@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能水站登记 - 调试版</title>
+    <script src="../frontend/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #F8FAFC; }
+        #debug-info { background: #fff; padding: 10px; border: 1px solid #ccc; margin: 10px; font-size: 12px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <!-- 调试信息 -->
+    <div id="debug-info">
+        <h3>🔍 调试信息</h3>
+        <div id="debug-content">初始化中...</div>
+    </div>
+
+    <!-- Vue 应用 -->
+    <div id="app" v-cloak>
+        <header class="bg-white shadow-sm px-4 py-4">
+            <h1 class="text-lg font-bold text-slate-800">智能水站</h1>
+        </header>
+        <div class="p-4">
+            <p>当前用户：{{ currentUser.name }}</p>
+            <p>产品数量：{{ products.length }}</p>
+            <p>有库存产品：{{ inStockProducts.length }}</p>
+        </div>
+    </div>
+
+    <script>
+        const debug = (msg) => {
+            const el = document.getElementById('debug-content');
+            if (el) el.innerHTML += '<br>' + msg;
+            console.log(msg);
+        };
+
+        debug('开始加载...');
+
+        // 检查 Vue
+        debug('Vue 类型：' + typeof Vue);
+        if (typeof Vue !== 'undefined') {
+            debug('✓ Vue 版本：' + (Vue.version || '未知'));
+        } else {
+            debug('<span class="error">✗ Vue 未加载</span>');
+        }
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                debug('setup() 执行中...');
+                
+                const API_BASE = 'http://localhost:8000/api';
+                const products = ref([]);
+                const currentUser = ref({ id: 1, name: '测试用户', department: '测试部' });
+
+                const inStockProducts = computed(() =>
+                    products.value.filter(p => p.stock > 0)
+                );
+
+                const loadData = async () => {
+                    debug('loadData() 执行中...');
+                    try {
+                        debug('请求：' + API_BASE + '/products');
+                        const res = await fetch(API_BASE + '/products');
+                        debug('响应状态：' + res.status);
+                        products.value = await res.json();
+                        debug('✓ 产品加载成功：' + products.value.length + ' 个');
+                    } catch (e) {
+                        debug('<span class="error">✗ 加载失败：' + e.message + '</span>');
+                    }
+                };
+
+                onMounted(() => {
+                    debug('onMounted() 执行中...');
+                    loadData();
+                });
+
+                return {
+                    products,
+                    currentUser,
+                    inStockProducts
+                };
+            }
+        }).mount('#app');
+
+        debug('Vue 应用已挂载');
+    </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能水站 - 测试版</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="loading" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+        <div style="text-align: center;">
+            <div style="width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+            <p style="color: #666; font-size: 14px;">加载中...</p>
+        </div>
+    </div>
+
+    <div id="app" style="display: none;" class="p-4">
+        <h1 class="text-2xl font-bold mb-4">✅ 页面加载成功！</h1>
+        <p class="mb-2">Vue 版本：{{ vueVersion }}</p>
+        <p class="mb-2">用户数量：{{ users.length }}</p>
+        <p class="mb-2">产品数量：{{ products.length }}</p>
+        
+        <div class="mt-4 flex gap-2">
+            <a href="index.html" class="px-4 py-2 bg-blue-600 text-white rounded">正式版用户端</a>
+            <a href="admin.html" class="px-4 py-2 bg-green-600 text-white rounded">管理后台</a>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const API_BASE = 'http://localhost:8000/api';
+
+        createApp({
+            data() {
+                return {
+                    vueVersion: Vue.version,
+                    users: [],
+                    products: []
+                };
+            },
+            async mounted() {
+                try {
+                    const [usersRes, productsRes] = await Promise.all([
+                        fetch(`${API_BASE}/users`),
+                        fetch(`${API_BASE}/products?active_only=true`)
+                    ]);
+                    
+                    if (usersRes.ok && productsRes.ok) {
+                        this.users = await usersRes.json();
+                        this.products = await productsRes.json();
+                        
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('app').style.display = 'block';
+                    } else {
+                        document.getElementById('loading').innerHTML = 
+                            '<p style="color: red;">API 响应失败</p>';
+                    }
+                } catch (error) {
+                    console.error('加载失败:', error);
+                    document.getElementById('loading').innerHTML = 
+                        '<p style="color: red;">加载失败：' + error.message + '</p>';
+                }
+            }
+        }).mount('#app');
+    </script>
+    
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</body>
+</html>

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能水站</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F8FAFC;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e5e5;
+            border-top-color: #2563EB;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tab-active {
+            color: #2563EB;
+            border-bottom: 2px solid #2563EB;
+        }
+        .btn-press {
+            transition: transform 0.1s ease;
+        }
+        .btn-press:active {
+            transform: scale(0.98);
+        }
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, a, input, select {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        @media (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .safe-bottom {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        .card-shadow {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        /* 快捷入口图标 */
+        .shortcut-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading 页面 -->
+    <div id="loading">
+        <div style="text-align: center;">
+            <div class="spinner" style="margin: 0 auto 16px;"></div>
+            <p style="color: #666; font-size: 14px;">加载中...</p>
+        </div>
+    </div>
+
+    <!-- Vue 应用 -->
+    <div id="app" style="display: none;" class="overflow-x-hidden">
+        <!-- Header - 个性化问候 -->
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-6 sticky top-0 z-10 safe-top">
+            <div class="flex justify-between items-center">
+                <div class="min-w-0 flex-1">
+                    <p class="text-white text-sm opacity-90 mb-1">{{ greetingText }}</p>
+                    <h1 class="text-white text-xl font-bold truncate">👋 {{ currentUser.name }}</h1>
+                    <p class="text-white text-xs opacity-80 mt-1">{{ currentUser.department }} · 本月已领 {{ userStatus.month_total_qty || 0 }} 桶</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- 消息中心入口 -->
+                    <a href="notifications.html" class="relative bg-white/20 p-2 rounded-lg ml-2 flex-shrink-0 active:opacity-70 transition-opacity backdrop-blur-sm" title="消息中心">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span v-if="unreadCount > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">{{ unreadCount }}</span>
+                    </a>
+                    <button @click="showUserSelect = true" class="text-xs bg-white/20 text-white px-3 py-2 rounded-lg ml-2 flex-shrink-0 active:opacity-70 transition-opacity backdrop-blur-sm">
+                        切换用户
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="bg-white border-b flex overflow-x-auto safe-top" style="-webkit-overflow-scrolling: touch;">
+            <button @click="activeTab = 'pickup'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'pickup' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
+                💧 领水
+            </button>
+            <button @click="activeTab = 'records'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'records' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
+                📋 记录
+            </button>
+            <button @click="activeTab = 'settlement'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'settlement' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
+                💰 结算
+            </button>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="px-4 pb-36 sm:pb-32" v-if="appLoaded">
+            <!-- 领水 Tab -->
+            <div v-if="activeTab === 'pickup'">
+                <!-- 快捷入口 -->
+                <div class="mb-4 mt-4">
+                    <h2 class="text-sm font-bold text-slate-600 mb-3">快捷操作</h2>
+                    <div class="grid grid-cols-4 gap-3">
+                        <button @click="quickPickup(1)" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
+                            <div class="shortcut-icon bg-blue-50 text-blue-600 mx-auto">🪣</div>
+                            <p class="text-xs text-slate-600 font-medium">桶装水 ×1</p>
+                        </button>
+                        <button @click="quickPickup(2)" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
+                            <div class="shortcut-icon bg-blue-50 text-blue-600 mx-auto">🪣🪣</div>
+                            <p class="text-xs text-slate-600 font-medium">桶装水 ×2</p>
+                        </button>
+                        <button @click="quickPickup(5, 'bottle')" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
+                            <div class="shortcut-icon bg-green-50 text-green-600 mx-auto">🧴</div>
+                            <p class="text-xs text-slate-600 font-medium">瓶装水 ×5</p>
+                        </button>
+                        <button @click="activeTab = 'records'" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
+                            <div class="shortcut-icon bg-purple-50 text-purple-600 mx-auto">📋</div>
+                            <p class="text-xs text-slate-600 font-medium">我的记录</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 状态卡片简化版 -->
+                <div class="bg-white rounded-2xl p-4 card-shadow mb-4">
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div>
+                            <p class="text-xs text-slate-500 mb-1">本月已领</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ userStatus.month_total_qty || 0 }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">桶</p>
+                        </div>
+                        <div class="border-l border-slate-100">
+                            <p class="text-xs text-slate-500 mb-1">待结算</p>
+                            <p class="text-2xl font-bold text-amber-600">¥{{ (userStatus.to_apply_amount || 0).toFixed(2) }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">元</p>
+                        </div>
+                        <div class="border-l border-slate-100">
+                            <p class="text-xs text-slate-500 mb-1">已结算</p>
+                            <p class="text-2xl font-bold text-green-600">¥{{ (userStatus.settled_amount || 0).toFixed(2) }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">元</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 产品列表 -->
+                <div class="mb-4">
+                    <h2 class="text-sm font-bold text-slate-600 mb-3">选择领取规格</h2>
+
+                    <div v-if="inStockProducts.length === 0" class="text-center text-slate-400 py-8">
+                        暂时缺货，敬请期待
+                    </div>
+
+                    <div v-for="product in inStockProducts" :key="product.id"
+                        class="rounded-2xl border-2 p-4 mb-3 bg-white card-shadow">
+                        <div class="flex justify-between items-start mb-3 gap-2">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-slate-800 truncate">{{ product.name }}</h3>
+                                <p class="text-sm text-slate-500">规格：{{ product.specification }}</p>
+                                <p class="text-sm text-slate-500">
+                                    库存：<span :class="product.stock < 10 ? 'text-red-500 font-bold' : 'text-green-600'">{{ product.stock }} {{ product.unit }}</span>
+                                </p>
+                                <p v-if="product.promo_threshold" class="text-xs text-orange-500 mt-1">
+                                    🔥 买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                </p>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-blue-600 font-bold text-lg">¥{{ product.price }}</p>
+                                <p class="text-xs text-slate-400">/{{ product.unit }}</p>
+                            </div>
+                        </div>
+
+                        <!-- 数量选择器 -->
+                        <div class="flex items-center justify-between bg-slate-50 rounded-xl p-3">
+                            <span class="text-sm text-slate-600">领取数量：</span>
+                            <div class="flex items-center gap-3">
+                                <button @click="decreaseQuantity(product.id)" :disabled="getQuantity(product.id) <= 0"
+                                    class="w-10 h-10 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold disabled:opacity-30 disabled:cursor-not-allowed active:bg-slate-100 transition-colors">
+                                    −
+                                </button>
+                                <span class="text-2xl font-bold text-slate-800 w-12 text-center">{{ getQuantity(product.id) }}</span>
+                                <button @click="increaseQuantity(product.id, product.stock)"
+                                    class="w-10 h-10 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold active:bg-slate-100 transition-colors">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 预计价格 -->
+                        <div v-if="getQuantity(product.id) > 0" class="mt-3 text-right text-sm">
+                            <span class="text-slate-500">预计支付：</span>
+                            <span class="text-blue-600 font-bold text-lg">¥{{ estimateProductPrice(product).toFixed(2) }}</span>
+                            <span v-if="hasProductPromotion(product)" class="text-green-500 text-xs ml-1">(含优惠)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 汇总和提交 -->
+                <div v-if="totalQuantity > 0" class="bg-white rounded-2xl p-4 border-2 border-blue-100 mb-4 card-shadow">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-base text-slate-600">总数量</span>
+                        <span class="text-xl font-bold text-slate-800">{{ totalQuantity }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-base text-slate-600">预计总额</span>
+                        <span class="text-xl font-bold text-blue-600">¥{{ totalEstimatedPrice.toFixed(2) }}</span>
+                    </div>
+                    <button @click="submitPickup" class="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-bold text-lg active:opacity-90 transition-opacity">
+                        确认领取
+                    </button>
+                </div>
+            </div>
+
+            <!-- 记录 Tab -->
+            <div v-if="activeTab === 'records'">
+                <h2 class="text-base font-bold text-slate-800 mb-3 mt-4">我的领取记录</h2>
+
+                <div v-if="userRecords.length === 0" class="text-center text-slate-400 py-12">
+                    <p>暂无记录</p>
+                </div>
+
+                <div class="space-y-2">
+                    <div v-for="record in userRecords" :key="record.id"
+                        :class="['rounded-xl p-4 border-2 card-shadow',
+                            record.status === 'settled' ? 'bg-green-50 border-green-100' :
+                            record.settlement_applied === 1 ? 'bg-blue-50 border-blue-100' :
+                            'bg-amber-50 border-amber-100']">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-slate-800 truncate">{{ record.product_name }}</p>
+                                <p class="text-xs text-slate-500 mt-1">{{ formatDate(record.created_at) }}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
+                                <p :class="record.actual_price === 0 ? 'text-green-600 font-bold' : 'text-blue-600 font-bold'">
+                                    ¥{{ record.actual_price.toFixed(2) }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-200 gap-2">
+                            <span :class="['text-xs px-2 py-1 rounded-full',
+                                record.status === 'settled' ? 'bg-green-200 text-green-700' :
+                                record.settlement_applied === 1 ? 'bg-blue-200 text-blue-700' :
+                                'bg-amber-200 text-amber-700']">
+                                {{ record.status === 'settled' ? '✅ 已结算' : record.settlement_applied === 1 ? '⏳ 已申请待确认' : '⏰ 待结算' }}
+                            </span>
+                            <span v-if="record.note" class="text-xs text-slate-500 truncate flex-1">{{ record.note }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结算 Tab -->
+            <div v-if="activeTab === 'settlement'">
+                <h2 class="text-base font-bold text-slate-800 mb-3 mt-4">结算管理</h2>
+
+                <!-- 状态概览 -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-amber-50 rounded-xl p-4 border border-amber-100 card-shadow">
+                        <p class="text-xs text-amber-600 mb-1">待支付</p>
+                        <p class="text-2xl font-bold text-amber-700">¥{{ (userStatus.to_apply_amount || 0).toFixed(2) }}</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 card-shadow">
+                        <p class="text-xs text-blue-600 mb-1">已支付待确认</p>
+                        <p class="text-2xl font-bold text-blue-700">¥{{ (userStatus.applied_amount || 0).toFixed(2) }}</p>
+                    </div>
+                </div>
+
+                <!-- 待申请结算 -->
+                <div v-if="toApplyRecords.length > 0" class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-slate-600">待结算 ({{ toApplyRecords.length }})</h3>
+                        <button @click="applySettlement" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg active:opacity-80 transition-opacity">
+                            批量申请
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <div v-for="record in toApplyRecords" :key="record.id"
+                            class="bg-white rounded-xl p-4 border-2 border-amber-100 card-shadow">
+                            <div class="flex justify-between items-start mb-2 gap-2">
+                                <div class="flex-1">
+                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
+                                    <p class="text-blue-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-slate-100 bg-amber-50 -mx-4 -mb-4 px-4 py-2 rounded-b-xl gap-2">
+                                <input type="checkbox" v-model="selectedToApply" :value="record.id" class="w-4 h-4">
+                                <span class="text-xs bg-amber-200 text-amber-700 px-2 py-1 rounded-full">待结算</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 已申请待确认 -->
+                <div v-if="appliedRecords.length > 0" class="mb-6">
+                    <h3 class="text-sm font-bold text-slate-600 mb-3">已申请待确认 ({{ appliedRecords.length }})</h3>
+                    <div class="space-y-2">
+                        <div v-for="record in appliedRecords" :key="record.id"
+                            class="bg-blue-50 rounded-xl p-4 border-2 border-blue-100 card-shadow">
+                            <div class="flex justify-between items-start mb-2 gap-2">
+                                <div class="flex-1">
+                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
+                                    <p class="text-blue-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-blue-100">
+                                <span class="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">已申请待确认</span>
+                                <span class="text-xs text-slate-500">管理员确认后完成结算</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 已结算历史 -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-600 mb-3">已结算历史 ({{ settledRecords.length }})</h3>
+                    <div class="space-y-2">
+                        <div v-for="record in settledRecords" :key="record.id"
+                            class="bg-green-50 rounded-xl p-4 border-2 border-green-100 card-shadow">
+                            <div class="flex justify-between items-start mb-2 gap-2">
+                                <div class="flex-1">
+                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
+                                    <p class="text-green-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-green-100">
+                                <span class="text-xs bg-green-600 text-white px-2 py-1 rounded-full">✅ 已结算</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户选择弹窗 -->
+        <div v-if="showUserSelect" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
+                <h3 class="text-lg font-bold mb-4">选择用户</h3>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    <button v-for="user in users" :key="user.id"
+                        @click="selectUser(user)"
+                        :class="['w-full text-left px-4 py-3 rounded-lg transition-colors',
+                            currentUser?.id === user.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50']">
+                        {{ user.name }} ({{ user.department }})
+                    </button>
+                </div>
+                <button @click="showUserSelect = false" class="w-full mt-4 bg-slate-100 text-slate-700 py-3 rounded-xl font-medium active:opacity-80 transition-opacity">
+                    取消
+                </button>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div v-if="toast.show" :class="['fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-medium transition-all',
+            toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-slate-700']">
+            {{ toast.message }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const API_BASE = 'http://localhost:8000';
+
+        createApp({
+            data() {
+                return {
+                    appLoaded: false,
+                    activeTab: 'pickup',
+                    currentUser: null,
+                    users: [],
+                    userStatus: {},
+                    products: [],
+                    userRecords: [],
+                    quantities: {},
+                    selectedToApply: [],
+                    showUserSelect: false,
+                    unreadCount: 0,
+                    toast: { show: false, message: '', type: 'success' }
+                };
+            },
+            computed: {
+                greetingText() {
+                    const hour = new Date().getHours();
+                    if (hour < 6) return '夜深了';
+                    if (hour < 9) return '早上好';
+                    if (hour < 12) return '上午好';
+                    if (hour < 14) return '中午好';
+                    if (hour < 18) return '下午好';
+                    if (hour < 22) return '晚上好';
+                    return '夜深了';
+                },
+                inStockProducts() {
+                    return this.products.filter(p => p.is_active && p.stock > 0);
+                },
+                totalQuantity() {
+                    return Object.values(this.quantities).reduce((sum, q) => sum + q, 0);
+                },
+                totalEstimatedPrice() {
+                    let total = 0;
+                    for (const product of this.products) {
+                        const qty = this.quantities[product.id] || 0;
+                        if (qty > 0) {
+                            total += this.estimateProductPrice(product);
+                        }
+                    }
+                    return total;
+                },
+                toApplyRecords() {
+                    return this.userRecords.filter(r => r.status === 'unsettled' && r.settlement_applied === 0);
+                },
+                appliedRecords() {
+                    return this.userRecords.filter(r => r.status === 'unsettled' && r.settlement_applied === 1);
+                },
+                settledRecords() {
+                    return this.userRecords.filter(r => r.status === 'settled');
+                }
+            },
+            methods: {
+                async loadData() {
+                    try {
+                        // 加载用户列表
+                        const usersRes = await fetch(`${API_BASE}/api/users`);
+                        this.users = await usersRes.json();
+                        
+                        // 默认选择第一个用户
+                        if (this.users.length > 0 && !this.currentUser) {
+                            this.currentUser = this.users[0];
+                            this.loadUserStatus();
+                            this.loadUserRecords();
+                        }
+                        
+                        // 加载产品列表
+                        const productsRes = await fetch(`${API_BASE}/api/products?active_only=true`);
+                        this.products = await productsRes.json();
+                        
+                        this.appLoaded = true;
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('app').style.display = 'block';
+                    } catch (error) {
+                        console.error('加载数据失败:', error);
+                        this.showToast('加载失败，请检查后端服务', 'error');
+                    }
+                },
+                async loadUserStatus() {
+                    if (!this.currentUser) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/user/${this.currentUser.id}/status`);
+                        this.userStatus = await res.json();
+                    } catch (error) {
+                        console.error('加载用户状态失败:', error);
+                    }
+                },
+                async loadUserRecords() {
+                    if (!this.currentUser) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/transactions?user_id=${this.currentUser.id}`);
+                        this.userRecords = await res.json();
+                    } catch (error) {
+                        console.error('加载记录失败:', error);
+                    }
+                },
+                selectUser(user) {
+                    this.currentUser = user;
+                    this.showUserSelect = false;
+                    this.loadUserStatus();
+                    this.loadUserRecords();
+                    this.quantities = {};
+                },
+                getQuantity(productId) {
+                    return this.quantities[productId] || 0;
+                },
+                increaseQuantity(productId, maxStock) {
+                    const current = this.getQuantity(productId);
+                    if (current < maxStock) {
+                        this.quantities[productId] = current + 1;
+                    }
+                },
+                decreaseQuantity(productId) {
+                    const current = this.getQuantity(productId);
+                    if (current > 0) {
+                        this.quantities[productId] = current - 1;
+                    }
+                },
+                estimateProductPrice(product) {
+                    const qty = this.getQuantity(product.id);
+                    if (qty === 0) return 0;
+                    
+                    // 简化的优惠计算
+                    const count = this.userRecords.filter(r => 
+                        r.product_id === product.id && 
+                        r.status === 'unsettled' && 
+                        r.actual_price > 0
+                    ).length;
+                    
+                    const cycle = product.promo_threshold + product.promo_gift;
+                    let freeItems = 0;
+                    
+                    for (let i = 0; i < qty; i++) {
+                        if ((count + i + 1) % cycle === 0) {
+                            freeItems++;
+                        }
+                    }
+                    
+                    const paidItems = qty - freeItems;
+                    return (product.price * paidItems);
+                },
+                hasProductPromotion(product) {
+                    const qty = this.getQuantity(product.id);
+                    if (qty === 0) return false;
+                    
+                    const count = this.userRecords.filter(r => 
+                        r.product_id === product.id && 
+                        r.status === 'unsettled' && 
+                        r.actual_price > 0
+                    ).length;
+                    
+                    const cycle = product.promo_threshold + product.promo_gift;
+                    for (let i = 0; i < qty; i++) {
+                        if ((count + i + 1) % cycle === 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                async quickPickup(qty, type = 'bucket') {
+                    if (!this.currentUser) {
+                        this.showToast('请先选择用户', 'error');
+                        return;
+                    }
+                    
+                    // 找到对应的产品
+                    let product;
+                    if (type === 'bucket') {
+                        product = this.products.find(p => p.name.includes('桶装') && p.is_active && p.stock >= qty);
+                    } else {
+                        product = this.products.find(p => p.name.includes('瓶装') && p.is_active && p.stock >= qty);
+                    }
+                    
+                    if (!product) {
+                        this.showToast('库存不足或产品不可用', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/record`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: this.currentUser.id,
+                                product_id: product.id,
+                                quantity: qty,
+                                type: 'pickup'
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('领取成功！', 'success');
+                            this.loadUserStatus();
+                            this.loadUserRecords();
+                        } else {
+                            const error = await res.json();
+                            this.showToast(error.detail || '领取失败', 'error');
+                        }
+                    } catch (error) {
+                        this.showToast('网络错误', 'error');
+                    }
+                },
+                async submitPickup() {
+                    if (!this.currentUser) {
+                        this.showToast('请先选择用户', 'error');
+                        return;
+                    }
+                    
+                    let success = true;
+                    for (const product of this.products) {
+                        const qty = this.getQuantity(product.id);
+                        if (qty > 0) {
+                            try {
+                                const res = await fetch(`${API_BASE}/api/record`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        user_id: this.currentUser.id,
+                                        product_id: product.id,
+                                        quantity: qty,
+                                        type: 'pickup'
+                                    })
+                                });
+                                
+                                if (!res.ok) {
+                                    success = false;
+                                    const error = await res.json();
+                                    this.showToast(`${product.name}: ${error.detail}`, 'error');
+                                    break;
+                                }
+                            } catch (error) {
+                                success = false;
+                                this.showToast(`${product.name}: 网络错误`, 'error');
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (success) {
+                        this.showToast('领取成功！', 'success');
+                        this.quantities = {};
+                        this.loadUserStatus();
+                        this.loadUserRecords();
+                    }
+                },
+                async applySettlement() {
+                    if (this.selectedToApply.length === 0) {
+                        this.showToast('请选择要结算的记录', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/user/settlement-apply`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: this.currentUser.id,
+                                transaction_ids: this.selectedToApply
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('结算申请已提交', 'success');
+                            this.selectedToApply = [];
+                            this.loadUserStatus();
+                            this.loadUserRecords();
+                        } else {
+                            const error = await res.json();
+                            this.showToast(error.detail || '申请失败', 'error');
+                        }
+                    } catch (error) {
+                        this.showToast('网络错误', 'error');
+                    }
+                },
+                showToast(message, type = 'success') {
+                    this.toast = { show: true, message, type };
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 2000);
+                },
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    const now = new Date();
+                    const diff = now - date;
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    
+                    if (days === 0) return '今天';
+                    if (days === 1) return '昨天';
+                    if (days < 7) return `${days}天前`;
+                    
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                },
+                formatDateTime(dateStr) {
+                    const date = new Date(dateStr);
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    const hour = date.getHours().toString().padStart(2, '0');
+                    const minute = date.getMinutes().toString().padStart(2, '0');
+                    return `${month}/${day} ${hour}:${minute}`;
+                },
+                async loadUnreadCount() {
+                    if (!this.currentUser) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/notifications/unread-count?user_id=${this.currentUser.id}`);
+                        const data = await res.json();
+                        this.unreadCount = data.unread_count;
+                    } catch (error) {
+                        console.error('加载未读消息失败:', error);
+                    }
+                }
+            },
+            mounted() {
+                this.loadData();
+                this.loadUnreadCount();
+                // 每 30 秒刷新一次未读消息数量
+                setInterval(() => {
+                    this.loadUnreadCount();
+                }, 30000);
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
