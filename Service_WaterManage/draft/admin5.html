@@ -14,58 +14,6 @@
             display: none !important;
         }
         
-        /* 自定义复选框样式 - 简洁美观 */
-        input[type="checkbox"] {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border: 1.5px solid #CBD5E1;
-            border-radius: 3px;
-            background-color: #fff;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-        }
-        
-        input[type="checkbox"]:hover {
-            border-color: #94A3B8;
-        }
-        
-        input[type="checkbox"]:checked {
-            background-color: #2563EB;
-            border-color: #2563EB;
-        }
-        
-        input[type="checkbox"]:checked::after {
-            content: '';
-            position: absolute;
-            left: 4px;
-            top: 2px;
-            width: 4px;
-            height: 7px;
-            border: solid white;
-            border-width: 0 1.5px 1.5px 0;
-            transform: rotate(45deg);
-        }
-        
-        input[type="checkbox"]:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        input[type="checkbox"]:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-        
-        /* 表格中的复选框居中对齐 */
-        table input[type="checkbox"] {
-            display: block;
-            margin: 0 auto;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background-color: #F1F5F9;
@@ -155,15 +103,9 @@
         /* ========== 移动端优化样式 ========== */
         
         /* 触摸友好：确保最小点击区域为 44x44px */
-        button, a, input:not([type="checkbox"]), select {
+        button, a, input, select {
             min-height: 44px;
             min-width: 44px;
-        }
-        
-        /* 复选框不受全局44px限制 */
-        input[type="checkbox"] {
-            min-height: unset;
-            min-width: unset;
         }
 
         /* 防止双击缩放 */
@@ -561,43 +503,36 @@
             
             <!-- 导航菜单 -->
             <nav class="sidebar-nav">
-                <!-- 运营管理 -->
+                <!-- 核心功能 -->
                 <div class="nav-section">
-                    <div class="nav-section-title">运营管理</div>
+                    <div class="nav-section-title">核心功能</div>
                     <button @click="navigateTo('dashboard')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'dashboard' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
-                        <span>首页</span>
+                        <span>数据看板</span>
                         <span class="shortcut-hint">G D</span>
                     </button>
-                    <button @click="navigateTo('officePickups')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officePickups' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                        </svg>
-                        <span>领水记录</span>
-                        <span class="shortcut-hint">G P</span>
-                    </button>
-                    <button @click="navigateTo('settlement')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'settlement' }">
+                    <button @click="navigateTo('applications')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'applications' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        <span>结算管理</span>
-                        <span v-if="settlementStats.pendingCount > 0" class="nav-item-badge">{{ settlementStats.pendingCount }}</span>
-                        <span class="shortcut-hint">G S</span>
+                        <span>结算申请</span>
+                        <span v-if="applications.length > 0" class="nav-item-badge">{{ applications.length }}</span>
+                        <span class="shortcut-hint">G A</span>
+                    </button>
+                    <button @click="navigateTo('transactions')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'transactions' }">
+                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <span>交易记录</span>
+                        <span class="shortcut-hint">G T</span>
                     </button>
                 </div>
                 
-                <!-- 资源管理 -->
+                <!-- 库存管理 -->
                 <div class="nav-section">
-                    <div class="nav-section-title">资源管理</div>
-                    <button @click="navigateTo('products')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'products' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                        </svg>
-                        <span>产品管理</span>
-                        <span class="shortcut-hint">G P</span>
-                    </button>
+                    <div class="nav-section-title">库存管理</div>
                     <button @click="navigateTo('inventory')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'inventory' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
@@ -606,24 +541,32 @@
                         <span v-if="inventoryAlerts.length > 0" class="nav-item-badge">{{ inventoryAlerts.length }}</span>
                         <span class="shortcut-hint">G I</span>
                     </button>
-                    <button @click="navigateTo('officeAccounts')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officeAccounts' }">
+                    <button @click="navigateTo('products')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'products' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
-                        <span>预付账户</span>
-                        <span class="shortcut-hint">G A</span>
+                        <span>产品管理</span>
+                        <span class="shortcut-hint">G P</span>
                     </button>
                 </div>
                 
                 <!-- 用户管理 -->
                 <div class="nav-section">
                     <div class="nav-section-title">用户管理</div>
+                    <button @click="navigateTo('remind')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'remind' }">
+                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span>提醒结算</span>
+                        <span v-if="remindList.length > 0" class="nav-item-badge">{{ remindList.length }}</span>
+                        <span class="shortcut-hint">G R</span>
+                    </button>
                     <button @click="navigateTo('offices')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'offices' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                         <span>办公室管理</span>
-                        <span class="shortcut-hint">G O</span>
+                        <span class="shortcut-hint">G M</span>
                     </button>
                     <button @click="navigateTo('users')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'users' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -632,17 +575,19 @@
                         <span>用户管理</span>
                         <span class="shortcut-hint">G U</span>
                     </button>
-                </div>
-
-                <!-- 运维支持 -->
-                <div class="nav-section">
-                    <div class="nav-section-title">运维支持</div>
-                    <button @click="navigateTo('trash')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'trash' }">
+                    <button @click="navigateTo('officeSettlement')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officeSettlement' }">
                         <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                         </svg>
-                        <span>回收站</span>
-                        <span class="shortcut-hint">G T</span>
+                        <span>办公室结算</span>
+                        <span v-if="officeSettlementAppliedCount > 0" class="nav-item-badge">{{ officeSettlementAppliedCount }}</span>
+                    </button>
+                    <button @click="openUnifiedAccount" class="nav-item">
+                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        <span>统一账户</span>
+                        <span class="badge-new">NEW</span>
                     </button>
                 </div>
 
@@ -758,45 +703,47 @@
         </nav>
 
         <!-- 移动端底部导航 - 使用 navigateTo 函数 -->
-        <nav class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-1 safe-bottom z-20">
+        <nav class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 safe-bottom z-20">
             <div class="flex justify-around items-center">
-                <button @click="navigateTo('dashboard')" :class="['flex flex-col items-center p-1.5', activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="navigateTo('dashboard')" :class="['flex flex-col items-center p-2', activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="text-[10px] mt-0.5">首页</span>
+                    <span class="text-xs mt-1">看板</span>
                 </button>
-                <button @click="navigateTo('officePickups')" :class="['flex flex-col items-center p-1.5', activeTab === 'officePickups' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                    </svg>
-                    <span class="text-[10px] mt-0.5">领水</span>
-                </button>
-                <button @click="navigateTo('settlement')" :class="['flex flex-col items-center p-1.5 relative', activeTab === 'settlement' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="navigateTo('applications')" :class="['flex flex-col items-center p-2 relative', activeTab === 'applications' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-[10px] mt-0.5">结算</span>
-                    <span v-if="officeSettlementAppliedCount > 0" class="absolute top-0 right-1 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ officeSettlementAppliedCount }}</span>
+                    <span class="text-xs mt-1">申请</span>
+                    <span v-if="applications.length > 0" class="absolute top-1 right-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ applications.length }}</span>
                 </button>
-                <button @click="navigateTo('products')" :class="['flex flex-col items-center p-1.5', activeTab === 'products' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                <button @click="navigateTo('transactions')" :class="['flex flex-col items-center p-2', activeTab === 'transactions' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    <span class="text-[10px] mt-0.5">产品</span>
+                    <span class="text-xs mt-1">记录</span>
                 </button>
-                <button @click="navigateTo('inventory')" :class="['flex flex-col items-center p-1.5 relative', activeTab === 'inventory' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="navigateTo('inventory')" :class="['flex flex-col items-center p-2', activeTab === 'inventory' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
                     </svg>
-                    <span class="text-[10px] mt-0.5">库存</span>
-                    <span v-if="inventoryAlerts.length > 0" class="absolute top-0 right-1 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ inventoryAlerts.length }}</span>
+                    <span class="text-xs mt-1">库存</span>
                 </button>
-                <button @click="navigateTo('offices')" :class="['flex flex-col items-center p-1.5', activeTab === 'offices' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                <!-- 回收站按钮 -->
+                <button @click="navigateTo('trash')" :class="['flex flex-col items-center p-2', activeTab === 'trash' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
-                    <span class="text-[10px] mt-0.5">办公室</span>
+                    <span class="text-xs mt-1">回收站</span>
+                    <span class="shortcut-hint" style="margin-top: 2px;">G Z</span>
+                </button>
+                <button @click="navigateTo('remind')" :class="['flex flex-col items-center p-2 relative', activeTab === 'remind' ? 'text-blue-600' : 'text-slate-500']">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <span class="text-xs mt-1">提醒</span>
+                    <span v-if="remindList.length > 0" class="absolute top-1 right-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ remindList.length }}</span>
                 </button>
             </div>
         </nav>
@@ -934,20 +881,20 @@
                                 <p class="text-xs text-slate-400 mt-1">已收款</p>
                             </div>
 
-                            <!-- 待付款金额 -->
+                            <!-- 待结算金额 -->
                             <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs text-slate-500">待付款金额</span>
+                                    <span class="text-xs text-slate-500">待结算金额</span>
                                     <span class="text-xs text-slate-400">{{ quickStats.pending?.unsettled_count || 0 }} 笔</span>
                                 </div>
                                 <p class="text-3xl font-bold text-amber-600">¥{{ (dashboardSummary.metrics?.unsettled_amount || totalStats.unsettled_amount).toFixed(0) }}</p>
                                 <p class="text-xs text-slate-400 mt-1">待收款</p>
                             </div>
 
-                            <!-- 付款待确认 -->
+                            <!-- 已申请待确认 -->
                             <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs text-slate-500">付款待确认</span>
+                                    <span class="text-xs text-slate-500">已申请待确认</span>
                                     <span class="text-xs text-slate-400">{{ quickStats.pending?.applied_count || applications.length }} 笔</span>
                                 </div>
                                 <p class="text-3xl font-bold text-blue-600">¥{{ (dashboardSummary.metrics?.applied_amount || totalStats.applied_amount).toFixed(0) }}</p>
@@ -1043,155 +990,6 @@
                     </div>
                     <p v-if="(!dashboardSummary.department_ranking || dashboardSummary.department_ranking.length === 0) && departmentReport.length === 0" 
                        class="text-center text-slate-400 py-8">暂无数据</p>
-                </div>
-            </div>
-
-            <!-- Office Pickups Tab - 领水记录 -->
-            <div v-if="activeTab === 'officePickups'" class="stat-card">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-xl font-bold text-slate-800">领水记录</h2>
-                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{{ filteredPickups.length }}条</span>
-                        <span v-if="officePickupFilter.status || officePickupFilter.officeId || officePickupFilter.productId || officePickupFilter.dateFrom || officePickupFilter.dateTo || officePickupFilter.searchPerson" class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full">
-                            已应用筛选
-                        </span>
-                    </div>
-                    <div class="flex gap-2">
-                        <button @click="exportFilteredPickups" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            导出筛选结果
-                        </button>
-                        <button @click="exportAllPickups" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            导出全部
-                        </button>
-                        <button @click="loadOfficePickups" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            刷新
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 统计卡片 - 可点击筛选 -->
-                <div class="grid grid-cols-4 gap-3 mb-6">
-                    <div @click="filterByStatus('')" :class="!officePickupFilter.status ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-3 text-center cursor-pointer hover:opacity-80 transition">
-                        <div class="text-2xl font-bold text-blue-600">{{ pickupStats.total.count }}</div>
-                        <div class="text-xs text-blue-600">总记录</div>
-                        <div class="text-xs text-blue-400">¥{{ pickupStats.total.amount.toFixed(2) }}</div>
-                    </div>
-                    <div @click="filterByStatus('pending')" :class="officePickupFilter.status === 'pending' ? 'ring-2 ring-yellow-500' : ''" class="bg-yellow-50 rounded-xl p-3 text-center cursor-pointer hover:opacity-80 transition">
-                        <div class="text-2xl font-bold text-yellow-600">{{ pickupStats.pending.count }}</div>
-                        <div class="text-xs text-yellow-600">待付款</div>
-                        <div class="text-xs text-yellow-400">¥{{ pickupStats.pending.amount.toFixed(2) }}</div>
-                    </div>
-                    <div @click="filterByStatus('applied')" :class="officePickupFilter.status === 'applied' ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-3 text-center cursor-pointer hover:opacity-80 transition">
-                        <div class="text-2xl font-bold text-blue-600">{{ pickupStats.applied.count }}</div>
-                        <div class="text-xs text-blue-600">付款待确认</div>
-                        <div class="text-xs text-blue-400">¥{{ pickupStats.applied.amount.toFixed(2) }}</div>
-                    </div>
-                    <div @click="filterByStatus('settled')" :class="officePickupFilter.status === 'settled' ? 'ring-2 ring-green-500' : ''" class="bg-green-50 rounded-xl p-3 text-center cursor-pointer hover:opacity-80 transition">
-                        <div class="text-2xl font-bold text-green-600">{{ pickupStats.settled.count }}</div>
-                        <div class="text-xs text-green-600">已结清</div>
-                        <div class="text-xs text-green-400">¥{{ pickupStats.settled.amount.toFixed(2) }}</div>
-                    </div>
-                </div>
-
-                <!-- 筛选器 -->
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <div class="flex items-center gap-1">
-                        <input type="date" v-model="officePickupFilter.dateFrom" @change="filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
-                        <span class="text-slate-400">至</span>
-                        <input type="date" v-model="officePickupFilter.dateTo" @change="filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
-                    </div>
-                    <select v-model="officePickupFilter.officeId" @change="filterOfficePickups" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                        <option value="">全部办公室</option>
-                        <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
-                    </select>
-                    <select v-model="officePickupFilter.productId" @change="filterOfficePickups" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                        <option value="">全部产品</option>
-                        <option v-for="p in products" :value="p.id">{{ p.name }}</option>
-                    </select>
-                    <select v-model="officePickupFilter.status" @change="filterOfficePickups" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                        <option value="">全部状态</option>
-                        <option value="pending">待付款</option>
-                        <option value="applied">付款待确认</option>
-                        <option value="settled">已结清</option>
-                    </select>
-                    <input type="text" v-model="officePickupFilter.searchPerson" @input="filterOfficePickups" placeholder="搜索领取人" class="px-3 py-2 border rounded-lg text-sm">
-                    <button @click="resetOfficePickupFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500 hover:bg-slate-50">重置</button>
-                </div>
-
-                <!-- 批量操作栏 -->
-                <div v-if="selectedPickups.length > 0" class="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                    <div>
-                        <span class="text-sm text-blue-700">已选择 <strong>{{ selectedPickups.length }}</strong> 条记录</span>
-                        <span v-if="selectedPendingAmount > 0" class="text-sm text-amber-600 ml-2">待付款: ¥{{ selectedPendingAmount.toFixed(2) }}</span>
-                        <span v-if="selectedAppliedAmount > 0" class="text-sm text-blue-600 ml-2">待确认: ¥{{ selectedAppliedAmount.toFixed(2) }}</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <button @click="selectedPickups = []" class="px-3 py-1.5 text-slate-500 text-sm hover:text-slate-700">取消选择</button>
-                        <button v-if="selectedPendingCount > 0" @click="batchRemindPickups" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
-                            🔔 批量提醒付款 ({{ selectedPendingCount }})
-                        </button>
-                        <button v-if="selectedAppliedCount > 0" @click="batchConfirmPickups" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                            ✅ 批量确认收款 ({{ selectedAppliedCount }})
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 记录列表 - 表格形式 -->
-                <div v-if="filteredPickups.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <table>
-                        <thead class="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th class="w-8 py-3 px-3"><input type="checkbox" @change="toggleAllPickups" :checked="allPickupsSelected"></th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">领取时间</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">办公室</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">房间号</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">产品</th>
-                                <th class="py-3 px-3 text-right text-sm font-medium text-slate-600">数量</th>
-                                <th class="py-3 px-3 text-right text-sm font-medium text-slate-600">单价</th>
-                                <th class="py-3 px-3 text-right text-sm font-medium text-slate-600">金额</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">状态</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">领取人</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="p in filteredPickups" :key="p.id" class="border-b border-slate-100 hover:bg-slate-50">
-                                <td class="py-3 px-3">
-                                    <input type="checkbox" :value="p.id" v-model="selectedPickups" :disabled="p.settlement_status === 'settled'">
-                                </td>
-                                <td class="py-3 px-3 text-sm text-slate-600">{{ new Date(p.pickup_time).toLocaleString('zh-CN') }}</td>
-                                <td class="py-3 px-3 font-medium text-slate-800">{{ p.office_name }}</td>
-                                <td class="py-3 px-3 text-sm text-slate-600">{{ p.office_room_number || '-' }}</td>
-                                <td class="py-3 px-3 text-sm text-slate-600">{{ p.product_name }}</td>
-                                <td class="py-3 px-3 text-right text-sm text-slate-600">{{ p.quantity }}</td>
-                                <td class="py-3 px-3 text-right text-sm text-slate-600">¥{{ p.unit_price.toFixed(2) }}</td>
-                                <td class="py-3 px-3 text-right text-sm font-medium text-slate-800">¥{{ p.total_amount.toFixed(2) }}</td>
-                                <td class="py-3 px-3">
-                                    <span :class="p.settlement_status === 'settled' ? 'bg-green-100 text-green-700' : (p.settlement_status === 'applied' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700')" class="text-xs px-2 py-1 rounded-full">
-                                        {{ p.settlement_status === 'settled' ? '已结清' : (p.settlement_status === 'applied' ? '付款待确认' : '待付款') }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-3 text-sm text-slate-600">{{ p.pickup_person }}</td>
-                                <td class="py-3 px-3">
-                                    <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium">
-                                        🔔 提醒付款
-                                    </button>
-                                    <button v-else-if="p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                                        ✅ 确认收款
-                                    </button>
-                                    <span v-else class="text-slate-400 text-sm">-</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div v-else class="text-center py-12 text-slate-400">
-                    <p>暂无领水记录</p>
                 </div>
             </div>
 
@@ -1340,7 +1138,7 @@
                         <p class="text-2xl font-bold text-green-700">¥{{ filteredStats.settledAmount.toFixed(2) }}</p>
                     </div>
                     <div class="bg-purple-50 rounded-xl p-4 border border-purple-100">
-                        <p class="text-xs text-purple-600 mb-1">待付款金额</p>
+                        <p class="text-xs text-purple-600 mb-1">待结算金额</p>
                         <p class="text-2xl font-bold text-purple-700">¥{{ filteredStats.unsettledAmount.toFixed(2) }}</p>
                     </div>
                 </div>
@@ -1377,7 +1175,7 @@
                                 <td>{{ t.type === 'pickup' ? '领取' : '预定' }}</td>
                                 <td>
                                     <span :class="['status-badge', t.settlement_applied === 1 ? 'status-applied' : 'status-' + t.status]">
-                                        {{ t.status === 'unsettled' ? (t.settlement_applied === 1 ? '付款待确认' : '待付款') : t.status === 'settled' ? '已结算' : '已预定' }}
+                                        {{ t.status === 'unsettled' ? (t.settlement_applied === 1 ? '已申请' : '待结算') : t.status === 'settled' ? '已结算' : '已预定' }}
                                     </span>
                                     <span v-if="t.is_deleted" class="ml-1 status-badge bg-red-100 text-red-700">已删除</span>
                                 </td>
@@ -1476,7 +1274,7 @@
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded-xl">
-                            <input type="checkbox" v-model="showInactive">
+                            <input type="checkbox" v-model="showInactive" class="rounded border-slate-300">
                             显示已停用产品
                         </label>
                     </div>
@@ -1653,47 +1451,6 @@
 
             </div>
 
-            <!-- Office Accounts Tab - 预付账户 -->
-            <div v-if="activeTab === 'officeAccounts'" class="stat-card">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-xl font-bold text-slate-800">预付账户管理</h2>
-                        <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">{{ officeAccounts.length }}个账户</span>
-                    </div>
-                    <button @click="loadOfficeAccounts" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        刷新
-                    </button>
-                </div>
-
-                <!-- 账户列表 -->
-                <div v-if="officeAccounts.length > 0" class="grid gap-3">
-                    <div v-for="acc in officeAccounts" :key="acc.id" class="bg-white border rounded-xl p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <div class="font-bold text-slate-800">{{ acc.office_name }}</div>
-                                <div class="text-sm text-slate-500">{{ acc.product_name }} · 规格: {{ acc.product_specification }}</div>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-2xl font-bold" :class="acc.remaining_qty > 10 ? 'text-green-600' : (acc.remaining_qty > 0 ? 'text-yellow-600' : 'text-red-600')">
-                                    {{ acc.remaining_qty }}
-                                </div>
-                                <div class="text-xs text-slate-500">剩余桶数</div>
-                            </div>
-                        </div>
-                        <div class="mt-3 pt-3 border-t text-sm text-slate-500 flex justify-between">
-                            <span>预留: {{ acc.reserved_qty }}桶</span>
-                            <span>已用: {{ acc.reserved_qty - acc.remaining_qty }}桶</span>
-                        </div>
-                    </div>
-                </div>
-                <div v-else class="text-center py-12 text-slate-400">
-                    <p>暂无预付账户</p>
-                </div>
-            </div>
-
             <!-- Trash / Recycle Bin Tab -->
             <div v-if="activeTab === 'trash'" class="p-3 sm:p-6">
                 <h2 class="text-lg font-bold text-slate-800 mb-4">🗑️ 回收站</h2>
@@ -1762,164 +1519,79 @@
             </div>
 
             <!-- Remind Tab -->
-            <!-- Remind Tab (提醒管理 - 库存预警) -->
             <div v-if="activeTab === 'remind'" class="stat-card">
-                <!-- 页面标题 -->
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-800">库存预警</h2>
-                        <p class="text-sm text-slate-500 mt-1">监控库存不足的产品，及时补货</p>
-                    </div>
-                    <button @click="loadInventoryAlerts" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 hover:bg-slate-50 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        刷新
-                    </button>
-                </div>
-
-                <!-- 统计卡片 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-5 border border-red-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-red-600 font-medium">库存不足</p>
-                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (inventoryAlerts?.filter(a => a.stock === 0).length || 0) }}</p>
-                            </div>
-                            <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-amber-600 font-medium">库存预警</p>
-                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (inventoryAlerts?.filter(a => a.stock > 0 && a.stock <= a.threshold).length || 0) }}</p>
-                            </div>
-                            <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-green-600 font-medium">库存正常</p>
-                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p.stock > p.stock_alert).length || 0) }}</p>
-                            </div>
-                            <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 筛选器 -->
-                <div class="flex flex-wrap items-center gap-3 mb-4">
-                    <select v-model="inventoryAlertFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none">
-                        <option value="all">全部状态</option>
-                        <option value="out">库存不足</option>
-                        <option value="warning">库存预警</option>
-                    </select>
-                </div>
-
-                <!-- 库存预警模块 -->
-                <div class="space-y-4">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <select v-model="inventoryAlertFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none">
-                            <option value="all">全部状态</option>
-                            <option value="warning">库存预警</option>
-                            <option value="out">库存不足</option>
-                        </select>
-                    </div>
-                    <div v-if="filteredInventoryAlerts.length > 0" class="space-y-3">
-                        <div v-for="alert in filteredInventoryAlerts" :key="alert.id" class="bg-white border rounded-xl p-4 hover:shadow-md transition">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div :class="alert.stock === 0 ? 'bg-red-100' : 'bg-amber-100'" class="w-10 h-10 rounded-lg flex items-center justify-center">
-                                        <span :class="alert.stock === 0 ? 'text-red-600' : 'text-amber-600'" class="font-bold">{{ alert.stock }}</span>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-800">{{ alert.name }}</div>
-                                        <div class="text-sm text-slate-500">预警阈值: {{ alert.threshold }}桶</div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span :class="alert.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'" class="text-xs px-2 py-1 rounded-full">
-                                        {{ alert.stock === 0 ? '库存不足' : '库存预警' }}
-                                    </span>
-                                    <button @click="quickRestock(alert)" class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">补货</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-else class="text-center py-12 text-slate-400">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
-                        <p>暂无库存预警</p>
-                    </div>
-                </div>
-
-                <!-- 提醒设置模块 -->
-            </div>
-
-            <!-- Products Tab (库存管理 - 含预警) -->
-            <div v-if="activeTab === 'products'" class="stat-card">
-                <!-- 库存预警统计卡片 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-5 border border-red-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-red-600 font-medium">库存不足</p>
-                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (products?.filter(p => p.stock === 0).length || 0) }}</p>
-                                <p class="text-sm text-red-500 mt-1">需要立即补货</p>
-                            </div>
-                            <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-amber-600 font-medium">库存预警</p>
-                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (products?.filter(p => p.stock > 0 && p.stock <= (p.stock_alert || 10)).length || 0) }}</p>
-                                <p class="text-sm text-amber-500 mt-1">需要关注</p>
-                            </div>
-                            <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-green-600 font-medium">库存正常</p>
-                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p.stock > (p.stock_alert || 10)).length || 0) }}</p>
-                                <p class="text-sm text-green-500 mt-1">库存充足</p>
-                            </div>
-                            <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 操作栏 -->
                 <div class="flex justify-between items-center mb-6">
-                    <div class="flex gap-2">
-                        <button @click="updateStock" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16m8-16v16m-8-8h16"></path>
-                            </svg>
-                            批量更新库存
-                        </button>
-                        <!-- 添加库存预警筛选 -->
-                        <select v-model="inventoryAlertFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none bg-white">
-                            <option value="all">全部产品</option>
-                            <option value="out">库存不足</option>
-                            <option value="warning">库存预警</option>
-                            <option value="normal">库存正常</option>
+                    <div class="flex items-center gap-3">
+                        <select v-model="remindDays" @change="loadRemindList" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="7">最近 7 天</option>
+                            <option value="15">最近 15 天</option>
+                            <option value="30">最近 30 天</option>
                         </select>
+                        <button @click="loadRemindList" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            刷新
+                        </button>
                     </div>
+                </div>
+
+                <div v-if="remindList.length === 0" class="text-center text-slate-400 py-12">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p>暂无需要提醒的用户</p>
+                </div>
+
+                <!-- 响应式表格容器 -->
+                <div class="table-responsive bg-white rounded-xl border border-slate-200 card-shadow" v-else>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="w-[50px]"><input type="checkbox" @change="toggleAllRemind" :checked="allRemindSelected"></th>
+                                <th>用户</th>
+                                <th>部门</th>
+                                <th>待结算金额</th>
+                                <th>待结算笔数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="user in remindList" :key="user.user_id">
+                                <td><input type="checkbox" v-model="selectedRemind" :value="user.user_id"></td>
+                                <td class="font-medium">{{ user.user_name }}</td>
+                                <td>{{ user.department }}</td>
+                                <td class="text-amber-600 font-bold">¥{{ user.total_amount.toFixed(2) }}</td>
+                                <td>{{ user.transaction_count }}</td>
+                                <td>
+                                    <button @click="sendRemind(user)" class="btn-warning text-white px-4 py-2 rounded-lg text-sm font-medium btn-active">
+                                        发送提醒
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="selectedRemind.length > 0" class="mt-4 flex justify-between items-center pt-4 border-t border-slate-200">
+                    <span class="text-slate-600">已选择 {{ selectedRemind.length }} 个用户</span>
+                    <button @click="batchRemind" class="btn-warning text-white px-6 py-3 rounded-xl font-medium">
+                        批量发送提醒
+                    </button>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div v-if="activeTab === 'products'" class="stat-card">
+                <!-- 操作栏 -->
+                <div class="flex justify-between items-center mb-6">
+                    <button @click="updateStock" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16m8-16v16m-8-8h16"></path>
+                        </svg>
+                        批量更新库存
+                    </button>
                 </div>
 
                 <div class="table-responsive">
@@ -1942,9 +1614,7 @@
                                 <td>{{ p.specification }}</td>
                                 <td>¥{{ p.price }}</td>
                                 <td>
-                                    <span v-if="p.stock === 0" class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">缺货</span>
-                                    <span v-else-if="p.stock <= (p.stock_alert || 10)" class="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-sm font-medium">预警 {{ p.stock }}</span>
-                                    <span v-else class="text-green-600 font-medium">{{ p.stock }}</span>
+                                    <span :class="p.stock <= 10 ? 'text-red-600 font-bold' : 'text-slate-600'">{{ p.stock }}</span>
                                 </td>
                                 <td>{{ p.unit }}</td>
                                 <td>
@@ -1974,7 +1644,7 @@
             <div v-if="activeTab === 'offices'" class="stat-card">
                 <!-- 操作栏 -->
                 <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                         <button @click="openOfficeModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -1991,16 +1661,10 @@
                     
                     <!-- 搜索筛选 -->
                     <div class="flex items-center gap-2">
-                        <select v-model="officeCommonFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none bg-white">
-                            <option value="all">全部状态</option>
-                            <option value="common">仅常用</option>
-                            <option value="uncommon">仅不常用</option>
-                        </select>
                         <input v-model="officeSearch" type="text" placeholder="搜索办公室..." 
                                class="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <select v-model="officeSortBy" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none">
                             <option value="name">按名称</option>
-                            <option value="is_common">按常用状态</option>
                             <option value="water_user_count">按人数</option>
                             <option value="created_at">按创建时间</option>
                         </select>
@@ -2008,12 +1672,6 @@
                             {{ officeSortOrder === 'asc' ? '↑' : '↓' }}
                         </button>
                     </div>
-                </div>
-
-                <!-- 批量操作栏 -->
-                <div v-if="selectedOffices.length > 0" class="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                    <span class="text-sm text-blue-700">已选择 <strong>{{ selectedOffices.length }}</strong> 个办公室</span>
-                    <button @click="selectedOffices = []" class="px-3 py-1.5 text-slate-500 text-sm hover:text-slate-700">取消选择</button>
                 </div>
 
                 <!-- 统计卡片 -->
@@ -2064,71 +1722,42 @@
                     <table class="w-full">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600 w-8">
-                                    <input type="checkbox" @change="toggleAllOffices" :checked="allOfficesSelected">
-                                </th>
-                                <th @click="officeSortBy = 'name'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    办公室名称
-                                    <span v-if="officeSortBy === 'name'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th @click="officeSortBy = 'room_number'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    房间编号
-                                    <span v-if="officeSortBy === 'room_number'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th @click="officeSortBy = 'leader_name'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    负责人
-                                    <span v-if="officeSortBy === 'leader_name'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th @click="officeSortBy = 'water_user_count'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    配置人数
-                                    <span v-if="officeSortBy === 'water_user_count'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th @click="officeSortBy = 'user_count'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    实际用户
-                                    <span v-if="officeSortBy === 'user_count'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th @click="officeSortBy = 'created_at'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    创建时间
-                                    <span v-if="officeSortBy === 'created_at'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
-                                </th>
-                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">使用状态</th>
-                                <th class="text-right py-3 px-3 text-sm font-medium text-slate-600">操作</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">办公室名称</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">常用</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">房间编号</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">负责人</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">用水人数</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">注册用户</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">创建时间</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-slate-600">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="office in filteredOffices" :key="office.id" class="border-b border-slate-100 hover:bg-slate-50">
-                                <td class="py-3 px-3">
-                                    <input type="checkbox" :value="office.id" v-model="selectedOffices">
-                                </td>
-                                <td class="py-3 px-3">
+                                <td class="py-3 px-4">
                                     <span class="font-medium text-slate-800">{{ office.name }}</span>
                                 </td>
-                                <td class="py-3 px-3 text-slate-600">{{ office.room_number || '-' }}</td>
-                                <td class="py-3 px-3 text-slate-600">{{ office.leader_name || '-' }}</td>
-                                <td class="py-3 px-3">
-                                    <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-sm font-medium">{{ office.water_user_count || 0 }}</span>
+                                <td class="py-3 px-4">
+                                    <span v-if="office.is_common === 1" class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">常用</span>
+                                    <span v-else class="bg-gray-100 text-gray-500 px-2 py-1 rounded-full text-xs font-medium">不常用</span>
                                 </td>
-                                <td class="py-3 px-3">
-                                    <button @click="viewOfficeUsers(office)" class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-medium hover:bg-blue-100 transition cursor-pointer">
-                                        {{ office.user_count || 0 }} 人
-                                    </button>
+                                <td class="py-3 px-4 text-slate-600">{{ office.room_number || '-' }}</td>
+                                <td class="py-3 px-4 text-slate-600">{{ office.leader_name || '-' }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-medium">{{ office.water_user_count || 0 }}</span>
                                 </td>
-                                <td class="py-3 px-3 text-slate-500 text-sm">{{ formatDate(office.created_at) }}</td>
-                                <td class="py-3 px-3">
-                                    <button @click="toggleOfficeCommon(office)" 
-                                            :title="office.is_common === 1 ? '点击设为不常用' : '点击设为常用'"
-                                            :class="office.is_common === 1 ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
-                                            class="px-3 py-1 rounded-full text-sm font-medium transition cursor-pointer">
-                                        {{ office.is_common === 1 ? '常用' : '不常用' }}
-                                    </button>
+                                <td class="py-3 px-4">
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-medium">{{ office.user_count || 0 }}</span>
                                 </td>
-                                <td class="py-3 px-3 text-right">
+                                <td class="py-3 px-4 text-slate-500 text-sm">{{ formatDate(office.created_at) }}</td>
+                                <td class="py-3 px-4 text-right">
                                     <button @click="openOfficeModal(office)" class="text-blue-600 hover:text-blue-800 text-sm font-medium mr-3">编辑</button>
+                                    <button @click="viewOfficeUsers(office)" class="text-green-600 hover:text-green-800 text-sm font-medium mr-3">用户</button>
                                     <button @click="deleteOffice(office)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
                                 </td>
                             </tr>
                             <tr v-if="filteredOffices.length === 0">
-                                <td colspan="9" class="py-12 text-center text-slate-400">
+                                <td colspan="7" class="py-12 text-center text-slate-400">
                                     <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                     </svg>
@@ -2391,7 +2020,7 @@
                         <textarea v-model="officeForm.description" rows="2" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="备注信息"></textarea>
                     </div>
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" v-model="officeForm.is_common" :true-value="1" :false-value="0" id="is_common" />
+                        <input type="checkbox" v-model="officeForm.is_common" :true-value="1" :false-value="0" id="is_common" class="w-4 h-4 text-blue-600 rounded" />
                         <label for="is_common" class="text-sm text-slate-700">设为常用办公室（在领水页面优先显示）</label>
                     </div>
                     <div class="flex gap-3 pt-2">
@@ -2421,182 +2050,63 @@
 
 
 
-            <!-- Settlement Tab (结算管理) -->
-            <div v-if="activeTab === 'settlement'" class="stat-card">
-                <!-- 标签页导航 -->
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg">
-                        <button @click="settlementTab = 'overview'" :class="settlementTab === 'overview' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'" class="px-4 py-2 rounded-md text-sm font-medium transition-all">📊 结算概览</button>
-                        <button @click="settlementTab = 'records'" :class="settlementTab === 'records' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'" class="px-4 py-2 rounded-md text-sm font-medium transition-all relative">
-                            📋 结算记录
-                            <span v-if="settlementStats.pendingCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ settlementStats.pendingCount }}</span>
-                        </button>
+            <!-- Office Settlement Tab (办公室结算) -->
+            <div v-if="activeTab === 'officeSettlement'" class="stat-card">
+                <!-- 操作栏 -->
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-xl font-bold text-slate-800">办公室结算管理</h2>
+                        <span v-if="officeSettlementAppliedCount > 0" class="bg-amber-500 text-white text-xs px-2 py-1 rounded-full">{{ officeSettlementAppliedCount }}笔待确认</span>
                     </div>
-                    <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 hover:bg-slate-50 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <button @click="loadOfficeSettlements" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
                         刷新
                     </button>
                 </div>
 
-                <!-- 结算概览仪表盘 -->
-                <div v-if="settlementTab === 'overview'" class="space-y-6">
-                    <!-- 统计卡片 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-amber-600 font-medium">待确认申请</p>
-                                    <p class="text-3xl font-bold text-amber-700 mt-1">{{ settlementStats.pendingCount }}</p>
-                                    <p class="text-sm text-amber-600 mt-1">¥{{ settlementStats.pendingAmount.toFixed(2) }}</p>
+                <!-- 筛选器 -->
+                <div class="flex gap-2 mb-6">
+                    <button @click="officeSettlementFilter = 'all'; filterOfficeSettlements()" :class="officeSettlementFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'" class="px-4 py-2 rounded-lg font-medium">全部</button>
+                    <button @click="officeSettlementFilter = 'applied'; filterOfficeSettlements()" :class="officeSettlementFilter === 'applied' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-4 py-2 rounded-lg font-medium">待确认</button>
+                    <button @click="officeSettlementFilter = 'confirmed'; filterOfficeSettlements()" :class="officeSettlementFilter === 'confirmed' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600'" class="px-4 py-2 rounded-lg font-medium">已确认</button>
+                </div>
+
+                <!-- 结算列表 -->
+                <div v-if="officeSettlements.length > 0" class="space-y-3">
+                    <div v-for="s in officeSettlements" :key="s.id" class="bg-white border rounded-xl p-4 hover:shadow-md transition">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-bold text-slate-800">{{ s.office_name }}</span>
+                                    <span class="text-slate-400 text-sm">({{ s.office_room_number }})</span>
+                                    <span :class="s.status === 'applied' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'" class="text-xs px-2 py-0.5 rounded-full">
+                                        {{ s.status === 'applied' ? '待确认' : '已确认' }}
+                                    </span>
                                 </div>
-                                <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center">
-                                    <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div class="text-sm text-slate-500">
+                                    结算单号: {{ s.settlement_no }} | 申请时间: {{ s.applied_at ? new Date(s.applied_at).toLocaleString('zh-CN') : '-' }}
                                 </div>
-                            </div>
-                        </div>
-                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-green-600 font-medium">本月已结算</p>
-                                    <p class="text-3xl font-bold text-green-700 mt-1">{{ settlementStats.monthlyCount }}</p>
-                                    <p class="text-sm text-green-600 mt-1">¥{{ settlementStats.monthlyAmount.toFixed(2) }}</p>
-                                </div>
-                                <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                                    <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-blue-600 font-medium">本周结算</p>
-                                    <p class="text-3xl font-bold text-blue-700 mt-1">{{ settlementStats.weeklyCount }}</p>
-                                    <p class="text-sm text-blue-600 mt-1">¥{{ settlementStats.weeklyAmount.toFixed(2) }}</p>
-                                </div>
-                                <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                                    <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                <div class="text-sm text-slate-500 mt-1">
+                                    申请人: {{ s.applied_by || '-' }}
                                 </div>
                             </div>
-                        </div>
-                        <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-purple-600 font-medium">累计结算</p>
-                                    <p class="text-3xl font-bold text-purple-700 mt-1">{{ settlementStats.totalCount }}</p>
-                                    <p class="text-sm text-purple-600 mt-1">¥{{ settlementStats.totalAmount.toFixed(2) }}</p>
-                                </div>
-                                <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-                                    <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-slate-800">¥{{ s.total_amount.toFixed(2) }}</div>
+                                <div class="text-sm text-slate-500">{{ s.total_quantity }}桶</div>
+                                <button v-if="s.status === 'applied'" @click="confirmOfficeSettlement(s.id)" class="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium">
+                                    确认收款
+                                </button>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 快速操作 -->
-                    <div class="bg-white border rounded-xl p-4">
-                        <h3 class="font-semibold text-slate-800 mb-3">⚡ 快速操作</h3>
-                        <div class="flex flex-wrap gap-2">
-                            <button v-if="settlementStats.pendingCount > 0" @click="batchConfirmAllSettlements" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                批量确认 ({{ settlementStats.pendingCount }})
-                            </button>
-                            <button @click="sendReminderToUnsettled" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                                提醒未结算
-                            </button>
                         </div>
                     </div>
                 </div>
-
-                <!-- 结算记录 -->
-                <div v-if="settlementTab === 'records'" class="space-y-4">
-                    <!-- 筛选器 -->
-                    <div class="flex flex-wrap items-center gap-3 mb-4">
-                        <input v-model="settlementSearch" type="text" placeholder="搜索办公室名称..." class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-[150px]" />
-                        <select v-model="settlementRecordFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="all">全部状态</option>
-                            <option value="applied">付款待确认</option>
-                            <option value="confirmed">已结清</option>
-                        </select>
-                        <input type="date" v-model="settlementDateFrom" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none" />
-                        <span class="text-slate-400">至</span>
-                        <input type="date" v-model="settlementDateTo" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none" />
-                    </div>
-                    
-                    <!-- 批量操作 -->
-                    <div class="flex flex-wrap items-center gap-2 mb-4">
-                        <button v-if="selectedSettlementApps.length > 0" @click="batchConfirmOfficeSettlements" class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                            批量确认 ({{ selectedSettlementApps.length }})
-                        </button>
-                        <button v-if="selectedSettlementApps.length > 0" @click="batchSendSettlementRemind" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                            批量提醒
-                        </button>
-                        <button @click="exportSettlementRecords" class="px-3 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            导出
-                        </button>
-                    </div>
-                    
-                    <!-- 记录卡片列表 -->
-                    <div v-if="filteredOfficeSettlements.length > 0" class="space-y-3">
-                        <div v-for="record in filteredOfficeSettlements" :key="record.id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
-                            <div @click="toggleSettlementAppDetail(record.id)" class="p-4 cursor-pointer">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex items-start gap-3">
-                                        <input type="checkbox" :value="record.id" v-model="selectedSettlementApps" @click.stop />
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <span class="font-semibold text-slate-800">{{ record.office_name }}</span>
-                                                <span class="text-slate-400 text-sm">({{ record.office_room_number || '-' }})</span>
-                                                <span :class="record.status === 'confirmed' ? 'bg-green-100 text-green-700' : (record.status === 'applied' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700')" class="text-xs px-2 py-0.5 rounded-full">
-                                                    {{ record.status === 'confirmed' ? '已结清' : (record.status === 'applied' ? '付款待确认' : '待付款') }}
-                                                </span>
-                                            </div>
-                                            <div class="text-sm text-slate-500">
-                                                结算单号: {{ record.settlement_no }} | 申请时间: {{ record.applied_at ? new Date(record.applied_at).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                            <div class="text-sm text-slate-500 mt-1">
-                                                桶数: {{ record.total_quantity }}桶 | 申请人: {{ record.applied_by || '-' }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-2xl font-bold text-slate-800">¥{{ (record.total_amount || 0).toFixed(2) }}</div>
-                                        <div class="flex gap-2 mt-2 justify-end">
-                                            <button v-if="record.status === 'applied'" @click.stop="sendSettlementRemind(record)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
-                                                提醒
-                                            </button>
-                                            <button v-if="record.status === 'applied'" @click.stop="confirmOfficeSettlement(record.id)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
-                                                确认收款
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                                    <span class="text-xs text-slate-500">点击查看明细</span>
-                                    <span class="text-xs text-slate-400">{{ expandedSettlementAppId === record.id ? '▲ 收起' : '▼ 展开' }}</span>
-                                </div>
-                            </div>
-                            <div v-if="expandedSettlementAppId === record.id && record.pickups && record.pickups.length > 0" class="border-t border-slate-200 bg-slate-50 p-3">
-                                <div class="text-xs font-medium text-slate-600 mb-2">明细列表</div>
-                                <div class="space-y-2 max-h-48 overflow-y-auto">
-                                    <div v-for="p in record.pickups" :key="p.id" class="bg-white rounded-lg p-2 text-xs flex justify-between items-center">
-                                        <div>
-                                            <div class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</div>
-                                            <div class="text-slate-400">{{ new Date(p.pickup_time).toLocaleString('zh-CN') }}</div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="font-medium text-slate-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-else class="text-center py-12 text-slate-400">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                        <p>暂无结算记录</p>
-                    </div>
+                <div v-else class="text-center py-12 text-slate-400">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                    <p>暂无结算记录</p>
                 </div>
             </div>
     </div>
@@ -2608,7 +2118,7 @@
         console.log('=== Admin.html Script Started ===');
         console.log('Vue available:', typeof Vue !== 'undefined');
         
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
         console.log('Vue APIs extracted:', { createApp: !!createApp, ref: !!ref, computed: !!computed, onMounted: !!onMounted });
 
         createApp({
@@ -2629,366 +2139,12 @@
                 // ========== 新增：导航增强状态 ==========
                 const sidebarMobileOpen = ref(false); // 移动端侧边栏开关
                 const showBackToTop = ref(false); // 是否显示返回顶部
-                const activeTab = ref(localStorage.getItem('activeTab') || 'dashboard'); // 当前选中的标签页
-                watch(activeTab, (newVal) => {
-                    localStorage.setItem('activeTab', newVal);
-                });
+                const activeTab = ref('dashboard'); // 当前选中的标签页
 
                 // ========== 回收站相关状态 ==========
                 const trashList = ref([]); // 回收站列表
                 const selectedTrash = ref([]); // 已选择的回收站记录
-                const selectedOffices = ref([]); // 已选择的办公室
-                const allOfficesSelected = computed(() => filteredOffices.value.length > 0 && selectedOffices.value.length === filteredOffices.value.length);
                 const selectAllTrash = ref(false); // 全选状态
-                
-                // ========== 领水记录相关状态 ==========
-                const officePickups = ref([]); // 领水记录列表
-                const selectedPickups = ref([]); // 选中的领水记录
-                const officePickupFilter = ref({ officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '' }); // 筛选状态
-                
-                const filteredPickups = computed(() => {
-                    let result = officePickups.value;
-                    const f = officePickupFilter.value;
-                    if (f.status) {
-                        result = result.filter(p => p.settlement_status === f.status);
-                    }
-                    if (f.officeId) {
-                        result = result.filter(p => p.office_id === parseInt(f.officeId));
-                    }
-                    if (f.productId) {
-                        result = result.filter(p => p.product_id === parseInt(f.productId));
-                    }
-                    if (f.dateFrom) {
-                        const from = new Date(f.dateFrom);
-                        result = result.filter(p => new Date(p.pickup_time) >= from);
-                    }
-                    if (f.dateTo) {
-                        const to = new Date(f.dateTo);
-                        to.setHours(23, 59, 59);
-                        result = result.filter(p => new Date(p.pickup_time) <= to);
-                    }
-                    if (f.searchPerson) {
-                        const kw = f.searchPerson.toLowerCase();
-                        result = result.filter(p => p.pickup_person && p.pickup_person.toLowerCase().includes(kw));
-                    }
-                    return result;
-                });
-                
-                const allPickupsSelected = computed(() => {
-                    const pending = filteredPickups.value.filter(p => p.settlement_status !== 'settled');
-                    return pending.length > 0 && selectedPickups.value.length === pending.length;
-                });
-                
-                const selectedPendingAmount = computed(() => {
-                    return selectedPickups.value.reduce((sum, id) => {
-                        const p = officePickups.value.find(x => x.id === id);
-                        return sum + (p && p.settlement_status === 'pending' ? p.total_amount : 0);
-                    }, 0);
-                });
-                
-                const selectedAppliedAmount = computed(() => {
-                    return selectedPickups.value.reduce((sum, id) => {
-                        const p = officePickups.value.find(x => x.id === id);
-                        return sum + (p && p.settlement_status === 'applied' ? p.total_amount : 0);
-                    }, 0);
-                });
-                
-                const selectedPendingCount = computed(() => {
-                    return selectedPickups.value.filter(id => {
-                        const p = officePickups.value.find(x => x.id === id);
-                        return p && p.settlement_status === 'pending';
-                    }).length;
-                });
-                
-                const selectedAppliedCount = computed(() => {
-                    return selectedPickups.value.filter(id => {
-                        const p = officePickups.value.find(x => x.id === id);
-                        return p && p.settlement_status === 'applied';
-                    }).length;
-                });
-                
-                const pickupStats = computed(() => {
-                    const pending = officePickups.value.filter(p => p.settlement_status === 'pending');
-                    const applied = officePickups.value.filter(p => p.settlement_status === 'applied');
-                    const settled = officePickups.value.filter(p => p.settlement_status === 'settled');
-                    return {
-                        total: { count: officePickups.value.length, amount: officePickups.value.reduce((s, p) => s + (p.total_amount || 0), 0) },
-                        pending: { count: pending.length, amount: pending.reduce((s, p) => s + (p.total_amount || 0), 0) },
-                        applied: { count: applied.length, amount: applied.reduce((s, p) => s + (p.total_amount || 0), 0) },
-                        settled: { count: settled.length, amount: settled.reduce((s, p) => s + (p.total_amount || 0), 0) }
-                    };
-                });
-                
-                // ========== 结算管理相关状态 ==========
-                const settlementTab = ref('overview'); // overview/applications/records/office
-                
-                // 结算统计数据
-                const settlementStats = ref({
-                    pendingCount: 0,
-                    pendingAmount: 0,
-                    monthlyCount: 0,
-                    monthlyAmount: 0,
-                    weeklyCount: 0,
-                    weeklyAmount: 0,
-                    totalCount: 0,
-                    totalAmount: 0
-                });
-                
-                // 结算申请列表
-                const settlementApplications = ref([]);
-                const settlementAppFilter = ref('all');
-                const settlementSearch = ref('');
-                const selectedSettlementApps = ref([]);
-                const expandedSettlementAppId = ref(null);
-                
-                // 结算记录
-                const settlementRecords = ref([]);
-                const settlementRecordFilter = ref('all');
-                const settlementDateFrom = ref('');
-                const settlementDateTo = ref('');
-                
-                // 计算属性
-                const filteredSettlementApps = computed(() => {
-                    let result = settlementApplications.value;
-                    if (settlementAppFilter.value !== 'all') {
-                        result = result.filter(a => a.status === settlementAppFilter.value);
-                    }
-                    if (settlementSearch.value) {
-                        const q = settlementSearch.value.toLowerCase();
-                        result = result.filter(a => 
-                            (a.user_name && a.user_name.toLowerCase().includes(q)) ||
-                            (a.applied_by && a.applied_by.toLowerCase().includes(q)) ||
-                            (a.office_name && a.office_name.toLowerCase().includes(q))
-                        );
-                    }
-                    return result;
-                });
-                
-                const filteredSettlementRecords = computed(() => {
-                    let result = settlementRecords.value;
-                    if (settlementRecordFilter.value !== 'all') {
-                        result = result.filter(r => r.status === settlementRecordFilter.value);
-                    }
-                    return result;
-                });
-                
-                // 筛选后的办公室结算申请
-                const filteredOfficeSettlements = computed(() => {
-                    let result = officeSettlements.value;
-                    // 按状态筛选
-                    if (settlementRecordFilter.value && settlementRecordFilter.value !== 'all') {
-                        result = result.filter(s => s.status === settlementRecordFilter.value);
-                    }
-                    // 按办公室名称搜索
-                    if (settlementSearch.value) {
-                        const q = settlementSearch.value.toLowerCase();
-                        result = result.filter(s => 
-                            s.office_name && s.office_name.toLowerCase().includes(q)
-                        );
-                    }
-                    // 按日期筛选
-                    if (settlementDateFrom.value) {
-                        const from = new Date(settlementDateFrom.value);
-                        result = result.filter(s => s.applied_at && new Date(s.applied_at) >= from);
-                    }
-                    if (settlementDateTo.value) {
-                        const to = new Date(settlementDateTo.value);
-                        to.setHours(23, 59, 59);
-                        result = result.filter(s => s.applied_at && new Date(s.applied_at) <= to);
-                    }
-                    return result;
-                });
-                
-                // 加载结算统计数据
-                const loadSettlementStats = async () => {
-                    try {
-                        // 获取办公室结算
-                        const officeRes = await fetch(`${API_BASE}/admin/office-settlements`);
-                        if (!officeRes.ok) {
-                            console.error('Failed to load office settlements:', officeRes.status);
-                            return;
-                        }
-                        const offices = await officeRes.json();
-                        if (offices && offices.length > 0) {
-                            const now = new Date();
-                            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                            const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
-                            
-                            const pending = offices.filter(o => o.status === 'applied');
-                            const confirmed = offices.filter(o => o.status === 'confirmed');
-                            const thisWeek = confirmed.filter(o => o.confirmed_at && new Date(o.confirmed_at) >= weekAgo);
-                            const thisMonth = confirmed.filter(o => o.confirmed_at && new Date(o.confirmed_at) >= monthAgo);
-                            
-                            settlementStats.value = {
-                                pendingCount: pending.length,
-                                pendingAmount: pending.reduce((s, o) => s + (o.total_amount || 0), 0),
-                                monthlyCount: thisMonth.length,
-                                monthlyAmount: thisMonth.reduce((s, o) => s + (o.total_amount || 0), 0),
-                                weeklyCount: thisWeek.length,
-                                weeklyAmount: thisWeek.reduce((s, o) => s + (o.total_amount || 0), 0),
-                                totalCount: offices.length,
-                                totalAmount: offices.reduce((s, o) => s + (o.total_amount || 0), 0)
-                            };
-                        }
-                        
-                        // 获取个人结算申请
-                        const appRes = await fetch(`${API_BASE}/admin/settlement-applications`);
-                        if (appRes.ok) {
-                            const apps = await appRes.json();
-                            // 合并到统计
-                            const pendingApps = apps.filter(a => a.status === 'applied');
-                            settlementStats.value.pendingCount += pendingApps.length;
-                            settlementStats.value.pendingAmount += pendingApps.reduce((s, a) => s + (a.total_amount || 0), 0);
-                        }
-                    } catch (e) {
-                        console.error('加载结算统计失败:', e);
-                    }
-                };
-                
-                // 加载结算申请列表
-                const loadSettlementApplications = async () => {
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/settlement-applications`);
-                        if (res.ok) {
-                            settlementApplications.value = await res.json();
-                        }
-                    } catch (e) {
-                        console.error('加载结算申请失败:', e);
-                    }
-                };
-                
-                // 批量确认办公室结算
-                const batchConfirmOfficeSettlements = async () => {
-                    if (!confirm(`确认已收到选中的 ${selectedSettlementApps.value.length} 笔结算款项？`)) return;
-                    try {
-                        for (const id of selectedSettlementApps.value) {
-                            await fetch(`${API_BASE}/admin/office-settlement/${id}/confirm`, { method: 'POST' });
-                        }
-                        selectedSettlementApps.value = [];
-                        alert('批量确认成功');
-                        loadOfficeSettlements();
-                        loadSettlementStats();
-                    } catch (e) {
-                        console.error('批量确认失败:', e);
-                        alert('批量确认失败');
-                    }
-                };
-                
-                // 发送结算提醒（单个）
-                const sendSettlementRemind = async (app) => {
-                    if (!confirm(`向 "${app.office_name}" 发送结算提醒？`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/office-settlement/${app.id}/reminder`, {
-                            method: 'POST'
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            alert(`提醒发送成功！已提醒 ${data.reminder_count} 次`);
-                            loadOfficeSettlements();
-                        } else {
-                            alert('发送提醒失败');
-                        }
-                    } catch (e) {
-                        console.error('发送提醒失败:', e);
-                        alert('发送提醒失败');
-                    }
-                };
-                
-                // 批量发送结算提醒
-                const batchSendSettlementRemind = async () => {
-                    if (selectedSettlementApps.value.length === 0) {
-                        alert('请先选择要发送提醒的办公室');
-                        return;
-                    }
-                    if (!confirm(`向选中的 ${selectedSettlementApps.value.length} 个办公室发送结算提醒？`)) return;
-                    try {
-                        for (const id of selectedSettlementApps.value) {
-                            const app = filteredOfficeSettlements.value.find(a => a.id === id);
-                            if (app) {
-                                await fetch(`${API_BASE}/admin/remind-unsettled?days=7&office_id=${app.office_id}`);
-                            }
-                        }
-                        alert(`已向 ${selectedSettlementApps.value.length} 个办公室发送提醒`);
-                    } catch (e) {
-                        console.error('批量发送提醒失败:', e);
-                        alert('批量发送提醒失败');
-                    }
-                };
-                
-                // 批量确认所有待确认
-                const batchConfirmAllSettlements = async () => {
-                    if (!confirm(`确认所有 ${settlementStats.value.pendingCount} 笔待确认结算？`)) return;
-                    try {
-                        // 确认办公室结算
-                        const officeRes = await fetch(`${API_BASE}/admin/office-settlements?status=applied`);
-                        if (officeRes.ok) {
-                            const offices = await officeRes.json();
-                            for (const o of offices) {
-                                await fetch(`${API_BASE}/admin/office-settlement/${o.id}/confirm`, { method: 'POST' });
-                            }
-                        }
-                        // 确认个人申请
-                        const appRes = await fetch(`${API_BASE}/admin/settlement-applications`);
-                        if (appRes.ok) {
-                            const apps = await appRes.json();
-                            for (const a of apps.filter(app => app.status === 'applied')) {
-                                await fetch(`${API_BASE}/admin/confirm-settlement`, {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({ transaction_ids: [a.transaction_ids?.[0] || a.id] })
-                                });
-                            }
-                        }
-                        alert('批量确认成功');
-                        loadSettlementStats();
-                        loadOfficeSettlements();
-                        loadSettlementApplications();
-                    } catch (e) {
-                        console.error('批量确认失败:', e);
-                        alert('批量确认失败');
-                    }
-                };
-                
-                // 提醒未结算用户
-                const sendReminderToUnsettled = async () => {
-                    if (!confirm('向所有未结算用户发送提醒？')) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/remind-unsettled?days=30`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            alert(`已向 ${data.count || 0} 个用户发送提醒`);
-                        }
-                    } catch (e) {
-                        console.error('发送提醒失败:', e);
-                    }
-                };
-                
-                // 导出结算记录
-                const exportSettlementRecords = () => {
-                    alert('导出功能开发中...');
-                };
-                
-                // 加载所有结算记录
-                const loadAllSettlementRecords = async () => {
-                    try {
-                        const [officeRes, appRes] = await Promise.all([
-                            fetch(`${API_BASE}/admin/office-settlements`),
-                            fetch(`${API_BASE}/admin/settlement-applications`)
-                        ]);
-                        const officeRecords = officeRes.ok ? await officeRes.json() : [];
-                        const appRecords = appRes.ok ? await appRes.json() : [];
-                        settlementRecords.value = [...officeRecords, ...appRecords].sort((a, b) => 
-                            new Date(b.applied_at || 0) - new Date(a.applied_at || 0)
-                        );
-                    } catch (e) {
-                        console.error('加载结算记录失败:', e);
-                    }
-                };
-                
-                // ========== 预付账户相关状态 ==========
-                const officeAccounts = ref([]); // 预付账户列表
-                const officeAccountFilter = ref({}); // 筛选状态
                 
                 // ========== 办公室结算相关状态 ==========
                 const officeSettlements = ref([]); // 办公室结算列表
@@ -3051,122 +2207,6 @@
                 const applications = ref([]);
                 const remindList = ref([]);
                 const remindDays = ref(30);
-                
-                // ========== 提醒管理增强 ==========
-                const remindTab = ref('inventory');
-                const remindFilter = ref('all');
-                const remindSearch = ref('');
-                const autoRemind = ref(false);
-                const autoRemindDays = ref(30);
-                const autoInventoryAlert = ref(false);
-                const inventoryAlertFilter = ref('all');
-                
-                const unsettledStats = ref({
-                    totalUsers: 0, 
-                    totalAmount: 0,
-                    over60Days: 0, 
-                    over60Amount: 0,
-                    over30Days: 0, 
-                    over30Amount: 0,
-                    over7Days: 0, 
-                    over7Amount: 0
-                });
-                
-                const inventoryAlertCount = computed(() => inventoryAlerts.value.length);
-                
-                const filteredRemindList = computed(() => {
-                    let result = remindList.value;
-                    if (remindFilter.value !== 'all') {
-                        if (remindFilter.value === 'over60') result = result.filter(r => r.overdue_days >= 60);
-                        else if (remindFilter.value === 'over30') result = result.filter(r => r.overdue_days >= 30 && r.overdue_days < 60);
-                        else if (remindFilter.value === 'over7') result = result.filter(r => r.overdue_days >= 7 && r.overdue_days < 30);
-                        else if (remindFilter.value === 'below7') result = result.filter(r => r.overdue_days < 7);
-                    }
-                    if (remindSearch.value) {
-                        const q = remindSearch.value.toLowerCase();
-                        result = result.filter(r => (r.office_name && r.office_name.toLowerCase().includes(q)) || (r.department && r.department.toLowerCase().includes(q)));
-                    }
-                    return result;
-                });
-                
-                const filteredInventoryAlerts = computed(() => {
-                    let result = inventoryAlerts.value;
-                    if (inventoryAlertFilter.value === 'warning') result = result.filter(a => a.stock > 0 && a.stock <= a.threshold);
-                    else if (inventoryAlertFilter.value === 'out') result = result.filter(a => a.stock === 0);
-                    return result;
-                });
-                
-                const loadRemindData = async () => {
-                    await Promise.all([loadRemindList(), loadUnsettledStats()]);
-                };
-                
-                const loadUnsettledStats = async () => {
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/unsettled-stats`);
-                        if (res.ok) unsettledStats.value = await res.json();
-                    } catch (e) { console.error('加载未结算统计失败:', e); }
-                };
-                
-                const sendSingleRemind = async (item) => {
-                    if (!confirm(`向 "${item.office_name || item.department}" 发送结算提醒？`)) return;
-                    try {
-                        await fetch(`${API_BASE}/admin/remind-unsettled?days=${item.overdue_days || 1}&user_id=${item.id}`);
-                        alert('提醒发送成功');
-                        item.reminded = true;
-                    } catch (e) { alert('发送提醒失败'); }
-                };
-                
-                const sendBulkRemind = async (type) => {
-                    const users = filteredRemindList.value;
-                    let targetUsers = users;
-                    if (type === 'overdue') targetUsers = users.filter(u => u.overdue_days >= 60);
-                    else if (type === 'warning') targetUsers = users.filter(u => u.overdue_days >= 30 && u.overdue_days < 60);
-                    if (targetUsers.length === 0) { alert('没有符合条件的用户'); return; }
-                    if (!confirm(`向 ${targetUsers.length} 个用户发送提醒？`)) return;
-                    try {
-                        for (const user of targetUsers) {
-                            await fetch(`${API_BASE}/admin/remind-unsettled?days=${user.overdue_days || 1}&user_id=${user.id}`);
-                        }
-                        alert(`已向 ${targetUsers.length} 个用户发送提醒`);
-                        loadRemindList();
-                    } catch (e) { alert('批量发送提醒失败'); }
-                };
-                
-                const quickSettle = async (item) => {
-                    if (!confirm(`确认一键结算 "${item.office_name || item.department}" 的所有待付款记录？`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/settle-by-department?department=${encodeURIComponent(item.department)}`, { method: 'POST' });
-                        if (res.ok) { alert('结算成功'); loadRemindList(); }
-                    } catch (e) { alert('结算失败'); }
-                };
-                
-                const quickRestock = async (product) => {
-                    const amount = prompt(`请输入补货数量 (${product.name}):`, '20');
-                    if (!amount || isNaN(amount)) return;
-                    try {
-                        await fetch(`${API_BASE}/products/${product.id}/stock`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ quantity: parseInt(amount) })
-                        });
-                        alert('补货成功');
-                        loadInventoryAlerts();
-                    } catch (e) { alert('补货失败'); }
-                };
-                
-                const saveReminderSettings = () => {
-                    localStorage.setItem('autoRemind', autoRemind.value);
-                    localStorage.setItem('autoRemindDays', autoRemindDays.value);
-                    localStorage.setItem('autoInventoryAlert', autoInventoryAlert.value);
-                    alert('设置已保存');
-                };
-                
-                const loadReminderSettings = () => {
-                    autoRemind.value = localStorage.getItem('autoRemind') === 'true';
-                    autoRemindDays.value = parseInt(localStorage.getItem('autoRemindDays')) || 30;
-                    autoInventoryAlert.value = localStorage.getItem('autoInventoryAlert') === 'true';
-                };
-                
                 const departmentReport = ref([]);
                 const inventoryAlerts = ref([]);
                 
@@ -3176,7 +2216,6 @@
                 const officeSearch = ref('');
                 const officeSortBy = ref('name');
                 const officeSortOrder = ref('asc');
-                const officeCommonFilter = ref('all');
                 const showOfficeModal = ref(false);
                 const editingOffice = ref(null);
                 const showOfficeUsersModal = ref(false);
@@ -3212,25 +2251,10 @@
 
 
                 const filteredProducts = computed(() => {
-                    let result = products.value;
-                    
-                    // 库存预警筛选
-                    if (inventoryAlertFilter.value !== 'all') {
-                        if (inventoryAlertFilter.value === 'out') {
-                            result = result.filter(p => p.stock === 0);
-                        } else if (inventoryAlertFilter.value === 'warning') {
-                            result = result.filter(p => p.stock > 0 && p.stock <= (p.stock_alert || 10));
-                        } else if (inventoryAlertFilter.value === 'normal') {
-                            result = result.filter(p => p.stock > (p.stock_alert || 10));
-                        }
+                    if (showInactive.value) {
+                        return products.value;
                     }
-                    
-                    // 激活状态筛选
-                    if (!showInactive.value) {
-                        result = result.filter(p => p.is_active === 1);
-                    }
-                    
-                    return result;
+                    return products.value.filter(p => p.is_active === 1);
                 });
 
                 const totalStats = computed(() => {
@@ -3352,54 +2376,6 @@
                     }
                 };
                 
-                const toggleAllOffices = () => {
-                    if (allOfficesSelected.value) {
-                        selectedOffices.value = [];
-                    } else {
-                        selectedOffices.value = filteredOffices.value.map(o => o.id);
-                    }
-                };
-                
-                const toggleOfficeCommon = async (office) => {
-                    const newValue = office.is_common === 1 ? 0 : 1;
-                    try {
-                        const res = await fetch(`${API_BASE}/offices/${office.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ is_common: newValue })
-                        });
-                        if (res.ok) {
-                            office.is_common = newValue;
-                            loadOffices();
-                        }
-                    } catch (e) {
-                        console.error('更新常用状态失败:', e);
-                    }
-                };
-                
-                const batchSetCommon = async (isCommon) => {
-                    if (selectedOffices.value.length === 0) {
-                        alert('请先选择要设置的办公室（勾选列表左侧的复选框）');
-                        return;
-                    }
-                    if (!confirm(`确认将选中的 ${selectedOffices.value.length} 个办公室设为${isCommon === 1 ? '常用' : '不常用'}？`)) return;
-                    try {
-                        for (const id of selectedOffices.value) {
-                            await fetch(`${API_BASE}/offices/${id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ is_common: isCommon })
-                            });
-                        }
-                        selectedOffices.value = [];
-                        loadOffices();
-                        alert('批量设置成功');
-                    } catch (e) {
-                        console.error('批量设置失败:', e);
-                        alert('批量设置失败');
-                    }
-                };
-                
                 const viewOfficeUsers = async (office) => {
                     try {
                         const res = await fetch(`${API_BASE}/offices/${office.id}/users`);
@@ -3418,14 +2394,6 @@
 
                 const filteredOffices = computed(() => {
                     let result = offices.value;
-                    
-                    // 常用状态筛选
-                    if (officeCommonFilter.value !== 'all') {
-                        const isCommon = officeCommonFilter.value === 'common' ? 1 : 0;
-                        result = result.filter(o => o.is_common === isCommon);
-                    }
-                    
-                    // 搜索筛选
                     if (officeSearch.value) {
                         const q = officeSearch.value.toLowerCase();
                         result = result.filter(o => 
@@ -3434,8 +2402,6 @@
                             (o.leader_name && o.leader_name.toLowerCase().includes(q))
                         );
                     }
-                    
-                    // 排序
                     result = [...result].sort((a, b) => {
                         let va = a[officeSortBy.value] || '';
                         let vb = b[officeSortBy.value] || '';
@@ -3764,7 +2730,7 @@
                 };
 
                 const settleDepartment = async (department) => {
-                    if (!confirm(`确认结算 "${department}" 的所有待付款记录？`)) return;
+                    if (!confirm(`确认结算 "${department}" 的所有待结算记录？`)) return;
                     try {
                         await fetch(`${API_BASE}/admin/settle-by-department?department=${encodeURIComponent(department)}`, {
                             method: 'POST'
@@ -3808,183 +2774,8 @@
                     }
                 };
                 
-                const toggleSettlementAppDetail = (id) => {
-                    expandedSettlementAppId.value = expandedSettlementAppId.value === id ? null : id;
-                };
-                
                 const filterOfficeSettlements = () => {
                     loadOfficeSettlements();
-                };
-                
-                // ========== 领水记录相关方法 ==========
-                const loadOfficePickups = async () => {
-                    try {
-                        const url = `${API_BASE}/user/office-pickups?limit=10000`;
-                        const res = await fetch(url);
-                        officePickups.value = await res.json();
-                        selectedPickups.value = [];
-                    } catch (e) {
-                        console.error('Failed to load office pickups:', e);
-                    }
-                };
-                
-                const resetOfficePickupFilter = () => {
-                    officePickupFilter.value = { officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '' };
-                    selectedPickups.value = [];
-                    loadOfficePickups();
-                };
-                
-                const filterByStatus = (status) => {
-                    officePickupFilter.value.status = status;
-                    selectedPickups.value = [];
-                    loadOfficePickups();
-                };
-                
-                const toggleAllPickups = () => {
-                    const pending = filteredPickups.value.filter(p => p.settlement_status !== 'settled');
-                    if (selectedPickups.value.length === pending.length) {
-                        selectedPickups.value = [];
-                    } else {
-                        selectedPickups.value = pending.map(p => p.id);
-                    }
-                };
-                
-                const confirmSinglePickup = async (id) => {
-                    if (!confirm('确认已收到该款项？')) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/settle`, { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                            alert(data.detail || '确认失败');
-                            return;
-                        }
-                        alert('已确认收款');
-                        loadOfficePickups();
-                        loadDashboard();
-                    } catch (e) {
-                        console.error('Failed to confirm pickup:', e);
-                        alert('确认失败: ' + e.message);
-                    }
-                };
-                
-                const sendRemindForPickup = async (p) => {
-                    if (!confirm(`确定向 ${p.pickup_person || '该用户'} 发送付款提醒？`)) return;
-                    try {
-                        console.log('Sending remind for pickup:', p.id, `${API_BASE}/admin/office-pickup/${p.id}/remind`);
-                        const res = await fetch(`${API_BASE}/admin/office-pickup/${p.id}/remind`, { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        console.log('Response status:', res.status);
-                        const data = await res.json();
-                        console.log('Response data:', data);
-                        if (!res.ok) {
-                            alert(data.detail || '发送提醒失败');
-                            return;
-                        }
-                        alert(data.message || '已发送付款提醒');
-                    } catch (e) {
-                        console.error('Failed to send remind:', e);
-                        alert('发送提醒失败: ' + e.message + '，请确保后端服务已启动');
-                    }
-                };
-                
-                const batchConfirmPickups = async () => {
-                    if (selectedPickups.value.length === 0) return;
-                    if (!confirm(`确认已收到选中的 ${selectedAppliedCount.value} 条记录的款项？`)) return;
-                    try {
-                        for (const id of selectedPickups.value) {
-                            const p = officePickups.value.find(x => x.id === id);
-                            if (p && p.settlement_status === 'applied') {
-                                const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/settle`, { 
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                                if (!res.ok) {
-                                    const data = await res.json();
-                                    console.error('Failed to settle pickup', id, data);
-                                }
-                            }
-                        }
-                        alert('批量确认收款成功');
-                        selectedPickups.value = [];
-                        loadOfficePickups();
-                        loadDashboard();
-                    } catch (e) {
-                        console.error('Failed to batch confirm:', e);
-                        alert('批量确认失败: ' + e.message);
-                    }
-                };
-                
-                const batchRemindPickups = async () => {
-                    if (selectedPickups.value.length === 0) return;
-                    if (!confirm(`确定向选中的 ${selectedPendingCount.value} 条记录的用户发送付款提醒？`)) return;
-                    try {
-                        for (const id of selectedPickups.value) {
-                            const p = officePickups.value.find(x => x.id === id);
-                            if (p && p.settlement_status === 'pending') {
-                                const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/remind`, { 
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                                if (!res.ok) {
-                                    const data = await res.json();
-                                    console.error('Failed to remind pickup', id, data);
-                                }
-                            }
-                        }
-                        alert('批量提醒发送成功');
-                        selectedPickups.value = [];
-                    } catch (e) {
-                        console.error('Failed to batch remind:', e);
-                        alert('批量提醒失败: ' + e.message);
-                    }
-                };
-                
-                const exportPickups = (data, filename) => {
-                    let csv = '序号,时间,办公室,房间号,产品,规格,数量,单价,金额,领取人,状态\n';
-                    data.forEach((p, i) => {
-                        const status = { pending: '待付款', applied: '付款待确认', settled: '已结清' }[p.settlement_status];
-                        csv += `${i+1},${p.pickup_time},${p.office_name},${p.office_room_number || ''},${p.product_name},${p.product_specification || ''},${p.quantity},${p.unit_price},${p.total_amount},${p.pickup_person},${status}\n`;
-                    });
-                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
-                };
-                
-                const exportFilteredPickups = () => {
-                    if (filteredPickups.value.length === 0) {
-                        alert('没有可导出的数据');
-                        return;
-                    }
-                    exportPickups(filteredPickups.value, `领水记录_筛选_${new Date().toISOString().slice(0,10)}.csv`);
-                };
-                
-                const exportAllPickups = () => {
-                    if (officePickups.value.length === 0) {
-                        alert('没有可导出的数据');
-                        return;
-                    }
-                    exportPickups(officePickups.value, `领水记录_全部_${new Date().toISOString().slice(0,10)}.csv`);
-                };
-                
-                const filterOfficePickups = () => {
-                    selectedPickups.value = [];
-                };
-                
-                // ========== 预付账户相关方法 ==========
-                const loadOfficeAccounts = async () => {
-                    try {
-                        const res = await fetch(`${API_BASE}/office-accounts`);
-                        officeAccounts.value = await res.json();
-                    } catch (e) {
-                        console.error('Failed to load office accounts:', e);
-                    }
                 };
 
                 const updateStock = async (product) => {
@@ -4134,7 +2925,7 @@
 
 尊敬的 ${user.user_name} (${user.department})：
 
-                    您在水站有待付款金额 ¥${user.total_amount.toFixed(2)}，共计 ${user.transaction_count} 笔记录。
+您在水站有待结算金额 ¥${user.total_amount.toFixed(2)}，共计 ${user.transaction_count} 笔记录。
 
 请及时登录系统提交结算申请或联系管理员完成结算。
 
@@ -4172,11 +2963,7 @@
                     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                     // 加载对应数据
                     if (tab === 'offices') loadOffices();
-                    if (tab === 'officePickups') loadOfficePickups();
-                    if (tab === 'settlement') { selectedSettlementApps.value = []; expandedSettlementAppId.value = null; loadSettlementStats(); loadOfficeSettlements(); }
-                    if (tab === 'officeAccounts') loadOfficeAccounts();
                     if (tab === 'officeSettlement') loadOfficeSettlements();
-                    if (tab === 'remind') { loadReminderSettings(); loadRemindData(); }
                 };
 
                 // 导航到用户管理页面（独立页面）
@@ -4401,16 +3188,6 @@
                     
                     // 加载用户数据（用于用户管理 Tab）
                     loadUsersData();
-                    
-                    // 根据当前标签页加载对应数据
-                    if (activeTab.value === 'officePickups') {
-                        loadOfficePickups();
-                    }
-                    if (activeTab.value === 'settlement') {
-                        selectedSettlementApps.value = [];
-                        loadSettlementStats();
-                        loadOfficeSettlements();
-                    }
                 });
 
                 // ==================== 认证相关函数 ====================
@@ -4542,18 +3319,12 @@
                     officeSearch,
                     officeSortBy,
                     officeSortOrder,
-                    officeCommonFilter,
                     filteredOffices,
                     loadOffices,
                     openOfficeModal,
                     saveOffice,
                     deleteOffice,
                     viewOfficeUsers,
-                    selectedOffices,
-                    allOfficesSelected,
-                    toggleAllOffices,
-                    toggleOfficeCommon,
-                    batchSetCommon,
                     // 用户管理相关
                     allUsers,
                     userSearchQuery,
@@ -4608,57 +3379,9 @@
                     settleOne,
                     settleSelected,
                     settleDepartment,
-                    loadOfficePickups,
-                    filterOfficePickups,
-                    loadOfficeAccounts,
                     loadOfficeSettlements,
                     confirmOfficeSettlement,
                     filterOfficeSettlements,
-                    toggleSettlementAppDetail,
-                    officePickups,
-                    selectedPickups,
-                    filteredPickups,
-                    allPickupsSelected,
-                    selectedPendingAmount,
-                    selectedAppliedAmount,
-                    selectedPendingCount,
-                    selectedAppliedCount,
-                    officePickupFilter,
-                    pickupStats,
-                    resetOfficePickupFilter,
-                    filterByStatus,
-                    toggleAllPickups,
-                    confirmSinglePickup,
-                    sendRemindForPickup,
-                    batchConfirmPickups,
-                    batchRemindPickups,
-                    exportFilteredPickups,
-                    exportAllPickups,
-                    officeAccounts,
-                    settlementTab,
-                    unsettledStats,
-                    settlementStats,
-                    settlementApplications,
-                    settlementAppFilter,
-                    settlementSearch,
-                    selectedSettlementApps,
-                    expandedSettlementAppId,
-                    filteredSettlementApps,
-                    filteredOfficeSettlements,
-                    settlementRecords,
-                    settlementRecordFilter,
-                    settlementDateFrom,
-                    settlementDateTo,
-                    filteredSettlementRecords,
-                    loadSettlementStats,
-                    loadSettlementApplications,
-                    batchConfirmOfficeSettlements,
-                    batchConfirmAllSettlements,
-                    sendSettlementRemind,
-                    batchSendSettlementRemind,
-                    sendReminderToUnsettled,
-                    exportSettlementRecords,
-                    loadAllSettlementRecords,
                     updateStock,
                     updateStockOne,
                     addProduct,

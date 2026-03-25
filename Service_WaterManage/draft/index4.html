@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能水站 - 领水登记</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [v-cloak] { display: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6; }
+        #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .office-card {
+            border: 1px solid #E5E7EB;
+            background: white;
+            transition: all 0.15s;
+        }
+        .office-card:hover { border-color: #3B82F6; }
+        .office-card.active {
+            border-color: #2563EB;
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+        }
+        
+        .product-item {
+            background: white;
+            border-bottom: 1px solid #F3F4F6;
+        }
+        
+        .qty-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+        }
+        .qty-btn-minus { background: #F3F4F6; color: #6B7280; }
+        .qty-btn-minus:hover { background: #E5E7EB; }
+        .qty-btn-plus { background: #2563EB; color: white; }
+        .qty-btn-plus:hover { background: #1D4ED8; }
+        .qty-input {
+            width: 56px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 6px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+        }
+        .qty-input:focus { outline: none; border-color: #2563EB; }
+    </style>
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.write('<div style="min-height:100vh;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:white;display:flex;align-items:center;justify-content:center;padding:20px;font-family:sans-serif;"><div style="max-width:400px;text-align:center;"><h1>请使用 HTTP 服务器访问</h1><p>cd frontend && python -m http.server 3000</p></div></div>');
+            throw new Error('Please use HTTP server');
+        }
+    </script>
+</head>
+<body>
+    <div id="loading"><div class="spinner"></div></div>
+    
+    <div id="app" v-cloak>
+        <!-- 顶部 -->
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white">
+            <h1 class="text-lg font-bold">💧 智能水站</h1>
+        </header>
+        
+        <div class="pb-24 px-3 py-4">
+            <!-- 步骤1: 选择办公室 -->
+            <div class="mb-4">
+                <div class="text-sm font-medium text-gray-700 mb-2">1. 选择办公室</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div v-for="office in offices" :key="office.id"
+                         @click="selectOffice(office)"
+                         :class="form.officeId === office.id ? 'office-card active' : 'office-card'"
+                         class="rounded-lg p-2 cursor-pointer text-center">
+                        <div class="text-xs text-gray-400">{{ office.room_number }}</div>
+                        <div class="text-sm font-medium text-gray-800 truncate">{{ office.name }}</div>
+                        <div class="text-xs text-blue-500 mt-1">
+                            <i class="fas fa-user mr-1"></i>{{ office.leader_name }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 步骤2: 领取规格和数量 -->
+            <div v-if="form.officeId" class="mb-4">
+                <div class="text-sm font-medium text-gray-700 mb-2">
+                    2. 领取规格和数量 <span class="text-gray-400 font-normal">({{ selectedOffice?.name }})</span>
+                </div>
+                <div class="bg-white rounded-lg overflow-hidden">
+                    <div v-for="product in products" :key="product.id" class="product-item px-3 py-3">
+                        <div class="flex items-center">
+                            <!-- 产品信息 -->
+                            <div class="flex-1">
+                                <div class="text-sm font-medium text-gray-800">{{ product.name }}</div>
+                                <div class="text-xs text-gray-500">{{ product.specification }}</div>
+                            </div>
+                            <!-- 单价 -->
+                            <div class="w-16 text-right mr-4">
+                                <div class="text-sm font-medium text-blue-600">¥{{ product.price }}</div>
+                                <div class="text-xs text-gray-400">/{{ product.unit }}</div>
+                            </div>
+                            <!-- 数量选择 -->
+                            <div class="flex items-center gap-1">
+                                <button @click="decreaseQty(product.id)" :disabled="!cart[product.id]" class="qty-btn qty-btn-minus">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
+                                <button @click="increaseQty(product.id)" class="qty-btn qty-btn-plus">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 步骤3: 领取人和时间 -->
+            <div v-if="form.officeId && totalQty > 0" class="mb-4">
+                <div class="text-sm font-medium text-gray-700 mb-2">3. 领取人和时间</div>
+                <div class="bg-white rounded-lg p-3 space-y-3">
+                    <!-- 领取人 -->
+                    <div class="flex items-center">
+                        <div class="w-16 text-sm text-gray-500">领取人</div>
+                        <select v-model="form.personId" @change="onPersonChange" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                            <option value="">请选择</option>
+                            <option v-for="user in officeUsers" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <button @click="toggleManualPerson" class="ml-2 text-xs text-blue-600 px-2">手动</button>
+                    </div>
+                    <div v-if="useManualPerson" class="flex items-center">
+                        <div class="w-16 text-sm text-gray-500"></div>
+                        <input v-model="form.personName" placeholder="请输入姓名" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                    </div>
+                    <!-- 领取时间 -->
+                    <div class="flex items-center">
+                        <div class="w-16 text-sm text-gray-500">领取时间</div>
+                        <input type="datetime-local" v-model="form.pickupTime" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 未选择办公室提示 -->
+            <div v-if="!form.officeId" class="text-center py-8 text-gray-400 text-sm">
+                请先选择办公室
+            </div>
+        </div>
+        
+        <!-- 底部提交栏 -->
+        <div v-if="form.officeId" class="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 z-50">
+            <div class="flex items-center justify-between mb-2">
+                <div class="text-sm">
+                    <span class="text-gray-500">已选 </span>
+                    <span class="text-blue-600 font-bold">{{ totalQty }}</span>
+                    <span class="text-gray-500"> 件</span>
+                </div>
+                <div class="text-xl font-bold text-blue-600">¥{{ totalAmount }}</div>
+            </div>
+            <button @click="submitPickup" :disabled="!canSubmit" 
+                    :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'"
+                    class="w-full text-white py-3 rounded-lg font-bold text-base">
+                确认提交
+            </button>
+        </div>
+        
+        <!-- 收款二维码 -->
+        <div v-if="paymentQrCode" class="fixed bottom-24 right-3 z-40">
+            <img :src="paymentQrCode" @error="paymentQrCode = null" class="w-14 h-14 rounded-lg border-2 border-white shadow-lg" alt="支付">
+        </div>
+        
+        <!-- 成功弹窗 -->
+        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showSuccess = false">
+            <div class="bg-white rounded-2xl p-6 text-center max-w-xs">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-check text-xl text-green-500"></i>
+                </div>
+                <h3 class="font-bold mb-2">提交成功</h3>
+                <p class="text-sm text-gray-500 mb-3">{{ successMessage }}</p>
+                <button @click="showSuccess = false; resetForm()" class="w-full bg-blue-600 text-white py-2 rounded-lg">确定</button>
+            </div>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg z-50 text-sm">
+            {{ errorMessage }}
+        </div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue;
+        const API_BASE = localStorage.getItem('API_BASE') || 'http://localhost:8000/api';
+        
+        createApp({
+            data() {
+                return {
+                    offices: [], officeUsers: [], products: [],
+                    form: { officeId: '', personId: '', personName: '', pickupTime: '' },
+                    cart: {},
+                    useManualPerson: false,
+                    showSuccess: false, successMessage: '', errorMessage: '', paymentQrCode: null
+                };
+            },
+            computed: {
+                selectedOffice() { return this.offices.find(o => o.id === this.form.officeId); },
+                totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
+                totalAmount() {
+                    return this.products.reduce((sum, p) => sum + (this.cart[p.id] || 0) * p.price, 0).toFixed(2);
+                },
+                canSubmit() {
+                    if (!this.form.officeId || this.totalQty === 0) return false;
+                    if (!this.form.personId && !this.form.personName) return false;
+                    return true;
+                },
+                pickerName() {
+                    if (this.form.personId) {
+                        const user = this.officeUsers.find(u => u.id === this.form.personId);
+                        return user ? user.name : '';
+                    }
+                    return this.form.personName || '';
+                }
+            },
+            async mounted() {
+                document.getElementById('loading').style.display = 'none';
+                await this.loadData();
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                this.form.pickupTime = now.toISOString().slice(0, 16);
+            },
+            methods: {
+                async loadData() {
+                    try {
+                        const [officesRes, productsRes] = await Promise.all([
+                            fetch(`${API_BASE}/user/offices-with-balance`),
+                            fetch(`${API_BASE}/products?is_active=1`)
+                        ]);
+                        if (officesRes.ok) this.offices = await officesRes.json();
+                        if (productsRes.ok) {
+                            this.products = await productsRes.json();
+                            this.products.forEach(p => this.cart[p.id] = 0);
+                        }
+                    } catch (e) { console.error(e); }
+                    this.loadPaymentQr();
+                },
+                async loadPaymentQr() {
+                    try {
+                        const res = await fetch(`${API_BASE}/config/payment-qr`);
+                        if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; }
+                    } catch (e) { console.error(e); }
+                },
+                async selectOffice(office) {
+                    this.form.officeId = office.id;
+                    this.form.personId = '';
+                    this.form.personName = '';
+                    this.useManualPerson = false;
+                    
+                    // 加载办公室用户
+                    try {
+                        const res = await fetch(`${API_BASE}/offices/${office.id}/users`);
+                        if (res.ok) this.officeUsers = await res.json();
+                    } catch (e) { console.error(e); }
+                    
+                    // 自动设置默认负责人
+                    const leader = this.officeUsers.find(u => u.name === office.leader_name);
+                    if (leader) {
+                        this.form.personId = leader.id;
+                    } else if (office.leader_name) {
+                        this.form.personName = office.leader_name;
+                    }
+                },
+                onPersonChange() {
+                    if (this.form.personId) this.useManualPerson = false;
+                },
+                toggleManualPerson() {
+                    this.useManualPerson = !this.useManualPerson;
+                    if (this.useManualPerson) this.form.personId = '';
+                },
+                increaseQty(productId) {
+                    this.cart[productId] = (this.cart[productId] || 0) + 1;
+                },
+                decreaseQty(productId) {
+                    if (this.cart[productId] > 0) this.cart[productId]--;
+                },
+                validateQty(productId) {
+                    let v = this.cart[productId] || 0;
+                    if (v < 0) v = 0;
+                    this.cart[productId] = v;
+                },
+                async submitPickup() {
+                    if (!this.canSubmit) { this.showError('请填写完整信息'); return; }
+                    const items = Object.entries(this.cart).filter(([k, v]) => v > 0);
+                    if (items.length === 0) { this.showError('请选择产品数量'); return; }
+                    
+                    const personName = this.form.personId 
+                        ? (this.officeUsers.find(u => u.id === this.form.personId)?.name || '') 
+                        : this.form.personName;
+                    
+                    try {
+                        for (const [productId, qty] of items) {
+                            const res = await fetch(`${API_BASE}/user/office-pickup`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    office_id: this.form.officeId,
+                                    product_id: parseInt(productId),
+                                    quantity: qty,
+                                    pickup_person: personName,
+                                    pickup_person_id: this.form.personId || null,
+                                    pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null
+                                })
+                            });
+                            if (!res.ok) { const e = await res.json(); this.showError(e.detail || '提交失败'); return; }
+                        }
+                        this.successMessage = '提交成功！';
+                        this.showSuccess = true;
+                        this.resetForm();
+                    } catch (e) { this.showError('网络错误'); }
+                },
+                resetForm() {
+                    this.form = { officeId: '', personId: '', personName: '', pickupTime: this.form.pickupTime };
+                    this.products.forEach(p => this.cart[p.id] = 0);
+                    this.useManualPerson = false;
+                },
+                showError(m) { this.errorMessage = m; setTimeout(() => this.errorMessage = '', 3000); }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

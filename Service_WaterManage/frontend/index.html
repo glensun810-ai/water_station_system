@@ -3,1041 +3,834 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能水站</title>
+    <title>智能水站 - 领水登记</title>
     <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #F8FAFC;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-        }
-        #loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e5e5e5;
-            border-top-color: #2563EB;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        [v-cloak] { display: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6; }
+        #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .tab-active {
-            color: #2563EB;
-            border-bottom: 2px solid #2563EB;
-        }
-        .btn-press {
-            transition: transform 0.1s ease;
-        }
-        .btn-press:active {
-            transform: scale(0.98);
-        }
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        button, a, input, select {
-            min-height: 44px;
-            min-width: 44px;
-        }
-        @media (max-width: 768px) {
-            input, select, textarea {
-                font-size: 16px !important;
-            }
-        }
-        @supports (padding-bottom: env(safe-area-inset-bottom)) {
-            .safe-bottom {
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-        }
-        .card-shadow {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        /* 快捷入口图标 */
-        .shortcut-icon {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 16px;
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        /* 快捷键提示 */
-        .shortcut-hint {
-            font-size: 10px;
-            color: #94a3b8;
-            background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 6px;
-            font-family: monospace;
-        }
+        
+        .office-card { border: 1px solid #E5E7EB; background: white; transition: all 0.15s; }
+        .office-card:hover { border-color: #3B82F6; }
+        .office-card.active { border-color: #2563EB; background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); }
+        
+        .product-item { background: white; border-bottom: 1px solid #F3F4F6; }
+        
+        .qty-btn { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; border: none; }
+        .qty-btn-minus { background: #F3F4F6; color: #6B7280; }
+        .qty-btn-minus:hover { background: #E5E7EB; }
+        .qty-btn-plus { background: #2563EB; color: white; }
+        .qty-btn-plus:hover { background: #1D4ED8; }
+        .qty-input { width: 56px; text-align: center; font-size: 18px; font-weight: 600; padding: 6px; border: 1px solid #E5E7EB; border-radius: 8px; }
+        .qty-input:focus { outline: none; border-color: #2563EB; }
+        
+        .tab-btn { padding: 12px 20px; font-weight: 500; color: #6B7280; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; }
+        
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .status-pending { background: #FEF3C7; color: #92400E; }
+        .status-applied { background: #DBEAFE; color: #1E40AF; }
+        .status-settled, .status-confirmed { background: #D1FAE5; color: #065F46; }
     </style>
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.write('<div style="min-height:100vh;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:white;display:flex;align-items:center;justify-content:center;padding:20px;font-family:sans-serif;"><div style="max-width:400px;text-align:center;"><h1>请使用 HTTP 服务器访问</h1><p>cd frontend && python -m http.server 3000</p></div></div>');
+            throw new Error('Please use HTTP server');
+        }
+    </script>
 </head>
 <body>
-    <!-- Loading 页面 -->
-    <div id="loading">
-        <div style="text-align: center;">
-            <div class="spinner" style="margin: 0 auto 16px;"></div>
-            <p style="color: #666; font-size: 14px;">加载中...</p>
-        </div>
-    </div>
-
-    <!-- Vue 应用 -->
-    <div id="app" style="display: none;" class="overflow-x-hidden">
-        <!-- Header - 个性化问候 -->
-        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-6 sticky top-0 z-10 safe-top" v-if="currentUser">
-            <div class="flex justify-between items-center">
-                <div class="min-w-0 flex-1">
-                    <p class="text-white text-sm opacity-90 mb-1">{{ greetingText }}</p>
-                    <h1 class="text-white text-xl font-bold truncate">👋 {{ currentUser.name }}</h1>
-                    <p class="text-white text-xs opacity-80 mt-1">{{ currentUser.department }} · 本月已领 {{ userStatus.month_total_qty || 0 }} 桶</p>
-                </div>
+    <div id="loading"><div class="spinner"></div></div>
+    
+    <div id="app" v-cloak>
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white">
+            <div class="flex items-center justify-between">
+                <h1 class="text-lg font-bold">💧 智能水站</h1>
                 <div class="flex items-center gap-2">
-                    <!-- 消息中心入口 -->
-                    <a href="notifications.html" class="relative bg-white/20 p-2 rounded-lg ml-2 flex-shrink-0 active:opacity-70 transition-opacity backdrop-blur-sm" title="消息中心">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        <span v-if="unreadCount > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">{{ unreadCount }}</span>
-                    </a>
-                    <button @click="showUserSelect = true" class="text-xs bg-white/20 text-white px-3 py-2 rounded-lg ml-2 flex-shrink-0 active:opacity-70 transition-opacity backdrop-blur-sm">
-                        切换用户
+                    <button @click="showOfficeSwitcher = true" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+                        <i class="fas fa-building"></i>
+                        <span class="max-w-[120px] truncate">{{ currentOfficeName || '选择办公室' }}</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
                     </button>
+                    <a href="my-offices.html" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm">
+                        <i class="fas fa-cog"></i>
+                    </a>
                 </div>
             </div>
         </header>
-
-        <!-- Tabs -->
-        <div class="bg-white border-b flex overflow-x-auto safe-top" style="-webkit-overflow-scrolling: touch;">
-            <button @click="activeTab = 'pickup'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'pickup' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
-                💧 领水
-            </button>
-            <button @click="activeTab = 'prepaid'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'prepaid' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
-                💳 我的预付
-            </button>
-            <button @click="activeTab = 'records'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'records' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
-                📋 记录
-            </button>
-            <button @click="activeTab = 'settlement'" :class="['flex-shrink-0 flex-1 min-w-[80px] py-3 text-sm font-medium transition-colors', activeTab === 'settlement' ? 'tab-active' : 'text-slate-500 active:bg-slate-50']">
-                💰 结算
-            </button>
+        
+        <div class="bg-white border-b flex">
+            <button @click="activeTab = 'pickup'" :class="activeTab === 'pickup' ? 'tab-btn active' : 'tab-btn'">领水登记</button>
+            <button @click="activeTab = 'records'" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">我的记录</button>
+            <button @click="activeTab = 'settlement'" :class="activeTab === 'settlement' ? 'tab-btn active' : 'tab-btn'">结算管理</button>
         </div>
-
-        <!-- 主内容区 -->
-        <div class="px-4 pb-36 sm:pb-32" v-if="appLoaded">
-            <!-- 领水 Tab -->
-            <div v-if="activeTab === 'pickup'">
-                <!-- 模式切换 Tab -->
-                <div class="mb-4 mt-4">
-                    <div class="flex bg-slate-100 rounded-xl p-1">
-                        <button @click="pickupMode = 'pay_later'" 
-                            :class="['flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-                                pickupMode === 'pay_later' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500']">
-                            🔄 先用后付
-                        </button>
-                        <button @click="pickupMode = 'prepay'" 
-                            :class="['flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-                                pickupMode === 'prepay' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500']">
-                            💳 先付后用
-                        </button>
-                    </div>
-                    <div v-if="pickupMode === 'prepay'" class="mt-2 text-xs text-green-600 text-center bg-green-50 py-2 rounded-lg">
-                        ✨ 先付后用享优惠：买 10 赠 1，更划算！
-                    </div>
-                </div>
-
-                <!-- 快捷入口 -->
-                <div class="mb-4 mt-4">
-                    <h2 class="text-sm font-bold text-slate-600 mb-3">快捷操作</h2>
-                    <div class="grid grid-cols-4 gap-3">
-                        <button @click="quickPickup(1)" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
-                            <div class="shortcut-icon bg-blue-50 text-blue-600 mx-auto">🪣</div>
-                            <p class="text-xs text-slate-600 font-medium">桶装水 ×1</p>
-                        </button>
-                        <button @click="quickPickup(2)" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
-                            <div class="shortcut-icon bg-blue-50 text-blue-600 mx-auto">🪣🪣</div>
-                            <p class="text-xs text-slate-600 font-medium">桶装水 ×2</p>
-                        </button>
-                        <button @click="quickPickup(5, 'bottle')" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
-                            <div class="shortcut-icon bg-green-50 text-green-600 mx-auto">🧴</div>
-                            <p class="text-xs text-slate-600 font-medium">瓶装水 ×5</p>
-                        </button>
-                        <button @click="activeTab = 'records'" class="bg-white rounded-2xl p-3 card-shadow btn-press text-center">
-                            <div class="shortcut-icon bg-purple-50 text-purple-600 mx-auto">📋</div>
-                            <p class="text-xs text-slate-600 font-medium">我的记录</p>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 状态卡片简化版 -->
-                <div class="bg-white rounded-2xl p-4 card-shadow mb-4">
-                    <div class="grid grid-cols-3 gap-3 text-center">
-                        <div>
-                            <p class="text-xs text-slate-500 mb-1">本月已领</p>
-                            <p class="text-2xl font-bold text-blue-600">{{ userStatus.month_total_qty || 0 }}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">桶</p>
-                        </div>
-                        <div class="border-l border-slate-100">
-                            <p class="text-xs text-slate-500 mb-1">待支付</p>
-                            <p class="text-2xl font-bold text-amber-600">¥{{ (userStatus.to_apply_amount || 0).toFixed(2) }}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">元</p>
-                        </div>
-                        <div class="border-l border-slate-100">
-                            <p class="text-xs text-slate-500 mb-1">已支付待确认</p>
-                            <p class="text-2xl font-bold text-green-600">¥{{ (userStatus.applied_amount || 0).toFixed(2) }}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">元</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 产品列表 -->
+        
+        <div class="pb-28 px-3 py-4">
+            <div v-show="activeTab === 'pickup'">
                 <div class="mb-4">
-                    <h2 class="text-sm font-bold text-slate-600 mb-3">选择领取规格</h2>
-
-                    <div v-if="inStockProducts.length === 0" class="text-center text-slate-400 py-8">
-                        暂时缺货，敬请期待
-                    </div>
-
-                    <div v-for="product in inStockProducts" :key="product.id"
-                        class="rounded-2xl border-2 p-4 mb-3 bg-white card-shadow">
-                        <div class="flex justify-between items-start mb-3 gap-2">
-                            <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-slate-800 truncate">{{ product.name }}</h3>
-                                <p class="text-sm text-slate-500">规格：{{ product.specification }}</p>
-                                <p class="text-sm text-slate-500">
-                                    库存：<span :class="product.stock < 10 ? 'text-red-500 font-bold' : 'text-green-600'">{{ product.stock }} {{ product.unit }}</span>
-                                </p>
-                                <!-- 根据模式显示优惠信息 -->
-                                <p v-if="pickupMode === 'pay_later'" class="text-xs text-slate-400 mt-1">
-                                    💰 先用后付：标准价格
-                                </p>
-                                <p v-else-if="promotionConfigs[product.id]" class="text-xs text-green-600 mt-1">
-                                    ✨ 先付后用：买{{ promotionConfigs[product.id].trigger_qty }}赠{{ promotionConfigs[product.id].gift_qty }}
-                                </p>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <p class="text-blue-600 font-bold text-lg">¥{{ product.price }}</p>
-                                <p class="text-xs text-slate-400">/{{ product.unit }}</p>
-                            </div>
-                        </div>
-
-                        <!-- 数量选择器 -->
-                        <div class="flex items-center justify-between bg-slate-50 rounded-xl p-3">
-                            <span class="text-sm text-slate-600">领取数量：</span>
-                            <div class="flex items-center gap-3">
-                                <button @click="decreaseQuantity(product.id)" :disabled="getQuantity(product.id) <= 0"
-                                    class="w-10 h-10 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold disabled:opacity-30 disabled:cursor-not-allowed active:bg-slate-100 transition-colors">
-                                    −
-                                </button>
-                                <span class="text-2xl font-bold text-slate-800 w-12 text-center">{{ getQuantity(product.id) }}</span>
-                                <button @click="increaseQuantity(product.id, product.stock)"
-                                    class="w-10 h-10 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold active:bg-slate-100 transition-colors">
-                                    +
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 预计价格 -->
-                        <div v-if="getQuantity(product.id) > 0" class="mt-3 text-right text-sm">
-                            <span class="text-slate-500">预计支付：</span>
-                            <span class="text-blue-600 font-bold text-lg">¥{{ estimateProductPrice(product).toFixed(2) }}</span>
-                            <span v-if="hasProductPromotion(product)" class="text-green-500 text-xs ml-1">(含优惠)</span>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm font-medium text-gray-700">1. 选择办公室</div>
+                        <div class="flex gap-1">
+                            <button @click="officeTab = 'common'" :class="officeTab === 'common' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">常用</button>
+                            <button @click="officeTab = 'uncommon'" :class="officeTab === 'uncommon' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">不常用</button>
                         </div>
                     </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div v-for="office in displayOffices" :key="office.id" @click="selectOffice(office)" :class="form.officeId === office.id ? 'office-card active' : 'office-card'" class="rounded-lg p-2 cursor-pointer text-center">
+                            <div class="text-xs text-gray-400">{{ office.room_number }}</div>
+                            <div class="text-sm font-medium text-gray-800 truncate">{{ office.name }}</div>
+                            <div class="text-xs text-blue-500 mt-1"><i class="fas fa-user mr-1"></i>{{ office.leader_name }}</div>
+                        </div>
+                    </div>
+                    <div v-if="displayOffices.length === 0" class="text-center py-4 text-gray-400 text-sm">{{ officeTab === 'common' ? '暂无常用办公室' : '暂无不常用办公室' }}</div>
                 </div>
-
-                <!-- 汇总和提交 -->
-                <div v-if="totalQuantity > 0" class="bg-white rounded-2xl p-4 border-2 border-blue-100 mb-4 card-shadow">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-base text-slate-600">总数量</span>
-                        <span class="text-xl font-bold text-slate-800">{{ totalQuantity }}</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-base text-slate-600">预计总额</span>
-                        <span class="text-xl font-bold text-blue-600">¥{{ totalEstimatedPrice.toFixed(2) }}</span>
-                    </div>
-                    <button @click="submitPickup" class="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-bold text-lg active:opacity-90 transition-opacity">
-                        确认领取
-                    </button>
-                </div>
-            </div>
-
-            <!-- 记录 Tab -->
-            <div v-if="activeTab === 'records'">
-                <h2 class="text-base font-bold text-slate-800 mb-3 mt-4">我的领取记录</h2>
-
-                <div v-if="userRecords.length === 0" class="text-center text-slate-400 py-12">
-                    <p>暂无记录</p>
-                </div>
-
-                <div class="space-y-2">
-                    <div v-for="record in userRecords" :key="record.id"
-                        :class="['rounded-xl p-4 border-2 card-shadow',
-                            record.status === 'settled' ? 'bg-green-50 border-green-100' :
-                            record.settlement_applied === 1 ? 'bg-blue-50 border-blue-100' :
-                            'bg-amber-50 border-amber-100']">
-                        <div class="flex justify-between items-start mb-2 gap-2">
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-slate-800 truncate">{{ record.product_name }}</p>
-                                <p class="text-xs text-slate-500 mt-1">{{ formatDate(record.created_at) }}</p>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
-                                <p :class="record.actual_price === 0 ? 'text-green-600 font-bold' : 'text-blue-600 font-bold'">
-                                    ¥{{ record.actual_price.toFixed(2) }}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center pt-2 border-t border-slate-200 gap-2">
-                            <span :class="['text-xs px-2 py-1 rounded-full',
-                                record.status === 'settled' ? 'bg-green-200 text-green-700' :
-                                record.settlement_applied === 1 ? 'bg-blue-200 text-blue-700' :
-                                'bg-amber-200 text-amber-700']">
-                                {{ record.status === 'settled' ? '✅ 已结算' : record.settlement_applied === 1 ? '⏳ 已支付待确认' : '⏰ 待支付' }}
-                            </span>
-                            <span v-if="record.note" class="text-xs text-slate-500 truncate flex-1">{{ record.note }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 我的预付 Tab -->
-            <div v-if="activeTab === 'prepaid'">
-                <h2 class="text-base font-bold text-slate-800 mb-3 mt-4">我的预付</h2>
-
-                <!-- 预付余额概览 -->
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white mb-4 card-shadow">
-                    <div class="flex justify-between items-center mb-3">
-                        <div>
-                            <p class="text-sm opacity-90 mb-1">预付余额总值</p>
-                            <p class="text-3xl font-bold">¥{{ prepaidBalance.summary?.total_remaining_value?.toFixed(2) || '0.00' }}</p>
-                        </div>
-                        <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/20">
-                        <div>
-                            <p class="text-xs opacity-80">预付订单数</p>
-                            <p class="text-lg font-bold">{{ prepaidBalance.summary?.total_orders || 0 }}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs opacity-80">预付总额</p>
-                            <p class="text-lg font-bold">¥{{ prepaidBalance.summary?.total_amount?.toFixed(2) || '0.00' }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 预付订单列表 -->
-                <div v-if="prepaidBalance.orders && prepaidBalance.orders.length > 0">
-                    <h3 class="text-sm font-bold text-slate-600 mb-3">预付订单 ({{ prepaidBalance.orders.length }})</h3>
-                    <div class="space-y-3">
-                        <div v-for="order in prepaidBalance.orders" :key="order.order_id"
-                            class="bg-white rounded-xl p-4 border-2 border-blue-100 card-shadow">
-                            <div class="flex justify-between items-start mb-3 gap-2">
+                
+                <div class="mb-4">
+                    <div class="text-sm font-medium text-gray-700 mb-2">2. 领取规格和数量 <span v-if="selectedOffice" class="text-gray-400 font-normal">({{ selectedOffice.name }})</span></div>
+                    <div class="bg-white rounded-lg overflow-hidden">
+                        <div v-for="product in products" :key="product.id" class="product-item px-3 py-3">
+                            <div class="flex items-center">
                                 <div class="flex-1">
-                                    <p class="font-bold text-slate-800">{{ order.product_name }}</p>
-                                    <p class="text-xs text-slate-500 mt-0.5">规格：{{ order.specification }}</p>
+                                    <div class="text-sm font-medium text-gray-800">{{ product.name }}</div>
+                                    <div class="text-xs text-gray-500">{{ product.specification }}</div>
+                                    <div v-if="getPrepaidQty(product.id) > 0" class="text-xs text-green-600 mt-1"><i class="fas fa-wallet mr-1"></i>已预付剩余: {{ getPrepaidQty(product.id) }}{{ product.unit }}</div>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-blue-600">¥{{ order.unit_price.toFixed(2) }}/{{ order.unit }}</p>
+                                <div class="w-16 text-right mr-4">
+                                    <div class="text-sm font-medium text-blue-600">¥{{ product.price }}</div>
+                                    <div class="text-xs text-gray-400">/{{ product.unit }}</div>
                                 </div>
-                            </div>
-
-                            <!-- 进度条 -->
-                            <div class="mb-3">
-                                <div class="flex justify-between text-xs text-slate-600 mb-1">
-                                    <span>总量：{{ order.total_qty }} {{ order.unit }}</span>
-                                    <span>剩余：{{ order.remaining_qty }} {{ order.unit }}</span>
+                                <div class="flex items-center gap-1">
+                                    <button @click="decreaseQty(product.id)" :disabled="!cart[product.id]" class="qty-btn qty-btn-minus"><i class="fas fa-minus"></i></button>
+                                    <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
+                                    <button @click="increaseQty(product.id)" class="qty-btn qty-btn-plus"><i class="fas fa-plus"></i></button>
                                 </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-blue-500 to-green-500 h-2.5 rounded-full transition-all duration-300"
-                                        :style="{ width: ((order.remaining_qty / order.total_qty) * 100) + '%' }"></div>
-                                </div>
-                                <div class="flex justify-between text-xs text-slate-500 mt-1">
-                                    <span>已用：{{ order.used_qty }}</span>
-                                    <span :class="order.remaining_qty <= order.total_qty * 0.2 ? 'text-red-600 font-bold' : ''">
-                                        {{ ((order.remaining_qty / order.total_qty) * 100).toFixed(0) }}%
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- 操作按钮 -->
-                            <div class="flex justify-between items-center pt-3 border-t border-slate-100">
-                                <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">✅ 已付款</span>
-                                <button @click="showPrepaidPickupModal = true; selectedPrepaidOrder = order"
-                                    :disabled="order.remaining_qty <= 0"
-                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium active:opacity-80 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                    领取
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div v-else class="text-center text-slate-400 py-12">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <p>暂无预付订单</p>
-                    <p class="text-xs mt-2">如需办理预付业务，请联系管理员</p>
-                </div>
-
-                <!-- 温馨提示 -->
-                <div class="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-4">
-                    <p class="text-sm font-bold text-amber-800 mb-2">💡 温馨提示</p>
-                    <ul class="text-xs text-amber-700 space-y-1">
-                        <li>• 领取时将从您的预付余额中扣减</li>
-                        <li>• 余量不足 20% 时会收到提醒</li>
-                        <li>• 如需续购请联系管理员</li>
-                    </ul>
+                
+                <div class="mb-4">
+                    <div class="text-sm font-medium text-gray-700 mb-2">3. 领取人和时间</div>
+                    <div class="bg-white rounded-lg p-3 space-y-3">
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">领取人</div>
+                            <select v-model="form.personId" @change="onPersonChange" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                                <option value="">请选择</option>
+                                <option v-for="user in officeUsers" :value="user.id">{{ user.name }}</option>
+                            </select>
+                            <button @click="toggleManualPerson" class="ml-2 text-xs text-blue-600 px-2">手动</button>
+                        </div>
+                        <div v-if="useManualPerson" class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500"></div>
+                            <input v-model="form.personName" placeholder="请输入姓名" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">领取时间</div>
+                            <input type="datetime-local" v-model="form.pickupTime" class="flex-1 text-sm px-2 py-2 border rounded-lg">
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- 结算 Tab -->
-            <div v-if="activeTab === 'settlement'">
-                <h2 class="text-base font-bold text-slate-800 mb-3 mt-4">结算管理</h2>
-
-                <!-- 状态概览 -->
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="bg-amber-50 rounded-xl p-4 border border-amber-100 card-shadow">
-                        <p class="text-xs text-amber-600 mb-1">待支付</p>
-                        <p class="text-2xl font-bold text-amber-700">¥{{ (userStatus.to_apply_amount || 0).toFixed(2) }}</p>
+            
+            <div v-show="activeTab === 'records'" class="pb-4">
+                <div class="px-3 pt-4">
+                    <div class="flex gap-2 mb-3">
+                        <input type="date" v-model="recordDateFrom" @change="filterRecordList" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                        <span class="text-slate-400 self-center">至</span>
+                        <input type="date" v-model="recordDateTo" @change="filterRecordList" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                        <button @click="resetRecordFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                     </div>
-                    <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 card-shadow">
-                        <p class="text-xs text-blue-600 mb-1">已支付待确认</p>
-                        <p class="text-2xl font-bold text-blue-700">¥{{ (userStatus.applied_amount || 0).toFixed(2) }}</p>
-                    </div>
-                </div>
 
-                <!-- 待申请结算 -->
-                <div v-if="toApplyRecords.length > 0" class="mb-6">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-slate-600">待支付 ({{ toApplyRecords.length }})</h3>
-                        <button @click="applySettlement" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg active:opacity-80 transition-opacity">
-                            批量申请
+                    <div class="grid grid-cols-4 gap-2 mb-3">
+                        <div @click="recordStatusFilter = ''" :class="recordStatusFilter === '' ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                            <div class="text-xl font-bold text-blue-600">{{ recordStats.total.count }}</div>
+                            <div class="text-xs text-blue-600">总记录</div>
+                            <div class="text-xs text-blue-400">¥{{ recordStats.total.amount.toFixed(2) }}</div>
+                        </div>
+                        <div @click="recordStatusFilter = 'pending'" :class="recordStatusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''" class="bg-yellow-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                            <div class="text-xl font-bold text-yellow-600">{{ recordStats.pending.count }}</div>
+                            <div class="text-xs text-yellow-600">待付款</div>
+                            <div class="text-xs text-yellow-400">¥{{ recordStats.pending.amount.toFixed(2) }}</div>
+                        </div>
+                        <div @click="recordStatusFilter = 'applied'" :class="recordStatusFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                            <div class="text-xl font-bold text-blue-600">{{ recordStats.applied.count }}</div>
+                            <div class="text-xs text-blue-600">付款待确认</div>
+                            <div class="text-xs text-blue-400">¥{{ recordStats.applied.amount.toFixed(2) }}</div>
+                        </div>
+                        <div @click="recordStatusFilter = 'settled'" :class="recordStatusFilter === 'settled' ? 'ring-2 ring-green-500' : ''" class="bg-green-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                            <div class="text-xl font-bold text-green-600">{{ recordStats.settled.count }}</div>
+                            <div class="text-xs text-green-600">已结清</div>
+                            <div class="text-xs text-green-400">¥{{ recordStats.settled.amount.toFixed(2) }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-3">
+                        <button @click="exportRecords('filtered')" class="flex-1 bg-white border border-slate-200 py-2 rounded-lg text-sm font-medium text-slate-600">
+                            📥 导出筛选
+                        </button>
+                        <button @click="exportRecords('all')" class="flex-1 bg-white border border-slate-200 py-2 rounded-lg text-sm font-medium text-slate-600">
+                            📥 导出全部
                         </button>
                     </div>
-                    <div class="space-y-2">
-                        <div v-for="record in toApplyRecords" :key="record.id"
-                            class="bg-white rounded-xl p-4 border-2 border-amber-100 card-shadow">
-                            <div class="flex justify-between items-start mb-2 gap-2">
-                                <div class="flex-1">
-                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
-                                    <p class="text-blue-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-slate-100 bg-amber-50 -mx-4 -mb-4 px-4 py-2 rounded-b-xl gap-2">
-                                <input type="checkbox" v-model="selectedToApply" :value="record.id" class="w-4 h-4">
-                                <span class="text-xs bg-amber-200 text-amber-700 px-2 py-1 rounded-full">待支付</span>
-                            </div>
+
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">领取时间</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">办公室</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">房间号</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">产品</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">数量</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">单价</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">金额</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">状态</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">领取人</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="r in filteredRecordList" :key="r.id" class="border-b border-slate-100 hover:bg-slate-50">
+                                        <td class="py-2 px-2 text-slate-600">{{ formatRecordDateFull(r.pickup_time) }}</td>
+                                        <td class="py-2 px-2 text-slate-800 font-medium">{{ r.office_name }}</td>
+                                        <td class="py-2 px-2 text-slate-600">{{ r.office_room_number || '-' }}</td>
+                                        <td class="py-2 px-2 text-slate-600">{{ r.product_name }}</td>
+                                        <td class="py-2 px-2 text-right text-slate-600">{{ r.quantity }}</td>
+                                        <td class="py-2 px-2 text-right text-slate-600">¥{{ r.unit_price.toFixed(2) }}</td>
+                                        <td class="py-2 px-2 text-right text-slate-800 font-medium">¥{{ r.total_amount.toFixed(2) }}</td>
+                                        <td class="py-2 px-2">
+                                            <span :class="getRecordStatusClass(r.settlement_status)" class="text-xs px-2 py-1 rounded-full">
+                                                {{ getRecordStatusText(r.settlement_status) }}
+                                            </span>
+                                        </td>
+                                        <td class="py-2 px-2 text-slate-600">{{ r.pickup_person }}</td>
+                                    </tr>
+                                    <tr v-if="filteredRecordList.length === 0">
+                                        <td colspan="9" class="py-8 text-center text-slate-400">暂无记录</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-
-                <!-- 已申请待确认 -->
-                <div v-if="appliedRecords.length > 0" class="mb-6">
-                    <h3 class="text-sm font-bold text-slate-600 mb-3">已支付待确认 ({{ appliedRecords.length }})</h3>
-                    <div class="space-y-2">
-                        <div v-for="record in appliedRecords" :key="record.id"
-                            class="bg-blue-50 rounded-xl p-4 border-2 border-blue-100 card-shadow">
-                            <div class="flex justify-between items-start mb-2 gap-2">
-                                <div class="flex-1">
-                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
-                                    <p class="text-blue-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-blue-100">
-                                <span class="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">已支付待确认</span>
-                                <span class="text-xs text-slate-500">管理员确认后完成结算</span>
-                            </div>
-                        </div>
-                    </div>
+            </div>
+            
+            <div v-show="activeTab === 'settlement'">
+                <div class="mb-3">
+                    <select v-model="settlementOfficeId" @change="onSettlementOfficeChange" class="w-full text-sm px-3 py-2 border rounded-lg bg-white">
+                        <option value="">请选择办公室</option>
+                        <option v-for="office in offices" :value="office.id">{{ office.name }} ({{ office.room_number }})</option>
+                    </select>
                 </div>
 
-                <!-- 已结算历史 -->
-                <div>
-                    <h3 class="text-sm font-bold text-slate-600 mb-3">已结算历史 ({{ settledRecords.length }})</h3>
-                    <div class="space-y-2">
-                        <div v-for="record in settledRecords" :key="record.id"
-                            class="bg-green-50 rounded-xl p-4 border-2 border-green-100 card-shadow">
-                            <div class="flex justify-between items-start mb-2 gap-2">
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div @click="showRechargeModal = true" :class="!settlementOfficeId ? 'opacity-50 pointer-events-none' : ''" class="bg-blue-50 rounded-xl p-2 text-center cursor-pointer hover:bg-blue-100">
+                        <div class="text-lg mb-1">💳</div>
+                        <div class="text-lg font-bold text-blue-600">{{ summary.prepaid_balance || 0 }}</div>
+                        <div class="text-xs text-blue-600">预付余额</div>
+                        <div class="text-[10px] text-blue-400 mt-0.5">点击充值</div>
+                    </div>
+                    <div @click="settlementStatus = 'pending'; loadSettlementData()" :class="settlementStatus === 'pending' ? 'ring-2 ring-yellow-500' : ''" class="bg-yellow-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                        <div class="text-lg font-bold text-yellow-600">{{ settlementStats.pending.count }}</div>
+                        <div class="text-xs text-yellow-600">待付款</div>
+                        <div class="text-xs text-yellow-400">¥{{ settlementStats.pending.amount.toFixed(2) }}</div>
+                    </div>
+                    <div @click="settlementStatus = 'confirmed'; loadSettlementData()" :class="settlementStatus === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="bg-green-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
+                        <div class="text-lg font-bold text-green-600">{{ settlementStats.confirmed.count }}</div>
+                        <div class="text-xs text-green-600">已结清</div>
+                        <div class="text-xs text-green-400">¥{{ settlementStats.confirmed.amount.toFixed(2) }}</div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-1 mb-3">
+                    <button @click="settlementStatus = 'all'; loadSettlementData()" :class="settlementStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium">全部</button>
+                    <button @click="settlementStatus = 'pending'; loadSettlementData()" :class="settlementStatus === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium">待付款</button>
+                    <button @click="settlementStatus = 'applied'; loadSettlementData()" :class="settlementStatus === 'applied' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium">付款待确认</button>
+                    <button @click="settlementStatus = 'confirmed'; loadSettlementData()" :class="settlementStatus === 'confirmed' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium">已结清</button>
+                    <button @click="openRechargeListModal" :class="!settlementOfficeId ? 'opacity-50' : ''" :disabled="!settlementOfficeId" class="py-1.5 px-2 rounded-lg text-xs font-medium bg-purple-100 text-purple-600 hover:bg-purple-200">充值记录</button>
+                </div>
+                
+                <div v-if="settlementStats.pending.count > 0 && settlementOfficeId" class="mb-3">
+                    <button @click="applySettlement" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl font-bold shadow-lg text-sm">
+                        🎯 申请结算 ({{ settlementStats.pending.count }}笔 ¥{{ settlementStats.pending.amount.toFixed(2) }})
+                    </button>
+                </div>
+                <div v-else-if="!settlementOfficeId" class="bg-gray-50 rounded-xl p-4 text-center mb-3 border">
+                    <div class="text-gray-400 text-sm">请先选择办公室</div>
+                </div>
+                
+                <div class="text-sm font-medium text-gray-600 mb-2">📋 结算单列表</div>
+                <div v-if="settlementList.length === 0" class="bg-white rounded-xl p-6 text-center border">
+                    <div class="text-gray-400 text-sm">暂无结算记录</div>
+                </div>
+                <div v-else class="space-y-3">
+                    <div v-for="s in settlementList" :key="s.id" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <div @click="toggleSettlementDetail(s.id)" class="p-3 cursor-pointer">
+                            <div class="flex justify-between items-start">
                                 <div class="flex-1">
-                                    <p class="font-bold text-slate-800">{{ record.product_name }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">{{ formatDateTime(record.created_at) }}</p>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span :class="getSettlementStatusClass(s.status)" class="text-[10px] px-2 py-0.5 rounded-full">
+                                            {{ getSettlementStatusText(s.status) }}
+                                        </span>
+                                        <span v-if="s.status === 'applied'" class="text-xs text-blue-500 animate-pulse">📤 等待确认</span>
+                                    </div>
+                                    <div class="text-sm font-bold text-slate-800">{{ s.settlement_no }}</div>
+                                    <div class="text-xs text-slate-400 mt-1">
+                                        申请时间: {{ s.applied_at ? new Date(s.applied_at).toLocaleString('zh-CN') : '-' }}
+                                    </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-sm font-medium text-slate-800">× {{ record.quantity }}</p>
-                                    <p class="text-green-600 font-bold">¥{{ record.actual_price.toFixed(2) }}</p>
+                                    <div class="text-lg font-bold" :class="s.status === 'confirmed' ? 'text-green-600' : (s.status === 'applied' ? 'text-blue-600' : 'text-yellow-600')">
+                                        ¥{{ (s.total_amount || 0).toFixed(2) }}
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ s.total_quantity }}笔</div>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-green-100">
-                                <span class="text-xs bg-green-600 text-white px-2 py-1 rounded-full">✅ 已结算</span>
+                            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                                <span class="text-xs text-slate-500">点击查看明细</span>
+                                <span class="text-xs text-slate-400">{{ expandedSettlementId === s.id ? '▲ 收起' : '▼ 展开' }}</span>
+                            </div>
+                        </div>
+                        <div v-if="expandedSettlementId === s.id && s.pickups && s.pickups.length > 0" class="border-t border-slate-200 bg-slate-50 p-2">
+                            <div class="text-xs font-medium text-slate-600 mb-2">明细列表</div>
+                            <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                                <div v-for="p in s.pickups" :key="p.id" class="bg-white rounded-lg p-2 text-xs flex justify-between items-center">
+                                    <div>
+                                        <div class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</div>
+                                        <div class="text-slate-400">{{ formatRecordDateFull(p.pickup_time) }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-medium text-slate-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- 用户选择弹窗 -->
-        <div v-if="showUserSelect" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
-                <h3 class="text-lg font-bold mb-4">选择用户</h3>
-                <div class="space-y-2 max-h-64 overflow-y-auto">
-                    <button v-for="user in users" :key="user.id"
-                        @click="selectUser(user)"
-                        :class="['w-full text-left px-4 py-3 rounded-lg transition-colors',
-                            currentUser?.id === user.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50']">
-                        {{ user.name }} ({{ user.department }})
+        
+        <div v-show="activeTab === 'pickup'" class="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 z-50">
+            <div class="flex items-center justify-between mb-2">
+                <div class="text-sm"><span class="text-gray-500">已选 </span><span class="text-blue-600 font-bold">{{ totalQty }}</span><span class="text-gray-500"> 件</span></div>
+                <div class="text-xl font-bold text-blue-600">¥{{ totalAmount }}</div>
+            </div>
+            <button @click="submitPickup" :disabled="!canSubmit" :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'" class="w-full text-white py-3 rounded-lg font-bold text-base">确认提交</button>
+        </div>
+        
+        <div v-if="paymentQrCode" class="fixed bottom-28 right-3 z-40">
+            <img :src="paymentQrCode" @error="paymentQrCode = null" class="w-14 h-14 rounded-lg border-2 border-white shadow-lg" alt="支付">
+        </div>
+        
+        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showSuccess = false">
+            <div class="bg-white rounded-2xl p-6 text-center max-w-xs">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-check text-xl text-green-500"></i></div>
+                <h3 class="font-bold mb-2">提交成功</h3>
+                <p class="text-sm text-gray-500 mb-3">{{ successMessage }}</p>
+                <button @click="showSuccess = false; resetForm()" class="w-full bg-blue-600 text-white py-2 rounded-lg">确定</button>
+            </div>
+        </div>
+        
+        <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg z-50 text-sm">{{ errorMessage }}</div>
+        
+        <div v-if="showRechargeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showRechargeModal = false">
+            <div class="bg-white rounded-2xl p-5 max-w-sm w-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">💳 账户充值</h3>
+                    <button @click="showRechargeModal = false" class="text-gray-400">
+                        <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
-                <button @click="showUserSelect = false" class="w-full mt-4 bg-slate-100 text-slate-700 py-3 rounded-xl font-medium active:opacity-80 transition-opacity">
-                    取消
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">选择产品</label>
+                        <select v-model="rechargeForm.productId" class="w-full px-3 py-2 border rounded-lg text-sm">
+                            <option v-for="p in rechargeProducts" :value="p.id">{{ p.name }} - ¥{{ p.price }}/桶</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">充值桶数</label>
+                        <div class="flex items-center gap-3">
+                            <button @click="rechargeForm.quantity > 1 && rechargeForm.quantity--" class="w-10 h-10 rounded-full bg-gray-100 text-gray-600 font-bold">-</button>
+                            <input type="number" v-model.number="rechargeForm.quantity" min="1" class="flex-1 px-3 py-2 border rounded-lg text-center text-lg font-bold">
+                            <button @click="rechargeForm.quantity++" class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold">+</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">备注说明</label>
+                        <input type="text" v-model="rechargeForm.note" placeholder="可选填写" class="w-full px-3 py-2 border rounded-lg text-sm">
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">充值金额</span>
+                            <span class="text-xl font-bold text-blue-600">¥{{ getRechargeTotal() }}</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-orange-500 bg-orange-50 rounded-lg p-2">
+                        ⚠️ 充值申请提交后需管理员审核，审核通过后余额将自动到账
+                    </div>
+                    <button @click="submitRecharge" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">
+                        提交充值申请
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showRechargeListModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showRechargeListModal = false">
+            <div class="bg-white rounded-2xl p-5 max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">📋 充值记录</h3>
+                    <button @click="showRechargeListModal = false" class="text-gray-400">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div v-if="rechargeList.length === 0" class="text-center py-8 text-gray-400">
+                    暂无充值记录
+                </div>
+                <div v-else class="flex-1 overflow-y-auto space-y-2">
+                    <div v-for="r in rechargeList" :key="r.id" class="bg-white border rounded-xl p-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-medium text-sm text-slate-800">{{ r.product_name }} × {{ r.quantity }}</div>
+                                <div class="text-xs text-slate-400 mt-1">{{ r.created_at ? new Date(r.created_at).toLocaleString('zh-CN') : '-' }}</div>
+                                <div v-if="r.note" class="text-xs text-slate-500 mt-1">备注: {{ r.note }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-blue-600">¥{{ (r.total_amount || 0).toFixed(2) }}</div>
+                                <div class="text-xs text-slate-400">{{ r.quantity }}桶</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button @click="showRechargeListModal = false" class="w-full bg-gray-100 text-gray-600 py-2 rounded-xl font-medium mt-3">
+                    关闭
                 </button>
             </div>
         </div>
-
-        <!-- 预付领取弹窗 -->
-        <div v-if="showPrepaidPickupModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold">领取预付水品</h3>
-                    <button @click="showPrepaidPickupModal = false" class="text-slate-400 hover:text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+        
+        <div v-if="showFirstTimeGuide" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+                <div class="text-center mb-4">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-building text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="font-bold text-lg text-gray-800">欢迎使用智能水站</h3>
+                    <p class="text-sm text-gray-500 mt-2">请先设置您所属的办公室，以便快速完成领水登记和结算操作。</p>
                 </div>
-
-                <div v-if="selectedPrepaidOrder" class="space-y-4">
-                    <div class="bg-slate-50 rounded-lg p-3">
-                        <p class="font-bold text-slate-800">{{ selectedPrepaidOrder.product_name }}</p>
-                        <p class="text-xs text-slate-500 mt-1">您的余额：{{ selectedPrepaidOrder.remaining_qty }} {{ selectedPrepaidOrder.unit }}</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">领取数量</label>
-                        <div class="flex items-center justify-center gap-4">
-                            <button @click="prepaidPickupQty = Math.max(1, prepaidPickupQty - 1)"
-                                class="w-12 h-12 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold active:bg-slate-100">
-                                −
-                            </button>
-                            <input type="number" v-model.number="prepaidPickupQty" min="1" :max="selectedPrepaidOrder.remaining_qty"
-                                class="w-20 text-center text-2xl font-bold border-2 border-slate-200 rounded-lg py-2" />
-                            <button @click="prepaidPickupQty = Math.min(selectedPrepaidOrder.remaining_qty, prepaidPickupQty + 1)"
-                                class="w-12 h-12 rounded-lg bg-white border-2 border-slate-200 text-slate-600 text-xl font-bold active:bg-slate-100">
-                                +
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-blue-50 rounded-lg p-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-slate-600">本次领取</span>
-                            <span class="font-bold text-blue-600">{{ prepaidPickupQty }} {{ selectedPrepaidOrder.unit }}</span>
-                        </div>
-                        <div class="flex justify-between mt-1">
-                            <span class="text-slate-600">领取后剩余</span>
-                            <span class="font-bold text-green-600">{{ selectedPrepaidOrder.remaining_qty - prepaidPickupQty }} {{ selectedPrepaidOrder.unit }}</span>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button @click="showPrepaidPickupModal = false" class="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium">取消</button>
-                        <button @click="submitPrepaidPickup" class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl font-bold">确认领取</button>
-                    </div>
+                <div class="space-y-2">
+                    <a href="my-offices.html" class="block w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-center">
+                        立即设置办公室
+                    </a>
+                    <button @click="skipFirstTimeGuide" class="block w-full bg-gray-100 text-gray-600 py-2 rounded-xl text-sm">
+                        暂时跳过
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- 消息提示 -->
-        <div v-if="toast.show" :class="['fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-medium transition-all',
-            toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-slate-700']">
-            {{ toast.message }}
+        <div v-if="showOfficeSwitcher" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSwitcher = false">
+            <div class="bg-white rounded-t-2xl w-full max-h-[70vh] overflow-y-auto p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">切换办公室</h3>
+                    <button @click="showOfficeSwitcher = false" class="text-gray-400">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="space-y-2 mb-4">
+                    <div v-for="office in offices" :key="office.id" 
+                         @click="switchOffice(office.id)"
+                         class="flex items-center justify-between p-3 rounded-xl border-2 transition"
+                         :class="(form.officeId || settlementOfficeId) === office.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+                        <div class="flex items-center gap-3">
+                            <div :class="(form.officeId || settlementOfficeId) === office.id ? 'bg-blue-500' : 'bg-gray-200'" class="w-4 h-4 rounded-full flex items-center justify-center">
+                                <i v-if="(form.officeId || settlementOfficeId) === office.id" class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-800">{{ office.name }}</div>
+                                <div class="text-xs text-gray-500">{{ office.room_number }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <a href="my-offices.html" class="block text-center text-blue-600 py-2 text-sm">
+                    <i class="fas fa-plus-circle mr-1"></i> 管理我的办公室
+                </a>
+            </div>
         </div>
     </div>
-
+    
     <script>
         const { createApp } = Vue;
-        const API_BASE = 'http://localhost:8000';
-
+        const API_BASE = localStorage.getItem('API_BASE') || 'http://localhost:8000/api';
+        
         createApp({
             data() {
                 return {
-                    appLoaded: false,
-                    activeTab: 'pickup',
-                    currentUser: null,
-                    users: [],
-                    userStatus: {},
-                    products: [],
-                    userRecords: [],
-                    quantities: {},
-                    selectedToApply: [],
-                    showUserSelect: false,
-                    unreadCount: 0,
-                    pickupMode: 'pay_later',  // 'pay_later' 或 'prepay'
-                    promotionConfigs: {},  // 优惠配置
-                    toast: { show: false, message: '', type: 'success' },
-                    // 预付功能状态
-                    prepaidBalance: { orders: [], summary: {} },
-                    showPrepaidPickupModal: false,
-                    selectedPrepaidOrder: null,
-                    prepaidPickupQty: 1
+                    offices: [], officeUsers: [], products: [],
+                    records: [], settlements: [],
+                    summary: { pending: {count:0,amount:0}, applied: {count:0,amount:0}, settled: {count:0,amount:0} },
+                    activeTab: localStorage.getItem('userActiveTab') || 'pickup',
+                    form: { officeId: '', personId: '', personName: '', pickupTime: '' },
+                    cart: {},
+                    filter: { officeId: '', status: '' },
+                    useManualPerson: false,
+                    showAllRecords: false,
+                    settlementOfficeId: '',
+                    settlementStatus: 'all',
+                    settlementList: [],
+                    expandedSettlementId: null,
+                    showRechargeModal: false,
+                    showRechargeListModal: false,
+                    rechargeList: [],
+                    rechargeForm: { productId: '', quantity: 1, note: '' },
+                    rechargeProducts: [],
+                    recordStatusFilter: '',
+                    recordList: [],
+                    recordDateFrom: '',
+                    recordDateTo: '',
+                    officeTab: 'common',
+                    userOffices: [],
+                    showOfficeSwitcher: false,
+                    showFirstTimeGuide: false,
+                    showSuccess: false, successMessage: '', errorMessage: '', paymentQrCode: null
                 };
             },
             computed: {
-                greetingText() {
-                    const hour = new Date().getHours();
-                    if (hour < 6) return '夜深了';
-                    if (hour < 9) return '早上好';
-                    if (hour < 12) return '上午好';
-                    if (hour < 14) return '中午好';
-                    if (hour < 18) return '下午好';
-                    if (hour < 22) return '晚上好';
-                    return '夜深了';
+                selectedOffice() { return this.offices.find(o => o.id === this.form.officeId); },
+                currentOfficeName() { 
+                    const office = this.offices.find(o => o.id === (this.form.officeId || this.settlementOfficeId));
+                    return office ? office.name : '';
                 },
-                inStockProducts() {
-                    return this.products.filter(p => p.is_active && p.stock > 0);
-                },
-                totalQuantity() {
-                    return Object.values(this.quantities).reduce((sum, q) => sum + q, 0);
-                },
-                totalEstimatedPrice() {
-                    let total = 0;
-                    for (const product of this.products) {
-                        const qty = this.quantities[product.id] || 0;
-                        if (qty > 0) {
-                            total += this.estimateProductPrice(product);
-                        }
+                displayOffices() { 
+                    if (this.userOffices.length > 0) {
+                        const userOfficeIds = this.userOffices.map(uo => uo.id);
+                        return this.offices.filter(o => userOfficeIds.includes(o.id) && (this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1));
                     }
-                    return total;
+                    return this.offices.filter(o => this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1); 
                 },
-                toApplyRecords() {
-                    return this.userRecords.filter(r => r.status === 'unsettled' && r.settlement_applied === 0);
+                totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
+                totalAmount() { return this.products.reduce((sum, p) => sum + (this.cart[p.id] || 0) * p.price, 0).toFixed(2); },
+                canSubmit() { if (!this.form.officeId || this.totalQty === 0) return false; if (!this.form.personId && !this.form.personName) return false; return true; },
+                displayRecords() { 
+                    let recs = this.records;
+                    if (this.settlementStatus && this.settlementStatus !== 'all') {
+                        recs = recs.filter(r => r.settlement_status === this.settlementStatus);
+                    }
+                    return this.showAllRecords ? recs : recs.slice(0, 10); 
                 },
-                appliedRecords() {
-                    return this.userRecords.filter(r => r.status === 'unsettled' && r.settlement_applied === 1);
+                filteredPendingRecords() { 
+                    return this.records.filter(r => r.settlement_status === 'pending'); 
                 },
-                settledRecords() {
-                    return this.userRecords.filter(r => r.status === 'settled');
+                settlementStats() {
+                    const list = this.settlementList;
+                    const pending = list.filter(s => s.status === 'pending');
+                    const applied = list.filter(s => s.status === 'applied');
+                    const confirmed = list.filter(s => s.status === 'confirmed');
+                    return {
+                        pending: { count: pending.length, amount: pending.reduce((s, s0) => s + (s0.total_amount || 0), 0) },
+                        applied: { count: applied.length, amount: applied.reduce((s, s0) => s + (s0.total_amount || 0), 0) },
+                        confirmed: { count: confirmed.length, amount: confirmed.reduce((s, s0) => s + (s0.total_amount || 0), 0) }
+                    };
+                },
+                filteredRecords() {
+                    let recs = this.recordList;
+                    if (this.recordStatusFilter) {
+                        recs = recs.filter(r => r.settlement_status === this.recordStatusFilter);
+                    }
+                    return recs;
+                },
+                recordStats() {
+                    const pending = this.recordList.filter(r => r.settlement_status === 'pending');
+                    const applied = this.recordList.filter(r => r.settlement_status === 'applied');
+                    const settled = this.recordList.filter(r => r.settlement_status === 'settled');
+                    return {
+                        total: { count: this.recordList.length, amount: this.recordList.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                        pending: { count: pending.length, amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                        applied: { count: applied.length, amount: applied.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                        settled: { count: settled.length, amount: settled.reduce((s, r) => s + (r.total_amount || 0), 0) }
+                    };
+                },
+                filteredRecordList() {
+                    let recs = this.recordList;
+                    if (this.recordStatusFilter) {
+                        recs = recs.filter(r => r.settlement_status === this.recordStatusFilter);
+                    }
+                    if (this.recordDateFrom) {
+                        const from = new Date(this.recordDateFrom);
+                        recs = recs.filter(r => new Date(r.pickup_time) >= from);
+                    }
+                    if (this.recordDateTo) {
+                        const to = new Date(this.recordDateTo);
+                        to.setHours(23, 59, 59);
+                        recs = recs.filter(r => new Date(r.pickup_time) <= to);
+                    }
+                    return recs;
+                }
+            },
+            async mounted() {
+                document.getElementById('loading').style.display = 'none';
+                await this.loadData();
+                const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                this.form.pickupTime = now.toISOString().slice(0, 16);
+                // 如果没有设置用户办公室，仍然加载结算数据（显示所有办公室的记录）
+                if (this.offices.length > 0) {
+                    this.loadSettlementData();
+                }
+            },
+            watch: {
+                activeTab(newVal) {
+                    localStorage.setItem('userActiveTab', newVal);
+                    if (newVal === 'settlement' && this.form.officeId) {
+                        this.settlementOfficeId = this.form.officeId;
+                        this.loadSettlementData();
+                    }
+                    if (newVal === 'records' && this.recordList.length === 0) {
+                        this.loadRecordList();
+                    }
+                },
+                'form.officeId': function(newVal) {
+                    if (this.activeTab === 'settlement' && newVal) {
+                        this.settlementOfficeId = newVal;
+                        this.loadSettlementData();
+                    }
                 }
             },
             methods: {
                 async loadData() {
-                    try {
-                        // 加载用户列表
-                        const usersRes = await fetch(`${API_BASE}/api/users`);
-                        this.users = await usersRes.json();
-
-                        // 默认选择第一个用户
-                        if (this.users.length > 0 && !this.currentUser) {
-                            this.currentUser = this.users[0];
-                            this.loadUserStatus();
-                            this.loadUserRecords();
-                        }
-
-                        // 加载产品列表
-                        const productsRes = await fetch(`${API_BASE}/api/products?active_only=true`);
-                        this.products = await productsRes.json();
-
-                        // 加载优惠配置
-                        await this.loadPromotionConfigs();
-
-                        this.appLoaded = true;
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('app').style.display = 'block';
-                    } catch (error) {
-                        console.error('加载数据失败:', error);
-                        this.showToast('加载失败，请检查后端服务', 'error');
+                    const storedUserOffices = localStorage.getItem('user_offices');
+                    const hasSkippedGuide = localStorage.getItem('has_skipped_first_time_guide');
+                    if (storedUserOffices) {
+                        this.userOffices = JSON.parse(storedUserOffices);
                     }
-                },
-                async loadPromotionConfigs() {
-                    try {
-                        const res = await fetch(`${API_BASE}/api/promotions/config`);
-                        const configs = await res.json();
-                        // 按 product_id 组织配置
-                        this.promotionConfigs = {};
-                        for (const config of configs) {
-                            if (config.mode === 'prepay' && config.is_active === 1) {
-                                this.promotionConfigs[config.product_id] = config;
-                            }
-                        }
-                    } catch (error) {
-                        console.error('加载优惠配置失败:', error);
-                    }
-                },
-                async loadUserStatus() {
-                    if (!this.currentUser) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/api/user/${this.currentUser.id}/status`);
-                        this.userStatus = await res.json();
-                    } catch (error) {
-                        console.error('加载用户状态失败:', error);
-                    }
-                },
-                async loadUserRecords() {
-                    if (!this.currentUser) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/api/transactions?user_id=${this.currentUser.id}`);
-                        this.userRecords = await res.json();
-                    } catch (error) {
-                        console.error('加载记录失败:', error);
-                    }
-                },
-                async loadPrepaidBalance() {
-                    if (!this.currentUser) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/api/prepaid/balance/${this.currentUser.id}`);
-                        if (res.ok) {
-                            this.prepaidBalance = await res.json();
-                        }
-                    } catch (error) {
-                        console.error('加载预付余额失败:', error);
-                    }
-                },
-                async submitPrepaidPickup() {
-                    if (!this.selectedPrepaidOrder || this.prepaidPickupQty <= 0) {
-                        this.showToast('参数错误', 'error');
-                        return;
-                    }
-
-                    try {
-                        const res = await fetch(`${API_BASE}/api/prepaid/pickups`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                order_id: this.selectedPrepaidOrder.order_id,
-                                pickup_qty: this.prepaidPickupQty
-                            })
-                        });
-
-                        if (res.ok) {
-                            this.showToast('领取成功', 'success');
-                            this.showPrepaidPickupModal = false;
-                            this.loadPrepaidBalance();
-                            this.loadUserStatus();
-                        } else {
-                            const error = await res.json();
-                            this.showToast(error.detail || '领取失败', 'error');
-                        }
-                    } catch (error) {
-                        this.showToast('网络错误', 'error');
-                    }
-                },
-                selectUser(user) {
-                    this.currentUser = user;
-                    this.showUserSelect = false;
-                    this.loadUserStatus();
-                    this.loadUserRecords();
-                    this.loadPrepaidBalance();
-                    this.quantities = {};
-                },
-                getQuantity(productId) {
-                    return this.quantities[productId] || 0;
-                },
-                increaseQuantity(productId, maxStock) {
-                    const current = this.getQuantity(productId);
-                    if (current < maxStock) {
-                        this.quantities[productId] = current + 1;
-                    }
-                },
-                decreaseQuantity(productId) {
-                    const current = this.getQuantity(productId);
-                    if (current > 0) {
-                        this.quantities[productId] = current - 1;
-                    }
-                },
-                estimateProductPrice(product) {
-                    const qty = this.getQuantity(product.id);
-                    if (qty === 0) return 0;
-
-                    // 根据模式计算优惠
-                    if (this.pickupMode === 'pay_later') {
-                        // 先用后付：标准价格
-                        return product.price * qty;
-                    } else {
-                        // 先付后用：享受买 N 赠 M 优惠
-                        // 获取该产品的优惠配置
-                        const config = this.promotionConfigs[product.id];
-                        if (!config) {
-                            return product.price * qty;
-                        }
-
-                        const count = this.userRecords.filter(r =>
-                            r.product_id === product.id &&
-                            r.status === 'unsettled' &&
-                            r.actual_price > 0 &&
-                            r.mode === 'prepay'
-                        ).length;
-
-                        const cycle = config.trigger_qty + config.gift_qty;
-                        let freeItems = 0;
-
-                        for (let i = 0; i < qty; i++) {
-                            if ((count + i + 1) % cycle === 0) {
-                                freeItems++;
-                            }
-                        }
-
-                        const paidItems = qty - freeItems;
-                        return (product.price * paidItems);
-                    }
-                },
-                hasProductPromotion(product) {
-                    const qty = this.getQuantity(product.id);
-                    if (qty === 0) return false;
-
-                    if (this.pickupMode === 'pay_later') {
-                        return false;  // 先用后付无优惠
-                    }
-
-                    // 先付后用：检查是否有优惠
-                    const config = this.promotionConfigs[product.id];
-                    if (!config) return false;
-
-                    const count = this.userRecords.filter(r =>
-                        r.product_id === product.id &&
-                        r.status === 'unsettled' &&
-                        r.actual_price > 0 &&
-                        r.mode === 'prepay'
-                    ).length;
-
-                    const cycle = config.trigger_qty + config.gift_qty;
-                    for (let i = 0; i < qty; i++) {
-                        if ((count + i + 1) % cycle === 0) {
-                            return true;
-                        }
-                    }
-                    return false;
-                },
-                async quickPickup(qty, type = 'bucket') {
-                    if (!this.currentUser) {
-                        this.showToast('请先选择用户', 'error');
-                        return;
-                    }
-
-                    // 找到对应的产品
-                    let product;
-                    if (type === 'bucket') {
-                        product = this.products.find(p => p.name.includes('桶装') && p.is_active && p.stock >= qty);
-                    } else {
-                        product = this.products.find(p => p.name.includes('瓶装') && p.is_active && p.stock >= qty);
-                    }
-
-                    if (!product) {
-                        this.showToast('库存不足或产品不可用', 'error');
-                        return;
-                    }
-
-                    try {
-                        const res = await fetch(`${API_BASE}/api/record`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_id: this.currentUser.id,
-                                product_id: product.id,
-                                quantity: qty,
-                                type: 'pickup',
-                                mode: this.pickupMode
-                            })
-                        });
-
-                        if (res.ok) {
-                            const modeText = this.pickupMode === 'pay_later' ? '先用后付' : '先付后用';
-                            this.showToast(`${modeText}领取成功！`, 'success');
-                            this.loadUserStatus();
-                            this.loadUserRecords();
-                        } else {
-                            const error = await res.json();
-                            this.showToast(error.detail || '领取失败', 'error');
-                        }
-                    } catch (error) {
-                        this.showToast('网络错误', 'error');
-                    }
-                },
-                async submitPickup() {
-                    if (!this.currentUser) {
-                        this.showToast('请先选择用户', 'error');
-                        return;
-                    }
-
-                    const modeText = this.pickupMode === 'pay_later' ? '先用后付' : '先付后用';
-
-                    let success = true;
-                    for (const product of this.products) {
-                        const qty = this.getQuantity(product.id);
-                        if (qty > 0) {
-                            try {
-                                const res = await fetch(`${API_BASE}/api/record`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        user_id: this.currentUser.id,
-                                        product_id: product.id,
-                                        quantity: qty,
-                                        type: 'pickup',
-                                        mode: this.pickupMode
-                                    })
-                                });
-
-                                if (!res.ok) {
-                                    success = false;
-                                    const error = await res.json();
-                                    this.showToast(`${product.name}: ${error.detail}`, 'error');
-                                    break;
-                                }
-                            } catch (error) {
-                                success = false;
-                                this.showToast(`${product.name}: 网络错误`, 'error');
-                                break;
-                            }
-                        }
-                    }
-
-                    if (success) {
-                        this.showToast(`${modeText}领取成功！`, 'success');
-                        this.quantities = {};
-                        this.loadUserStatus();
-                        this.loadUserRecords();
-                    }
-                },
-                async applySettlement() {
-                    if (this.selectedToApply.length === 0) {
-                        this.showToast('请选择要结算的记录', 'error');
-                        return;
+                    
+                    if (!storedUserOffices && !hasSkippedGuide) {
+                        this.showFirstTimeGuide = true;
                     }
                     
                     try {
-                        const res = await fetch(`${API_BASE}/api/user/settlement-apply`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_id: this.currentUser.id,
-                                transaction_ids: this.selectedToApply
-                            })
-                        });
+                        const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/user/offices-with-balance'), fetch(API_BASE + '/products?is_active=1')]);
+                        if (officesRes.ok) this.offices = await officesRes.json();
+                        if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
                         
-                        if (res.ok) {
-                            this.showToast('结算申请已提交', 'success');
-                            this.selectedToApply = [];
-                            this.loadUserStatus();
-                            this.loadUserRecords();
-                        } else {
-                            const error = await res.json();
-                            this.showToast(error.detail || '申请失败', 'error');
-                        }
-                    } catch (error) {
-                        this.showToast('网络错误', 'error');
-                    }
-                },
-                showToast(message, type = 'success') {
-                    this.toast = { show: true, message, type };
-                    setTimeout(() => {
-                        this.toast.show = false;
-                    }, 2000);
-                },
-                formatDate(dateStr) {
-                    const date = new Date(dateStr);
-                    const now = new Date();
-                    const diff = now - date;
-                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    
-                    if (days === 0) return '今天';
-                    if (days === 1) return '昨天';
-                    if (days < 7) return `${days}天前`;
-                    
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
-                },
-                formatDateTime(dateStr) {
-                    const date = new Date(dateStr);
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    const hour = date.getHours().toString().padStart(2, '0');
-                    const minute = date.getMinutes().toString().padStart(2, '0');
-                    return `${month}/${day} ${hour}:${minute}`;
-                },
-                async loadUnreadCount() {
-                    if (!this.currentUser) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/api/notifications/unread-count?user_id=${this.currentUser.id}`);
-                        const data = await res.json();
-                        this.unreadCount = data.unread_count;
-                    } catch (error) {
-                        console.error('加载未读消息失败:', error);
-                    }
-                },
-                // 快捷键处理
-                handleKeydown(e) {
-                    // 如果在输入框中，不处理快捷键
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-                        return;
-                    }
-                    // G 键开头的快捷键 (G + 其他键)
-                    if (e.key === 'g' || e.key === 'G') {
-                        e.preventDefault();
-                        const handleNextKeyTemp = (nextEvent) => {
-                            const key = nextEvent.key.toLowerCase();
-                            const shortcuts = {
-                                'p': 'pickup',    // 领取
-                                'r': 'records',   // 记录
-                                's': 'settlement' // 结算
-                            };
-                            if (shortcuts[key]) {
-                                this.activeTab = shortcuts[key];
-                                this.showToast(`已切换到${this.getTabName(shortcuts[key])}`);
+                        if (this.userOffices.length > 0) {
+                            const defaultOffice = this.userOffices.find(o => o.is_default);
+                            const defaultId = defaultOffice ? defaultOffice.id : this.userOffices[0].id;
+                            if (!this.form.officeId) {
+                                this.form.officeId = defaultId;
                             }
-                        };
-                        setTimeout(() => {
-                            window.removeEventListener('keydown', handleNextKeyTemp);
-                        }, 1000);
-                        window.addEventListener('keydown', handleNextKeyTemp, { once: true });
+                            if (!this.settlementOfficeId) {
+                                this.settlementOfficeId = defaultId;
+                            }
+                            this.loadSettlementData();
+                        }
+                    } catch (e) { console.error(e); }
+                    this.loadPaymentQr();
+                    this.loadRecordList();
+                },
+                async loadPaymentQr() { try { const res = await fetch(API_BASE + '/config/payment-qr'); if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; } } catch (e) { console.error(e); } },
+                async loadRecordList() {
+                    try {
+                        const res = await fetch(API_BASE + '/user/office-pickups?limit=10000');
+                        if (res.ok) {
+                            let records = await res.json();
+                            if (this.userOffices.length > 0) {
+                                const userOfficeIds = this.userOffices.map(uo => uo.id);
+                                records = records.filter(r => userOfficeIds.includes(r.office_id));
+                            }
+                            this.recordList = records;
+                        }
+                    } catch (e) { console.error(e); }
+                },
+                async loadRecords(officeId, status) { 
+                    try { 
+                        const params = new URLSearchParams(); 
+                        const oid = officeId || this.settlementOfficeId;
+                        const s = status || this.settlementStatus;
+                        if (oid) params.append('office_id', oid); 
+                        if (s && s !== 'all') params.append('status', s); 
+                        const res = await fetch(API_BASE + '/user/office-pickups?' + params); 
+                        if (res.ok) this.records = await res.json(); 
+                    } catch (e) { console.error(e); } 
+                },
+                async loadSettlementData() {
+                    await Promise.all([
+                        this.loadRecords(this.settlementOfficeId, this.settlementStatus),
+                        this.loadSummary(this.settlementOfficeId),
+                        this.loadSettlementList()
+                    ]);
+                },
+                async loadSettlementList() {
+                    try {
+                        const params = new URLSearchParams();
+                        // 如果选择了办公室，则按办公室筛选；否则显示所有
+                        if (this.settlementOfficeId) params.append('office_id', this.settlementOfficeId);
+                        if (this.settlementStatus && this.settlementStatus !== 'all') params.append('status', this.settlementStatus);
+                        const res = await fetch(API_BASE + '/user/office-settlements?' + params);
+                        if (res.ok) this.settlementList = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                async loadRechargeList() {
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.settlementOfficeId) params.append('office_id', this.settlementOfficeId);
+                        const res = await fetch(API_BASE + '/office-recharges?' + params);
+                        if (res.ok) this.rechargeList = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                async openRechargeListModal() {
+                    await this.loadRechargeList();
+                    this.showRechargeListModal = true;
+                },
+                toggleSettlementDetail(id) {
+                    this.expandedSettlementId = this.expandedSettlementId === id ? null : id;
+                },
+                getSettlementStatusClass(status) {
+                    if (status === 'confirmed') return 'bg-green-100 text-green-700';
+                    if (status === 'applied') return 'bg-blue-100 text-blue-700';
+                    return 'bg-yellow-100 text-yellow-700';
+                },
+                getSettlementStatusText(status) {
+                    if (status === 'confirmed') return '已结清';
+                    if (status === 'applied') return '付款待确认';
+                    return '待付款';
+                },
+                async loadSummary(officeId) { 
+                    try { 
+                        const params = new URLSearchParams(); 
+                        const oid = officeId || this.settlementOfficeId;
+                        if (oid) params.append('office_id', oid);
+                        const res = await fetch(API_BASE + '/user/office-pickup-summary?' + params); 
+                        if (res.ok) this.summary = await res.json(); 
+                    } catch (e) { console.error(e); } 
+                },
+                onSettlementOfficeChange() {
+                    this.loadSettlementData();
+                },
+                getPrepaidQty(productId) { if (!this.selectedOffice) return 0; const prepaid = this.selectedOffice.prepaid_by_product || []; const p = prepaid.find(x => x.product_id === productId); return p ? p.remaining_qty : 0; },
+                async selectOffice(office) {
+                    this.form.officeId = office.id;
+                    this.form.personId = ''; 
+                    this.form.personName = ''; 
+                    this.useManualPerson = false;
+                    if (office.leader_name) {
+                        this.form.personName = office.leader_name;
+                        this.useManualPerson = true; 
                     }
                 },
-                getTabName(tab) {
-                    const names = {
-                        'pickup': '领取',
-                        'records': '记录',
-                        'settlement': '结算'
-                    };
-                    return names[tab] || '';
-                }
-            },
-            mounted() {
-                this.loadData();
-                this.loadUnreadCount();
-                // 添加快捷键监听
-                window.addEventListener('keydown', this.handleKeydown);
-                // 每 30 秒刷新一次未读消息数量
-                setInterval(() => {
-                    this.loadUnreadCount();
-                }, 30000);
-            },
-            watch: {
-                // 监听 Tab 切换，加载对应数据
-                activeTab(newVal) {
-                    if (newVal === 'prepaid') {
-                        this.loadPrepaidBalance();
+                switchOffice(officeId) {
+                    if (this.activeTab === 'pickup') {
+                        const office = this.offices.find(o => o.id === officeId);
+                        if (office) this.selectOffice(office);
+                    } else {
+                        this.settlementOfficeId = officeId;
+                        this.loadSettlementData();
                     }
-                }
+                    this.showOfficeSwitcher = false;
+                },
+                
+                skipFirstTimeGuide() {
+                    localStorage.setItem('has_skipped_first_time_guide', 'true');
+                    this.showFirstTimeGuide = false;
+                },
+
+                onPersonChange() { if (this.form.personId) this.useManualPerson = false; },
+                toggleManualPerson() { this.useManualPerson = !this.useManualPerson; if (this.useManualPerson) this.form.personId = ''; },
+                increaseQty(productId) { this.cart[productId] = (this.cart[productId] || 0) + 1; },
+                decreaseQty(productId) { if (this.cart[productId] > 0) this.cart[productId]--; },
+                validateQty(productId) { let v = this.cart[productId] || 0; if (v < 0) v = 0; this.cart[productId] = v; },
+                async submitPickup() {
+                    if (!this.canSubmit) { this.showError('请填写完整信息'); return; }
+                    const items = Object.entries(this.cart).filter(([k, v]) => v > 0);
+                    if (items.length === 0) { this.showError('请选择产品数量'); return; }
+                    const personName = this.form.personId ? (this.officeUsers.find(u => u.id === this.form.personId)?.name || '') : this.form.personName;
+                    try {
+                        for (const [productId, qty] of items) {
+                            const res = await fetch(API_BASE + '/user/office-pickup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ office_id: this.form.officeId, product_id: parseInt(productId), quantity: qty, pickup_person: personName, pickup_person_id: this.form.personId || null, pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null }) });
+                            if (!res.ok) { const e = await res.json(); this.showError(e.detail || '提交失败'); return; }
+                        }
+                        this.successMessage = '提交成功！'; this.showSuccess = true; this.resetForm(); await this.loadData();
+                    } catch (e) { this.showError('网络错误'); }
+                },
+                resetForm() { this.form = { officeId: '', personId: '', personName: '', pickupTime: this.form.pickupTime }; this.products.forEach(p => this.cart[p.id] = 0); this.useManualPerson = false; },
+                async applySettlement() {
+                    const pending = this.filteredPendingRecords;
+                    if (pending.length === 0) { this.showError('没有待付款记录'); return; }
+                    if (!this.settlementOfficeId) { this.showError('请先选择办公室'); return; }
+                    try {
+                        const res = await fetch(API_BASE + '/user/office-settlement?office_id=' + this.settlementOfficeId + '&applied_by=访客', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.map(p => p.id)) });
+                        if (res.ok) { 
+                            const data = await res.json();
+                            this.showSuccess = true; 
+                            this.successMessage = '结算申请已提交！结算单号：' + data.settlement_no; 
+                            this.expandedSettlementId = data.id;
+                            await this.loadSettlementData(); 
+                        } else { const e = await res.json(); this.showError(e.detail || '提交失败'); }
+                    } catch (e) { this.showError('网络错误'); }
+                },
+                async openRechargeModal() {
+                    this.rechargeProducts = this.products.filter(p => p.is_active === 1);
+                    if (this.rechargeProducts.length > 0) this.rechargeForm.productId = this.rechargeProducts[0].id;
+                    this.showRechargeModal = true;
+                },
+                async submitRecharge() {
+                    if (!this.settlementOfficeId) { this.showError('请先选择办公室'); return; }
+                    if (!this.rechargeForm.productId || this.rechargeForm.quantity < 1) { this.showError('请填写正确的充值信息'); return; }
+                    const product = this.rechargeProducts.find(p => p.id === this.rechargeForm.productId);
+                    if (!product) { this.showError('请选择产品'); return; }
+                    try {
+                        const res = await fetch(API_BASE + '/office-recharges', { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ 
+                                office_id: this.settlementOfficeId, 
+                                product_id: this.rechargeForm.productId, 
+                                quantity: this.rechargeForm.quantity,
+                                unit_price: product.price,
+                                note: this.rechargeForm.note,
+                                recharge_person: '用户自助'
+                            }) 
+                        });
+                        if (res.ok) { 
+                            this.showSuccess = true; 
+                            this.successMessage = '充值申请已提交，等待管理员审核！'; 
+                            this.showRechargeModal = false;
+                            this.loadSettlementData();
+                        } else { const e = await res.json(); this.showError(e.detail || '提交失败'); }
+                    } catch (e) { this.showError('网络错误'); }
+                },
+                getRechargeTotal() {
+                    const product = this.rechargeProducts.find(p => p.id === this.rechargeForm.productId);
+                    if (!product) return '0.00';
+                    return (product.price * this.rechargeForm.quantity).toFixed(2);
+                },
+                getStatusClass(s) { return { pending: 'status-pending', applied: 'status-applied', settled: 'status-settled' }[s] || 'status-pending'; },
+                getStatusText(s) { return { pending: '待付款', applied: '付款待确认', settled: '已结清' }[s] || s; },
+                formatDate(d) { if (!d) return '-'; return new Date(d).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); },
+                formatRecordDate(d) { if (!d) return '-'; const date = new Date(d); return `${date.getMonth()+1}-${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`; },
+                formatRecordDateFull(d) { if (!d) return '-'; const date = new Date(d); return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`; },
+                filterRecordList() {
+                    // filtering is handled by computed property filteredRecordList
+                },
+                resetRecordFilter() {
+                    this.recordStatusFilter = '';
+                    this.recordDateFrom = '';
+                    this.recordDateTo = '';
+                },
+                getRecordStatusClass(s) { const classes = { pending: 'bg-yellow-100 text-yellow-700', applied: 'bg-blue-100 text-blue-700', settled: 'bg-green-100 text-green-700' }; return classes[s] || ''; },
+                getRecordStatusText(s) { const texts = { pending: '待付款', applied: '付款待确认', settled: '已结清' }; return texts[s] || s; },
+                exportRecords(type) {
+                    const data = type === 'filtered' ? this.filteredRecordList : this.recordList;
+                    if (data.length === 0) { alert('没有可导出的数据'); return; }
+                    let csv = '序号,时间,办公室,房间号,产品,数量,单价,金额,领取人,状态\n';
+                    data.forEach((r, i) => { csv += `${i+1},${r.pickup_time},${r.office_name},${r.office_room_number || ''},${r.product_name},${r.quantity},${r.unit_price},${r.total_amount},${r.pickup_person},${this.getRecordStatusText(r.settlement_status)}\n`; });
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `领水记录_${type}_${new Date().toISOString().slice(0,10)}.csv`; link.click();
+                },
+                showError(m) { this.errorMessage = m; setTimeout(() => this.errorMessage = '', 3000); }
             }
         }).mount('#app');
     </script>

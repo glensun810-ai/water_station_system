@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>我的领水记录 - 智能水站</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 3px;
+            background-color: #fff;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s ease;
+            vertical-align: middle;
+        }
+        input[type="checkbox"]:checked {
+            background-color: #2563EB;
+            border-color: #2563EB;
+        }
+        input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 2px;
+            width: 4px;
+            height: 7px;
+            border: solid white;
+            border-width: 0 1.5px 1.5px 0;
+            transform: rotate(45deg);
+        }
+        input[type="checkbox"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-4 safe-top">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-white flex items-center gap-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    返回
+                </a>
+                <h1 class="text-white text-lg font-bold">📋 我的领水记录</h1>
+                <button @click="showOfficeSwitcher = true" class="text-white flex items-center gap-1 bg-white/20 px-3 py-1.5 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    <span class="max-w-[80px] truncate">{{ currentOfficeName || '选择' }}</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="p-4" v-if="!isLoading">
+            <div class="bg-white rounded-xl p-3 mb-4 card-shadow">
+                <div class="flex gap-1 mb-3">
+                    <button @click="statusFilter = ''" :class="statusFilter === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 px-2 rounded-lg text-xs font-medium">全部</button>
+                    <button @click="statusFilter = 'pending'" :class="statusFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 px-2 rounded-lg text-xs font-medium">待付款</button>
+                    <button @click="statusFilter = 'applied'" :class="statusFilter === 'applied' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 px-2 rounded-lg text-xs font-medium">付款待确认</button>
+                    <button @click="statusFilter = 'settled'" :class="statusFilter === 'settled' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 px-2 rounded-lg text-xs font-medium">已结清</button>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-50 rounded-lg p-2">
+                        <div class="text-lg font-bold text-blue-600">{{ stats.total.count }}</div>
+                        <div class="text-xs text-blue-500">总记录</div>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-2">
+                        <div class="text-lg font-bold text-yellow-600">{{ stats.pending.count }}</div>
+                        <div class="text-xs text-yellow-500">待付款</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-2">
+                        <div class="text-lg font-bold text-green-600">{{ stats.settled.count }}</div>
+                        <div class="text-xs text-green-500">已结清</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <button @click="exportData('filtered')" class="flex-1 bg-white border border-slate-200 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    📥 导出筛选结果
+                </button>
+                <button @click="exportData('all')" class="flex-1 bg-white border border-slate-200 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    📥 导出全部
+                </button>
+            </div>
+
+            <div v-if="selectedRecords.length > 0" class="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <span class="text-sm text-blue-700">已选择 <strong>{{ selectedRecords.length }}</strong> 条记录</span>
+                <button @click="batchRemind" class="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium">
+                    🔔 提醒付款
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden card-shadow">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="py-2 px-2 text-left text-slate-600 font-medium w-8">
+                                    <input type="checkbox" @change="toggleAll" :checked="allSelected">
+                                </th>
+                                <th class="py-2 px-2 text-left text-slate-600 font-medium">时间</th>
+                                <th class="py-2 px-2 text-left text-slate-600 font-medium">办公室</th>
+                                <th class="py-2 px-2 text-left text-slate-600 font-medium">产品</th>
+                                <th class="py-2 px-2 text-right text-slate-600 font-medium">数量</th>
+                                <th class="py-2 px-2 text-right text-slate-600 font-medium">金额</th>
+                                <th class="py-2 px-2 text-left text-slate-600 font-medium">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in filteredRecords" :key="r.id" class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="py-2 px-2">
+                                    <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="r.settlement_status === 'settled'">
+                                </td>
+                                <td class="py-2 px-2 text-slate-600">{{ formatDate(r.pickup_time) }}</td>
+                                <td class="py-2 px-2 text-slate-800 font-medium">{{ r.office_name }}</td>
+                                <td class="py-2 px-2 text-slate-600">{{ r.product_name }}</td>
+                                <td class="py-2 px-2 text-right text-slate-600">{{ r.quantity }}</td>
+                                <td class="py-2 px-2 text-right text-slate-800 font-medium">¥{{ r.total_amount.toFixed(2) }}</td>
+                                <td class="py-2 px-2">
+                                    <span :class="getStatusClass(r.settlement_status)" class="text-xs px-2 py-1 rounded-full">
+                                        {{ getStatusText(r.settlement_status) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredRecords.length === 0">
+                                <td colspan="7" class="py-8 text-center text-slate-400">暂无记录</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showOfficeSwitcher" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSwitcher = false">
+            <div class="bg-white rounded-t-2xl w-full max-h-[70vh] overflow-y-auto p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">切换办公室</h3>
+                    <button @click="showOfficeSwitcher = false" class="text-slate-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="space-y-2 mb-4">
+                    <div @click="switchOffice('')" class="flex items-center p-3 rounded-xl border-2 cursor-pointer transition" :class="!officeId ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
+                        <div :class="!officeId ? 'bg-blue-500' : 'bg-slate-200'" class="w-4 h-4 rounded-full mr-3 flex items-center justify-center">
+                            <span v-if="!officeId" class="text-white text-xs">✓</span>
+                        </div>
+                        <span class="font-medium">全部办公室</span>
+                    </div>
+                    <div v-for="office in offices" :key="office.id" 
+                         @click="switchOffice(office.id)"
+                         class="flex items-center p-3 rounded-xl border-2 cursor-pointer transition"
+                         :class="officeId === office.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
+                        <div :class="officeId === office.id ? 'bg-blue-500' : 'bg-slate-200'" class="w-4 h-4 rounded-full mr-3 flex items-center justify-center">
+                            <span v-if="officeId === office.id" class="text-white text-xs">✓</span>
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-800">{{ office.name }}</div>
+                            <div class="text-xs text-slate-500">{{ office.room_number }}</div>
+                        </div>
+                    </div>
+                </div>
+                <a href="my-offices.html" class="block text-center text-blue-600 py-2 text-sm">
+                    + 管理我的办公室
+                </a>
+            </div>
+        </div>
+
+        <div v-if="isLoading" class="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p class="text-slate-500">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        createApp({
+            setup() {
+                const API_BASE = localStorage.getItem('API_BASE') || 'http://localhost:8000/api';
+                const isLoading = ref(true);
+                const records = ref([]);
+                const offices = ref([]);
+                const userOffices = ref([]);
+                const officeId = ref('');
+                const statusFilter = ref('');
+                const selectedRecords = ref([]);
+                const showOfficeSwitcher = ref(false);
+
+                const filteredRecords = computed(() => {
+                    let result = records.value;
+                    if (statusFilter.value) {
+                        result = result.filter(r => r.settlement_status === statusFilter.value);
+                    }
+                    return result;
+                });
+
+                const stats = computed(() => {
+                    const pending = records.value.filter(r => r.settlement_status === 'pending');
+                    const applied = records.value.filter(r => r.settlement_status === 'applied');
+                    const settled = records.value.filter(r => r.settlement_status === 'settled');
+                    return {
+                        total: { count: records.value.length },
+                        pending: { count: pending.length, amount: pending.reduce((s, r) => s + r.total_amount, 0) },
+                        applied: { count: applied.length },
+                        settled: { count: settled.length }
+                    };
+                });
+
+                const currentOfficeName = computed(() => {
+                    if (!officeId.value) return '全部';
+                    const office = offices.value.find(o => o.id === officeId.value);
+                    return office ? office.name : '';
+                });
+
+                const allSelected = computed(() => {
+                    const pending = filteredRecords.value.filter(r => r.settlement_status !== 'settled');
+                    return pending.length > 0 && selectedRecords.value.length === pending.length;
+                });
+
+                const loadData = async () => {
+                    isLoading.value = true;
+                    const stored = localStorage.getItem('user_offices');
+                    if (stored) {
+                        userOffices.value = JSON.parse(stored);
+                    }
+
+                    try {
+                        const [officesRes, recordsRes] = await Promise.all([
+                            fetch(`${API_BASE}/user/offices-with-balance`),
+                            fetch(`${API_BASE}/user/office-pickups?limit=10000`)
+                        ]);
+
+                        if (officesRes.ok) offices.value = await officesRes.json();
+                        if (recordsRes.ok) records.value = await recordsRes.json();
+
+                        if (userOffices.value.length > 0) {
+                            const defaultOffice = userOffices.value.find(o => o.is_default);
+                            if (defaultOffice) {
+                                officeId.value = defaultOffice.id;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to load:', e);
+                    }
+                    isLoading.value = false;
+                };
+
+                const switchOffice = (id) => {
+                    officeId.value = id;
+                    showOfficeSwitcher.value = false;
+                };
+
+                const toggleAll = () => {
+                    const pending = filteredRecords.value.filter(r => r.settlement_status !== 'settled');
+                    if (selectedRecords.value.length === pending.length) {
+                        selectedRecords.value = [];
+                    } else {
+                        selectedRecords.value = pending.map(r => r.id);
+                    }
+                };
+
+                const batchRemind = async () => {
+                    if (selectedRecords.value.length === 0) return;
+                    if (!confirm(`确定向 ${selectedRecords.value.length} 条记录的用户发送付款提醒？`)) return;
+                    alert('提醒功能开发中');
+                    selectedRecords.value = [];
+                };
+
+                const exportData = (type) => {
+                    const data = type === 'filtered' ? filteredRecords.value : records.value;
+                    if (data.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+                    let csv = '序号,时间,办公室,房间号,产品,数量,单价,金额,状态\n';
+                    data.forEach((r, i) => {
+                        csv += `${i+1},${r.pickup_time},${r.office_name},${r.office_room_number || ''},${r.product_name},${r.quantity},${r.unit_price},${r.total_amount},${getStatusText(r.settlement_status)}\n`;
+                    });
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `领水记录_${type}_${new Date().toISOString().slice(0,10)}.csv`;
+                    link.click();
+                };
+
+                const formatDate = (d) => {
+                    if (!d) return '-';
+                    const date = new Date(d);
+                    return `${date.getMonth()+1}-${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                };
+
+                const getStatusClass = (s) => {
+                    const classes = {
+                        pending: 'bg-yellow-100 text-yellow-700',
+                        applied: 'bg-blue-100 text-blue-700',
+                        settled: 'bg-green-100 text-green-700'
+                    };
+                    return classes[s] || '';
+                };
+
+                const getStatusText = (s) => {
+                    const texts = {
+                        pending: '待付款',
+                        applied: '付款待确认',
+                        settled: '已结清'
+                    };
+                    return texts[s] || s;
+                };
+
+                onMounted(() => {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    loadData();
+                });
+
+                return {
+                    isLoading, records, offices, userOffices, officeId, statusFilter,
+                    filteredRecords, stats, currentOfficeName, allSelected, selectedRecords,
+                    showOfficeSwitcher, loadData, switchOffice, toggleAll, batchRemind,
+                    exportData, formatDate, getStatusClass, getStatusText
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能水站 - 领水登记</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [v-cloak] { display: none; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: #F8FAFC;
+            padding-bottom: 140px;
+        }
+        #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .card-select {
+            border: 2px solid #E5E7EB;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        .card-select:hover {
+            border-color: #93C5FD;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        .card-select.active {
+            border-color: #3B82F6;
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .qty-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .qty-btn-minus {
+            background: #F3F4F6;
+            color: #6B7280;
+        }
+        .qty-btn-minus:hover:not(:disabled) {
+            background: #E5E7EB;
+            color: #374151;
+        }
+        .qty-btn-minus:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .qty-btn-plus {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+        }
+        .qty-btn-plus:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        .qty-btn-plus:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .qty-input {
+            width: 70px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            padding: 8px;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+        }
+        .qty-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+        
+        .tab-btn {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #6B7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            color: #2563EB;
+            border-bottom-color: #2563EB;
+        }
+        
+        .status-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-pending { background: #FEF3C7; color: #92400E; }
+        .status-applied { background: #DBEAFE; color: #1E40AF; }
+        .status-confirmed, .status-settled { background: #D1FAE5; color: #065F46; }
+        
+        .bottom-fixed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            padding: 16px;
+            z-index: 100;
+        }
+        
+        .qr-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+    </style>
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.write('<div style="min-height:100vh;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:white;display:flex;align-items:center;justify-content:center;padding:20px;font-family:sans-serif;"><div style="max-width:400px;text-align:center;"><h1>请使用 HTTP 服务器访问</h1><p>cd frontend && python -m http.server 3000</p></div></div>');
+            throw new Error('Please use HTTP server');
+        }
+    </script>
+</head>
+<body>
+    <div id="loading"><div class="spinner"></div></div>
+    
+    <div id="app" v-cloak style="display:none;">
+        <!-- 顶部 -->
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-5">
+            <h1 class="text-white text-xl font-bold">💧 智能水站</h1>
+            <p class="text-white text-xs opacity-80 mt-1">领水登记 · 便捷结算</p>
+        </header>
+        
+        <!-- Tab 切换 -->
+        <div class="bg-white border-b flex">
+            <button @click="activeTab = 'pickup'" :class="activeTab === 'pickup' ? 'tab-btn active' : 'tab-btn'">
+                <i class="fas fa-edit mr-1"></i>领水登记
+            </button>
+            <button @click="activeTab = 'records'" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">
+                <i class="fas fa-list mr-1"></i>记录查询
+            </button>
+            <button @click="activeTab = 'settlement'" :class="activeTab === 'settlement' ? 'tab-btn active' : 'tab-btn'">
+                <i class="fas fa-credit-card mr-1"></i>结算中心
+            </button>
+        </div>
+        
+        <div class="p-4">
+            <!-- 领水登记 -->
+            <div v-show="activeTab === 'pickup'">
+                <!-- 步骤指示 -->
+                <div class="flex items-center justify-between mb-6 px-2">
+                    <div class="flex items-center">
+                        <div :class="step >= 1 ? 'bg-blue-600' : 'bg-gray-300'" class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
+                        <div class="w-10 h-0.5" :class="step >= 2 ? 'bg-blue-600' : 'bg-gray-300'"></div>
+                    </div>
+                    <div class="flex items-center">
+                        <div :class="step >= 2 ? 'bg-blue-600' : 'bg-gray-300'" class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
+                        <div class="w-10 h-0.5" :class="step >= 3 ? 'bg-blue-600' : 'bg-gray-300'"></div>
+                    </div>
+                    <div :class="step >= 3 ? 'bg-blue-600' : 'bg-gray-300'" class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold">3</div>
+                </div>
+                
+                <!-- 步骤1: 选择办公室 -->
+                <div v-show="step === 1">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">选择办公室</h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div v-for="office in offices" :key="office.id" 
+                             @click="selectOffice(office)"
+                             :class="form.officeId === office.id ? 'card-select active' : 'card-select'"
+                             class="rounded-xl p-4 cursor-pointer">
+                            <div class="text-xs text-gray-400 mb-1">{{ office.room_number }}</div>
+                            <div class="text-base font-bold text-gray-800 mb-1">{{ office.name }}</div>
+                            <div class="text-sm text-gray-500 mb-2">
+                                <i class="fas fa-user mr-1"></i>{{ office.leader_name }}
+                            </div>
+                            <div v-if="office.has_prepaid" class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full inline-block">
+                                <i class="fas fa-wallet mr-1"></i>余额: {{ office.total_remaining }}桶
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤2: 选择产品 -->
+                <div v-show="step === 2">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">
+                        选择规格
+                        <span class="text-sm font-normal text-gray-500 ml-2">{{ selectedOffice?.name }}</span>
+                    </h2>
+                    <div class="space-y-3">
+                        <div v-for="product in products" :key="product.id" 
+                             @click="selectProduct(product)"
+                             :class="form.productId === product.id ? 'card-select active' : 'card-select'"
+                             class="rounded-xl p-4 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-base font-bold text-gray-800">{{ product.name }}</div>
+                                    <div class="text-sm text-gray-500">{{ product.specification }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xl font-bold text-blue-600">¥{{ product.price }}</div>
+                                    <div class="text-xs text-gray-400">/{{ product.unit }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤3: 填写信息 -->
+                <div v-show="step === 3">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">确认领取</h2>
+                    
+                    <!-- 已选信息 -->
+                    <div class="bg-blue-50 rounded-xl p-4 mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600">办公室</span>
+                            <span class="font-medium">{{ selectedOffice?.name }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600">产品</span>
+                            <span class="font-medium">{{ selectedProduct?.name }} ({{ selectedProduct?.specification }})</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">单价</span>
+                            <span class="font-bold text-blue-600">¥{{ selectedProduct?.price }}/{{ selectedProduct?.unit }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 数量选择器 -->
+                    <div class="bg-white rounded-xl p-4 mb-4 border">
+                        <div class="text-sm font-medium text-gray-700 mb-3">领取数量</div>
+                        <div class="flex justify-center">
+                            <div class="quantity-control">
+                                <button @click="decreaseQty" :disabled="form.quantity <= 1" class="qty-btn qty-btn-minus">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" v-model.number="form.quantity" min="1" max="99" 
+                                       class="qty-input" @change="validateQty">
+                                <button @click="increaseQty" :disabled="form.paymentMode === 'prepaid' && form.quantity >= officeRemaining" class="qty-btn qty-btn-plus">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <span class="text-gray-500">小计: </span>
+                            <span class="text-2xl font-bold text-blue-600">¥{{ calculateTotal }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 支付方式 -->
+                    <div class="bg-white rounded-xl p-4 mb-4 border">
+                        <div class="text-sm font-medium text-gray-700 mb-3">支付方式</div>
+                        <div class="flex gap-3">
+                            <button @click="form.paymentMode = 'credit'" 
+                                    :class="form.paymentMode === 'credit' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+                                    class="flex-1 py-3 rounded-xl font-medium transition-all">
+                                <i class="fas fa-credit-card mr-2"></i>先用后付
+                            </button>
+                            <button @click="form.paymentMode = 'prepaid'" 
+                                    :disabled="!hasPrepaid"
+                                    :class="[form.paymentMode === 'prepaid' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600', !hasPrepaid ? 'opacity-40 cursor-not-allowed' : '']"
+                                    class="flex-1 py-3 rounded-xl font-medium transition-all">
+                                <i class="fas fa-wallet mr-2"></i>预付余额
+                                <div v-if="hasPrepaid" class="text-xs mt-1">{{ officeRemaining }}桶可用</div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 领水人 -->
+                    <div class="bg-white rounded-xl p-4 mb-4 border">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="text-sm font-medium text-gray-700">领水人</div>
+                            <button @click="togglePersonInput" class="text-blue-600 text-sm">
+                                {{ useManualInput ? '选择用户' : '手动输入' }}
+                            </button>
+                        </div>
+                        <select v-if="!useManualInput" v-model="form.personId" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                            <option value="">请选择领水人</option>
+                            <option v-for="user in officeUsers" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <input v-else v-model="form.personName" type="text" placeholder="请输入领水人姓名" 
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                        <button v-if="!form.personId && !useManualInput && selectedOffice" @click="useDefaultPerson" 
+                                class="text-blue-600 text-sm mt-2">
+                            使用默认负责人 ({{ selectedOffice.leader_name }})
+                        </button>
+                    </div>
+                    
+                    <!-- 领水时间 -->
+                    <div class="bg-white rounded-xl p-4 mb-4 border">
+                        <div class="text-sm font-medium text-gray-700 mb-2">领水时间</div>
+                        <input type="datetime-local" v-model="form.pickupTime" 
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    </div>
+                    
+                    <!-- 备注 -->
+                    <div class="bg-white rounded-xl p-4 mb-4 border">
+                        <div class="text-sm font-medium text-gray-700 mb-2">备注（可选）</div>
+                        <textarea v-model="form.note" rows="2" placeholder="如：代领、特殊需求等" 
+                                  class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 上一步按钮 -->
+                <div v-if="step > 1" class="mt-4">
+                    <button @click="step--" class="w-full py-3 border border-gray-300 rounded-xl font-medium text-gray-600">
+                        <i class="fas fa-arrow-left mr-2"></i>上一步
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 记录查询 -->
+            <div v-show="activeTab === 'records'">
+                <!-- 筛选 -->
+                <div class="flex gap-2 mb-4">
+                    <select v-model="filter.officeId" @change="loadRecords" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white">
+                        <option value="">全部办公室</option>
+                        <option v-for="office in offices" :value="office.id">{{ office.name }}</option>
+                    </select>
+                    <select v-model="filter.status" @change="loadRecords" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white">
+                        <option value="">全部状态</option>
+                        <option value="pending">待结算</option>
+                        <option value="applied">已申请</option>
+                        <option value="settled">已结清</option>
+                    </select>
+                </div>
+                
+                <!-- 统计 -->
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="bg-yellow-50 rounded-xl p-3 text-center">
+                        <div class="text-xl font-bold text-yellow-600">{{ summary.pending.count || 0 }}</div>
+                        <div class="text-xs text-yellow-600">待结算</div>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-3 text-center">
+                        <div class="text-xl font-bold text-blue-600">{{ summary.applied.count || 0 }}</div>
+                        <div class="text-xs text-blue-600">已申请</div>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-3 text-center">
+                        <div class="text-xl font-bold text-green-600">{{ summary.settled.count || 0 }}</div>
+                        <div class="text-xs text-green-600">已结清</div>
+                    </div>
+                </div>
+                
+                <!-- 记录列表 -->
+                <div class="space-y-3">
+                    <div v-for="record in records" :key="record.id" class="bg-white rounded-xl p-4 border">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-medium text-gray-800">{{ record.office_name }}</div>
+                                <div class="text-sm text-gray-500">{{ record.product_name }} × {{ record.quantity }}</div>
+                            </div>
+                            <span :class="getStatusClass(record.settlement_status)" class="status-tag">
+                                {{ getStatusText(record.settlement_status) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <div class="text-gray-500">
+                                <i class="far fa-clock mr-1"></i>{{ formatDate(record.pickup_time) }}
+                            </div>
+                            <div class="font-bold text-blue-600">¥{{ record.total_amount.toFixed(2) }}</div>
+                        </div>
+                        <div v-if="record.pickup_person" class="text-xs text-gray-400 mt-1">
+                            领水人: {{ record.pickup_person }}
+                        </div>
+                    </div>
+                </div>
+                <div v-if="records.length === 0" class="text-center py-12 text-gray-400">
+                    <i class="fas fa-inbox text-4xl mb-3"></i>
+                    <div>暂无记录</div>
+                </div>
+            </div>
+            
+            <!-- 结算中心 -->
+            <div v-show="activeTab === 'settlement'">
+                <!-- 预付余额 -->
+                <div v-if="summary.prepaid_balance > 0" class="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-5 mb-4 text-white">
+                    <div class="text-sm opacity-80">预付账户余额</div>
+                    <div class="text-3xl font-bold mt-1">{{ summary.prepaid_balance }} <span class="text-lg">桶</span></div>
+                    <div class="text-sm opacity-80 mt-2">可用于预付模式领水</div>
+                </div>
+                
+                <!-- 待结算汇总 -->
+                <div class="bg-white rounded-xl p-4 mb-4 border">
+                    <div class="text-lg font-bold text-gray-800 mb-3">待结算汇总</div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-600">待结算笔数</span>
+                        <span class="font-medium">{{ summary.pending.count }} 笔</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-600">待结算数量</span>
+                        <span class="font-medium">{{ summary.pending.quantity }} 桶</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t">
+                        <span class="font-medium">待结算金额</span>
+                        <span class="text-xl font-bold text-yellow-600">¥{{ summary.pending.amount.toFixed(2) }}</span>
+                    </div>
+                </div>
+                
+                <!-- 结算按钮 -->
+                <button v-if="summary.pending.count > 0" @click="showSettlementModal = true" 
+                        class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-4 rounded-xl font-bold text-lg mb-4">
+                    <i class="fas fa-credit-card mr-2"></i>提交结算申请
+                </button>
+                
+                <!-- 结算记录 -->
+                <div class="text-lg font-bold text-gray-800 mb-3">结算记录</div>
+                <div class="space-y-3">
+                    <div v-for="s in settlements" :key="s.id" class="bg-white rounded-xl p-4 border">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-medium text-gray-800">{{ s.office_name }}</div>
+                                <div class="text-sm text-gray-500">{{ s.total_quantity }}桶 · ¥{{ s.total_amount.toFixed(2) }}</div>
+                            </div>
+                            <span :class="getSettleStatusClass(s.status)" class="status-tag">
+                                {{ getSettleStatusText(s.status) }}
+                            </span>
+                        </div>
+                        <div v-if="s.applied_at" class="text-xs text-gray-400">
+                            申请时间: {{ formatDate(s.applied_at) }}
+                        </div>
+                    </div>
+                </div>
+                <div v-if="settlements.length === 0" class="text-center py-12 text-gray-400">
+                    <i class="fas fa-receipt text-4xl mb-3"></i>
+                    <div>暂无结算记录</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部提交栏 -->
+        <div v-show="activeTab === 'pickup' && step === 3" class="bottom-fixed">
+            <button @click="submitPickup" :disabled="!canSubmit" 
+                    :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'"
+                    class="w-full text-white py-4 rounded-xl font-bold text-lg transition-all">
+                确认提交
+            </button>
+        </div>
+        
+        <!-- 底部收款二维码 -->
+        <div v-if="paymentQrCode" class="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-4 text-center z-0" style="padding-bottom: 100px;">
+            <div class="text-sm opacity-80 mb-2">扫码支付 · 安全便捷</div>
+            <img :src="paymentQrCode" class="w-24 h-24 mx-auto rounded-lg bg-white p-1" alt="支付二维码">
+        </div>
+        
+        <!-- 结算确认弹窗 -->
+        <div v-if="showSettlementModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showSettlementModal = false">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
+                <h3 class="text-lg font-bold mb-4">提交结算申请</h3>
+                <div class="bg-yellow-50 rounded-xl p-4 mb-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">待结算</span>
+                        <span class="font-bold">{{ summary.pending.count }} 笔</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">总金额</span>
+                        <span class="font-bold text-yellow-600">¥{{ summary.pending.amount.toFixed(2) }}</span>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-500 mb-4">
+                    <i class="fas fa-info-circle mr-1"></i>提交后请扫码支付，管理员确认收款后将自动更新状态
+                </div>
+                <div class="flex gap-3">
+                    <button @click="showSettlementModal = false" class="flex-1 py-3 border rounded-xl">取消</button>
+                    <button @click="confirmSettlement" class="flex-1 bg-yellow-500 text-white py-3 rounded-xl font-bold">确认提交</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 成功提示 -->
+        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showSuccess = false">
+            <div class="bg-white rounded-2xl p-8 text-center max-w-sm">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-3xl text-green-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">提交成功！</h3>
+                <p class="text-gray-500 mb-4">{{ successMessage }}</p>
+                <button @click="showSuccess = false; resetForm()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">确定</button>
+            </div>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-xl z-50 font-medium">
+            {{ errorMessage }}
+        </div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue;
+        const API_BASE = localStorage.getItem('API_BASE') || 'http://localhost:8000/api';
+        
+        const getDeviceFingerprint = () => {
+            let fp = localStorage.getItem('device_fp');
+            if (!fp) {
+                fp = 'fp_' + Math.random().toString(36).substr(2, 15) + Date.now();
+                localStorage.setItem('device_fp', fp);
+            }
+            return fp;
+        };
+        
+        createApp({
+            data() {
+                return {
+                    currentUser: null,
+                    offices: [],
+                    officeUsers: [],
+                    products: [],
+                    records: [],
+                    settlements: [],
+                    summary: { pending: {}, applied: {}, settled: {}, prepaid_balance: 0 },
+                    
+                    activeTab: 'pickup',
+                    step: 1,
+                    
+                    form: {
+                        officeId: '',
+                        productId: '',
+                        quantity: 1,
+                        paymentMode: 'credit',
+                        personId: '',
+                        personName: '',
+                        pickupTime: '',
+                        note: ''
+                    },
+                    
+                    filter: {
+                        officeId: '',
+                        status: ''
+                    },
+                    
+                    useManualInput: false,
+                    showSettlementModal: false,
+                    paymentQrCode: null,
+                    
+                    showSuccess: false,
+                    successMessage: '',
+                    errorMessage: ''
+                };
+            },
+            
+            computed: {
+                selectedOffice() {
+                    return this.offices.find(o => o.id === this.form.officeId);
+                },
+                selectedProduct() {
+                    return this.products.find(p => p.id === this.form.productId);
+                },
+                hasPrepaid() {
+                    return this.selectedOffice && this.selectedOffice.has_prepaid;
+                },
+                officeRemaining() {
+                    return this.selectedOffice?.total_remaining || 0;
+                },
+                calculateTotal() {
+                    if (!this.selectedProduct) return '0.00';
+                    return (this.form.quantity * this.selectedProduct.price).toFixed(2);
+                },
+                canSubmit() {
+                    if (!this.form.officeId || !this.form.productId || !this.form.quantity) return false;
+                    if (this.form.paymentMode === 'prepaid' && this.form.quantity > this.officeRemaining) return false;
+                    if (!this.form.personId && !this.form.personName) return false;
+                    return true;
+                }
+            },
+            
+            async mounted() {
+                await this.checkAuth();
+                await Promise.all([this.loadOffices(), this.loadProducts()]);
+                await Promise.all([this.loadRecords(), this.loadSummary(), this.loadSettlements()]);
+                this.loadPaymentQr();
+                
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                this.form.pickupTime = now.toISOString().slice(0, 16);
+            },
+            
+            methods: {
+                async checkAuth() {
+                    const token = localStorage.getItem('token');
+                    const userData = localStorage.getItem('user');
+                    if (!token || !userData) {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${API_BASE}/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (!res.ok) throw new Error('认证失败');
+                        this.currentUser = await res.json();
+                    } catch (e) {
+                        window.location.href = 'login.html';
+                    }
+                },
+                
+                async loadOffices() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/user/offices-with-balance`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.offices = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadOfficeUsers(officeId) {
+                    if (!officeId) return;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/offices/${officeId}/users`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.officeUsers = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadProducts() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/products?is_active=1`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.products = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadRecords() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        if (this.filter.officeId) params.append('office_id', this.filter.officeId);
+                        if (this.filter.status) params.append('status', this.filter.status);
+                        const res = await fetch(`${API_BASE}/user/office-pickups?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.records = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadSummary() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/user/office-pickup-summary`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.summary = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadSettlements() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/user/office-settlements`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) this.settlements = await res.json();
+                    } catch (e) { console.error(e); }
+                },
+                
+                async loadPaymentQr() {
+                    try {
+                        const res = await fetch(`${API_BASE}/config/payment-qr`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.paymentQrCode = data.qr_code;
+                        }
+                    } catch (e) { console.error(e); }
+                },
+                
+                selectOffice(office) {
+                    this.form.officeId = office.id;
+                    this.loadOfficeUsers(office.id);
+                    this.step = 2;
+                },
+                
+                selectProduct(product) {
+                    this.form.productId = product.id;
+                    this.step = 3;
+                },
+                
+                useDefaultPerson() {
+                    if (this.selectedOffice) {
+                        const leader = this.officeUsers.find(u => u.name === this.selectedOffice.leader_name);
+                        if (leader) {
+                            this.form.personId = leader.id;
+                        } else {
+                            this.form.personName = this.selectedOffice.leader_name;
+                            this.useManualInput = true;
+                        }
+                    }
+                },
+                
+                togglePersonInput() {
+                    this.useManualInput = !this.useManualInput;
+                    this.form.personId = '';
+                    this.form.personName = '';
+                },
+                
+                increaseQty() {
+                    if (this.form.paymentMode === 'prepaid' && this.form.quantity >= this.officeRemaining) {
+                        this.showError('预付余额不足');
+                        return;
+                    }
+                    this.form.quantity++;
+                },
+                
+                decreaseQty() {
+                    if (this.form.quantity > 1) this.form.quantity--;
+                },
+                
+                validateQty() {
+                    if (this.form.quantity < 1) this.form.quantity = 1;
+                    if (this.form.paymentMode === 'prepaid' && this.form.quantity > this.officeRemaining) {
+                        this.form.quantity = this.officeRemaining;
+                    }
+                },
+                
+                async submitPickup() {
+                    if (!this.canSubmit) {
+                        this.showError('请填写完整信息');
+                        return;
+                    }
+                    
+                    const personName = this.form.personId 
+                        ? this.officeUsers.find(u => u.id === this.form.personId)?.name || ''
+                        : this.form.personName;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/user/office-pickup`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                office_id: this.form.officeId,
+                                product_id: this.form.productId,
+                                quantity: this.form.quantity,
+                                payment_mode: this.form.paymentMode,
+                                pickup_person: personName,
+                                pickup_person_id: this.form.personId || null,
+                                pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null,
+                                note: this.form.note
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            this.successMessage = this.form.paymentMode === 'prepaid' ? '预付扣减成功！' : '领水登记成功！';
+                            this.showSuccess = true;
+                            this.resetForm();
+                            await Promise.all([this.loadOffices(), this.loadRecords(), this.loadSummary()]);
+                            this.activeTab = 'records';
+                        } else {
+                            const error = await res.json();
+                            this.showError(error.detail || '提交失败');
+                        }
+                    } catch (e) {
+                        this.showError('网络错误');
+                    }
+                },
+                
+                resetForm() {
+                    this.form = {
+                        officeId: '',
+                        productId: '',
+                        quantity: 1,
+                        paymentMode: 'credit',
+                        personId: '',
+                        personName: '',
+                        pickupTime: this.form.pickupTime,
+                        note: ''
+                    };
+                    this.step = 1;
+                    this.useManualInput = false;
+                },
+                
+                async confirmSettlement() {
+                    const pendingRecords = this.records.filter(r => r.settlement_status === 'pending');
+                    if (pendingRecords.length === 0) {
+                        this.showError('没有待结算的记录');
+                        return;
+                    }
+                    
+                    const pickupIds = pendingRecords.map(r => r.id);
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(
+                            `${API_BASE}/user/office-settlement?office_id=${this.filter.officeId || this.offices[0]?.id}&applied_by=${this.currentUser?.name || ''}`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify(pickupIds)
+                            }
+                        );
+                        
+                        if (res.ok) {
+                            this.showSettlementModal = false;
+                            await Promise.all([this.loadRecords(), this.loadSummary(), this.loadSettlements()]);
+                            this.showSuccess = true;
+                            this.successMessage = '结算申请已提交，请扫码支付！';
+                        } else {
+                            const error = await res.json();
+                            this.showError(error.detail || '提交失败');
+                        }
+                    } catch (e) {
+                        this.showError('网络错误');
+                    }
+                },
+                
+                getStatusClass(status) {
+                    const map = { 'pending': 'status-pending', 'applied': 'status-applied', 'settled': 'status-settled' };
+                    return map[status] || 'status-pending';
+                },
+                
+                getStatusText(status) {
+                    const map = { 'pending': '待结算', 'applied': '已申请', 'settled': '已结清' };
+                    return map[status] || status;
+                },
+                
+                getSettleStatusClass(status) {
+                    const map = { 'pending': 'status-pending', 'applied': 'status-applied', 'confirmed': 'status-settled' };
+                    return map[status] || 'status-pending';
+                },
+                
+                getSettleStatusText(status) {
+                    const map = { 'pending': '待支付', 'applied': '已支付待确认', 'confirmed': '已确认' };
+                    return map[status] || status;
+                },
+                
+                formatDate(dateStr) {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                },
+                
+                showError(msg) {
+                    this.errorMessage = msg;
+                    setTimeout(() => this.errorMessage = '', 3000);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
