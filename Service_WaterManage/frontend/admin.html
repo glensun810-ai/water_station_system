@@ -1133,13 +1133,13 @@
                     <div class="flex gap-2">
                         <button @click="selectedPickups = []" class="px-3 py-1.5 text-slate-500 text-sm hover:text-slate-700">取消选择</button>
                         <button v-if="selectedPendingCount > 0" @click="batchRemindPickups" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
-                            🔔 批量提醒
+                            批量提醒付款
                         </button>
                         <button v-if="selectedAppliedCount > 0" @click="batchConfirmPickups" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                            ✅ 批量确认
+                            批量确认收款
                         </button>
                         <button @click="batchDeletePickups" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
-                            🗑️ 批量删除
+                            批量删除
                         </button>
                     </div>
                 </div>
@@ -1181,15 +1181,18 @@
                                 </td>
                                 <td class="py-3 px-3 text-sm text-slate-600">{{ p.pickup_person }}</td>
                                 <td class="py-3 px-3">
-                                    <div class="flex items-center gap-2">
-                                        <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium">
-                                            🔔
+                                    <div class="flex items-center gap-1">
+                                        <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded">
+                                            提醒付款
                                         </button>
-                                        <button v-else-if="p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                                            ✅
+                                        <button v-else-if="p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-xs font-medium px-2 py-1 bg-green-50 rounded">
+                                            确认收款
                                         </button>
-                                        <button @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-sm font-medium" title="删除">
-                                            🗑️
+                                        <span v-else class="text-xs text-green-500 font-medium px-2 py-1">
+                                            已结清
+                                        </span>
+                                        <button @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded ml-1" title="删除">
+                                            删除
                                         </button>
                                     </div>
                                 </td>
@@ -4323,7 +4326,7 @@
                 // ========== 领水记录相关方法 ==========
                 const loadOfficePickups = async () => {
                     try {
-                        let url = `${API_BASE}/admin/office-pickups?limit=10000`;
+                        let url = `${API_BASE}/office-pickups?limit=10000`;
                         const token = localStorage.getItem('token');
                         const headers = {};
                         if (token) {
@@ -4368,9 +4371,12 @@
                 const confirmSinglePickup = async (id) => {
                     if (!confirm('确认已收到该款项？')) return;
                     try {
-                        const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/settle`, { 
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        const res = await fetch(`${API_BASE}/office-pickup/${id}/confirm`, { 
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: headers
                         });
                         const data = await res.json();
                         if (!res.ok) {
@@ -4425,7 +4431,7 @@
                             'Authorization': `Bearer ${token}`
                         };
                         
-                        const res = await fetch(`${API_BASE}/admin/office-pickup/${id}`, {
+                        const res = await fetch(`${API_BASE}/office-pickup/${id}`, {
                             method: 'DELETE',
                             headers: headers
                         });
@@ -4471,7 +4477,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         };
-                        const res = await fetch(`${API_BASE}/admin/office-pickups/batch-delete`, {
+                        const res = await fetch(`${API_BASE}/office-pickups/batch-delete`, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify({ pickup_ids: selectedPickups.value })
@@ -4494,8 +4500,8 @@
                 const sendRemindForPickup = async (p) => {
                     if (!confirm(`确定向 ${p.pickup_person || '该用户'} 发送付款提醒？`)) return;
                     try {
-                        console.log('Sending remind for pickup:', p.id, `${API_BASE}/admin/office-pickup/${p.id}/remind`);
-                        const res = await fetch(`${API_BASE}/admin/office-pickup/${p.id}/remind`, { 
+                        console.log('Sending remind for pickup:', p.id, `${API_BASE}/office-pickup/${p.id}/remind`);
+                        const res = await fetch(`${API_BASE}/office-pickup/${p.id}/remind`, { 
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' }
                         });
@@ -4517,25 +4523,28 @@
                     if (selectedPickups.value.length === 0) return;
                     if (!confirm(`确认已收到选中的 ${selectedAppliedCount.value} 条记录的款项？`)) return;
                     try {
-                        for (const id of selectedPickups.value) {
-                            const p = officePickups.value.find(x => x.id === id);
-                            if (p && p.settlement_status === 'applied') {
-                                const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/settle`, { 
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                                if (!res.ok) {
-                                    const data = await res.json();
-                                    console.error('Failed to settle pickup', id, data);
-                                }
-                            }
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        // Use batch API
+                        const res = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify(selectedPickups.value)
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || '批量确认收款成功');
+                            selectedPickups.value = [];
+                            loadOfficePickups();
+                            loadDashboard();
+                        } else {
+                            const data = await res.json();
+                            alert(data.detail || '批量确认收款失败');
                         }
-                        alert('批量确认收款成功');
-                        selectedPickups.value = [];
-                        loadOfficePickups();
-                        loadDashboard();
                     } catch (e) {
                         console.error('Failed to batch confirm:', e);
+                        alert('批量确认收款失败');
                         alert('批量确认失败: ' + e.message);
                     }
                 };
@@ -4547,7 +4556,7 @@
                         for (const id of selectedPickups.value) {
                             const p = officePickups.value.find(x => x.id === id);
                             if (p && p.settlement_status === 'pending') {
-                                const res = await fetch(`${API_BASE}/admin/office-pickup/${id}/remind`, { 
+                                const res = await fetch(`${API_BASE}/office-pickup/${id}/remind`, { 
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' }
                                 });

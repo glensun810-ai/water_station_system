@@ -51,10 +51,9 @@
             <div class="flex items-center justify-between">
                 <h1 class="text-lg font-bold">💧 智能水站</h1>
                 <div class="flex items-center gap-2">
-                    <button @click="showOfficeSwitcher = true" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
-                        <i class="fas fa-building"></i>
-                        <span class="max-w-[120px] truncate">我的办公室</span>
-                        <i class="fas fa-chevron-down text-xs"></i>
+                    <button @click="showOfficeSettings = true" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+                        <i class="fas fa-cog"></i>
+                        <span class="max-w-[80px] truncate">设置</span>
                     </button>
                 </div>
             </div>
@@ -174,6 +173,17 @@
                         </button>
                     </div>
 
+                    <!-- 批量操作工具栏 -->
+                    <div v-if="selectedRecords.length > 0" class="bg-blue-50 border border-blue-100 px-3 py-2 rounded-lg mb-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-blue-700">已选择 {{ selectedRecords.length }} 条</span>
+                            <button @click="selectedRecords = []" class="text-sm text-blue-600 hover:text-blue-800">取消</button>
+                        </div>
+                        <button @click="batchMarkAsPaid" class="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            批量已付款
+                        </button>
+                    </div>
+
                     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
@@ -188,10 +198,14 @@
                                         <th class="py-2 px-2 text-right text-slate-600 font-medium">金额</th>
                                         <th class="py-2 px-2 text-left text-slate-600 font-medium">状态</th>
                                         <th class="py-2 px-2 text-left text-slate-600 font-medium">领取人</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="r in filteredRecordList" :key="r.id" class="border-b border-slate-100 hover:bg-slate-50">
+                                        <td class="py-2 px-2">
+                                            <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="r.settlement_status === 'settled'" class="w-4 h-4 rounded">
+                                        </td>
                                         <td class="py-2 px-2 text-slate-600">{{ formatRecordDateFull(r.pickup_time) }}</td>
                                         <td class="py-2 px-2 text-slate-800 font-medium">{{ r.office_name }}</td>
                                         <td class="py-2 px-2 text-slate-600">{{ r.office_room_number || '-' }}</td>
@@ -205,9 +219,20 @@
                                             </span>
                                         </td>
                                         <td class="py-2 px-2 text-slate-600">{{ r.pickup_person }}</td>
+                                        <td class="py-2 px-2">
+                                            <button v-if="r.settlement_status === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200">
+                                                已付款
+                                            </button>
+                                            <span v-else-if="r.settlement_status === 'applied'" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                                                待确认
+                                            </span>
+                                            <span v-else class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                                已结清
+                                            </span>
+                                        </td>
                                     </tr>
                                     <tr v-if="filteredRecordList.length === 0">
-                                        <td colspan="9" class="py-8 text-center text-slate-400">暂无记录</td>
+                                        <td colspan="10" class="py-8 text-center text-slate-400">暂无记录</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -419,9 +444,9 @@
                     <p class="text-sm text-gray-500 mt-2">请先设置您所属的办公室，以便快速完成领水登记和结算操作。</p>
                 </div>
                 <div class="space-y-2">
-                    <a href="my-offices.html" class="block w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-center">
+                    <button @click="showOfficeSettings = true; showFirstTimeGuide = false" class="block w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-center">
                         立即设置办公室
-                    </a>
+                    </button>
                     <button @click="skipFirstTimeGuide" class="block w-full bg-gray-100 text-gray-600 py-2 rounded-xl text-sm">
                         暂时跳过
                     </button>
@@ -429,47 +454,43 @@
             </div>
         </div>
 
-        <div v-if="showOfficeSwitcher" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSwitcher = false">
-            <div class="bg-white rounded-t-2xl w-full max-h-[70vh] overflow-y-auto p-4">
+        <!-- 设置弹窗：选择办公室 -->
+        <div v-if="showOfficeSettings" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSettings = false">
+            <div class="bg-white rounded-t-2xl w-full max-h-[80vh] overflow-y-auto p-4">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg">我的办公室</h3>
-                    <button @click="showOfficeSwitcher = false" class="text-gray-400">
+                    <h3 class="font-bold text-lg">设置我的办公室</h3>
+                    <button @click="showOfficeSettings = false" class="text-gray-400">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
-                <div v-if="userOffices.length === 0" class="text-center py-8">
-                    <div class="text-gray-400 mb-4">您还没有关联办公室</div>
-                    <a href="my-offices.html" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">
-                        去添加办公室
-                    </a>
-                </div>
-                <div v-else>
-                    <div class="space-y-2 mb-4">
-                        <div v-for="office in userOffices" :key="office.id" 
-                             @click="switchOffice(office.id)"
-                             class="flex items-center justify-between p-3 rounded-xl border-2 transition"
-                             :class="form.officeId === office.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
-                            <div class="flex items-center gap-3">
-                                <div :class="form.officeId === office.id ? 'bg-blue-500' : 'bg-gray-200'" class="w-4 h-4 rounded-full flex items-center justify-center">
-                                    <i v-if="form.officeId === office.id" class="fas fa-check text-white text-xs"></i>
-                                </div>
-                                <div>
-                                    <div class="font-medium text-gray-800 flex items-center gap-2">
-                                        {{ office.name }}
-                                        <span v-if="office.is_default" class="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full">默认</span>
-                                    </div>
-                                    <div class="text-xs text-gray-500">{{ office.room_number }}</div>
-                                </div>
+                <p class="text-sm text-gray-500 mb-4">选择您所属的办公室（可多选），并设置其中一个为默认办公室。</p>
+                
+                <div class="space-y-2 mb-4 max-h-[50vh] overflow-y-auto">
+                    <div v-for="office in offices" :key="office.id" 
+                         @click="toggleUserOffice(office.id)"
+                         class="flex items-center justify-between p-3 rounded-xl border-2 transition cursor-pointer"
+                         :class="isUserOfficeSelected(office.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+                        <div class="flex items-center gap-3">
+                            <div :class="isUserOfficeSelected(office.id) ? 'bg-blue-500' : 'bg-gray-200'" class="w-5 h-5 rounded flex items-center justify-center">
+                                <i v-if="isUserOfficeSelected(office.id)" class="fas fa-check text-white text-xs"></i>
                             </div>
-                            <div v-if="office.leader_name" class="text-xs text-gray-400">
-                                负责人: {{ office.leader_name }}
+                            <div>
+                                <div class="font-medium text-gray-800">{{ office.name }}</div>
+                                <div class="text-xs text-gray-500">{{ office.room_number || '未设置房间号' }}</div>
                             </div>
                         </div>
+                        <button v-if="isUserOfficeSelected(office.id)" 
+                                @click.stop="setAsDefault(office.id)"
+                                :class="getUserOffice(office.id)?.is_default ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'"
+                                class="px-2 py-1 rounded text-xs font-medium">
+                            {{ getUserOffice(office.id)?.is_default ? '默认' : '设为默认' }}
+                        </button>
                     </div>
-                    <a href="my-offices.html" class="block text-center text-blue-600 py-2 text-sm">
-                        <i class="fas fa-cog mr-1"></i> 管理我的办公室（设置默认等）
-                    </a>
                 </div>
+                
+                <button @click="saveUserOffices" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium">
+                    确定
+                </button>
             </div>
         </div>
     </div>
@@ -501,11 +522,12 @@
                     rechargeProducts: [],
                     recordStatusFilter: '',
                     recordList: [],
+                    selectedRecords: [],
                     recordDateFrom: '',
                     recordDateTo: '',
                     officeTab: 'common',
                     userOffices: [],
-                    showOfficeSwitcher: false,
+                    showOfficeSettings: false,
                     showFirstTimeGuide: false,
                     showSuccess: false, successMessage: '', errorMessage: '', paymentQrCode: null
                 };
@@ -604,6 +626,24 @@
                     }
                 },
                 'form.officeId': function(newVal) {
+                    // When office changes in pickup tab, auto-update pickup person to office leader
+                    if (newVal && this.activeTab === 'pickup') {
+                        // First check userOffices for the leader
+                        const userOffice = this.userOffices.find(o => o.id === newVal);
+                        if (userOffice && userOffice.leader_name) {
+                            this.form.personName = userOffice.leader_name;
+                            this.form.personId = '';
+                            this.useManualPerson = true;
+                        } else {
+                            // Check in full offices list
+                            const office = this.offices.find(o => o.id === newVal);
+                            if (office && office.leader_name) {
+                                this.form.personName = office.leader_name;
+                                this.form.personId = '';
+                                this.useManualPerson = true;
+                            }
+                        }
+                    }
                     if (this.activeTab === 'settlement' && newVal) {
                         this.settlementOfficeId = newVal;
                         this.loadSettlementData();
@@ -623,20 +663,22 @@
                     }
                     
                     try {
-                        const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/user/offices-with-balance'), fetch(API_BASE + '/products?is_active=1')]);
+                        const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/offices?is_active=1'), fetch(API_BASE + '/products?is_active=1')]);
                         if (officesRes.ok) this.offices = await officesRes.json();
                         if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
                         
                         if (this.userOffices.length > 0) {
                             const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
                             const defaultId = defaultOffice.id;
+                            // Always set default office if not already set, or force update personName
                             if (!this.form.officeId) {
                                 this.form.officeId = defaultId;
-                                // 设置领取人为默认办公室的负责人
-                                if (defaultOffice.leader_name) {
-                                    this.form.personName = defaultOffice.leader_name;
-                                    this.useManualPerson = true;
-                                }
+                            }
+                            // Always set pickup person to office leader if available
+                            if (defaultOffice.leader_name) {
+                                this.form.personName = defaultOffice.leader_name;
+                                this.form.personId = '';
+                                this.useManualPerson = true;
                             }
                             if (!this.settlementOfficeId) {
                                 this.settlementOfficeId = defaultId;
@@ -761,7 +803,71 @@
                         this.settlementOfficeId = officeId;
                         this.loadSettlementData();
                     }
-                    this.showOfficeSwitcher = false;
+                    this.showOfficeSettings = false;
+                },
+                
+                // 新的办公室设置方法
+                isUserOfficeSelected(officeId) {
+                    return this.userOffices.some(o => o.id === officeId);
+                },
+                getUserOffice(officeId) {
+                    return this.userOffices.find(o => o.id === officeId);
+                },
+                toggleUserOffice(officeId) {
+                    const idx = this.userOffices.findIndex(o => o.id === officeId);
+                    const office = this.offices.find(o => o.id === officeId);
+                    if (!office) return;
+                    
+                    if (idx > -1) {
+                        // 移除
+                        if (this.userOffices.length > 1) {
+                            this.userOffices.splice(idx, 1);
+                        } else {
+                            alert('至少需要保留一个办公室');
+                            return;
+                        }
+                    } else {
+                        // 添加
+                        this.userOffices.push({
+                            id: office.id,
+                            name: office.name,
+                            room_number: office.room_number,
+                            leader_name: office.leader_name || '',
+                            is_default: this.userOffices.length === 0
+                        });
+                    }
+                },
+                setAsDefault(officeId) {
+                    this.userOffices.forEach(o => {
+                        o.is_default = o.id === officeId;
+                    });
+                },
+                saveUserOffices() {
+                    if (this.userOffices.length === 0) {
+                        alert('请至少选择一个办公室');
+                        return;
+                    }
+                    // 确保有一个默认
+                    if (!this.userOffices.some(o => o.is_default)) {
+                        this.userOffices[0].is_default = true;
+                    }
+                    // 保存到localStorage
+                    localStorage.setItem('user_offices', JSON.stringify(this.userOffices));
+                    const defaultOffice = this.userOffices.find(o => o.is_default);
+                    if (defaultOffice) {
+                        localStorage.setItem('user_default_office_id', defaultOffice.id);
+                        // 应用到表单
+                        this.form.officeId = defaultOffice.id;
+                        if (defaultOffice.leader_name) {
+                            this.form.personName = defaultOffice.leader_name;
+                            this.useManualPerson = true;
+                        }
+                        this.settlementOfficeId = defaultOffice.id;
+                    }
+                    this.showOfficeSettings = false;
+                    // 刷新数据
+                    this.loadSettlementData();
+                    this.loadRecordList();
                 },
                 
                 skipFirstTimeGuide() {
@@ -787,7 +893,18 @@
                         this.successMessage = '提交成功！'; this.showSuccess = true; this.resetForm(); await this.loadData();
                     } catch (e) { this.showError('网络错误'); }
                 },
-                resetForm() { this.form = { officeId: '', personId: '', personName: '', pickupTime: this.form.pickupTime }; this.products.forEach(p => this.cart[p.id] = 0); this.useManualPerson = false; },
+                resetForm() { 
+                    // After submission, reset to default office and person
+                    const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
+                    this.form = { 
+                        officeId: defaultOffice ? defaultOffice.id : '', 
+                        personId: '', 
+                        personName: defaultOffice && defaultOffice.leader_name ? defaultOffice.leader_name : '', 
+                        pickupTime: this.form.pickupTime 
+                    };
+                    this.useManualPerson = !! (defaultOffice && defaultOffice.leader_name);
+                    this.products.forEach(p => this.cart[p.id] = 0); 
+                },
                 async applySettlement() {
                     const pending = this.filteredPendingRecords;
                     if (pending.length === 0) { this.showError('没有待付款记录'); return; }
@@ -861,6 +978,43 @@
                     data.forEach((r, i) => { csv += `${i+1},${r.pickup_time},${r.office_name},${r.office_room_number || ''},${r.product_name},${r.quantity},${r.unit_price},${r.total_amount},${r.pickup_person},${this.getRecordStatusText(r.settlement_status)}\n`; });
                     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `领水记录_${type}_${new Date().toISOString().slice(0,10)}.csv`; link.click();
+                },
+                async markAsPaid(recordId) {
+                    try {
+                        const res = await fetch(`${API_BASE}/office-pickup/${recordId}/pay`, { method: 'POST' });
+                        if (res.ok) {
+                            alert('已标记为已付款');
+                            this.loadData();
+                            this.selectedRecords = [];
+                        } else {
+                            const e = await res.json();
+                            alert(e.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('网络错误');
+                    }
+                },
+                async batchMarkAsPaid() {
+                    if (this.selectedRecords.length === 0) return;
+                    if (!confirm(`确定要将选中的 ${this.selectedRecords.length} 条记录标记为已付款吗？`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/office-pickups/batch-pay`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.selectedRecords)
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || '批量操作成功');
+                            this.loadData();
+                            this.selectedRecords = [];
+                        } else {
+                            const e = await res.json();
+                            alert(e.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('网络错误');
+                    }
                 },
                 showError(m) { this.errorMessage = m; setTimeout(() => this.errorMessage = '', 3000); }
             }

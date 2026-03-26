@@ -145,7 +145,12 @@ class OfficePickupResponse(BaseModel):
     product_specification: Optional[str] = None
     quantity: int
     pickup_person: Optional[str] = None
+    pickup_person_id: Optional[int] = None
     pickup_time: datetime
+    payment_mode: Optional[str] = "credit"
+    settlement_status: Optional[str] = "pending"
+    unit_price: Optional[float] = 0
+    total_amount: Optional[float] = 0
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -923,3 +928,122 @@ def get_office_pickups(
 
     pickups = query.order_by(OfficePickup.pickup_time.desc()).limit(limit).all()
     return pickups
+
+
+@router.post("/office-pickup/{pickup_id}/settle")
+def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """结算办公室领水记录"""
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    pickup.settlement_status = "settled"
+    db.commit()
+
+    return {"message": "结算成功"}
+
+
+@router.delete("/office-pickup/{pickup_id}")
+def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """删除办公室领水记录"""
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    db.delete(pickup)
+    db.commit()
+
+    return {"message": "删除成功"}
+
+
+@router.post("/office-pickups/batch-delete")
+def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db)):
+    """批量删除办公室领水记录"""
+    deleted_count = 0
+    for pickup_id in pickup_ids:
+        pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+        if pickup:
+            db.delete(pickup)
+            deleted_count += 1
+
+    db.commit()
+    return {
+        "deleted_count": deleted_count,
+        "message": f"成功删除 {deleted_count} 条记录",
+    }
+
+
+@router.post("/office-pickup/{pickup_id}/remind")
+def remind_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """提醒结算办公室领水记录"""
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    return {"message": "提醒已发送"}
+
+
+@router.post("/office-pickup/{pickup_id}/pay")
+def user_pay_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """用户标记已付款 - 将状态从待付款改为付款待确认"""
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    if pickup.settlement_status != "pending":
+        raise HTTPException(status_code=400, detail="只有待付款状态才能标记已付款")
+
+    pickup.settlement_status = "applied"
+    db.commit()
+
+    return {"message": "已标记为已付款，等待确认"}
+
+
+@router.post("/office-pickup/{pickup_id}/confirm")
+def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db)):
+    """管理员确认收款 - 将状态从付款待确认改为已结清"""
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    if pickup.settlement_status != "applied":
+        raise HTTPException(status_code=400, detail="只有付款待确认状态才能确认收款")
+
+    pickup.settlement_status = "settled"
+    db.commit()
+
+    return {"message": "确认收款成功"}
+
+
+@router.post("/office-pickups/batch-pay")
+def batch_user_pay(pickup_ids: List[int], db: Session = Depends(get_db)):
+    """批量用户标记已付款"""
+    updated_count = 0
+    for pickup_id in pickup_ids:
+        pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+        if pickup and pickup.settlement_status == "pending":
+            pickup.settlement_status = "applied"
+            updated_count += 1
+
+    db.commit()
+    return {
+        "updated_count": updated_count,
+        "message": f"成功标记 {updated_count} 条记录为已付款",
+    }
+
+
+@router.post("/office-pickups/batch-confirm")
+def batch_admin_confirm(pickup_ids: List[int], db: Session = Depends(get_db)):
+    """批量管理员确认收款"""
+    updated_count = 0
+    for pickup_id in pickup_ids:
+        pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+        if pickup and pickup.settlement_status == "applied":
+            pickup.settlement_status = "settled"
+            updated_count += 1
+
+    db.commit()
+    return {
+        "updated_count": updated_count,
+        "message": f"成功确认 {updated_count} 条记录的收款",
+    }

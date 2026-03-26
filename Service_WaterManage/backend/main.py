@@ -1498,269 +1498,140 @@ def get_settlement_applications(db: Session = Depends(get_db)):
     return results
 
 
-@app.post("/api/admin/confirm-settlement")
-def confirm_settlement(request: SettlementRequest, db: Session = Depends(get_db)):
-    """管理员确认收款，完成结算"""
-    updated = 0
-    total_amount = 0
-    user_id = None
-
-    for tid in request.transaction_ids:
-        transaction = db.query(Transaction).filter(Transaction.id == tid).first()
-        if transaction:
-            transaction.status = "settled"
-            transaction.settlement_applied = 0  # 重置申请标记
-            updated += 1
-            total_amount += transaction.actual_price
-            user_id = transaction.user_id
-
-    if updated > 0 and user_id:
-        # 发送通知给用户
-        send_settlement_confirmed_notification(db, user_id, total_amount)
-
-    db.commit()
-    return {"updated": updated}
+class OfficePickupCreate(BaseModel):
+    office_id: int
+    product_id: int
+    quantity: int
+    pickup_person: Optional[str] = None
+    pickup_person_id: Optional[int] = None
+    pickup_time: Optional[str] = None
 
 
-@app.get("/api/admin/office-settlements")
-def get_office_settlements(status: str = None, db: Session = Depends(get_db)):
-    """获取所有办公室结算记录"""
-    query = db.query(OfficeSettlement).order_by(OfficeSettlement.created_at.desc())
-
-    results = []
-    for s in query.all():
-        results.append(
-            {
-                "id": s.id,
-                "office_id": s.office_id,
-                "office_name": s.office_name,
-                "product_name": s.product_name,
-                "quantity": s.quantity,
-                "unit_price": s.unit_price,
-                "total_amount": s.total_amount,
-                "settlement_person": s.settlement_person,
-                "settlement_person_id": s.settlement_person_id,
-                "created_at": s.created_at.isoformat() if s.created_at else None,
-                "status": "applied",  # 简化状态
-            }
-        )
-    return results
-
-
-@app.post("/api/admin/office-settlement/{settlement_id}/confirm")
-def confirm_office_settlement(settlement_id: int, db: Session = Depends(get_db)):
-    """确认办公室结算"""
-    settlement = (
-        db.query(OfficeSettlement).filter(OfficeSettlement.id == settlement_id).first()
-    )
-    if not settlement:
-        raise HTTPException(status_code=404, detail="结算记录不存在")
-
-    return {"message": "结算已确认", "id": settlement_id}
-
-
-@app.get("/api/admin/office-pickups")
-def get_office_pickups_admin(
-    limit: int = 100, offset: int = 0, db: Session = Depends(get_db)
-):
-    """获取所有办公室领水记录（管理员）- 从transactions表读取"""
-    pickups = (
-        db.query(Transaction, User, Product)
-        .join(User, Transaction.user_id == User.id)
-        .join(Product, Transaction.product_id == Product.id)
-        .filter(Transaction.type == "pickup")
-        .order_by(Transaction.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-
-    results = []
-    for txn, user, product in pickups:
-        # 计算settlement_status: pending(待付款)/applied(付款待确认)/settled(已结清)
-        if txn.status == "settled":
-            settlement_status = "settled"
-        elif txn.settlement_applied == 1:
-            settlement_status = "applied"
-        else:
-            settlement_status = "pending"
-
-        results.append(
-            {
-                "id": txn.id,
-                "user_id": user.id,
-                "user_name": user.name,
-                "department": user.department,
-                "office_name": user.department or "未知办公室",
-                "product_id": product.id,
-                "product_name": product.name,
-                "product_specification": product.specification,
-                "quantity": txn.quantity,
-                "pickup_person": user.name,
-                "pickup_person_id": user.id,
-                "pickup_time": txn.created_at.isoformat() if txn.created_at else None,
-                "payment_mode": txn.mode,
-                "settlement_status": settlement_status,
-                "unit_price": txn.actual_price / txn.quantity
-                if txn.quantity and txn.actual_price
-                else 0,
-                "total_amount": txn.actual_price,
-                "status": txn.status,
-            }
-        )
-    return results
-
-
-@app.post("/api/admin/office-pickup/{pickup_id}/settle")
-def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
-    """结算办公室领水记录 - 从transactions表操作"""
-    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
-    if not txn:
-        raise HTTPException(status_code=404, detail="领水记录不存在")
-
-    txn.status = "settled"
-    db.commit()
-
-    return {"message": "结算成功", "id": pickup_id}
-
-
-@app.post("/api/admin/office-pickup/{pickup_id}/remind")
-def remind_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
-    """提醒办公室领水结算 - 从transactions表操作"""
-    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
-    if not txn:
-        raise HTTPException(status_code=404, detail="领水记录不存在")
-
-    return {"message": "提醒已发送", "id": pickup_id}
-
-
-@app.delete("/api/admin/office-pickup/{pickup_id}")
-def delete_office_pickup(
-    pickup_id: int,
-    current_user: User = Depends(get_current_user),
+@app.post("/api/user/office-pickup")
+def create_office_pickup(
+    pickup: OfficePickupCreate,
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """删除单条领水记录（超级管理员）"""
-    import logging
+    """创建办公室领水记录"""
+    # Get office info
+    from api_office import Office
 
-    # 调试日志
-    logging.info(f"=== DELETE PICKUP DEBUG ===")
-    logging.info(f"pickup_id: {pickup_id}")
-    logging.info(f"current_user: {current_user}")
+    office = db.query(Office).filter(Office.id == pickup.office_id).first()
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
 
-    if current_user:
-        logging.info(
-            f"User authenticated - id: {current_user.id}, role: {current_user.role}, name: {current_user.name}"
-        )
-    else:
-        logging.info("User NOT authenticated - current_user is None")
+    # Get product info
+    product = db.query(Product).filter(Product.id == pickup.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
 
-    if not current_user:
-        logging.warning("Delete failed: User not authenticated")
-        raise HTTPException(status_code=401, detail="请先登录")
+    # Parse pickup time
+    pickup_time = datetime.now()
+    if pickup.pickup_time:
+        try:
+            pickup_time = datetime.fromisoformat(
+                pickup.pickup_time.replace("Z", "+00:00")
+            )
+        except:
+            pickup_time = datetime.now()
 
-    if current_user.role != "super_admin":
-        logging.warning(
-            f"Delete failed: User role '{current_user.role}' is not 'super_admin'"
-        )
-        raise HTTPException(
-            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
-        )
+    # Calculate amount
+    unit_price = product.price or 0
+    total_amount = unit_price * pickup.quantity
 
-    logging.info("Authorization passed, proceeding with delete")
-    if current_user:
-        logging.info(f"User role: {current_user.role}, User id: {current_user.id}")
-    else:
-        logging.info("current_user is None - not authenticated")
+    # Determine pickup person - use provided name or current user
+    pickup_person_name = pickup.pickup_person
+    pickup_person_id_val = pickup.pickup_person_id
 
-    if not current_user or current_user.role != "super_admin":
-        raise HTTPException(
-            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
-        )
+    if not pickup_person_name and current_user:
+        pickup_person_name = current_user.name
+    if not pickup_person_id_val and current_user:
+        pickup_person_id_val = current_user.id
 
-    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
-    if not txn:
-        raise HTTPException(status_code=404, detail="领水记录不存在")
+    # Create pickup record
+    new_pickup = OfficePickup(
+        office_id=pickup.office_id,
+        office_name=office.name,
+        office_room_number=office.room_number,
+        product_id=pickup.product_id,
+        product_name=product.name,
+        product_specification=product.specification,
+        quantity=pickup.quantity,
+        pickup_person=pickup_person_name or "匿名",
+        pickup_person_id=pickup_person_id_val,
+        pickup_time=pickup_time,
+        unit_price=unit_price,
+        total_amount=total_amount,
+        settlement_status="pending",
+    )
 
-    db.delete(txn)
+    db.add(new_pickup)
     db.commit()
+    db.refresh(new_pickup)
 
-    return {"message": "领水记录已删除", "id": pickup_id}
-
-
-class BatchDeletePickupsRequest(BaseModel):
-    pickup_ids: List[int]
-
-
-@app.post("/api/admin/office-pickups/batch-delete")
-def batch_delete_office_pickups(
-    request: BatchDeletePickupsRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """批量删除领水记录（超级管理员）"""
-    if not current_user or current_user.role != "super_admin":
-        raise HTTPException(
-            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
-        )
-
-    deleted_count = 0
-    for pickup_id in request.pickup_ids:
-        txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
-        if txn:
-            db.delete(txn)
-            deleted_count += 1
-
-    db.commit()
-
-    return {
-        "message": f"已删除 {deleted_count} 条领水记录",
-        "deleted_count": deleted_count,
-    }
+    return {"id": new_pickup.id, "message": "领水记录创建成功"}
 
 
 @app.get("/api/user/office-pickups")
 def get_user_office_pickups(
     limit: int = 100,
     offset: int = 0,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
+    office_id: Optional[int] = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """获取当前用户的办公室领水记录 - 从transactions表读取"""
+    """获取当前用户的办公室领水记录 - 从OfficePickup表读取"""
+    # Query from OfficePickup table
+    query = db.query(OfficePickup)
+
+    # Filter by office_id if provided
+    if office_id is not None:
+        query = query.filter(OfficePickup.office_id == office_id)
+
+    # Filter by status if provided
+    if status and status != "all":
+        query = query.filter(OfficePickup.settlement_status == status)
+
+    # If user is logged in, filter by their office associations
+    if current_user:
+        # Get user's office names from localStorage (passed as parameter) or filter all
+        # For now, just return all records (admin can see all, users can see all for now)
+        pass
+
     pickups = (
-        db.query(Transaction, Product)
-        .join(Product, Transaction.product_id == Product.id)
-        .filter(Transaction.user_id == current_user.id)
-        .filter(Transaction.type == "pickup")
-        .order_by(Transaction.created_at.desc())
+        query.order_by(OfficePickup.pickup_time.desc())
         .offset(offset)
         .limit(limit)
         .all()
     )
 
     results = []
-    for txn, product in pickups:
+    for pickup in pickups:
         results.append(
             {
-                "id": txn.id,
-                "user_id": current_user.id,
-                "user_name": current_user.name,
-                "department": current_user.department,
-                "office_name": current_user.department or "未知办公室",
-                "product_id": product.id,
-                "product_name": product.name,
-                "product_specification": product.specification,
-                "quantity": txn.quantity,
-                "pickup_person": current_user.name,
-                "pickup_person_id": current_user.id,
-                "pickup_time": txn.created_at.isoformat() if txn.created_at else None,
-                "payment_mode": txn.mode,
-                "settlement_status": txn.status,
-                "unit_price": txn.actual_price / txn.quantity
-                if txn.quantity and txn.actual_price
-                else 0,
-                "total_amount": txn.actual_price,
-                "status": txn.status,
+                "id": pickup.id,
+                "office_id": pickup.office_id,
+                "user_id": pickup.pickup_person_id,
+                "user_name": pickup.pickup_person,
+                "department": pickup.office_name,
+                "office_name": pickup.office_name,
+                "office_room_number": pickup.office_room_number,
+                "product_id": pickup.product_id,
+                "product_name": pickup.product_name,
+                "product_specification": pickup.product_specification,
+                "quantity": pickup.quantity,
+                "pickup_person": pickup.pickup_person,
+                "pickup_person_id": pickup.pickup_person_id,
+                "pickup_time": pickup.pickup_time.isoformat()
+                if pickup.pickup_time
+                else None,
+                "payment_mode": pickup.payment_mode,
+                "settlement_status": pickup.settlement_status,
+                "unit_price": pickup.unit_price,
+                "total_amount": pickup.total_amount,
+                "status": pickup.settlement_status,
             }
         )
     return results

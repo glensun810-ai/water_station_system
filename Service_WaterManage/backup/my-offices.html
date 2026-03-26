@@ -132,13 +132,15 @@
                 const loadData = async () => {
                     isLoading.value = true;
                     try {
+                        // Load user's saved offices from localStorage
                         const stored = localStorage.getItem('user_offices');
                         if (stored) {
                             userOffices.value = JSON.parse(stored);
                             selectedOfficeIds.value = userOffices.value.map(o => o.id);
                         }
 
-                        const res = await fetch(`${API_BASE}/user/offices-with-balance`);
+                        // Load all offices from office management (master data)
+                        const res = await fetch(`${API_BASE}/offices?is_active=1`);
                         if (res.ok) {
                             allOffices.value = await res.json();
                         }
