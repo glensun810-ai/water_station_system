@@ -92,6 +92,9 @@
                                 <div class="flex-1">
                                     <div class="text-sm font-medium text-gray-800">{{ product.name }}</div>
                                     <div class="text-xs text-gray-500">{{ product.specification }}</div>
+                                    <div v-if="product.promo_threshold && product.promo_gift" class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">
+                                        买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                    </div>
                                     <div v-if="getPrepaidQty(product.id) > 0" class="text-xs text-green-600 mt-1"><i class="fas fa-wallet mr-1"></i>已预付剩余: {{ getPrepaidQty(product.id) }}{{ product.unit }}</div>
                                 </div>
                                 <div class="w-16 text-right mr-4">
@@ -103,6 +106,9 @@
                                     <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
                                     <button @click="increaseQty(product.id)" class="qty-btn qty-btn-plus"><i class="fas fa-plus"></i></button>
                                 </div>
+                            </div>
+                            <div v-if="cart[product.id] > 0 && product.promo_threshold && product.promo_gift" class="mt-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                🉐 即将获得 <strong>{{ calculatePromoGift(product, cart[product.id]) }}</strong> 赠送
                             </div>
                         </div>
                     </div>
@@ -1040,6 +1046,14 @@
                 increaseQty(productId) { this.cart[productId] = (this.cart[productId] || 0) + 1; },
                 decreaseQty(productId) { if (this.cart[productId] > 0) this.cart[productId]--; },
                 validateQty(productId) { let v = this.cart[productId] || 0; if (v < 0) v = 0; this.cart[productId] = v; },
+                calculatePromoGift(product, quantity) {
+                    if (!product.promo_threshold || !product.promo_gift || quantity < product.promo_threshold) return 0;
+                    const total = product.promo_threshold + product.promo_gift;
+                    const cycles = Math.floor(quantity / total);
+                    const remainder = quantity % total;
+                    const extraFree = Math.floor(remainder / product.promo_threshold) * product.promo_gift;
+                    return cycles * product.promo_gift + extraFree;
+                },
                 async submitPickup() {
                     if (!this.canSubmit) { this.showError('请填写完整信息'); return; }
                     const items = Object.entries(this.cart).filter(([k, v]) => v > 0);

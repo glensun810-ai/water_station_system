@@ -139,6 +139,16 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user")
 
 
+class ProductCategory(Base):
+    __tablename__ = "product_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
 class Product(Base):
     __tablename__ = "products"
 
@@ -148,10 +158,18 @@ class Product(Base):
     unit = Column(String, default="unit")
     price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
+    cost_price = Column(Float, nullable=True)  # 成本价
+    image_url = Column(String, nullable=True)  # 产品图片URL
+    description = Column(String, nullable=True)  # 产品描述
+    category_id = Column(
+        Integer, ForeignKey("product_categories.id"), nullable=True
+    )  # 分类ID
+    barcode = Column(String, nullable=True)  # 产品条码
     promo_threshold = Column(Integer, default=10)  # 买 N
     promo_gift = Column(Integer, default=1)  # 赠 M
     is_active = Column(Integer, default=1)  # 1: 启用/在售，0: 停用/归档
 
+    category = relationship("ProductCategory", backref="products")
     transactions = relationship("Transaction", back_populates="product")
 
 
@@ -421,9 +439,14 @@ class DeleteTransactionRequest(BaseModel):
 class ProductBase(BaseModel):
     name: str
     specification: str
-    unit: str = "unit"
+    unit: str = "桶"
     price: float
     stock: int = 0
+    cost_price: Optional[float] = None
+    image_url: Optional[str] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    barcode: Optional[str] = None
     promo_threshold: int = 10
     promo_gift: int = 1
     is_active: int = 1
@@ -435,6 +458,7 @@ class ProductCreate(ProductBase):
 
 class ProductResponse(ProductBase):
     id: int
+    category_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1242,10 +1266,30 @@ def get_products(active_only: bool = False, db: Session = Depends(get_db)):
     - active_only=True: only return active products (for user-facing APIs)
     - active_only=False: return all products (for admin)
     """
-    query = db.query(Product)
+    products = db.query(Product).all()
+    result = []
+    for p in products:
+        product_dict = {
+            "id": p.id,
+            "name": p.name,
+            "specification": p.specification,
+            "unit": p.unit,
+            "price": p.price,
+            "stock": p.stock,
+            "cost_price": p.cost_price,
+            "image_url": p.image_url,
+            "description": p.description,
+            "category_id": p.category_id,
+            "barcode": p.barcode,
+            "promo_threshold": p.promo_threshold,
+            "promo_gift": p.promo_gift,
+            "is_active": p.is_active,
+            "category_name": p.category.name if p.category else None,
+        }
+        result.append(product_dict)
     if active_only:
-        query = query.filter(Product.is_active == 1)
-    return query.all()
+        result = [p for p in result if p["is_active"] == 1]
+    return result
 
 
 @app.post("/api/products", response_model=ProductResponse)
@@ -1307,6 +1351,23 @@ def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
     }
 
 
+@app.put("/api/products/{product_id}")
+def update_product(
+    product_id: int, product: ProductCreate, db: Session = Depends(get_db)
+):
+    """Update a product"""
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    for key, value in product.model_dump().items():
+        setattr(db_product, key, value)
+
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+
 @app.put("/api/products/{product_id}/stock")
 def update_product_stock(
     product_id: int, inventory: InventoryUpdate, db: Session = Depends(get_db)
@@ -1318,6 +1379,78 @@ def update_product_stock(
     db.commit()
     db.refresh(product)
     return {"product_id": product_id, "stock": product.stock}
+
+
+# --- Product Category APIs ---
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+    sort_order: int
+    is_active: int
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    sort_order: int = 0
+    is_active: int = 1
+
+
+@app.get("/api/admin/product-categories", response_model=List[CategoryResponse])
+def get_product_categories(db: Session = Depends(get_db)):
+    """Get all product categories"""
+    return db.query(ProductCategory).order_by(ProductCategory.sort_order).all()
+
+
+@app.post("/api/admin/product-categories", response_model=CategoryResponse)
+def create_product_category(category: CategoryCreate, db: Session = Depends(get_db)):
+    """Create a new product category"""
+    db_category = ProductCategory(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.put("/api/admin/product-categories/{category_id}", response_model=CategoryResponse)
+def update_product_category(
+    category_id: int, category: CategoryCreate, db: Session = Depends(get_db)
+):
+    """Update a product category"""
+    db_category = (
+        db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
+    )
+    if not db_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db_category.name = category.name
+    db_category.sort_order = category.sort_order
+    db_category.is_active = category.is_active
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.delete("/api/admin/product-categories/{category_id}")
+def delete_product_category(category_id: int, db: Session = Depends(get_db)):
+    """Delete a product category"""
+    db_category = (
+        db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
+    )
+    if not db_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    # Check if category has products
+    product_count = db.query(Product).filter(Product.category_id == category_id).count()
+    if product_count > 0:
+        raise HTTPException(
+            status_code=400, detail=f"无法删除：该分类下已有 {product_count} 个产品"
+        )
+
+    db.delete(db_category)
+    db.commit()
+    return {"message": "分类已删除", "category_id": category_id}
 
 
 # --- Transaction APIs ---

@@ -2102,6 +2102,11 @@
                             </svg>
                             批量更新库存
                         </button>
+                        <!-- 产品分类筛选 -->
+                        <select v-model="productCategoryFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none bg-white">
+                            <option value="">全部分类</option>
+                            <option v-for="cat in productCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
                         <!-- 添加库存预警筛选 -->
                         <select v-model="inventoryAlertFilter" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none bg-white">
                             <option value="all">全部产品</option>
@@ -2117,6 +2122,7 @@
                         <thead>
                             <tr>
                                 <th>产品名称</th>
+                                <th>分类</th>
                                 <th>规格</th>
                                 <th>价格</th>
                                 <th>库存</th>
@@ -2129,6 +2135,12 @@
                         <tbody>
                             <tr v-for="p in filteredProducts" :key="p.id">
                                 <td class="font-medium">{{ p.name }}</td>
+                                <td>
+                                    <span v-if="p.category_name" class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                                        {{ p.category_name }}
+                                    </span>
+                                    <span v-else class="text-xs text-slate-400">-</span>
+                                </td>
                                 <td>{{ p.specification }}</td>
                                 <td>¥{{ p.price }}</td>
                                 <td>
@@ -4006,6 +4018,8 @@
                 const autoRemindDays = ref(30);
                 const autoInventoryAlert = ref(false);
                 const inventoryAlertFilter = ref('all');
+                const productCategories = ref([]);
+                const productCategoryFilter = ref('');
                 
                 const unsettledStats = ref({
                     totalUsers: 0, 
@@ -4140,7 +4154,7 @@
                 const datePreset = ref('month'); // 默认选中本月
                 const specifications = ref([]); // 产品规格列表
                 const showInactive = ref(false);
-                const newProduct = ref({ name: '', specification: '', price: 0, stock: 0, promo_threshold: 10, promo_gift: 1, unit: '件', is_active: 1 });
+                const newProduct = ref({ name: '', specification: '', price: 0, stock: 0, cost_price: null, image_url: '', description: '', category_id: null, barcode: '', promo_threshold: 10, promo_gift: 1, unit: '桶', is_active: 1 });
 
                 // 新增：数据看板状态
                 const dashboardSummary = ref({});
@@ -4159,6 +4173,11 @@
 
                 const filteredProducts = computed(() => {
                     let result = products.value;
+                    
+                    // 产品分类筛选
+                    if (productCategoryFilter.value) {
+                        result = result.filter(p => p.category_id === productCategoryFilter.value);
+                    }
                     
                     // 库存预警筛选
                     if (inventoryAlertFilter.value !== 'all') {
@@ -4220,15 +4239,17 @@
 
                 const loadData = async () => {
                     try {
-                        const [usersRes, productsRes] = await Promise.all([
+                        const [usersRes, productsRes, categoriesRes] = await Promise.all([
                             fetch(`${API_BASE}/users`),
-                            fetch(`${API_BASE}/products`)
+                            fetch(`${API_BASE}/products`),
+                            fetch(`${API_BASE}/admin/product-categories`)
                         ]);
                         if (!usersRes.ok || !productsRes.ok) {
                             throw new Error('API 服务不可用');
                         }
                         users.value = await usersRes.json();
                         products.value = await productsRes.json();
+                        productCategories.value = categoriesRes.ok ? await categoriesRes.json() : [];
                         API_AVAILABLE.value = true;
                         apiError.value = null;
                     } catch (e) {
@@ -5502,9 +5523,39 @@
 
                 const editProduct = (product) => {
                     const newName = prompt('产品名称:', product.name);
-                    if (newName) product.name = newName;
+                    if (!newName) return;
+                    const newSpec = prompt('产品规格:', product.specification);
+                    if (!newSpec) return;
                     const newPrice = prompt('单价:', product.price);
-                    if (newPrice) product.price = parseFloat(newPrice);
+                    if (!newPrice) return;
+                    const newCostPrice = prompt('成本价 (可选):', product.cost_price || '');
+                    const newCategory = prompt('分类ID (可选):', product.category_id || '');
+                    
+                    const updatedProduct = {
+                        name: newName,
+                        specification: newSpec,
+                        price: parseFloat(newPrice),
+                        cost_price: newCostPrice ? parseFloat(newCostPrice) : null,
+                        category_id: newCategory ? parseInt(newCategory) : null,
+                        stock: product.stock,
+                        unit: product.unit,
+                        promo_threshold: product.promo_threshold,
+                        promo_gift: product.promo_gift,
+                        is_active: product.is_active
+                    };
+                    
+                    fetch(`${API_BASE}/products/${product.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedProduct)
+                    }).then(res => {
+                        if (res.ok) {
+                            alert('产品更新成功');
+                            loadData();
+                        } else {
+                            alert('更新失败');
+                        }
+                    });
                 };
 
                 const deleteProduct = async (product) => {
@@ -6119,6 +6170,8 @@
                     remindDays,
                     departmentReport,
                     inventoryAlerts,
+                    productCategories,
+                    productCategoryFilter,
                     selectedTransactions,
                     selectedApplications,
                     selectedRemind,
