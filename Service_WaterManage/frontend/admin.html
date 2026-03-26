@@ -1052,7 +1052,7 @@
                     <div class="flex items-center gap-3">
                         <h2 class="text-xl font-bold text-slate-800">领水记录</h2>
                         <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{{ filteredPickups.length }}条</span>
-                        <span v-if="officePickupFilter.status || officePickupFilter.officeId || officePickupFilter.productId || officePickupFilter.dateFrom || officePickupFilter.dateTo || officePickupFilter.searchPerson" class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full">
+                        <span v-if="officePickupFilter.status || officePickupFilter.officeId || officePickupFilter.productId || officePickupFilter.dateFrom || officePickupFilter.dateTo || officePickupFilter.searchPerson || officePickupFilter.quickDate" class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full">
                             已应用筛选
                         </span>
                     </div>
@@ -1100,10 +1100,22 @@
 
                 <!-- 筛选器 -->
                 <div class="flex flex-wrap gap-2 mb-4">
+                    <!-- 日期快捷筛选 -->
+                    <div class="w-full flex flex-wrap items-center gap-1 mb-2">
+                        <span class="text-sm text-slate-500 mr-1">日期:</span>
+                        <button @click="setDateFilter('today')" :class="officePickupFilter.quickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">今天</button>
+                        <button @click="setDateFilter('yesterday')" :class="officePickupFilter.quickDate === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">昨天</button>
+                        <button @click="setDateFilter('3days')" :class="officePickupFilter.quickDate === '3days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近3天</button>
+                        <button @click="setDateFilter('7days')" :class="officePickupFilter.quickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近1周</button>
+                        <button @click="setDateFilter('30days')" :class="officePickupFilter.quickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近1月</button>
+                        <button @click="setDateFilter('60days')" :class="officePickupFilter.quickDate === '60days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近2月</button>
+                        <button @click="setDateFilter('thisMonth')" :class="officePickupFilter.quickDate === 'thisMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">本月</button>
+                        <button @click="setDateFilter('lastMonth')" :class="officePickupFilter.quickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">上月</button>
+                    </div>
                     <div class="flex items-center gap-1">
-                        <input type="date" v-model="officePickupFilter.dateFrom" @change="filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                        <input type="date" v-model="officePickupFilter.dateFrom" @change="clearQuickDate; filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
                         <span class="text-slate-400">至</span>
-                        <input type="date" v-model="officePickupFilter.dateTo" @change="filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                        <input type="date" v-model="officePickupFilter.dateTo" @change="clearQuickDate; filterOfficePickups" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
                     </div>
                     <select v-model="officePickupFilter.officeId" @change="filterOfficePickups" class="px-3 py-2 border rounded-lg text-sm bg-white">
                         <option value="">全部办公室</option>
@@ -2977,7 +2989,7 @@
                 // ========== 领水记录相关状态 ==========
                 const officePickups = ref([]); // 领水记录列表
                 const selectedPickups = ref([]); // 选中的领水记录
-                const officePickupFilter = ref({ officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '' }); // 筛选状态
+                const officePickupFilter = ref({ officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '', quickDate: '' }); // 筛选状态
                 
                 const filteredPickups = computed(() => {
                     let result = officePickups.value;
@@ -4348,9 +4360,57 @@
                 };
                 
                 const resetOfficePickupFilter = () => {
-                    officePickupFilter.value = { officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '' };
+                    officePickupFilter.value = { officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '', quickDate: '' };
                     selectedPickups.value = [];
                     loadOfficePickups();
+                };
+                
+                const clearQuickDate = () => {
+                    officePickupFilter.value.quickDate = '';
+                };
+                
+                const setDateFilter = (type) => {
+                    const today = new Date();
+                    today.setHours(23, 59, 59, 999);
+                    let startDate = new Date();
+                    startDate.setHours(0, 0, 0, 0);
+                    let endDate = new Date();
+                    endDate.setHours(23, 59, 59, 999);
+                    
+                    switch(type) {
+                        case 'today':
+                            startDate = new Date(today);
+                            endDate = new Date(today);
+                            break;
+                        case 'yesterday':
+                            startDate.setDate(startDate.getDate() - 1);
+                            endDate.setDate(endDate.getDate() - 1);
+                            break;
+                        case '3days':
+                            startDate.setDate(startDate.getDate() - 2);
+                            break;
+                        case '7days':
+                            startDate.setDate(startDate.getDate() - 6);
+                            break;
+                        case '30days':
+                            startDate.setDate(startDate.getDate() - 29);
+                            break;
+                        case '60days':
+                            startDate.setDate(startDate.getDate() - 59);
+                            break;
+                        case 'thisMonth':
+                            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                            break;
+                        case 'lastMonth':
+                            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                            break;
+                    }
+                    
+                    officePickupFilter.value.dateFrom = startDate.toISOString().slice(0, 10);
+                    officePickupFilter.value.dateTo = endDate.toISOString().slice(0, 10);
+                    officePickupFilter.value.quickDate = type;
+                    filterOfficePickups();
                 };
                 
                 const filterByStatus = (status) => {
@@ -5603,6 +5663,8 @@
                     officePickupFilter,
                     pickupStats,
                     resetOfficePickupFilter,
+                    setDateFilter,
+                    clearQuickDate,
                     filterByStatus,
                     toggleAllPickups,
                     confirmSinglePickup,
