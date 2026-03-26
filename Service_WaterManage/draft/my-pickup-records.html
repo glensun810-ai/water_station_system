@@ -49,7 +49,7 @@
     <div id="app" v-cloak>
         <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-4 safe-top">
             <div class="flex items-center justify-between">
-                <a href="index.html" class="text-white flex items-center gap-1">
+                <a href="../frontend/index.html" class="text-white flex items-center gap-1">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                     返回
                 </a>
@@ -70,18 +70,22 @@
                     <button @click="statusFilter = 'settled'" :class="statusFilter === 'settled' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 px-2 rounded-lg text-xs font-medium">已结清</button>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-blue-50 rounded-lg p-2">
-                        <div class="text-lg font-bold text-blue-600">{{ stats.total.count }}</div>
-                        <div class="text-xs text-blue-500">总记录</div>
-                    </div>
+                <div class="grid grid-cols-4 gap-2 text-center">
                     <div class="bg-yellow-50 rounded-lg p-2">
                         <div class="text-lg font-bold text-yellow-600">{{ stats.pending.count }}</div>
                         <div class="text-xs text-yellow-500">待付款</div>
                     </div>
+                    <div class="bg-blue-50 rounded-lg p-2">
+                        <div class="text-lg font-bold text-blue-600">{{ stats.applied.count }}</div>
+                        <div class="text-xs text-blue-500">付款待确认</div>
+                    </div>
                     <div class="bg-green-50 rounded-lg p-2">
                         <div class="text-lg font-bold text-green-600">{{ stats.settled.count }}</div>
                         <div class="text-xs text-green-500">已结清</div>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-2">
+                        <div class="text-lg font-bold text-slate-600">{{ stats.total.count }}</div>
+                        <div class="text-xs text-slate-500">总记录</div>
                     </div>
                 </div>
             </div>
@@ -178,7 +182,7 @@
                         </div>
                     </div>
                 </div>
-                <a href="index.html" class="block text-center text-blue-600 py-2 text-sm">
+                <a href="../frontend/index.html" class="block text-center text-blue-600 py-2 text-sm">
                     + 在首页设置我的办公室
                 </a>
             </div>
@@ -202,7 +206,8 @@
                 const offices = ref([]);
                 const userOffices = ref([]);
                 const officeId = ref('');
-                const statusFilter = ref('');
+                
+                const statusFilter = ref('pending');
                 const selectedRecords = ref([]);
                 const showOfficeSwitcher = ref(false);
 
@@ -221,7 +226,7 @@
                     return {
                         total: { count: records.value.length },
                         pending: { count: pending.length, amount: pending.reduce((s, r) => s + r.total_amount, 0) },
-                        applied: { count: applied.length },
+                        applied: { count: applied.length, amount: applied.reduce((s, r) => s + r.total_amount, 0) },
                         settled: { count: settled.length }
                     };
                 });
