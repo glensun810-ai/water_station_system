@@ -431,6 +431,26 @@
                     </div>
 
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">负责人</label>
+                        <div class="flex gap-2">
+                            <select v-model="accountForm.managerType" class="input-field w-32" @change="accountForm.managerId = ''">
+                                <option value="user">选择用户</option>
+                                <option value="manual">手动录入</option>
+                            </select>
+                            <select v-if="accountForm.managerType === 'user'" v-model="accountForm.managerId" class="input-field flex-1">
+                                <option value="">请选择负责人</option>
+                                <option v-for="user in users" :value="user.id">{{ user.name }}</option>
+                            </select>
+                            <input v-else v-model="accountForm.managerName" type="text" class="input-field flex-1" placeholder="请输入负责人姓名">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">配置人数 <span class="text-red-500">*</span></label>
+                        <input v-model.number="accountForm.configuredCount" type="number" min="0" class="input-field" placeholder="请输入办公室配置人数">
+                    </div>
+
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
                         <textarea v-model="accountForm.note" rows="2" class="input-field" placeholder="可选填写备注"></textarea>
                     </div>
@@ -516,7 +536,13 @@
                         personType: 'user',
                         personId: '',
                         personName: '',
-                        note: ''
+                        note: '',
+                        // 负责人信息（新增）
+                        managerType: 'user',
+                        managerId: '',
+                        managerName: '',
+                        // 配置人数（新增）
+                        configuredCount: 0
                     },
                     
                     // 充值表单
@@ -802,7 +828,13 @@
                         personType: 'user',
                         personId: '',
                         personName: '',
-                        note: ''
+                        note: '',
+                        // 负责人信息（新增）
+                        managerType: 'user',
+                        managerId: '',
+                        managerName: '',
+                        // 配置人数（新增）
+                        configuredCount: 0
                     };
                     this.showAccountModal = true;
                 },
@@ -816,7 +848,13 @@
                         personType: account.reserved_person_id ? 'user' : 'manual',
                         personId: account.reserved_person_id || '',
                         personName: account.reserved_person || '',
-                        note: account.note || ''
+                        note: account.note || '',
+                        // 负责人信息（新增）
+                        managerType: account.manager_id ? 'user' : (account.manager_name ? 'manual' : 'user'),
+                        managerId: account.manager_id || '',
+                        managerName: account.manager_name || '',
+                        // 配置人数（新增）
+                        configuredCount: account.configured_count || 0
                     };
                     this.showAccountModal = true;
                 },
@@ -826,19 +864,25 @@
                         this.showMessage('请填写完整信息', 'error');
                         return;
                     }
-                    
-                    const personName = this.accountForm.personType === 'user' 
+
+                    const personName = this.accountForm.personType === 'user'
                         ? this.getUserName(this.accountForm.personId)
                         : this.accountForm.personName;
                     const personId = this.accountForm.personType === 'user' ? this.accountForm.personId : null;
-                    
+
+                    // 获取负责人信息
+                    const managerName = this.accountForm.managerType === 'user'
+                        ? this.getUserName(this.accountForm.managerId)
+                        : this.accountForm.managerName;
+                    const managerId = this.accountForm.managerType === 'user' ? this.accountForm.managerId : null;
+
                     try {
                         const token = localStorage.getItem('token');
-                        const url = this.accountForm.id 
+                        const url = this.accountForm.id
                             ? `${API_BASE}/office-accounts/${this.accountForm.id}`
                             : `${API_BASE}/office-accounts`;
                         const method = this.accountForm.id ? 'PUT' : 'POST';
-                        
+
                         const body = {
                             office_id: this.accountForm.officeId,
                             product_id: this.accountForm.productId,
@@ -846,9 +890,12 @@
                             remaining_qty: this.accountForm.reservedQty,
                             reserved_person: personName,
                             reserved_person_id: personId,
+                            manager_name: managerName,
+                            manager_id: managerId,
+                            configured_count: this.accountForm.configuredCount,
                             note: this.accountForm.note
                         };
-                        
+
                         const res = await fetch(url, {
                             method: method,
                             headers: {
@@ -860,10 +907,13 @@
                                 remaining_qty: this.accountForm.reservedQty,
                                 reserved_person: personName,
                                 reserved_person_id: personId,
+                                manager_name: managerName,
+                                manager_id: managerId,
+                                configured_count: this.accountForm.configuredCount,
                                 note: this.accountForm.note
                             } : body)
                         });
-                        
+
                         if (res.ok) {
                             this.showMessage(this.accountForm.id ? '账户更新成功' : '账户创建成功', 'success');
                             this.showAccountModal = false;

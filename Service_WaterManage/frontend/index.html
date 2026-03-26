@@ -53,12 +53,9 @@
                 <div class="flex items-center gap-2">
                     <button @click="showOfficeSwitcher = true" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
                         <i class="fas fa-building"></i>
-                        <span class="max-w-[120px] truncate">{{ currentOfficeName || '选择办公室' }}</span>
+                        <span class="max-w-[120px] truncate">我的办公室</span>
                         <i class="fas fa-chevron-down text-xs"></i>
                     </button>
-                    <a href="my-offices.html" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm">
-                        <i class="fas fa-cog"></i>
-                    </a>
                 </div>
             </div>
         </header>
@@ -435,30 +432,44 @@
         <div v-if="showOfficeSwitcher" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSwitcher = false">
             <div class="bg-white rounded-t-2xl w-full max-h-[70vh] overflow-y-auto p-4">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg">切换办公室</h3>
+                    <h3 class="font-bold text-lg">我的办公室</h3>
                     <button @click="showOfficeSwitcher = false" class="text-gray-400">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
-                <div class="space-y-2 mb-4">
-                    <div v-for="office in offices" :key="office.id" 
-                         @click="switchOffice(office.id)"
-                         class="flex items-center justify-between p-3 rounded-xl border-2 transition"
-                         :class="(form.officeId || settlementOfficeId) === office.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
-                        <div class="flex items-center gap-3">
-                            <div :class="(form.officeId || settlementOfficeId) === office.id ? 'bg-blue-500' : 'bg-gray-200'" class="w-4 h-4 rounded-full flex items-center justify-center">
-                                <i v-if="(form.officeId || settlementOfficeId) === office.id" class="fas fa-check text-white text-xs"></i>
+                <div v-if="userOffices.length === 0" class="text-center py-8">
+                    <div class="text-gray-400 mb-4">您还没有关联办公室</div>
+                    <a href="my-offices.html" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">
+                        去添加办公室
+                    </a>
+                </div>
+                <div v-else>
+                    <div class="space-y-2 mb-4">
+                        <div v-for="office in userOffices" :key="office.id" 
+                             @click="switchOffice(office.id)"
+                             class="flex items-center justify-between p-3 rounded-xl border-2 transition"
+                             :class="form.officeId === office.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+                            <div class="flex items-center gap-3">
+                                <div :class="form.officeId === office.id ? 'bg-blue-500' : 'bg-gray-200'" class="w-4 h-4 rounded-full flex items-center justify-center">
+                                    <i v-if="form.officeId === office.id" class="fas fa-check text-white text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-800 flex items-center gap-2">
+                                        {{ office.name }}
+                                        <span v-if="office.is_default" class="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full">默认</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ office.room_number }}</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="font-medium text-gray-800">{{ office.name }}</div>
-                                <div class="text-xs text-gray-500">{{ office.room_number }}</div>
+                            <div v-if="office.leader_name" class="text-xs text-gray-400">
+                                负责人: {{ office.leader_name }}
                             </div>
                         </div>
                     </div>
+                    <a href="my-offices.html" class="block text-center text-blue-600 py-2 text-sm">
+                        <i class="fas fa-cog mr-1"></i> 管理我的办公室（设置默认等）
+                    </a>
                 </div>
-                <a href="my-offices.html" class="block text-center text-blue-600 py-2 text-sm">
-                    <i class="fas fa-plus-circle mr-1"></i> 管理我的办公室
-                </a>
             </div>
         </div>
     </div>
@@ -617,10 +628,15 @@
                         if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
                         
                         if (this.userOffices.length > 0) {
-                            const defaultOffice = this.userOffices.find(o => o.is_default);
-                            const defaultId = defaultOffice ? defaultOffice.id : this.userOffices[0].id;
+                            const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
+                            const defaultId = defaultOffice.id;
                             if (!this.form.officeId) {
                                 this.form.officeId = defaultId;
+                                // 设置领取人为默认办公室的负责人
+                                if (defaultOffice.leader_name) {
+                                    this.form.personName = defaultOffice.leader_name;
+                                    this.useManualPerson = true;
+                                }
                             }
                             if (!this.settlementOfficeId) {
                                 this.settlementOfficeId = defaultId;
@@ -723,8 +739,24 @@
                 },
                 switchOffice(officeId) {
                     if (this.activeTab === 'pickup') {
-                        const office = this.offices.find(o => o.id === officeId);
-                        if (office) this.selectOffice(office);
+                        // 从用户办公室列表中获取
+                        let office = this.userOffices.find(o => o.id === officeId);
+                        if (!office) {
+                            office = this.offices.find(o => o.id === officeId);
+                        }
+                        if (office) {
+                            this.form.officeId = officeId;
+                            // 设置领取人为办公室负责人
+                            if (office.leader_name) {
+                                this.form.personName = office.leader_name;
+                                this.form.personId = '';
+                                this.useManualPerson = true;
+                            } else {
+                                this.form.personName = '';
+                                this.form.personId = '';
+                                this.useManualPerson = false;
+                            }
+                        }
                     } else {
                         this.settlementOfficeId = officeId;
                         this.loadSettlementData();

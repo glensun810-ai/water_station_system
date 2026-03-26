@@ -2,11 +2,23 @@
 Water Management System - Backend API
 智能水站管理系统 - 后端服务
 """
+
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, func, case
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    ForeignKey,
+    func,
+    case,
+    text,
+)
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -24,9 +36,12 @@ security = HTTPBearer(auto_error=False)
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 # Dependency
 def get_db():
@@ -36,17 +51,22 @@ def get_db():
     finally:
         db.close()
 
+
 # ==================== Helper Functions ====================
 def hash_password(password: str) -> str:
     """使用 bcrypt 加密密码"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        )
     except Exception:
         return False
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """创建 JWT Token"""
@@ -59,6 +79,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 def verify_token(token: str) -> Optional[dict]:
     """验证 JWT Token"""
     try:
@@ -66,34 +87,36 @@ def verify_token(token: str) -> Optional[dict]:
         return payload
     except jwt.ExpiredSignatureError:
         return None
-    except jwt.InvalidTokenError as e:
+    except Exception as e:
         # 记录详细错误但不暴露给客户端
         import logging
+
         logging.error(f"Token verification failed: {str(e)}")
         return None
 
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> Optional[User]:
     """获取当前登录用户"""
     if not credentials:
         return None
-    
+
     token = credentials.credentials
     payload = verify_token(token)
-    
+
     if not payload:
         return None
-    
+
     user_id = payload.get("sub")
     if not user_id:
         return None
-    
+
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user or not user.is_active:
         return None
-    
+
     return user
 
 
@@ -110,7 +133,9 @@ class User(Base):
     is_active = Column(Integer, default=1)  # 1: 启用，0: 禁用
     created_at = Column(DateTime, default=datetime.now)
 
-    transactions = relationship("Transaction", foreign_keys="Transaction.user_id", back_populates="user")
+    transactions = relationship(
+        "Transaction", foreign_keys="Transaction.user_id", back_populates="user"
+    )
     notifications = relationship("Notification", back_populates="user")
 
 
@@ -151,17 +176,63 @@ class Transaction(Base):
     delete_reason = Column(String, nullable=True)  # 删除原因
 
     # 双模式业务字段
-    mode = Column(String(20), default='pay_later')  # 'pay_later' 或 'prepay'
+    mode = Column(String(20), default="pay_later")  # 'pay_later' 或 'prepay'
     reserved_qty = Column(Integer, default=0)  # 预定时预留的数量
     used_qty = Column(Integer, default=0)  # 已使用的数量
-    payment_status = Column(String(20), default='unpaid')  # 'unpaid', 'paid', 'refunded'
+    payment_status = Column(
+        String(20), default="unpaid"
+    )  # 'unpaid', 'paid', 'refunded'
 
     user = relationship("User", foreign_keys=[user_id], back_populates="transactions")
     product = relationship("Product", back_populates="transactions")
 
 
+class OfficePickup(Base):
+    __tablename__ = "office_pickup"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    pickup_person = Column(String(100), nullable=True)
+    pickup_person_id = Column(Integer, nullable=True)
+    pickup_time = Column(DateTime, nullable=False)
+    payment_mode = Column(String(20), default="credit")
+    settlement_status = Column(String(20), default="pending")
+    unit_price = Column(Float, default=0)
+    total_amount = Column(Float, default=0)
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class OfficeSettlement(Base):
+    __tablename__ = "office_settlement"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    settlement_person = Column(String(100), nullable=True)
+    settlement_person_id = Column(Integer, nullable=True)
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    confirmed_at = Column(DateTime, nullable=True)
+    confirmed_by = Column(Integer, nullable=True)
+
+
 class DeleteLog(Base):
     """删除操作审计日志表"""
+
     __tablename__ = "delete_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -177,13 +248,18 @@ class DeleteLog(Base):
 
 class Notification(Base):
     """站内消息通知表"""
+
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 接收用户 ID，None 表示全员通知
+    user_id = Column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )  # 接收用户 ID，None 表示全员通知
     title = Column(String, nullable=False)  # 消息标题
     content = Column(String, nullable=False)  # 消息内容
-    type = Column(String, default="info")  # 消息类型：info, settlement, reminder, warning
+    type = Column(
+        String, default="info"
+    )  # 消息类型：info, settlement, reminder, warning
     is_read = Column(Integer, default=0)  # 是否已读：0-未读，1-已读
     created_at = Column(DateTime, default=datetime.now)
 
@@ -203,11 +279,14 @@ class Promotion(Base):
 
 class PromotionConfig(Base):
     """优惠配置表 - 支持按模式配置不同优惠"""
+
     __tablename__ = "promotion_config"
 
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    mode = Column(String(20), nullable=False, default='pay_later')  # 'pay_later' 或 'prepay'
+    mode = Column(
+        String(20), nullable=False, default="pay_later"
+    )  # 'pay_later' 或 'prepay'
     trigger_qty = Column(Integer, nullable=False, default=10)  # 买 N
     gift_qty = Column(Integer, nullable=False, default=0)  # 赠 M
     discount_rate = Column(Float, nullable=False, default=100.0)  # 折扣率（百分比）
@@ -218,6 +297,7 @@ class PromotionConfig(Base):
 
 class ReservationPickup(Base):
     """预定领取记录表"""
+
     __tablename__ = "reservation_pickups"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -225,11 +305,12 @@ class ReservationPickup(Base):
     pickup_qty = Column(Integer, nullable=False)
     picked_at = Column(DateTime, default=datetime.now)
     picked_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(String, default='completed')
+    status = Column(String, default="completed")
 
 
 class PrepaidOrder(Base):
     """预付订单表"""
+
     __tablename__ = "prepaid_orders"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -240,8 +321,8 @@ class PrepaidOrder(Base):
     unit_price = Column(Float, nullable=False)
     total_amount = Column(Float, nullable=False)
     discount_amount = Column(Float, default=0)
-    payment_status = Column(String, default='unpaid')  # unpaid, paid, refunded
-    payment_method = Column(String, default='offline')  # offline, online, credit
+    payment_status = Column(String, default="unpaid")  # unpaid, paid, refunded
+    payment_method = Column(String, default="offline")  # offline, online, credit
     payment_at = Column(DateTime, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -257,6 +338,7 @@ class PrepaidOrder(Base):
 
 class PrepaidPickup(Base):
     """预付领取记录表"""
+
     __tablename__ = "prepaid_pickups"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -272,7 +354,9 @@ class PrepaidPickup(Base):
 
 
 # 添加反向关系
-PrepaidOrder.pickups = relationship("PrepaidPickup", back_populates="order", order_by=PrepaidPickup.created_at)
+PrepaidOrder.pickups = relationship(
+    "PrepaidPickup", back_populates="order", order_by=PrepaidPickup.created_at
+)
 
 
 # ==================== Pydantic Schemas ====================
@@ -288,6 +372,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """用户更新模型（所有字段可选）"""
+
     name: Optional[str] = None
     department: Optional[str] = None
     role: Optional[str] = None
@@ -306,12 +391,14 @@ class UserResponse(UserBase):
 
 class UserLogin(BaseModel):
     """用户登录请求"""
+
     name: str
     password: str
 
 
 class TokenResponse(BaseModel):
     """Token 响应"""
+
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
@@ -319,12 +406,14 @@ class TokenResponse(BaseModel):
 
 class PasswordChange(BaseModel):
     """密码修改请求"""
+
     old_password: str
     new_password: str
 
 
 class DeleteTransactionRequest(BaseModel):
     """删除交易记录请求"""
+
     transaction_ids: List[int]
     reason: str = ""  # 删除原因
 
@@ -359,7 +448,13 @@ class TransactionRecord(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"user_id": 1, "product_id": 1, "quantity": 1, "type": "pickup", "mode": "pay_later"}
+            "example": {
+                "user_id": 1,
+                "product_id": 1,
+                "quantity": 1,
+                "type": "pickup",
+                "mode": "pay_later",
+            }
         }
     )
 
@@ -375,7 +470,7 @@ class TransactionResponse(BaseModel):
     settlement_applied: int = 0
     note: Optional[str] = None
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -395,12 +490,14 @@ class InventoryUpdate(BaseModel):
 
 class DeleteTransactionRequest(BaseModel):
     """删除交易记录请求"""
+
     transaction_ids: List[int]
     reason: str = ""  # 删除原因
 
 
 class DeleteLogResponse(BaseModel):
     """删除日志响应"""
+
     id: int
     operator_id: int
     operator_name: str
@@ -545,6 +642,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register office management router
+from api_office import router as office_router
+
+app.include_router(office_router)
+
 
 def get_db():
     db = SessionLocal()
@@ -555,11 +657,13 @@ def get_db():
 
 
 # ==================== Helper Functions ====================
-def calculate_promotion_price(db: Session, user_id: int, product_id: int, quantity: int, mode: str = 'pay_later') -> tuple[float, str]:
+def calculate_promotion_price(
+    db: Session, user_id: int, product_id: int, quantity: int, mode: str = "pay_later"
+) -> tuple[float, str]:
     """
     Calculate price with promotion logic (买 N 赠 M)
     Returns (actual_price, note)
-    
+
     双模式优惠策略：
     - pay_later (先用后付): 标准价格，无买赠优惠
     - prepay (先付后用): 享受买 N 赠 M 优惠
@@ -569,38 +673,50 @@ def calculate_promotion_price(db: Session, user_id: int, product_id: int, quanti
         return product.price if product else 0, ""
 
     # 获取该产品的优惠配置
-    config = db.query(PromotionConfig).filter(
-        PromotionConfig.product_id == product_id,
-        PromotionConfig.mode == mode,
-        PromotionConfig.is_active == 1
-    ).first()
+    config = (
+        db.query(PromotionConfig)
+        .filter(
+            PromotionConfig.product_id == product_id,
+            PromotionConfig.mode == mode,
+            PromotionConfig.is_active == 1,
+        )
+        .first()
+    )
 
     # 如果没有找到配置，使用默认配置
     if not config:
-        config = db.query(PromotionConfig).filter(
-            PromotionConfig.product_id == product_id,
-            PromotionConfig.mode == 'pay_later'
-        ).first()
-    
+        config = (
+            db.query(PromotionConfig)
+            .filter(
+                PromotionConfig.product_id == product_id,
+                PromotionConfig.mode == "pay_later",
+            )
+            .first()
+        )
+
     if not config:
         # 完全没有配置，返回原价
         return product.price, ""
 
     # 先用后付模式：标准价格，无优惠
-    if mode == 'pay_later':
+    if mode == "pay_later":
         actual_price = product.price
         note = "先用后付：标准价格"
         return actual_price, note
 
     # 先付后用模式：享受买 N 赠 M 优惠
     # Count unpaid transactions for this user and product
-    count = db.query(Transaction).filter(
-        Transaction.user_id == user_id,
-        Transaction.product_id == product_id,
-        Transaction.status == "unsettled",
-        Transaction.actual_price > 0,
-        Transaction.mode == "prepay"
-    ).count()
+    count = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user_id,
+            Transaction.product_id == product_id,
+            Transaction.status == "unsettled",
+            Transaction.actual_price > 0,
+            Transaction.mode == "prepay",
+        )
+        .count()
+    )
 
     # Check if this purchase triggers promotion
     # 买 N 赠 M: every (N+M)th item is free
@@ -618,7 +734,9 @@ def calculate_promotion_price(db: Session, user_id: int, product_id: int, quanti
 
     note = ""
     if free_items > 0:
-        note = f"先付后用 - 买{config.trigger_qty}赠{config.gift_qty}: {free_items}件免费"
+        note = (
+            f"先付后用 - 买{config.trigger_qty}赠{config.gift_qty}: {free_items}件免费"
+        )
     else:
         note = f"先付后用：买{config.trigger_qty}赠{config.gift_qty}优惠中"
 
@@ -626,6 +744,7 @@ def calculate_promotion_price(db: Session, user_id: int, product_id: int, quanti
 
 
 # ==================== API Endpoints ====================
+
 
 # --- User APIs ---
 @app.get("/api/users", response_model=List[UserResponse])
@@ -637,7 +756,7 @@ def get_users(db: Session = Depends(get_db)):
 def create_user(
     user: UserCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     创建用户
@@ -646,13 +765,12 @@ def create_user(
     # 验证权限
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
-    
+
     if current_user.role != "super_admin":
         raise HTTPException(
-            status_code=403,
-            detail="权限不足：只有超级管理员才能创建用户"
+            status_code=403, detail="权限不足：只有超级管理员才能创建用户"
         )
-    
+
     # 检查用户名是否存在
     existing_user = db.query(User).filter(User.name == user.name).first()
     if existing_user:
@@ -666,8 +784,8 @@ def create_user(
         department=user.department,
         role=user.role,
         password_hash=password_hash,
-        balance_credit=user.balance_credit if hasattr(user, 'balance_credit') else 0,
-        is_active=user.is_active if hasattr(user, 'is_active') else 1
+        balance_credit=user.balance_credit if hasattr(user, "balance_credit") else 0,
+        is_active=user.is_active if hasattr(user, "is_active") else 1,
     )
     db.add(db_user)
     db.commit()
@@ -683,13 +801,13 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
     """
     # 查找用户
     user = db.query(User).filter(User.name == login_data.name).first()
-    
+
     if not user:
         raise HTTPException(status_code=401, detail="用户名或密码错误")
-    
+
     if not user.is_active:
         raise HTTPException(status_code=403, detail="用户已被禁用")
-    
+
     # 如果没有密码，使用默认密码 admin123 验证（兼容旧数据）
     if not user.password_hash:
         if login_data.password != "admin123":
@@ -698,24 +816,18 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
         # 验证密码
         if not verify_password(login_data.password, user.password_hash):
             raise HTTPException(status_code=401, detail="用户名或密码错误")
-    
+
     # 创建 Token
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user
-    }
+
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
-def get_current_user_info(
-    current_user: User = Depends(get_current_user)
-):
+def get_current_user_info(current_user: User = Depends(get_current_user)):
     """获取当前登录用户信息"""
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
@@ -726,25 +838,27 @@ def get_current_user_info(
 def change_password(
     password_change: PasswordChange,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """修改密码"""
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
-    
+
     # 验证旧密码
     if not current_user.password_hash:
         # 兼容旧数据
         if password_change.old_password != "admin123":
             raise HTTPException(status_code=400, detail="原密码错误")
     else:
-        if not verify_password(password_change.old_password, current_user.password_hash):
+        if not verify_password(
+            password_change.old_password, current_user.password_hash
+        ):
             raise HTTPException(status_code=400, detail="原密码错误")
-    
+
     # 更新密码
     current_user.password_hash = hash_password(password_change.new_password)
     db.commit()
-    
+
     return {"message": "密码修改成功"}
 
 
@@ -761,7 +875,7 @@ def update_user(
     user_id: int,
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     更新用户信息
@@ -769,34 +883,43 @@ def update_user(
     """
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
-    
+
     if current_user.role != "super_admin":
-        raise HTTPException(status_code=403, detail="权限不足：只有超级管理员才能更新用户")
-    
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能更新用户"
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
+
     # 更新字段
     if user_update.name is not None:
         # 检查新用户名是否已被使用
-        existing = db.query(User).filter(User.name == user_update.name, User.id != user_id).first()
+        existing = (
+            db.query(User)
+            .filter(User.name == user_update.name, User.id != user_id)
+            .first()
+        )
         if existing:
             raise HTTPException(status_code=400, detail="用户名已存在")
         user.name = user_update.name
-    
+
     if user_update.department is not None:
         user.department = user_update.department
-    
+
     if user_update.role is not None:
         user.role = user_update.role
-    
+
     if user_update.balance_credit is not None:
         user.balance_credit = user_update.balance_credit
-    
+
     if user_update.is_active is not None:
+        # 禁止禁用或启用超级管理员
+        if user.role == "super_admin":
+            raise HTTPException(status_code=403, detail="不能修改超级管理员的状态")
         user.is_active = user_update.is_active
-    
+
     db.commit()
     db.refresh(user)
     return user
@@ -806,7 +929,7 @@ def update_user(
 def delete_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     删除用户
@@ -814,25 +937,245 @@ def delete_user(
     """
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
-    
+
     if current_user.role != "super_admin":
-        raise HTTPException(status_code=403, detail="权限不足：只有超级管理员才能删除用户")
-    
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能删除用户"
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
-    # 检查是否有交易记录
-    has_transactions = db.query(Transaction).filter(Transaction.user_id == user_id).first()
-    if has_transactions:
+
+    # 禁止删除超级管理员
+    if user.role == "super_admin":
+        raise HTTPException(status_code=403, detail="不能删除超级管理员")
+
+    # 检查关联记录
+    record_info = {}
+    detailed_records = {
+        "transactions": [],
+        "office_pickups": [],
+        "office_settlements": [],
+    }
+
+    # 检查 transactions 表
+    transactions = db.query(Transaction).filter(Transaction.user_id == user_id).all()
+    transaction_count = len(transactions)
+    if transaction_count > 0:
+        record_info["transactions"] = transaction_count
+        detailed_records["transactions"] = [
+            {
+                "id": t.id,
+                "amount": float(t.actual_price) if t.actual_price else 0,
+                "status": t.status,
+                "pickup_time": t.created_at.isoformat() if t.created_at else None,
+                "settlement_applied": t.settlement_applied,
+                "type": t.type,
+            }
+            for t in transactions[:10]  # 最多返回10条
+        ]
+
+    # 检查 office_pickup 表（按pickup_person_id）
+    try:
+        office_pickups = db.execute(
+            text("""
+                SELECT id, pickup_time, quantity, office_name, product_name
+                FROM office_pickup WHERE pickup_person_id = :uid ORDER BY pickup_time DESC LIMIT 10
+            """),
+            {"uid": user_id},
+        ).fetchall()
+        office_pickup_count = len(office_pickups)
+        if office_pickup_count > 0:
+            record_info["office_pickups"] = office_pickup_count
+            detailed_records["office_pickups"] = [
+                {
+                    "id": p.id,
+                    "pickup_time": p.pickup_time,
+                    "water_quantity": p.quantity,
+                    "office_name": p.office_name,
+                    "product_name": p.product_name,
+                }
+                for p in office_pickups
+            ]
+    except Exception as e:
+        print(f"Error querying office_pickup: {e}")
+        pass
+
+    # 检查 office_settlement 表
+    try:
+        office_stls = db.execute(
+            text("""
+                SELECT id, total_amount, product_name, quantity, created_at, office_name
+                FROM office_settlement WHERE settlement_person_id = :uid ORDER BY created_at DESC LIMIT 10
+            """),
+            {"uid": user_id},
+        ).fetchall()
+        office_stl_count = len(office_stls)
+        if office_stl_count > 0:
+            record_info["office_settlements"] = office_stl_count
+            detailed_records["office_settlements"] = [
+                {
+                    "id": s.id,
+                    "amount": float(s.total_amount) if s.total_amount else 0,
+                    "product_name": s.product_name,
+                    "quantity": s.quantity,
+                    "office_name": s.office_name,
+                    "created_at": s.created_at,
+                }
+                for s in office_stls
+            ]
+    except Exception as e:
+        print(f"Error querying office_settlement: {e}")
+        pass
+
+    if record_info:
         # 软删除：禁用用户而不是真正删除
         user.is_active = False
         db.commit()
-        return {"message": "用户有交易记录，已禁用而非删除"}
-    
+        record_str_parts = []
+        if "transactions" in record_info:
+            record_str_parts.append(f"交易记录{record_info['transactions']}条")
+        if "office_pickups" in record_info:
+            record_str_parts.append(f"领水记录{record_info['office_pickups']}条")
+        if "office_settlements" in record_info:
+            record_str_parts.append(f"办公室结算{record_info['office_settlements']}条")
+        record_str = "、".join(record_str_parts)
+        return {
+            "message": f"用户有{record_str}，已禁用而非删除",
+            "record_info": record_info,
+            "detailed_records": detailed_records,
+        }
+
     db.delete(user)
     db.commit()
-    return {"message": "用户已删除"}
+    return {
+        "message": "用户已删除",
+        "record_info": {},
+        "detailed_records": detailed_records,
+    }
+
+
+@app.get("/api/admin/users-with-stats")
+def get_users_with_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """获取用户列表（含统计信息）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    users = db.query(User).all()
+    result = []
+    for user in users:
+        # 查询transactions表
+        transaction_count = (
+            db.query(Transaction).filter(Transaction.user_id == user.id).count()
+        )
+
+        # 查询office_pickup表（直接用SQL）
+        try:
+            office_pickup_count = (
+                db.execute(
+                    text(
+                        "SELECT COUNT(*) FROM office_pickup WHERE pickup_person_id = :uid"
+                    ),
+                    {"uid": user.id},
+                ).scalar()
+                or 0
+            )
+        except:
+            office_pickup_count = 0
+        result.append(
+            {
+                "id": user.id,
+                "name": user.name,
+                "department": user.department,
+                "role": user.role,
+                "is_active": user.is_active,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "stats": {
+                    "transactions": transaction_count,
+                    "office_pickups": office_pickup_count,
+                    "total_records": transaction_count + office_pickup_count,
+                },
+            }
+        )
+    return result
+
+
+class BatchStatusRequest(BaseModel):
+    user_ids: List[int]
+    is_active: int
+
+
+@app.post("/api/admin/users/batch-status")
+def batch_update_user_status(
+    request: BatchStatusRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量启用/禁用用户"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    updated_count = 0
+    errors = []
+
+    for user_id in request.user_ids:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            errors.append(f"用户ID {user_id} 不存在")
+            continue
+        if user.role == "super_admin":
+            errors.append(f"用户 {user.name} 为超级管理员，无法修改")
+            continue
+
+        user.is_active = request.is_active
+        updated_count += 1
+
+    db.commit()
+
+    status_text = "启用" if request.is_active == 1 else "禁用"
+    return {
+        "updated_count": updated_count,
+        "message": f"成功{status_text} {updated_count} 个用户",
+        "errors": errors if errors else None,
+    }
+
+
+@app.post("/api/admin/users/batch-delete")
+def batch_delete_users(
+    user_ids: List[int],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量删除用户（软删除）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    deleted_count = 0
+    errors = []
+
+    for user_id in user_ids:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            errors.append(f"用户ID {user_id} 不存在")
+            continue
+        if user.role == "super_admin":
+            errors.append(f"用户 {user.name} 为超级管理员，无法删除")
+            continue
+
+        user.is_active = 0
+        deleted_count += 1
+
+    db.commit()
+
+    return {
+        "deleted_count": deleted_count,
+        "message": f"成功删除 {deleted_count} 个用户",
+        "errors": errors if errors else None,
+    }
 
 
 @app.get("/api/user/{user_id}/status")
@@ -846,21 +1189,36 @@ def get_user_status(user_id: int, db: Session = Depends(get_db)):
     now = datetime.now()
     month_start = datetime(now.year, now.month, 1)
 
-    transactions = db.query(Transaction).filter(
-        Transaction.user_id == user_id,
-        Transaction.created_at >= month_start
-    ).all()
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == user_id, Transaction.created_at >= month_start)
+        .all()
+    )
 
     total_qty = sum(t.quantity for t in transactions)
-    unsettled_amount = sum(t.actual_price for t in transactions if t.status == "unsettled")
+    unsettled_amount = sum(
+        t.actual_price for t in transactions if t.status == "unsettled"
+    )
     settled_amount = sum(t.actual_price for t in transactions if t.status == "settled")
-    
+
     # 新增：结算申请状态
-    applied_amount = sum(t.actual_price for t in transactions if t.status == "unsettled" and t.settlement_applied == 1)
-    to_apply_amount = sum(t.actual_price for t in transactions if t.status == "unsettled" and t.settlement_applied == 0)
+    applied_amount = sum(
+        t.actual_price
+        for t in transactions
+        if t.status == "unsettled" and t.settlement_applied == 1
+    )
+    to_apply_amount = sum(
+        t.actual_price
+        for t in transactions
+        if t.status == "unsettled" and t.settlement_applied == 0
+    )
 
     # Count free items
-    free_count = sum(t.quantity for t in transactions if t.actual_price == 0 and t.status == "unsettled")
+    free_count = sum(
+        t.quantity
+        for t in transactions
+        if t.actual_price == 0 and t.status == "unsettled"
+    )
 
     return {
         "user_id": user_id,
@@ -872,7 +1230,7 @@ def get_user_status(user_id: int, db: Session = Depends(get_db)):
         "applied_amount": applied_amount,  # 已申请待确认金额
         "to_apply_amount": to_apply_amount,  # 待申请金额
         "free_items": free_count,
-        "balance_credit": user.balance_credit
+        "balance_credit": user.balance_credit,
     }
 
 
@@ -916,11 +1274,13 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
 
     # Check if product has associated transactions
-    transaction_count = db.query(Transaction).filter(Transaction.product_id == product_id).count()
+    transaction_count = (
+        db.query(Transaction).filter(Transaction.product_id == product_id).count()
+    )
     if transaction_count > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"无法删除：该产品已有 {transaction_count} 条交易记录，请先删除相关记录"
+            detail=f"无法删除：该产品已有 {transaction_count} 条交易记录，请先删除相关记录",
         )
 
     db.delete(product)
@@ -934,17 +1294,23 @@ def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    
+
     product.is_active = 0 if product.is_active == 1 else 1
     db.commit()
     db.refresh(product)
-    
+
     status_text = "已启用" if product.is_active == 1 else "已停用"
-    return {"product_id": product_id, "is_active": product.is_active, "message": status_text}
+    return {
+        "product_id": product_id,
+        "is_active": product.is_active,
+        "message": status_text,
+    }
 
 
 @app.put("/api/products/{product_id}/stock")
-def update_product_stock(product_id: int, inventory: InventoryUpdate, db: Session = Depends(get_db)):
+def update_product_stock(
+    product_id: int, inventory: InventoryUpdate, db: Session = Depends(get_db)
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -959,7 +1325,7 @@ def update_product_stock(product_id: int, inventory: InventoryUpdate, db: Sessio
 def record_pickup(record: TransactionRecord, db: Session = Depends(get_db)):
     """
     Record a water pickup with automatic promotion calculation
-    
+
     支持两种业务模式：
     - pay_later (先用后付): 标准价格，无买赠优惠
     - prepay (先付后用): 享受买 N 赠 M 优惠
@@ -985,7 +1351,9 @@ def record_pickup(record: TransactionRecord, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Insufficient stock")
 
     # Calculate promotion price based on mode
-    actual_price, note = calculate_promotion_price(db, record.user_id, record.product_id, record.quantity, record.mode)
+    actual_price, note = calculate_promotion_price(
+        db, record.user_id, record.product_id, record.quantity, record.mode
+    )
 
     # Deduct stock
     product.stock -= record.quantity
@@ -1000,7 +1368,7 @@ def record_pickup(record: TransactionRecord, db: Session = Depends(get_db)):
         mode=record.mode,
         status="unsettled" if record.type == "pickup" else "reserved",
         payment_status="unpaid" if record.mode == "pay_later" else "paid",
-        note=note
+        note=note,
     )
 
     db.add(transaction)
@@ -1014,7 +1382,7 @@ def record_pickup(record: TransactionRecord, db: Session = Depends(get_db)):
 def get_transactions(
     user_id: Optional[int] = None,
     status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(Transaction)
     if user_id:
@@ -1023,22 +1391,26 @@ def get_transactions(
         query = query.filter(Transaction.status == status)
     query = query.order_by(Transaction.created_at.desc())
     transactions = query.all()
-    
+
     # 确保 settlement_applied 字段被正确序列化
     result = []
     for t in transactions:
-        result.append({
-            "id": t.id,
-            "user_id": t.user_id,
-            "product_id": t.product_id,
-            "quantity": t.quantity,
-            "actual_price": t.actual_price,
-            "type": t.type,
-            "status": t.status,
-            "settlement_applied": t.settlement_applied if t.settlement_applied is not None else 0,
-            "note": t.note,
-            "created_at": t.created_at.isoformat() if t.created_at else None
-        })
+        result.append(
+            {
+                "id": t.id,
+                "user_id": t.user_id,
+                "product_id": t.product_id,
+                "quantity": t.quantity,
+                "actual_price": t.actual_price,
+                "type": t.type,
+                "status": t.status,
+                "settlement_applied": t.settlement_applied
+                if t.settlement_applied is not None
+                else 0,
+                "note": t.note,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            }
+        )
     return result
 
 
@@ -1061,10 +1433,11 @@ def settle_by_department(department: str, db: Session = Depends(get_db)):
     users = db.query(User).filter(User.department == department).all()
     user_ids = [u.id for u in users]
 
-    updated = db.query(Transaction).filter(
-        Transaction.user_id.in_(user_ids),
-        Transaction.status == "unsettled"
-    ).update({"status": "settled"})
+    updated = (
+        db.query(Transaction)
+        .filter(Transaction.user_id.in_(user_ids), Transaction.status == "unsettled")
+        .update({"status": "settled"})
+    )
     db.commit()
 
     return {"department": department, "updated": updated}
@@ -1076,24 +1449,25 @@ def apply_settlement(request: SettlementApplyRequest, db: Session = Depends(get_
     """用户提交结算申请，标记交易为待确认结算"""
     updated = 0
     total_amount = 0
-    
+
     for tid in request.transaction_ids:
-        transaction = db.query(Transaction).filter(
-            Transaction.id == tid,
-            Transaction.user_id == request.user_id
-        ).first()
+        transaction = (
+            db.query(Transaction)
+            .filter(Transaction.id == tid, Transaction.user_id == request.user_id)
+            .first()
+        )
         if transaction and transaction.status == "unsettled":
             transaction.settlement_applied = 1
             updated += 1
             total_amount += transaction.actual_price
-    
+
     if updated > 0:
         # 获取用户姓名
         user = db.query(User).filter(User.id == request.user_id).first()
         if user:
             # 发送通知给管理员
             send_settlement_application_notification(db, user.name, total_amount)
-    
+
     db.commit()
     return {"updated": updated, "message": "结算申请已提交，等待管理员确认"}
 
@@ -1101,23 +1475,26 @@ def apply_settlement(request: SettlementApplyRequest, db: Session = Depends(get_
 @app.get("/api/admin/settlement-applications")
 def get_settlement_applications(db: Session = Depends(get_db)):
     """获取所有待确认的结算申请"""
-    applications = db.query(Transaction, User).join(
-        User, Transaction.user_id == User.id
-    ).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 1
-    ).order_by(Transaction.created_at.desc()).all()
-    
+    applications = (
+        db.query(Transaction, User)
+        .join(User, Transaction.user_id == User.id)
+        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 1)
+        .order_by(Transaction.created_at.desc())
+        .all()
+    )
+
     results = []
     for transaction, user in applications:
-        results.append({
-            "id": transaction.id,
-            "user_id": user.id,
-            "user_name": user.name,
-            "department": user.department,
-            "amount": transaction.actual_price,
-            "created_at": transaction.created_at.isoformat()
-        })
+        results.append(
+            {
+                "id": transaction.id,
+                "user_id": user.id,
+                "user_name": user.name,
+                "department": user.department,
+                "amount": transaction.actual_price,
+                "created_at": transaction.created_at.isoformat(),
+            }
+        )
     return results
 
 
@@ -1127,7 +1504,7 @@ def confirm_settlement(request: SettlementRequest, db: Session = Depends(get_db)
     updated = 0
     total_amount = 0
     user_id = None
-    
+
     for tid in request.transaction_ids:
         transaction = db.query(Transaction).filter(Transaction.id == tid).first()
         if transaction:
@@ -1136,40 +1513,291 @@ def confirm_settlement(request: SettlementRequest, db: Session = Depends(get_db)
             updated += 1
             total_amount += transaction.actual_price
             user_id = transaction.user_id
-    
+
     if updated > 0 and user_id:
         # 发送通知给用户
         send_settlement_confirmed_notification(db, user_id, total_amount)
-    
+
     db.commit()
     return {"updated": updated}
+
+
+@app.get("/api/admin/office-settlements")
+def get_office_settlements(status: str = None, db: Session = Depends(get_db)):
+    """获取所有办公室结算记录"""
+    query = db.query(OfficeSettlement).order_by(OfficeSettlement.created_at.desc())
+
+    results = []
+    for s in query.all():
+        results.append(
+            {
+                "id": s.id,
+                "office_id": s.office_id,
+                "office_name": s.office_name,
+                "product_name": s.product_name,
+                "quantity": s.quantity,
+                "unit_price": s.unit_price,
+                "total_amount": s.total_amount,
+                "settlement_person": s.settlement_person,
+                "settlement_person_id": s.settlement_person_id,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "status": "applied",  # 简化状态
+            }
+        )
+    return results
+
+
+@app.post("/api/admin/office-settlement/{settlement_id}/confirm")
+def confirm_office_settlement(settlement_id: int, db: Session = Depends(get_db)):
+    """确认办公室结算"""
+    settlement = (
+        db.query(OfficeSettlement).filter(OfficeSettlement.id == settlement_id).first()
+    )
+    if not settlement:
+        raise HTTPException(status_code=404, detail="结算记录不存在")
+
+    return {"message": "结算已确认", "id": settlement_id}
+
+
+@app.get("/api/admin/office-pickups")
+def get_office_pickups_admin(
+    limit: int = 100, offset: int = 0, db: Session = Depends(get_db)
+):
+    """获取所有办公室领水记录（管理员）- 从transactions表读取"""
+    pickups = (
+        db.query(Transaction, User, Product)
+        .join(User, Transaction.user_id == User.id)
+        .join(Product, Transaction.product_id == Product.id)
+        .filter(Transaction.type == "pickup")
+        .order_by(Transaction.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for txn, user, product in pickups:
+        # 计算settlement_status: pending(待付款)/applied(付款待确认)/settled(已结清)
+        if txn.status == "settled":
+            settlement_status = "settled"
+        elif txn.settlement_applied == 1:
+            settlement_status = "applied"
+        else:
+            settlement_status = "pending"
+
+        results.append(
+            {
+                "id": txn.id,
+                "user_id": user.id,
+                "user_name": user.name,
+                "department": user.department,
+                "office_name": user.department or "未知办公室",
+                "product_id": product.id,
+                "product_name": product.name,
+                "product_specification": product.specification,
+                "quantity": txn.quantity,
+                "pickup_person": user.name,
+                "pickup_person_id": user.id,
+                "pickup_time": txn.created_at.isoformat() if txn.created_at else None,
+                "payment_mode": txn.mode,
+                "settlement_status": settlement_status,
+                "unit_price": txn.actual_price / txn.quantity
+                if txn.quantity and txn.actual_price
+                else 0,
+                "total_amount": txn.actual_price,
+                "status": txn.status,
+            }
+        )
+    return results
+
+
+@app.post("/api/admin/office-pickup/{pickup_id}/settle")
+def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """结算办公室领水记录 - 从transactions表操作"""
+    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    txn.status = "settled"
+    db.commit()
+
+    return {"message": "结算成功", "id": pickup_id}
+
+
+@app.post("/api/admin/office-pickup/{pickup_id}/remind")
+def remind_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    """提醒办公室领水结算 - 从transactions表操作"""
+    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    return {"message": "提醒已发送", "id": pickup_id}
+
+
+@app.delete("/api/admin/office-pickup/{pickup_id}")
+def delete_office_pickup(
+    pickup_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """删除单条领水记录（超级管理员）"""
+    import logging
+
+    # 调试日志
+    logging.info(f"=== DELETE PICKUP DEBUG ===")
+    logging.info(f"pickup_id: {pickup_id}")
+    logging.info(f"current_user: {current_user}")
+
+    if current_user:
+        logging.info(
+            f"User authenticated - id: {current_user.id}, role: {current_user.role}, name: {current_user.name}"
+        )
+    else:
+        logging.info("User NOT authenticated - current_user is None")
+
+    if not current_user:
+        logging.warning("Delete failed: User not authenticated")
+        raise HTTPException(status_code=401, detail="请先登录")
+
+    if current_user.role != "super_admin":
+        logging.warning(
+            f"Delete failed: User role '{current_user.role}' is not 'super_admin'"
+        )
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
+        )
+
+    logging.info("Authorization passed, proceeding with delete")
+    if current_user:
+        logging.info(f"User role: {current_user.role}, User id: {current_user.id}")
+    else:
+        logging.info("current_user is None - not authenticated")
+
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
+        )
+
+    txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    db.delete(txn)
+    db.commit()
+
+    return {"message": "领水记录已删除", "id": pickup_id}
+
+
+class BatchDeletePickupsRequest(BaseModel):
+    pickup_ids: List[int]
+
+
+@app.post("/api/admin/office-pickups/batch-delete")
+def batch_delete_office_pickups(
+    request: BatchDeletePickupsRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量删除领水记录（超级管理员）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员可以删除领水记录"
+        )
+
+    deleted_count = 0
+    for pickup_id in request.pickup_ids:
+        txn = db.query(Transaction).filter(Transaction.id == pickup_id).first()
+        if txn:
+            db.delete(txn)
+            deleted_count += 1
+
+    db.commit()
+
+    return {
+        "message": f"已删除 {deleted_count} 条领水记录",
+        "deleted_count": deleted_count,
+    }
+
+
+@app.get("/api/user/office-pickups")
+def get_user_office_pickups(
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """获取当前用户的办公室领水记录 - 从transactions表读取"""
+    pickups = (
+        db.query(Transaction, Product)
+        .join(Product, Transaction.product_id == Product.id)
+        .filter(Transaction.user_id == current_user.id)
+        .filter(Transaction.type == "pickup")
+        .order_by(Transaction.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for txn, product in pickups:
+        results.append(
+            {
+                "id": txn.id,
+                "user_id": current_user.id,
+                "user_name": current_user.name,
+                "department": current_user.department,
+                "office_name": current_user.department or "未知办公室",
+                "product_id": product.id,
+                "product_name": product.name,
+                "product_specification": product.specification,
+                "quantity": txn.quantity,
+                "pickup_person": current_user.name,
+                "pickup_person_id": current_user.id,
+                "pickup_time": txn.created_at.isoformat() if txn.created_at else None,
+                "payment_mode": txn.mode,
+                "settlement_status": txn.status,
+                "unit_price": txn.actual_price / txn.quantity
+                if txn.quantity and txn.actual_price
+                else 0,
+                "total_amount": txn.actual_price,
+                "status": txn.status,
+            }
+        )
+    return results
 
 
 @app.get("/api/admin/remind-unsettled")
 def get_remind_unsettled(days: int = 30, db: Session = Depends(get_db)):
     """获取超过指定天数未结算的用户列表，用于提醒结算"""
     from datetime import timedelta
+
     cutoff_date = datetime.now() - timedelta(days=days)
-    
-    users_unsettled = db.query(
-        User.id,
-        User.name,
-        User.department,
-        func.sum(Transaction.actual_price).label("total_amount"),
-        func.count(Transaction.id).label("count")
-    ).join(Transaction, User.id == Transaction.user_id).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 0,  # 未申请结算
-        Transaction.created_at < cutoff_date
-    ).group_by(User.id, User.name, User.department).all()
-    
+
+    users_unsettled = (
+        db.query(
+            User.id,
+            User.name,
+            User.department,
+            func.sum(Transaction.actual_price).label("total_amount"),
+            func.count(Transaction.id).label("count"),
+        )
+        .join(Transaction, User.id == Transaction.user_id)
+        .filter(
+            Transaction.status == "unsettled",
+            Transaction.settlement_applied == 0,  # 未申请结算
+            Transaction.created_at < cutoff_date,
+        )
+        .group_by(User.id, User.name, User.department)
+        .all()
+    )
+
     return [
         {
             "user_id": r.id,
             "user_name": r.name,
             "department": r.department,
             "total_amount": r.total_amount or 0,
-            "transaction_count": r.count or 0
+            "transaction_count": r.count or 0,
         }
         for r in users_unsettled
     ]
@@ -1181,24 +1809,37 @@ def get_monthly_report(db: Session = Depends(get_db)):
     """Get monthly report grouped by department"""
     now = datetime.now()
     month_start = datetime(now.year, now.month, 1)
-    
-    report = db.query(
-        User.department,
-        func.sum(Transaction.quantity).label("total_qty"),
-        func.sum(case((Transaction.status == "unsettled", Transaction.actual_price), else_=0)).label("unsettled_amount"),
-        func.sum(case((Transaction.status == "settled", Transaction.actual_price), else_=0)).label("settled_amount"),
-        func.count(Transaction.id).label("transaction_count")
-    ).join(Transaction, User.id == Transaction.user_id).filter(
-        Transaction.created_at >= month_start
-    ).group_by(User.department).all()
-    
+
+    report = (
+        db.query(
+            User.department,
+            func.sum(Transaction.quantity).label("total_qty"),
+            func.sum(
+                case(
+                    (Transaction.status == "unsettled", Transaction.actual_price),
+                    else_=0,
+                )
+            ).label("unsettled_amount"),
+            func.sum(
+                case(
+                    (Transaction.status == "settled", Transaction.actual_price), else_=0
+                )
+            ).label("settled_amount"),
+            func.count(Transaction.id).label("transaction_count"),
+        )
+        .join(Transaction, User.id == Transaction.user_id)
+        .filter(Transaction.created_at >= month_start)
+        .group_by(User.department)
+        .all()
+    )
+
     return [
         {
             "department": r.department,
             "total_qty": r.total_qty or 0,
             "unsettled_amount": r.unsettled_amount or 0,
             "settled_amount": r.settled_amount or 0,
-            "transaction_count": r.transaction_count or 0
+            "transaction_count": r.transaction_count or 0,
         }
         for r in report
     ]
@@ -1211,11 +1852,11 @@ def get_all_transactions(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     specification: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Get all transactions with user info
-    
+
     Query Parameters:
     - status: Filter by transaction status (unsettled/settled/reserved)
     - department: Filter by department name
@@ -1223,17 +1864,17 @@ def get_all_transactions(
     - date_to: Filter transactions to this date (YYYY-MM-DD format)
     - specification: Filter by product specification (e.g., "18L", "500ml")
     """
-    query = db.query(Transaction, User, Product).join(
-        User, Transaction.user_id == User.id
-    ).join(
-        Product, Transaction.product_id == Product.id
+    query = (
+        db.query(Transaction, User, Product)
+        .join(User, Transaction.user_id == User.id)
+        .join(Product, Transaction.product_id == Product.id)
     )
 
     if status:
         query = query.filter(Transaction.status == status)
     if department:
         query = query.filter(User.department == department)
-    
+
     # 时间范围筛选
     if date_from:
         try:
@@ -1241,7 +1882,7 @@ def get_all_transactions(
             query = query.filter(Transaction.created_at >= from_date)
         except ValueError:
             pass  # 忽略无效日期格式
-    
+
     if date_to:
         try:
             to_date = datetime.strptime(date_to, "%Y-%m-%d")
@@ -1250,7 +1891,7 @@ def get_all_transactions(
             query = query.filter(Transaction.created_at <= to_date)
         except ValueError:
             pass  # 忽略无效日期格式
-    
+
     # 规格筛选
     if specification:
         query = query.filter(Product.specification == specification)
@@ -1259,20 +1900,22 @@ def get_all_transactions(
 
     results = []
     for transaction, user, product in query.all():
-        results.append({
-            "id": transaction.id,
-            "user_name": user.name,
-            "department": user.department,
-            "product_id": transaction.product_id,
-            "product_name": product.name,
-            "specification": product.specification,
-            "quantity": transaction.quantity,
-            "actual_price": transaction.actual_price,
-            "type": transaction.type,
-            "status": transaction.status,
-            "note": transaction.note,
-            "created_at": transaction.created_at.isoformat()
-        })
+        results.append(
+            {
+                "id": transaction.id,
+                "user_name": user.name,
+                "department": user.department,
+                "product_id": transaction.product_id,
+                "product_name": product.name,
+                "specification": product.specification,
+                "quantity": transaction.quantity,
+                "actual_price": transaction.actual_price,
+                "type": transaction.type,
+                "status": transaction.status,
+                "note": transaction.note,
+                "created_at": transaction.created_at.isoformat(),
+            }
+        )
     return results
 
 
@@ -1290,17 +1933,18 @@ def get_specifications(db: Session = Depends(get_db)):
 @app.get("/api/admin/inventory-alert")
 def get_inventory_alert(threshold: int = 10, db: Session = Depends(get_db)):
     """Get products with low stock (only active products)"""
-    products = db.query(Product).filter(
-        Product.stock < threshold,
-        Product.is_active == 1
-    ).all()
+    products = (
+        db.query(Product)
+        .filter(Product.stock < threshold, Product.is_active == 1)
+        .all()
+    )
     return [
         {
             "id": p.id,
             "name": p.name,
             "specification": p.specification,
             "stock": p.stock,
-            "threshold": threshold
+            "threshold": threshold,
         }
         for p in products
     ]
@@ -1315,11 +1959,11 @@ def get_all_transactions(
     date_to: Optional[str] = None,
     specification: Optional[str] = None,
     include_deleted: bool = False,  # 是否包含已删除的记录
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Get all transactions with user info
-    
+
     Query Parameters:
     - status: Filter by transaction status (unsettled/settled/reserved)
     - department: Filter by department name
@@ -1335,12 +1979,12 @@ def get_all_transactions(
     if not include_deleted:
         query = query.filter(Transaction.is_deleted == 0)
 
-    # 关联用户和部门筛选
+    # 关联用户和办公室筛选
     if department:
         user_ids = db.query(User.id).filter(User.department == department).all()
         user_ids = [u[0] for u in user_ids]
         query = query.filter(Transaction.user_id.in_(user_ids))
-    
+
     # 时间范围筛选
     if date_from:
         try:
@@ -1348,7 +1992,7 @@ def get_all_transactions(
             query = query.filter(Transaction.created_at >= from_date)
         except ValueError:
             pass  # 忽略无效日期格式
-    
+
     if date_to:
         try:
             to_date = datetime.strptime(date_to, "%Y-%m-%d")
@@ -1357,13 +2001,15 @@ def get_all_transactions(
             query = query.filter(Transaction.created_at <= to_date)
         except ValueError:
             pass  # 忽略无效日期格式
-    
+
     # 规格筛选
     if specification:
-        product_ids = db.query(Product.id).filter(Product.specification == specification).all()
+        product_ids = (
+            db.query(Product.id).filter(Product.specification == specification).all()
+        )
         product_ids = [p[0] for p in product_ids]
         query = query.filter(Transaction.product_id.in_(product_ids))
-    
+
     # 状态筛选
     if status:
         query = query.filter(Transaction.status == status)
@@ -1377,25 +2023,29 @@ def get_all_transactions(
         user = db.query(User).filter(User.id == transaction.user_id).first()
         # 获取产品信息
         product = db.query(Product).filter(Product.id == transaction.product_id).first()
-        
-        results.append({
-            "id": transaction.id,
-            "user_name": user.name if user else "Unknown",
-            "department": user.department if user else "Unknown",
-            "product_id": transaction.product_id,
-            "product_name": product.name if product else "Unknown",
-            "specification": product.specification if product else "Unknown",
-            "quantity": transaction.quantity,
-            "actual_price": transaction.actual_price,
-            "type": transaction.type,
-            "status": transaction.status,
-            "note": transaction.note,
-            "created_at": transaction.created_at.isoformat(),
-            "is_deleted": transaction.is_deleted,
-            "deleted_at": transaction.deleted_at.isoformat() if transaction.deleted_at else None,
-            "deleted_by": transaction.deleted_by,
-            "delete_reason": transaction.delete_reason
-        })
+
+        results.append(
+            {
+                "id": transaction.id,
+                "user_name": user.name if user else "Unknown",
+                "department": user.department if user else "Unknown",
+                "product_id": transaction.product_id,
+                "product_name": product.name if product else "Unknown",
+                "specification": product.specification if product else "Unknown",
+                "quantity": transaction.quantity,
+                "actual_price": transaction.actual_price,
+                "type": transaction.type,
+                "status": transaction.status,
+                "note": transaction.note,
+                "created_at": transaction.created_at.isoformat(),
+                "is_deleted": transaction.is_deleted,
+                "deleted_at": transaction.deleted_at.isoformat()
+                if transaction.deleted_at
+                else None,
+                "deleted_by": transaction.deleted_by,
+                "delete_reason": transaction.delete_reason,
+            }
+        )
     return results
 
 
@@ -1403,7 +2053,7 @@ def get_all_transactions(
 def delete_transactions(
     request: DeleteTransactionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Delete transactions (soft delete)
@@ -1424,20 +2074,16 @@ def delete_transactions(
 
     if current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(
-            status_code=403,
-            detail="权限不足：只有管理员才能删除交易记录"
+            status_code=403, detail="权限不足：只有管理员才能删除交易记录"
         )
 
     # 检查交易记录是否存在且未被删除
-    transactions = db.query(Transaction).filter(
-        Transaction.id.in_(request.transaction_ids)
-    ).all()
+    transactions = (
+        db.query(Transaction).filter(Transaction.id.in_(request.transaction_ids)).all()
+    )
 
     if len(transactions) != len(request.transaction_ids):
-        raise HTTPException(
-            status_code=404,
-            detail="部分交易记录不存在"
-        )
+        raise HTTPException(status_code=404, detail="部分交易记录不存在")
 
     # 执行软删除
     now = datetime.now()
@@ -1454,13 +2100,14 @@ def delete_transactions(
 
     # 记录删除日志
     import json
+
     delete_log = DeleteLog(
         operator_id=current_user.id,
         operator_name=current_user.name,
         action="delete_transaction",
         target_type="transaction",
         target_ids=json.dumps(request.transaction_ids),
-        reason=request.reason
+        reason=request.reason,
     )
     db.add(delete_log)
     db.commit()
@@ -1468,116 +2115,123 @@ def delete_transactions(
     return {
         "message": f"成功删除 {deleted_count} 条交易记录",
         "deleted_count": deleted_count,
-        "deleted_ids": request.transaction_ids
+        "deleted_ids": request.transaction_ids,
     }
 
 
 @app.post("/api/admin/transactions/restore")
 def restore_transactions(
-    transaction_ids: List[int],
-    current_user_id: int,
-    db: Session = Depends(get_db)
+    transaction_ids: List[int], current_user_id: int, db: Session = Depends(get_db)
 ):
     """
     Restore deleted transactions (only for super admin)
-    
+
     权限要求：
     - 必须是 admin 角色
     """
     current_user = db.query(User).filter(User.id == current_user_id).first()
     if not current_user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
+
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403, 
-            detail="权限不足：只有管理员才能恢复交易记录"
+            status_code=403, detail="权限不足：只有管理员才能恢复交易记录"
         )
-    
+
     # 恢复交易记录
-    transactions = db.query(Transaction).filter(
-        Transaction.id.in_(transaction_ids),
-        Transaction.is_deleted == 1
-    ).all()
-    
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.id.in_(transaction_ids), Transaction.is_deleted == 1)
+        .all()
+    )
+
     for transaction in transactions:
         transaction.is_deleted = 0
         transaction.deleted_at = None
         transaction.deleted_by = None
         transaction.delete_reason = None
-    
+
     db.commit()
-    
+
     return {
         "message": f"成功恢复 {len(transactions)} 条交易记录",
-        "restored_count": len(transactions)
+        "restored_count": len(transactions),
     }
 
 
 @app.get("/api/admin/delete-logs")
-def get_delete_logs(
-    limit: int = 50,
-    db: Session = Depends(get_db)
-):
+def get_delete_logs(limit: int = 50, db: Session = Depends(get_db)):
     """
     Get delete operation logs
 
     权限要求：
     - 必须是 admin 角色
     """
-    logs = db.query(DeleteLog, User).join(
-        User, DeleteLog.operator_id == User.id
-    ).order_by(DeleteLog.created_at.desc()).limit(limit).all()
+    logs = (
+        db.query(DeleteLog, User)
+        .join(User, DeleteLog.operator_id == User.id)
+        .order_by(DeleteLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
     results = []
     for log, operator in logs:
-        results.append({
-            "id": log.id,
-            "operator_name": operator.name,
-            "action": log.action,
-            "target_type": log.target_type,
-            "target_ids": log.target_ids,
-            "reason": log.reason,
-            "created_at": log.created_at.isoformat()
-        })
+        results.append(
+            {
+                "id": log.id,
+                "operator_name": operator.name,
+                "action": log.action,
+                "target_type": log.target_type,
+                "target_ids": log.target_ids,
+                "reason": log.reason,
+                "created_at": log.created_at.isoformat(),
+            }
+        )
     return results
 
 
 # ==================== Trash / Recycle Bin APIs ====================
 @app.get("/api/admin/trash")
-def get_trash_transactions(
-    days: int = 30,
-    db: Session = Depends(get_db)
-):
+def get_trash_transactions(days: int = 30, db: Session = Depends(get_db)):
     """获取回收站中的交易记录（保留最近 days 天）"""
     from datetime import timedelta
+
     cutoff_date = datetime.now() - timedelta(days=days)
-    
-    transactions = db.query(Transaction).filter(
-        Transaction.is_deleted == 1,
-        Transaction.deleted_at >= cutoff_date
-    ).order_by(Transaction.deleted_at.desc()).all()
-    
+
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.is_deleted == 1, Transaction.deleted_at >= cutoff_date)
+        .order_by(Transaction.deleted_at.desc())
+        .all()
+    )
+
     results = []
     for t in transactions:
         user = db.query(User).filter(User.id == t.user_id).first()
         product = db.query(Product).filter(Product.id == t.product_id).first()
-        deleter = db.query(User).filter(User.id == t.deleted_by).first() if t.deleted_by else None
-        
-        results.append({
-            "id": t.id,
-            "user_name": user.name if user else "Unknown",
-            "department": user.department if user else "Unknown",
-            "product_name": product.name if product else "Unknown",
-            "quantity": t.quantity,
-            "actual_price": t.actual_price,
-            "status": t.status,
-            "deleted_at": t.deleted_at.isoformat() if t.deleted_at else None,
-            "deleted_by": t.deleted_by,
-            "deleter_name": deleter.name if deleter else "Unknown",
-            "delete_reason": t.delete_reason
-        })
-    
+        deleter = (
+            db.query(User).filter(User.id == t.deleted_by).first()
+            if t.deleted_by
+            else None
+        )
+
+        results.append(
+            {
+                "id": t.id,
+                "user_name": user.name if user else "Unknown",
+                "department": user.department if user else "Unknown",
+                "product_name": product.name if product else "Unknown",
+                "quantity": t.quantity,
+                "actual_price": t.actual_price,
+                "status": t.status,
+                "deleted_at": t.deleted_at.isoformat() if t.deleted_at else None,
+                "deleted_by": t.deleted_by,
+                "deleter_name": deleter.name if deleter else "Unknown",
+                "delete_reason": t.delete_reason,
+            }
+        )
+
     return results
 
 
@@ -1585,25 +2239,26 @@ def get_trash_transactions(
 def restore_trash_transactions(
     request: SettlementRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """恢复回收站中的交易记录"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="权限不足")
-    
+
     restored = 0
     for tid in request.transaction_ids:
-        transaction = db.query(Transaction).filter(
-            Transaction.id == tid,
-            Transaction.is_deleted == 1
-        ).first()
+        transaction = (
+            db.query(Transaction)
+            .filter(Transaction.id == tid, Transaction.is_deleted == 1)
+            .first()
+        )
         if transaction:
             transaction.is_deleted = 0
             transaction.deleted_at = None
             transaction.deleted_by = None
             transaction.delete_reason = None
             restored += 1
-    
+
     db.commit()
     return {"message": f"成功恢复 {restored} 条记录", "restored_count": restored}
 
@@ -1612,23 +2267,26 @@ def restore_trash_transactions(
 def permanently_delete_transaction(
     transaction_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """永久删除回收站中的交易记录（仅超级管理员）"""
     if not current_user or current_user.role != "super_admin":
-        raise HTTPException(status_code=403, detail="权限不足：只有超级管理员才能永久删除")
-    
-    transaction = db.query(Transaction).filter(
-        Transaction.id == transaction_id,
-        Transaction.is_deleted == 1
-    ).first()
-    
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能永久删除"
+        )
+
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.is_deleted == 1)
+        .first()
+    )
+
     if not transaction:
         raise HTTPException(status_code=404, detail="记录不存在")
-    
+
     db.delete(transaction)
     db.commit()
-    
+
     return {"message": "记录已永久删除", "deleted_id": transaction_id}
 
 
@@ -1638,7 +2296,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     """
     Get comprehensive dashboard summary with actionable insights
     Returns: pending tasks, key metrics with trends, quick stats
-    
+
     优化后的核心指标分为两大类：
     - 用量统计：按单位（桶/瓶/提）分类统计，更贴合实际运营场景
     - 金额统计：按结算状态分类，清晰掌握收款情况
@@ -1657,34 +2315,43 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         last_month_end = month_start - timedelta(days=1)
 
     # 本月数据
-    this_month_transactions = db.query(Transaction).filter(
-        Transaction.created_at >= month_start
-    ).all()
+    this_month_transactions = (
+        db.query(Transaction).filter(Transaction.created_at >= month_start).all()
+    )
 
     # 上月同期数据
-    last_month_transactions = db.query(Transaction).filter(
-        Transaction.created_at >= last_month_start,
-        Transaction.created_at <= last_month_end
-    ).all()
+    last_month_transactions = (
+        db.query(Transaction)
+        .filter(
+            Transaction.created_at >= last_month_start,
+            Transaction.created_at <= last_month_end,
+        )
+        .all()
+    )
 
     # 待办事项统计
-    pending_applications = db.query(Transaction).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 1
-    ).count()
+    pending_applications = (
+        db.query(Transaction)
+        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 1)
+        .count()
+    )
 
-    low_stock_products = db.query(Product).filter(
-        Product.stock < 10,
-        Product.is_active == 1
-    ).count()
+    low_stock_products = (
+        db.query(Product).filter(Product.stock < 10, Product.is_active == 1).count()
+    )
 
     # 超过 30 天未结算且未申请的用户数
     cutoff_date = now - timedelta(days=30)
-    users_to_remind = db.query(Transaction).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 0,
-        Transaction.created_at < cutoff_date
-    ).distinct(Transaction.user_id).count()
+    users_to_remind = (
+        db.query(Transaction)
+        .filter(
+            Transaction.status == "unsettled",
+            Transaction.settlement_applied == 0,
+            Transaction.created_at < cutoff_date,
+        )
+        .distinct(Transaction.user_id)
+        .count()
+    )
 
     # ==================== 用量统计（按单位分类） ====================
     # 按产品单位分组统计本月领取量
@@ -1697,7 +2364,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
                 usage_by_unit[unit] = {
                     "quantity": 0,
                     "transaction_count": 0,
-                    "products": {}
+                    "products": {},
                 }
             usage_by_unit[unit]["quantity"] += t.quantity
             usage_by_unit[unit]["transaction_count"] += 1
@@ -1710,31 +2377,57 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     # 计算上月同期用量（用于环比）
     last_month_qty = sum(t.quantity for t in last_month_transactions)
     this_month_qty = sum(t.quantity for t in this_month_transactions)
-    qty_growth = ((this_month_qty - last_month_qty) / last_month_qty * 100) if last_month_qty > 0 else 0
+    qty_growth = (
+        ((this_month_qty - last_month_qty) / last_month_qty * 100)
+        if last_month_qty > 0
+        else 0
+    )
 
     # ==================== 金额统计（按状态分类） ====================
-    this_month_settled = sum(t.actual_price for t in this_month_transactions if t.status == "settled")
-    last_month_settled = sum(t.actual_price for t in last_month_transactions if t.status == "settled")
-    settled_growth = ((this_month_settled - last_month_settled) / last_month_settled * 100) if last_month_settled > 0 else 0
+    this_month_settled = sum(
+        t.actual_price for t in this_month_transactions if t.status == "settled"
+    )
+    last_month_settled = sum(
+        t.actual_price for t in last_month_transactions if t.status == "settled"
+    )
+    settled_growth = (
+        ((this_month_settled - last_month_settled) / last_month_settled * 100)
+        if last_month_settled > 0
+        else 0
+    )
 
-    unsettled_amount = sum(t.actual_price for t in this_month_transactions if t.status == "unsettled" and t.settlement_applied == 0)
-    applied_amount = sum(t.actual_price for t in this_month_transactions if t.status == "unsettled" and t.settlement_applied == 1)
+    unsettled_amount = sum(
+        t.actual_price
+        for t in this_month_transactions
+        if t.status == "unsettled" and t.settlement_applied == 0
+    )
+    applied_amount = sum(
+        t.actual_price
+        for t in this_month_transactions
+        if t.status == "unsettled" and t.settlement_applied == 1
+    )
 
-    # 部门排行
-    dept_stats = db.query(
-        User.department,
-        func.sum(Transaction.quantity).label("total_qty"),
-        func.count(Transaction.id).label("transaction_count")
-    ).join(Transaction, User.id == Transaction.user_id).filter(
-        Transaction.created_at >= month_start
-    ).group_by(User.department).order_by(func.sum(Transaction.quantity).desc()).limit(5).all()
+    # 办公室排行
+    dept_stats = (
+        db.query(
+            User.department,
+            func.sum(Transaction.quantity).label("total_qty"),
+            func.count(Transaction.id).label("transaction_count"),
+        )
+        .join(Transaction, User.id == Transaction.user_id)
+        .filter(Transaction.created_at >= month_start)
+        .group_by(User.department)
+        .order_by(func.sum(Transaction.quantity).desc())
+        .limit(5)
+        .all()
+    )
 
     return {
         "pending_tasks": {
             "applications_count": pending_applications,
             "low_stock_count": low_stock_products,
             "remind_count": users_to_remind,
-            "abnormal_count": 0
+            "abnormal_count": 0,
         },
         "metrics": {
             # 金额统计
@@ -1743,7 +2436,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
             "unsettled_amount": round(unsettled_amount, 2),
             "applied_amount": round(applied_amount, 2),
             # 总体趋势
-            "total_qty_growth_rate": round(qty_growth, 1)
+            "total_qty_growth_rate": round(qty_growth, 1),
         },
         "usage_stats": {
             "by_unit": [
@@ -1751,16 +2444,20 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
                     "unit": unit,
                     "quantity": data["quantity"],
                     "transaction_count": data["transaction_count"],
-                    "products": data["products"]
+                    "products": data["products"],
                 }
                 for unit, data in usage_by_unit.items()
             ],
-            "total_quantity": this_month_qty
+            "total_quantity": this_month_qty,
         },
         "department_ranking": [
-            {"department": dept.department, "total_qty": dept.total_qty, "transaction_count": dept.transaction_count}
+            {
+                "department": dept.department,
+                "total_qty": dept.total_qty,
+                "transaction_count": dept.transaction_count,
+            }
             for dept in dept_stats
-        ]
+        ],
     }
 
 
@@ -1775,62 +2472,59 @@ def get_quick_stats(db: Session = Depends(get_db)):
     week_start = today_start - timedelta(days=7)
 
     # 今日领取
-    today_transactions = db.query(Transaction).filter(
-        Transaction.created_at >= today_start
-    ).all()
+    today_transactions = (
+        db.query(Transaction).filter(Transaction.created_at >= today_start).all()
+    )
     today_qty = sum(t.quantity for t in today_transactions)
 
     # 昨日领取
-    yesterday_transactions = db.query(Transaction).filter(
-        Transaction.created_at >= yesterday_start,
-        Transaction.created_at < today_start
-    ).all()
+    yesterday_transactions = (
+        db.query(Transaction)
+        .filter(
+            Transaction.created_at >= yesterday_start,
+            Transaction.created_at < today_start,
+        )
+        .all()
+    )
     yesterday_qty = sum(t.quantity for t in yesterday_transactions)
-    today_growth = ((today_qty - yesterday_qty) / yesterday_qty * 100) if yesterday_qty > 0 else 0
+    today_growth = (
+        ((today_qty - yesterday_qty) / yesterday_qty * 100) if yesterday_qty > 0 else 0
+    )
 
     # 本周领取
-    week_transactions = db.query(Transaction).filter(
-        Transaction.created_at >= week_start
-    ).all()
+    week_transactions = (
+        db.query(Transaction).filter(Transaction.created_at >= week_start).all()
+    )
     week_qty = sum(t.quantity for t in week_transactions)
 
     # 待结算笔数（区分状态）
-    unsettled_count = db.query(Transaction).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 0
-    ).count()
+    unsettled_count = (
+        db.query(Transaction)
+        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 0)
+        .count()
+    )
 
-    applied_count = db.query(Transaction).filter(
-        Transaction.status == "unsettled",
-        Transaction.settlement_applied == 1
-    ).count()
+    applied_count = (
+        db.query(Transaction)
+        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 1)
+        .count()
+    )
 
     return {
-        "today": {
-            "quantity": today_qty,
-            "growth_rate": round(today_growth, 1)
-        },
-        "week": {
-            "quantity": week_qty
-        },
-        "pending": {
-            "unsettled_count": unsettled_count,
-            "applied_count": applied_count
-        }
+        "today": {"quantity": today_qty, "growth_rate": round(today_growth, 1)},
+        "week": {"quantity": week_qty},
+        "pending": {"unsettled_count": unsettled_count, "applied_count": applied_count},
     }
 
 
 @app.get("/api/admin/dashboard/trend")
-def get_dashboard_trend(
-    days: int = 7,
-    db: Session = Depends(get_db)
-):
+def get_dashboard_trend(days: int = 7, db: Session = Depends(get_db)):
     """
     Get trend data for dashboard charts
-    
+
     Query Parameters:
     - days: Number of days (7 for weekly trend, 30 for monthly trend)
-    
+
     Returns:
     - daily_data: Array of daily statistics
     - product_distribution: Product type distribution
@@ -1849,26 +2543,32 @@ def get_dashboard_trend(
         day_start = datetime(date.year, date.month, date.day)
         day_end = day_start + timedelta(days=1)
 
-        day_transactions = db.query(Transaction).filter(
-            Transaction.created_at >= day_start,
-            Transaction.created_at < day_end
-        ).all()
+        day_transactions = (
+            db.query(Transaction)
+            .filter(
+                Transaction.created_at >= day_start, Transaction.created_at < day_end
+            )
+            .all()
+        )
 
-        daily_data.append({
-            "date": date_str,
-            "display_date": f"{date.month}/{date.day}",
-            "quantity": sum(t.quantity for t in day_transactions),
-            "amount": sum(t.actual_price for t in day_transactions),
-            "transaction_count": len(day_transactions)
-        })
+        daily_data.append(
+            {
+                "date": date_str,
+                "display_date": f"{date.month}/{date.day}",
+                "quantity": sum(t.quantity for t in day_transactions),
+                "amount": sum(t.actual_price for t in day_transactions),
+                "transaction_count": len(day_transactions),
+            }
+        )
 
     # 产品分布统计（本月）
     month_start = datetime(now.year, now.month, 1)
-    month_transactions = db.query(Transaction, Product).join(
-        Product, Transaction.product_id == Product.id
-    ).filter(
-        Transaction.created_at >= month_start
-    ).all()
+    month_transactions = (
+        db.query(Transaction, Product)
+        .join(Product, Transaction.product_id == Product.id)
+        .filter(Transaction.created_at >= month_start)
+        .all()
+    )
 
     product_distribution = []
     product_stats = {}
@@ -1880,21 +2580,24 @@ def get_dashboard_trend(
         product_stats[product_name]["amount"] += t.actual_price
 
     for name, stats in product_stats.items():
-        product_distribution.append({
-            "name": name,
-            "quantity": stats["quantity"],
-            "amount": stats["amount"]
-        })
+        product_distribution.append(
+            {"name": name, "quantity": stats["quantity"], "amount": stats["amount"]}
+        )
 
-    # 部门完整排行（本月）
-    dept_ranking = db.query(
-        User.department,
-        func.sum(Transaction.quantity).label("total_qty"),
-        func.sum(Transaction.actual_price).label("total_amount"),
-        func.count(Transaction.id).label("transaction_count")
-    ).join(Transaction, User.id == Transaction.user_id).filter(
-        Transaction.created_at >= month_start
-    ).group_by(User.department).order_by(func.sum(Transaction.quantity).desc()).all()
+    # 办公室完整排行（本月）
+    dept_ranking = (
+        db.query(
+            User.department,
+            func.sum(Transaction.quantity).label("total_qty"),
+            func.sum(Transaction.actual_price).label("total_amount"),
+            func.count(Transaction.id).label("transaction_count"),
+        )
+        .join(Transaction, User.id == Transaction.user_id)
+        .filter(Transaction.created_at >= month_start)
+        .group_by(User.department)
+        .order_by(func.sum(Transaction.quantity).desc())
+        .all()
+    )
 
     return {
         "daily_data": daily_data,
@@ -1904,10 +2607,10 @@ def get_dashboard_trend(
                 "department": dept.department,
                 "total_qty": dept.total_qty,
                 "total_amount": round(dept.total_amount, 2),
-                "transaction_count": dept.transaction_count
+                "transaction_count": dept.transaction_count,
             }
             for dept in dept_ranking
-        ]
+        ],
     }
 
 
@@ -1916,7 +2619,7 @@ def get_dashboard_trend(
 def create_notification(
     notification: NotificationCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """创建通知（管理员专用）"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
@@ -1934,11 +2637,11 @@ def get_notifications(
     user_id: Optional[int] = None,
     unread_only: bool = False,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取通知列表"""
     query = db.query(Notification)
-    
+
     if user_id is not None:
         # 获取该用户的通知和全员通知
         query = query.filter(
@@ -1947,12 +2650,12 @@ def get_notifications(
     else:
         # 默认只获取全员通知
         query = query.filter(Notification.user_id == None)
-    
+
     if unread_only:
         query = query.filter(Notification.is_read == 0)
-    
+
     query = query.order_by(Notification.created_at.desc()).limit(limit)
-    
+
     return query.all()
 
 
@@ -1960,16 +2663,18 @@ def get_notifications(
 def mark_notification_as_read(
     notification_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """标记通知为已读"""
-    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    notification = (
+        db.query(Notification).filter(Notification.id == notification_id).first()
+    )
     if not notification:
         raise HTTPException(status_code=404, detail="通知不存在")
-    
+
     notification.is_read = 1
     db.commit()
-    
+
     return {"message": "已标记为已读"}
 
 
@@ -1977,49 +2682,48 @@ def mark_notification_as_read(
 def mark_all_notifications_as_read(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """标记所有通知为已读"""
     db.query(Notification).filter(
         (Notification.user_id == user_id) | (Notification.user_id == None),
-        Notification.is_read == 0
+        Notification.is_read == 0,
     ).update({"is_read": 1})
     db.commit()
-    
+
     return {"message": "已全部标记为已读"}
 
 
 @app.get("/api/notifications/unread-count")
-def get_unread_count(
-    user_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
+def get_unread_count(user_id: Optional[int] = None, db: Session = Depends(get_db)):
     """获取未读通知数量"""
     query = db.query(Notification).filter(Notification.is_read == 0)
-    
+
     if user_id is not None:
         query = query.filter(
             (Notification.user_id == user_id) | (Notification.user_id == None)
         )
-    
+
     count = query.count()
     return {"unread_count": count}
 
 
 # ==================== Auto Notification Helpers ====================
-def send_settlement_application_notification(db: Session, user_name: str, amount: float):
+def send_settlement_application_notification(
+    db: Session, user_name: str, amount: float
+):
     """发送结算申请通知给所有管理员"""
     admins = db.query(User).filter(User.role.in_(["admin", "super_admin"])).all()
-    
+
     for admin in admins:
         notification = Notification(
             user_id=admin.id,
             title="新的结算申请",
             content=f"用户 {user_name} 提交了结算申请，金额：¥{amount:.2f}",
-            type="settlement"
+            type="settlement",
         )
         db.add(notification)
-    
+
     db.commit()
 
 
@@ -2029,13 +2733,15 @@ def send_settlement_confirmed_notification(db: Session, user_id: int, amount: fl
         user_id=user_id,
         title="结算确认",
         content=f"您的结算申请已确认，金额：¥{amount:.2f}",
-        type="info"
+        type="info",
     )
     db.add(notification)
     db.commit()
 
 
-def send_low_stock_notification(db: Session, product_name: str, stock: int, threshold: int = 10):
+def send_low_stock_notification(
+    db: Session, product_name: str, stock: int, threshold: int = 10
+):
     """发送库存预警通知给所有管理员"""
     admins = db.query(User).filter(User.role.in_(["admin", "super_admin"])).all()
 
@@ -2044,7 +2750,7 @@ def send_low_stock_notification(db: Session, product_name: str, stock: int, thre
             user_id=admin.id,
             title="库存预警",
             content=f"⚠️ {product_name} 库存不足，当前库存：{stock}，预警阈值：{threshold}",
-            type="warning"
+            type="warning",
         )
         db.add(notification)
 
@@ -2057,32 +2763,35 @@ def send_prepaid_paid_notification(db: Session, user_id: int, order: PrepaidOrde
         user_id=user_id,
         title="预付订单已确认",
         content=f"您的预付订单已确认：{order.product.name if order.product else '产品'} {order.total_qty}{order.product.unit if order.product else ''}，金额：¥{order.total_amount:.2f}",
-        type="info"
+        type="info",
     )
     db.add(notification)
     db.commit()
 
 
-def send_low_prepaid_balance_notification(db: Session, user_id: int, order: PrepaidOrder, remaining: int):
+def send_low_prepaid_balance_notification(
+    db: Session, user_id: int, order: PrepaidOrder, remaining: int
+):
     """发送预付余量不足提醒"""
     notification = Notification(
         user_id=user_id,
         title="⚠️ 预付余量不足",
         content=f"您的{order.product.name if order.product else '产品'}预付余量不足 20%，当前剩余：{remaining}{order.product.unit if order.product else ''}，请及时续购",
-        type="reminder"
+        type="reminder",
     )
     db.add(notification)
     db.commit()
 
 
-
 # ==================== Promotion Config APIs ====================
-@app.get("/api/promotions/config/{product_id}", response_model=List[PromotionConfigResponse])
+@app.get(
+    "/api/promotions/config/{product_id}", response_model=List[PromotionConfigResponse]
+)
 def get_product_promotion_config(product_id: int, db: Session = Depends(get_db)):
     """获取指定产品的优惠配置（包含两种模式）"""
-    configs = db.query(PromotionConfig).filter(
-        PromotionConfig.product_id == product_id
-    ).all()
+    configs = (
+        db.query(PromotionConfig).filter(PromotionConfig.product_id == product_id).all()
+    )
     return configs
 
 
@@ -2090,7 +2799,7 @@ def get_product_promotion_config(product_id: int, db: Session = Depends(get_db))
 def get_promotion_configs(
     product_id: Optional[int] = None,
     mode: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取优惠配置列表"""
     query = db.query(PromotionConfig)
@@ -2108,17 +2817,21 @@ def get_promotion_configs(
 def create_promotion_config(
     config: PromotionConfigCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """创建或更新优惠配置"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="权限不足")
 
     # 检查是否已存在该产品和模式的配置
-    existing = db.query(PromotionConfig).filter(
-        PromotionConfig.product_id == config.product_id,
-        PromotionConfig.mode == config.mode
-    ).first()
+    existing = (
+        db.query(PromotionConfig)
+        .filter(
+            PromotionConfig.product_id == config.product_id,
+            PromotionConfig.mode == config.mode,
+        )
+        .first()
+    )
 
     if existing:
         # 更新现有配置
@@ -2142,7 +2855,7 @@ def create_promotion_config(
 def batch_update_promotion_configs(
     configs: List[PromotionConfigCreate],
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """批量设置产品优惠配置"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
@@ -2150,10 +2863,14 @@ def batch_update_promotion_configs(
 
     updated_count = 0
     for config in configs:
-        existing = db.query(PromotionConfig).filter(
-            PromotionConfig.product_id == config.product_id,
-            PromotionConfig.mode == config.mode
-        ).first()
+        existing = (
+            db.query(PromotionConfig)
+            .filter(
+                PromotionConfig.product_id == config.product_id,
+                PromotionConfig.mode == config.mode,
+            )
+            .first()
+        )
 
         if existing:
             existing.trigger_qty = config.trigger_qty
@@ -2163,7 +2880,7 @@ def batch_update_promotion_configs(
         else:
             db_config = PromotionConfig(**config.model_dump())
             db.add(db_config)
-        
+
         updated_count += 1
 
     db.commit()
@@ -2175,7 +2892,7 @@ def batch_update_promotion_configs(
 def create_reservation(
     request: ReservationPickupRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     创建预定订单（先付后用模式）
@@ -2197,7 +2914,7 @@ def create_reservation(
 
     # 计算优惠价格
     actual_price, note = calculate_promotion_price(
-        db, current_user.id, request.product_id, request.pickup_qty, mode='prepay'
+        db, current_user.id, request.product_id, request.pickup_qty, mode="prepay"
     )
 
     # 冻结库存
@@ -2215,7 +2932,7 @@ def create_reservation(
         mode="prepay",
         payment_status="paid",  # 预定时即支付
         status="reserved",
-        note=f"预定订单：{note}"
+        note=f"预定订单：{note}",
     )
 
     db.add(reservation)
@@ -2230,34 +2947,40 @@ def create_reservation(
         "quantity": request.pickup_qty,
         "actual_price": actual_price,
         "payment_status": "paid",
-        "note": note
+        "note": note,
     }
 
 
 @app.get("/api/reservation/{user_id}/balance")
 def get_reservation_balance(user_id: int, db: Session = Depends(get_db)):
     """获取用户的预定余额（未领取的数量）"""
-    reservations = db.query(Transaction).filter(
-        Transaction.user_id == user_id,
-        Transaction.mode == "prepay",
-        Transaction.status == "reserved"
-    ).all()
+    reservations = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user_id,
+            Transaction.mode == "prepay",
+            Transaction.status == "reserved",
+        )
+        .all()
+    )
 
     balances = []
     for res in reservations:
         product = db.query(Product).filter(Product.id == res.product_id).first()
         remaining = res.reserved_qty - res.used_qty
-        
+
         if remaining > 0:
-            balances.append({
-                "user_id": user_id,
-                "product_id": res.product_id,
-                "product_name": product.name if product else "Unknown",
-                "reserved_qty": res.reserved_qty,
-                "used_qty": res.used_qty,
-                "remaining_qty": remaining,
-                "reservation_id": res.id
-            })
+            balances.append(
+                {
+                    "user_id": user_id,
+                    "product_id": res.product_id,
+                    "product_name": product.name if product else "Unknown",
+                    "reserved_qty": res.reserved_qty,
+                    "used_qty": res.used_qty,
+                    "remaining_qty": remaining,
+                    "reservation_id": res.id,
+                }
+            )
 
     return balances
 
@@ -2266,7 +2989,7 @@ def get_reservation_balance(user_id: int, db: Session = Depends(get_db)):
 def pickup_reservation(
     request: ReservationPickupRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     领取预定的水（核销）
@@ -2276,10 +2999,14 @@ def pickup_reservation(
         raise HTTPException(status_code=401, detail="未登录")
 
     # 查找预定记录
-    reservation = db.query(Transaction).filter(
-        Transaction.id == request.reservation_id,
-        Transaction.user_id == current_user.id
-    ).first()
+    reservation = (
+        db.query(Transaction)
+        .filter(
+            Transaction.id == request.reservation_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
 
     if not reservation:
         raise HTTPException(status_code=404, detail="预定记录不存在")
@@ -2296,7 +3023,9 @@ def pickup_reservation(
         raise HTTPException(status_code=400, detail="领取数量必须大于 0")
 
     if request.pickup_qty > remaining:
-        raise HTTPException(status_code=400, detail=f"领取数量超过剩余数量，剩余：{remaining}")
+        raise HTTPException(
+            status_code=400, detail=f"领取数量超过剩余数量，剩余：{remaining}"
+        )
 
     # 更新已使用数量
     reservation.used_qty += request.pickup_qty
@@ -2310,7 +3039,7 @@ def pickup_reservation(
         reservation_id=request.reservation_id,
         pickup_qty=request.pickup_qty,
         picked_by=current_user.id,
-        status="completed"
+        status="completed",
     )
     db.add(pickup)
     db.commit()
@@ -2319,7 +3048,7 @@ def pickup_reservation(
         "message": "领取成功",
         "pickup_qty": request.pickup_qty,
         "remaining_qty": reservation.reserved_qty - reservation.used_qty,
-        "status": reservation.status
+        "status": reservation.status,
     }
 
 
@@ -2328,11 +3057,13 @@ def pickup_reservation(
 def create_prepaid_order(
     order: PrepaidOrderCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """创建预付订单（管理员专用）"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="权限不足：只有管理员才能创建预付订单")
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有管理员才能创建预付订单"
+        )
 
     # 验证用户
     user = db.query(User).filter(User.id == order.user_id).first()
@@ -2375,7 +3106,7 @@ def create_prepaid_order(
         payment_status="unpaid",
         payment_method=order.payment_method,
         created_by=current_user.id,
-        note=order.note
+        note=order.note,
     )
 
     db.add(db_order)
@@ -2389,7 +3120,7 @@ def create_prepaid_order(
 def get_admin_prepaid_orders(
     user_id: Optional[int] = None,
     payment_status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取预付订单列表（管理员专用）"""
     query = db.query(PrepaidOrder)
@@ -2406,15 +3137,14 @@ def get_admin_prepaid_orders(
 
 
 @app.get("/api/prepaid/orders", response_model=List[PrepaidOrderResponse])
-def get_user_prepaid_orders(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
+def get_user_prepaid_orders(user_id: int, db: Session = Depends(get_db)):
     """获取用户的预付订单列表"""
-    orders = db.query(PrepaidOrder).filter(
-        PrepaidOrder.user_id == user_id,
-        PrepaidOrder.is_active == 1
-    ).order_by(PrepaidOrder.created_at.desc()).all()
+    orders = (
+        db.query(PrepaidOrder)
+        .filter(PrepaidOrder.user_id == user_id, PrepaidOrder.is_active == 1)
+        .order_by(PrepaidOrder.created_at.desc())
+        .all()
+    )
 
     return orders
 
@@ -2432,7 +3162,7 @@ def get_prepaid_order(order_id: int, db: Session = Depends(get_db)):
 def confirm_prepaid_payment(
     order_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """确认预付订单收款（管理员专用）"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
@@ -2458,7 +3188,7 @@ def confirm_prepaid_payment(
     return {
         "message": "已确认收款",
         "order_id": order_id,
-        "payment_at": order.payment_at.isoformat()
+        "payment_at": order.payment_at.isoformat(),
     }
 
 
@@ -2466,7 +3196,7 @@ def confirm_prepaid_payment(
 def refund_prepaid_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """退款预付订单（管理员专用）"""
     if not current_user or current_user.role not in ["admin", "super_admin"]:
@@ -2481,8 +3211,7 @@ def refund_prepaid_order(
 
     if order.used_qty > 0:
         raise HTTPException(
-            status_code=400,
-            detail=f"订单已使用{order.used_qty}，无法全额退款"
+            status_code=400, detail=f"订单已使用{order.used_qty}，无法全额退款"
         )
 
     # 更新订单状态
@@ -2497,11 +3226,15 @@ def refund_prepaid_order(
 @app.get("/api/prepaid/balance/{user_id}", response_model=PrepaidBalanceResponse)
 def get_prepaid_balance(user_id: int, db: Session = Depends(get_db)):
     """获取用户预付余额"""
-    orders = db.query(PrepaidOrder).filter(
-        PrepaidOrder.user_id == user_id,
-        PrepaidOrder.payment_status == "paid",
-        PrepaidOrder.is_active == 1
-    ).all()
+    orders = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.user_id == user_id,
+            PrepaidOrder.payment_status == "paid",
+            PrepaidOrder.is_active == 1,
+        )
+        .all()
+    )
 
     balance_items = []
     total_orders = 0
@@ -2514,19 +3247,21 @@ def get_prepaid_balance(user_id: int, db: Session = Depends(get_db)):
             product = db.query(Product).filter(Product.id == order.product_id).first()
             remaining_value = remaining * order.unit_price
 
-            balance_items.append({
-                "order_id": order.id,
-                "product_id": order.product_id,
-                "product_name": product.name if product else "Unknown",
-                "specification": product.specification if product else "",
-                "unit": product.unit if product else "",
-                "total_qty": order.total_qty,
-                "used_qty": order.used_qty,
-                "remaining_qty": remaining,
-                "unit_price": order.unit_price,
-                "total_amount": order.total_amount - order.discount_amount,
-                "payment_status": order.payment_status
-            })
+            balance_items.append(
+                {
+                    "order_id": order.id,
+                    "product_id": order.product_id,
+                    "product_name": product.name if product else "Unknown",
+                    "specification": product.specification if product else "",
+                    "unit": product.unit if product else "",
+                    "total_qty": order.total_qty,
+                    "used_qty": order.used_qty,
+                    "remaining_qty": remaining,
+                    "unit_price": order.unit_price,
+                    "total_amount": order.total_amount - order.discount_amount,
+                    "payment_status": order.payment_status,
+                }
+            )
 
             total_orders += 1
             total_amount += order.total_amount - order.discount_amount
@@ -2538,8 +3273,8 @@ def get_prepaid_balance(user_id: int, db: Session = Depends(get_db)):
         "summary": {
             "total_orders": total_orders,
             "total_amount": round(total_amount, 2),
-            "total_remaining_value": round(total_remaining_value, 2)
-        }
+            "total_remaining_value": round(total_remaining_value, 2),
+        },
     }
 
 
@@ -2548,18 +3283,22 @@ def get_prepaid_balance(user_id: int, db: Session = Depends(get_db)):
 def create_prepaid_pickup(
     pickup: PrepaidPickupCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """创建预付领取记录"""
     if not current_user:
         raise HTTPException(status_code=401, detail="未登录")
 
     # 查找订单
-    order = db.query(PrepaidOrder).filter(
-        PrepaidOrder.id == pickup.order_id,
-        PrepaidOrder.user_id == current_user.id,
-        PrepaidOrder.is_active == 1
-    ).first()
+    order = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.id == pickup.order_id,
+            PrepaidOrder.user_id == current_user.id,
+            PrepaidOrder.is_active == 1,
+        )
+        .first()
+    )
 
     if not order:
         raise HTTPException(status_code=404, detail="订单不存在")
@@ -2572,7 +3311,7 @@ def create_prepaid_pickup(
     if pickup.pickup_qty > remaining:
         raise HTTPException(
             status_code=400,
-            detail=f"余额不足，剩余：{remaining} {order.product.unit if order.product else '单位'}"
+            detail=f"余额不足，剩余：{remaining} {order.product.unit if order.product else '单位'}",
         )
 
     if pickup.pickup_qty <= 0:
@@ -2595,7 +3334,7 @@ def create_prepaid_pickup(
         order_id=pickup.order_id,
         pickup_qty=pickup.pickup_qty,
         picked_by=current_user.id,
-        note=pickup.note
+        note=pickup.note,
     )
 
     db.add(db_pickup)
@@ -2614,7 +3353,7 @@ def create_prepaid_pickup(
 def get_prepaid_pickups(
     order_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """获取预付领取记录列表"""
     query = db.query(PrepaidPickup)
@@ -2624,7 +3363,9 @@ def get_prepaid_pickups(
 
     if user_id:
         # 通过订单关联用户
-        order_ids = db.query(PrepaidOrder.id).filter(PrepaidOrder.user_id == user_id).all()
+        order_ids = (
+            db.query(PrepaidOrder.id).filter(PrepaidOrder.user_id == user_id).all()
+        )
         order_ids = [o[0] for o in order_ids]
         query = query.filter(PrepaidPickup.order_id.in_(order_ids))
 
@@ -2647,9 +3388,9 @@ def init_db():
 if __name__ == "__main__":
     import uvicorn
     import os
-    
+
     # 从环境变量读取端口，默认 8000
     port = int(os.getenv("PORT", 8000))
-    
+
     init_db()
     uvicorn.run(app, host="0.0.0.0", port=port)

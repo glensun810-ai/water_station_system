@@ -1,0 +1,925 @@
+"""
+Office Management API Routes - 办公室管理 API 路由
+提供办公室管理、账户管理、充值记录等功能接口
+"""
+
+from fastapi import APIRouter, HTTPException, Depends, status
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine, func
+from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel, ConfigDict
+
+from models_unified import Office, OfficeAccount, OfficeRecharge, OfficePickup, Product
+
+# 数据库配置
+SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """获取数据库会话"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+router = APIRouter(prefix="/api", tags=["office-management"])
+
+
+# ==================== Pydantic Schemas ====================
+class OfficeBase(BaseModel):
+    name: str
+    room_number: Optional[str] = None
+    description: Optional[str] = None
+    leader_name: Optional[str] = None
+    water_user_count: int = 0
+    is_common: int = 1
+
+
+class OfficeCreate(OfficeBase):
+    pass
+
+
+class OfficeUpdate(BaseModel):
+    name: Optional[str] = None
+    room_number: Optional[str] = None
+    description: Optional[str] = None
+    leader_name: Optional[str] = None
+    water_user_count: Optional[int] = None
+    is_common: Optional[int] = None
+    is_active: Optional[int] = None
+    super_admin_id: Optional[int] = None
+
+
+class OfficeResponse(OfficeBase):
+    id: int
+    is_active: int = 1
+    is_common: int = 1
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OfficeAccountBase(BaseModel):
+    office_id: int
+    office_name: str
+    office_room_number: Optional[str] = None
+    product_id: int
+    product_name: str
+    product_specification: Optional[str] = None
+    reserved_qty: int = 0
+    remaining_qty: int = 0
+    reserved_person: Optional[str] = None
+    reserved_person_id: Optional[int] = None
+
+    # 负责人信息（新增）
+    manager_name: Optional[str] = None
+    manager_id: Optional[int] = None
+
+    # 配置人数（新增）
+    configured_count: int = 0
+
+    note: Optional[str] = None
+
+
+class OfficeAccountCreate(OfficeAccountBase):
+    pass
+
+
+class OfficeAccountUpdate(BaseModel):
+    reserved_qty: Optional[int] = None
+    remaining_qty: Optional[int] = None
+    reserved_person: Optional[str] = None
+    reserved_person_id: Optional[int] = None
+
+    # 负责人信息（新增）
+    manager_name: Optional[str] = None
+    manager_id: Optional[int] = None
+
+    # 配置人数（新增）
+    configured_count: Optional[int] = None
+
+    note: Optional[str] = None
+
+
+class OfficeAccountResponse(OfficeAccountBase):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OfficeRechargeResponse(BaseModel):
+    id: int
+    office_id: int
+    office_name: str
+    office_room_number: Optional[str] = None
+    product_id: int
+    product_name: str
+    product_specification: Optional[str] = None
+    quantity: int
+    unit_price: float
+    total_amount: float
+    recharge_person: Optional[str] = None
+    note: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OfficePickupResponse(BaseModel):
+    id: int
+    office_id: int
+    office_name: str
+    office_room_number: Optional[str] = None
+    product_id: int
+    product_name: str
+    product_specification: Optional[str] = None
+    quantity: int
+    pickup_person: Optional[str] = None
+    pickup_time: datetime
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== API Endpoints ====================
+
+
+# --- Office APIs ---
+@router.get("/offices")
+def get_offices(
+    skip: int = 0,
+    limit: int = 100,
+    is_active: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    获取办公室列表
+
+    - **skip**: 跳过记录数
+    - **limit**: 返回记录数限制
+    - **is_active**: 筛选启用/禁用的办公室
+    """
+    # 动态导入 User 模型
+    import main
+
+    query = db.query(Office)
+
+    if is_active is not None:
+        query = query.filter(Office.is_active == is_active)
+
+    offices = query.offset(skip).limit(limit).all()
+
+    # 为每个办公室添加实际用户数（通过 department 匹配）
+    result = []
+    for office in offices:
+        # 获取超级管理员信息
+        super_admin_name = None
+        if office.super_admin_id:
+            super_admin = (
+                db.query(main.User)
+                .filter(main.User.id == office.super_admin_id)
+                .first()
+            )
+            if super_admin:
+                super_admin_name = super_admin.name
+
+        office_dict = {
+            "id": office.id,
+            "name": office.name,
+            "room_number": office.room_number,
+            "description": office.description,
+            "leader_name": office.leader_name,
+            "water_user_count": office.water_user_count,
+            "is_common": office.is_common,
+            "is_active": office.is_active,
+            "super_admin_id": office.super_admin_id,
+            "super_admin_name": super_admin_name,
+            "created_at": office.created_at.isoformat() if office.created_at else None,
+            "updated_at": office.updated_at.isoformat() if office.updated_at else None,
+        }
+        # 统计实际用户数（通过 department 匹配）
+        user_count = (
+            db.query(main.User)
+            .filter(main.User.department == office.name, main.User.is_active == 1)
+            .count()
+        )
+        office_dict["user_count"] = user_count
+        result.append(office_dict)
+
+    return result
+
+
+@router.post("/offices", response_model=OfficeResponse)
+def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
+    """
+    创建办公室
+    """
+    # 检查办公室名称是否已存在
+    existing = (
+        db.query(Office)
+        .filter(Office.name == office.name, Office.is_active == 1)
+        .first()
+    )
+
+    if existing:
+        raise HTTPException(status_code=400, detail="办公室名称已存在")
+
+    # 创建办公室
+    db_office = Office(
+        name=office.name,
+        room_number=office.room_number,
+        description=office.description,
+        leader_name=office.leader_name,
+        water_user_count=office.water_user_count,
+        is_active=1,
+    )
+
+    db.add(db_office)
+    db.commit()
+    db.refresh(db_office)
+
+    return db_office
+
+
+@router.get("/offices/{office_id}", response_model=OfficeResponse)
+def get_office(office_id: int, db: Session = Depends(get_db)):
+    """获取办公室详情"""
+    office = db.query(Office).filter(Office.id == office_id).first()
+
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    return office
+
+
+@router.put("/offices/{office_id}", response_model=OfficeResponse)
+def update_office(
+    office_id: int, office_update: OfficeUpdate, db: Session = Depends(get_db)
+):
+    """
+    更新办公室信息
+    """
+    office = db.query(Office).filter(Office.id == office_id).first()
+
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    # 只更新传入的字段，如果是部分更新则跳过名称检查
+    update_data = office_update.model_dump(exclude_unset=True)
+
+    # 如果name被修改了，才检查名称冲突
+    if "name" in update_data and update_data["name"] != office.name:
+        existing = (
+            db.query(Office)
+            .filter(
+                Office.name == update_data["name"],
+                Office.id != office_id,
+                Office.is_active == 1,
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="办公室名称已存在")
+
+    # 更新传入的字段
+    for key, value in update_data.items():
+        if hasattr(office, key):
+            setattr(office, key, value)
+
+    office.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(office)
+
+    return office
+
+
+@router.delete("/offices/{office_id}")
+def delete_office(office_id: int, force: bool = False, db: Session = Depends(get_db)):
+    """
+    删除办公室
+    - force=False: 软删除（仅禁用）
+    - force=True: 强制删除（包括关联的账户数据）
+    """
+    office = db.query(Office).filter(Office.id == office_id).first()
+
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    # 检查是否有关联的账户
+    accounts = (
+        db.query(OfficeAccount).filter(OfficeAccount.office_id == office_id).all()
+    )
+    account_count = len(accounts)
+
+    if account_count > 0:
+        if not force:
+            # 返回账户信息，提示用户确认是否强制删除
+            account_info = [
+                {
+                    "id": a.id,
+                    "product_name": a.product_name,
+                    "remaining_qty": a.remaining_qty,
+                }
+                for a in accounts
+            ]
+            return {
+                "has_related_data": True,
+                "account_count": account_count,
+                "accounts": account_info,
+                "message": f"该办公室下存在 {account_count} 个预付账户，删除将同时清除这些账户数据。",
+                "requires_confirmation": True,
+            }
+        else:
+            # 强制删除：先删除关联的账户
+            for account in accounts:
+                db.delete(account)
+            db.flush()
+
+    # 导入主应用中的User模型，检查是否有用户关联到此办公室
+    import main
+
+    related_users = (
+        db.query(main.User)
+        .filter(main.User.department == office.name, main.User.is_active == 1)
+        .count()
+    )
+
+    if related_users > 0 and not force:
+        return {
+            "has_related_data": True,
+            "user_count": related_users,
+            "message": f"该办公室下有 {related_users} 个员工，删除将影响这些员工的部门归属。",
+            "requires_confirmation": True,
+        }
+    elif related_users > 0 and force:
+        # 强制删除时，只禁用用户而非删除
+        pass
+
+    # 执行删除
+    db.delete(office)
+    db.commit()
+
+    return {"message": "办公室已删除", "deleted": True}
+
+
+@router.post("/offices/batch-delete")
+def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db)):
+    """
+    批量删除办公室（软删除）
+    """
+    deleted_count = 0
+    errors = []
+
+    for office_id in office_ids:
+        office = db.query(Office).filter(Office.id == office_id).first()
+        if not office:
+            errors.append(f"办公室ID {office_id} 不存在")
+            continue
+
+        # 检查是否有关联的账户
+        accounts = (
+            db.query(OfficeAccount).filter(OfficeAccount.office_id == office_id).all()
+        )
+        if accounts:
+            errors.append(f"办公室 '{office.name}' 存在关联账户，无法删除")
+            continue
+
+        # 软删除
+        office.is_active = 0
+        office.updated_at = datetime.now()
+        deleted_count += 1
+
+    db.commit()
+
+    return {
+        "deleted_count": deleted_count,
+        "errors": errors if errors else None,
+        "message": f"成功删除 {deleted_count} 个办公室",
+    }
+
+
+@router.post("/offices/batch-common")
+def batch_set_common(
+    office_ids: List[int], is_common: int = 1, db: Session = Depends(get_db)
+):
+    """
+    批量设置常用/不常用状态
+    """
+    updated_count = 0
+
+    for office_id in office_ids:
+        office = db.query(Office).filter(Office.id == office_id).first()
+        if office:
+            office.is_common = is_common
+            office.updated_at = datetime.now()
+            updated_count += 1
+
+    db.commit()
+
+    status_text = "常用" if is_common == 1 else "不常用"
+    return {
+        "updated_count": updated_count,
+        "message": f"成功设置 {updated_count} 个办公室为 {status_text}",
+    }
+
+
+@router.post("/offices/batch-active")
+def batch_set_active(
+    office_ids: List[int], is_active: int = 1, db: Session = Depends(get_db)
+):
+    """
+    批量设置启用/禁用状态
+    """
+    updated_count = 0
+
+    for office_id in office_ids:
+        office = db.query(Office).filter(Office.id == office_id).first()
+        if office:
+            office.is_active = is_active
+            office.updated_at = datetime.now()
+            updated_count += 1
+
+    db.commit()
+
+    status_text = "启用" if is_active == 1 else "禁用"
+    return {
+        "updated_count": updated_count,
+        "message": f"成功设置 {updated_count} 个办公室为 {status_text}",
+    }
+
+
+@router.get("/admin-users")
+def get_admin_users(db: Session = Depends(get_db)):
+    """
+    获取管理员用户列表（role为admin或super_admin的用户）
+    """
+    import main
+
+    users = (
+        db.query(main.User)
+        .filter(main.User.role.in_(["admin", "super_admin"]), main.User.is_active == 1)
+        .all()
+    )
+
+    return [
+        {"id": u.id, "name": u.name, "role": u.role, "department": u.department}
+        for u in users
+    ]
+
+
+@router.get("/offices/{office_id}/users", response_model=List[dict])
+def get_office_users(office_id: int, db: Session = Depends(get_db)):
+    """
+    获取办公室关联的用户列表
+
+    返回所有活动用户，前端根据需要进行筛选
+    """
+    office = db.query(Office).filter(Office.id == office_id).first()
+
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    # 动态导入 User 模型
+    import main
+
+    users = db.query(main.User).filter(main.User.is_active == 1).all()
+
+    return [
+        {"id": u.id, "name": u.name, "department": u.department, "role": u.role}
+        for u in users
+    ]
+
+
+# --- Office Account APIs ---
+@router.get("/office-accounts")
+def get_office_accounts(
+    office_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+    status: Optional[str] = None,  # normal/low/empty
+    search: Optional[str] = None,
+    sort_by: str = "office_name",
+    sort_order: str = "asc",
+    db: Session = Depends(get_db),
+):
+    """
+    获取办公室账户列表
+
+    - **office_id**: 按办公室 ID 筛选
+    - **product_id**: 按产品 ID 筛选
+    - **status**: 按状态筛选 (normal: 正常, low: 库存不足, empty: 已用完)
+    - **search**: 搜索办公室名称/房间号
+    - **sort_by**: 排序字段
+    - **sort_order**: 排序顺序 (asc/desc)
+    """
+    # 动态导入 User 模型
+    import main
+
+    query = db.query(OfficeAccount)
+
+    if office_id is not None:
+        query = query.filter(OfficeAccount.office_id == office_id)
+
+    if product_id is not None:
+        query = query.filter(OfficeAccount.product_id == product_id)
+
+    # 按状态筛选
+    if status == "normal":
+        query = query.filter(OfficeAccount.remaining_qty > 10)
+    elif status == "low":
+        query = query.filter(
+            OfficeAccount.remaining_qty > 0, OfficeAccount.remaining_qty <= 10
+        )
+    elif status == "empty":
+        query = query.filter(OfficeAccount.remaining_qty == 0)
+
+    # 搜索
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (OfficeAccount.office_name.like(search_pattern))
+            | (OfficeAccount.office_room_number.like(search_pattern))
+        )
+
+    # 排序
+    if sort_by == "office_name":
+        if sort_order == "asc":
+            query = query.order_by(OfficeAccount.office_name)
+        else:
+            query = query.order_by(OfficeAccount.office_name.desc())
+    elif sort_by == "room_number":
+        if sort_order == "asc":
+            query = query.order_by(OfficeAccount.office_room_number)
+        else:
+            query = query.order_by(OfficeAccount.office_room_number.desc())
+    elif sort_by == "reserved_qty":
+        if sort_order == "asc":
+            query = query.order_by(OfficeAccount.reserved_qty)
+        else:
+            query = query.order_by(OfficeAccount.reserved_qty.desc())
+    elif sort_by == "remaining_qty":
+        if sort_order == "asc":
+            query = query.order_by(OfficeAccount.remaining_qty)
+        else:
+            query = query.order_by(OfficeAccount.remaining_qty.desc())
+    elif sort_by == "created_at":
+        if sort_order == "asc":
+            query = query.order_by(OfficeAccount.created_at)
+        else:
+            query = query.order_by(OfficeAccount.created_at.desc())
+
+    accounts = query.all()
+
+    # 转换为包含用户信息的字典列表
+    result = []
+    for acc in accounts:
+        acc_dict = {
+            "id": acc.id,
+            "office_id": acc.office_id,
+            "office_name": acc.office_name,
+            "office_room_number": acc.office_room_number,
+            "product_id": acc.product_id,
+            "product_name": acc.product_name,
+            "product_specification": acc.product_specification,
+            "reserved_qty": acc.reserved_qty,
+            "remaining_qty": acc.remaining_qty,
+            "used_qty": acc.reserved_qty - acc.remaining_qty,
+            "reserved_person": acc.reserved_person,
+            "reserved_person_id": acc.reserved_person_id,
+            "manager_name": acc.manager_name,
+            "manager_id": acc.manager_id,
+            "configured_count": acc.configured_count,
+            "note": acc.note,
+            "created_at": acc.created_at.isoformat() if acc.created_at else None,
+            "updated_at": acc.updated_at.isoformat() if acc.updated_at else None,
+            # 状态
+            "status": "empty"
+            if acc.remaining_qty == 0
+            else ("low" if acc.remaining_qty <= 10 else "normal"),
+        }
+
+        # 如果有 reserved_person_id，获取用户信息
+        if acc.reserved_person_id:
+            user = (
+                db.query(main.User)
+                .filter(main.User.id == acc.reserved_person_id)
+                .first()
+            )
+            if user:
+                acc_dict["reserved_person_name"] = user.name
+                acc_dict["reserved_person_department"] = user.department
+
+        result.append(acc_dict)
+
+    return result
+
+
+@router.post("/office-accounts", response_model=OfficeAccountResponse)
+def create_office_account(account: OfficeAccountCreate, db: Session = Depends(get_db)):
+    """
+    创建办公室账户
+    """
+    # 检查办公室是否存在
+    office = db.query(Office).filter(Office.id == account.office_id).first()
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    # 检查产品是否存在
+    product = db.query(Product).filter(Product.id == account.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
+
+    # 检查该办公室和产品的组合是否已存在
+    existing = (
+        db.query(OfficeAccount)
+        .filter(
+            OfficeAccount.office_id == account.office_id,
+            OfficeAccount.product_id == account.product_id,
+        )
+        .first()
+    )
+
+    if existing:
+        raise HTTPException(status_code=400, detail="该办公室已存在此产品的账户")
+
+    # 创建账户
+    db_account = OfficeAccount(
+        office_id=account.office_id,
+        office_name=account.office_name,
+        office_room_number=account.office_room_number,
+        product_id=account.product_id,
+        product_name=account.product_name,
+        product_specification=account.product_specification,
+        reserved_qty=account.reserved_qty,
+        remaining_qty=account.remaining_qty,
+        reserved_person=account.reserved_person,
+        reserved_person_id=account.reserved_person_id,
+        manager_name=account.manager_name,
+        manager_id=account.manager_id,
+        configured_count=account.configured_count,
+        note=account.note,
+    )
+
+    db.add(db_account)
+    db.commit()
+    db.refresh(db_account)
+
+    return db_account
+
+
+@router.get("/office-accounts/{account_id}", response_model=OfficeAccountResponse)
+def get_office_account(account_id: int, db: Session = Depends(get_db)):
+    """获取办公室账户详情"""
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="账户不存在")
+
+    return account
+
+
+@router.put("/office-accounts/{account_id}", response_model=OfficeAccountResponse)
+def update_office_account(
+    account_id: int, account_update: OfficeAccountUpdate, db: Session = Depends(get_db)
+):
+    """
+    更新办公室账户
+    """
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="账户不存在")
+
+    # 更新字段
+    if account_update.reserved_qty is not None:
+        account.reserved_qty = account_update.reserved_qty
+
+    if account_update.remaining_qty is not None:
+        account.remaining_qty = account_update.remaining_qty
+
+    if account_update.reserved_person is not None:
+        account.reserved_person = account_update.reserved_person
+
+    if account_update.reserved_person_id is not None:
+        account.reserved_person_id = account_update.reserved_person_id
+
+    # 更新负责人信息（新增）
+    if account_update.manager_name is not None:
+        account.manager_name = account_update.manager_name
+
+    if account_update.manager_id is not None:
+        account.manager_id = account_update.manager_id
+
+    # 更新配置人数（新增）
+    if account_update.configured_count is not None:
+        account.configured_count = account_update.configured_count
+
+    if account_update.note is not None:
+        account.note = account_update.note
+
+    account.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(account)
+
+    return account
+
+
+@router.delete("/office-accounts/{account_id}")
+def delete_office_account(account_id: int, db: Session = Depends(get_db)):
+    """
+    删除办公室账户
+    """
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="账户不存在")
+
+    db.delete(account)
+    db.commit()
+
+    return {"message": "账户已删除"}
+
+
+class OfficeAccountRechargeRequest(BaseModel):
+    quantity: int  # 充值数量（正数）或扣减数量（负数）
+
+
+@router.post("/office-accounts/{account_id}/recharge")
+def recharge_office_account(
+    account_id: int,
+    request: OfficeAccountRechargeRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    充值/扣减办公室账户桶数
+    - quantity > 0: 充值（增加桶数）
+    - quantity < 0: 扣减（减少桶数）
+    """
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="账户不存在")
+
+    new_remaining = account.remaining_qty + request.quantity
+
+    if new_remaining < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"桶数不足，当前剩余 {account.remaining_qty} 桶，无法扣减 {-request.quantity} 桶",
+        )
+
+    # 允许充值后超过预留桶数（支持额外购买）
+    # 如果需要严格限制，可以取消下面这行注释
+    # if new_remaining > account.reserved_qty:
+    #     new_remaining = account.reserved_qty
+
+    account.remaining_qty = new_remaining
+    account.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(account)
+
+    return {
+        "message": f"操作成功，剩余桶数: {account.remaining_qty}",
+        "remaining_qty": account.remaining_qty,
+        "used_qty": account.reserved_qty - account.remaining_qty,
+    }
+
+
+@router.post("/office-accounts/{account_id}/reset")
+def reset_office_account(
+    account_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    重置办公室账户（将剩余桶数重置为预留桶数）
+    """
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="账户不存在")
+
+    account.remaining_qty = account.reserved_qty
+    account.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(account)
+
+    return {
+        "message": "账户已重置",
+        "remaining_qty": account.remaining_qty,
+        "reserved_qty": account.reserved_qty,
+    }
+
+
+# --- Products API (for office accounts) ---
+@router.get("/products-for-office")
+def get_products_for_office(db: Session = Depends(get_db)):
+    """获取可用于办公室账户的产品列表"""
+    products = db.query(Product).filter(Product.is_active == 1).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "specification": p.specification,
+            "unit": p.unit,
+            "price": p.price,
+            "stock": p.stock,
+        }
+        for p in products
+    ]
+
+
+# --- Office Recharge APIs ---
+@router.get("/office-recharges", response_model=List[OfficeRechargeResponse])
+def get_office_recharges(
+    office_id: Optional[int] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    db: Session = Depends(get_db),
+):
+    """
+    获取办公室充值记录列表
+
+    - **office_id**: 按办公室 ID 筛选
+    - **sort_by**: 排序字段
+    - **sort_order**: 排序顺序 (asc/desc)
+    """
+    query = db.query(OfficeRecharge)
+
+    if office_id is not None:
+        query = query.filter(OfficeRecharge.office_id == office_id)
+
+    # 排序
+    if sort_by == "created_at":
+        if sort_order == "asc":
+            query = query.order_by(OfficeRecharge.created_at)
+        else:
+            query = query.order_by(OfficeRecharge.created_at.desc())
+    elif sort_by == "total_amount":
+        if sort_order == "asc":
+            query = query.order_by(OfficeRecharge.total_amount)
+        else:
+            query = query.order_by(OfficeRecharge.total_amount.desc())
+
+    records = query.all()
+    return records
+
+
+@router.post("/office-recharges", response_model=OfficeRechargeResponse)
+def create_office_recharge(
+    recharge: OfficeAccountCreate, db: Session = Depends(get_db)
+):
+    """
+    创建办公室充值记录
+    """
+    # 创建充值记录
+    db_recharge = OfficeRecharge(
+        office_id=recharge.office_id,
+        office_name=recharge.office_name,
+        office_room_number=recharge.office_room_number,
+        product_id=recharge.product_id,
+        product_name=recharge.product_name,
+        product_specification=recharge.product_specification,
+        quantity=recharge.reserved_qty,  # 使用 reserved_qty 作为 quantity
+        unit_price=0,  # 需要根据产品获取
+        total_amount=0,
+        note=recharge.note,
+    )
+
+    db.add(db_recharge)
+    db.commit()
+    db.refresh(db_recharge)
+
+    return db_recharge
+
+
+# --- Office Pickup APIs ---
+@router.get("/office-pickups", response_model=List[OfficePickupResponse])
+def get_office_pickups(
+    office_id: Optional[int] = None, limit: int = 100, db: Session = Depends(get_db)
+):
+    """
+    获取办公室领水记录列表
+
+    - **office_id**: 按办公室 ID 筛选
+    - **limit**: 返回记录数限制
+    """
+    query = db.query(OfficePickup)
+
+    if office_id is not None:
+        query = query.filter(OfficePickup.office_id == office_id)
+
+    pickups = query.order_by(OfficePickup.pickup_time.desc()).limit(limit).all()
+    return pickups

@@ -2,9 +2,11 @@
 数据库迁移脚本 - 添加新字段
 Run: python migrate.py
 """
+
 import sqlite3
 
 DB_PATH = "waterms.db"
+
 
 def migrate():
     conn = sqlite3.connect(DB_PATH)
@@ -38,6 +40,20 @@ def migrate():
             print("✓ 已添加 is_active 字段到 products 表")
         else:
             print("✓ is_active 字段已存在")
+
+        # 检查 office 表的字段
+        cursor.execute("PRAGMA table_info(office)")
+        columns_office = [col[1] for col in cursor.fetchall()]
+
+        if "super_admin_id" not in columns_office:
+            cursor.execute("""
+                ALTER TABLE office
+                ADD COLUMN super_admin_id INTEGER
+            """)
+            conn.commit()
+            print("✓ 已添加 super_admin_id 字段到 office 表")
+        else:
+            print("✓ super_admin_id 字段已存在")
 
         print("\n迁移完成！")
 

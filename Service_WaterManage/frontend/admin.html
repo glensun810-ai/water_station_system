@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>水站管理后台</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [v-cloak] {
@@ -1012,14 +1012,14 @@
                     </div>
                 </div>
 
-                <!-- 部门排行 -->
+                <!-- 办公室排行 -->
                 <div class="stat-card">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                             </svg>
-                            部门用水排行（本月）
+                            办公室用水排行（本月）
                         </h3>
                         <span class="text-xs text-slate-500">TOP 5</span>
                     </div>
@@ -1133,10 +1133,13 @@
                     <div class="flex gap-2">
                         <button @click="selectedPickups = []" class="px-3 py-1.5 text-slate-500 text-sm hover:text-slate-700">取消选择</button>
                         <button v-if="selectedPendingCount > 0" @click="batchRemindPickups" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
-                            🔔 批量提醒付款 ({{ selectedPendingCount }})
+                            🔔 批量提醒
                         </button>
                         <button v-if="selectedAppliedCount > 0" @click="batchConfirmPickups" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                            ✅ 批量确认收款 ({{ selectedAppliedCount }})
+                            ✅ 批量确认
+                        </button>
+                        <button @click="batchDeletePickups" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
+                            🗑️ 批量删除
                         </button>
                     </div>
                 </div>
@@ -1178,13 +1181,17 @@
                                 </td>
                                 <td class="py-3 px-3 text-sm text-slate-600">{{ p.pickup_person }}</td>
                                 <td class="py-3 px-3">
-                                    <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium">
-                                        🔔 提醒付款
-                                    </button>
-                                    <button v-else-if="p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                                        ✅ 确认收款
-                                    </button>
-                                    <span v-else class="text-slate-400 text-sm">-</span>
+                                    <div class="flex items-center gap-2">
+                                        <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium">
+                                            🔔
+                                        </button>
+                                        <button v-else-if="p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                            ✅
+                                        </button>
+                                        <button @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-sm font-medium" title="删除">
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1221,7 +1228,7 @@
                             <tr>
                                 <th class="w-[50px]"><input type="checkbox" @change="toggleAllApplications" :checked="allApplicationsSelected"></th>
                                 <th>用户</th>
-                                <th>部门</th>
+                                <th>办公室</th>
                                 <th>申请金额</th>
                                 <th>申请时间</th>
                                 <th>操作</th>
@@ -1308,10 +1315,10 @@
                             <option value="reserved">已预定</option>
                         </select>
                         
-                        <!-- 部门筛选 -->
+                        <!-- 办公室筛选 -->
                         <select v-model="transactionFilter.department" @change="loadTransactions" class="border border-slate-300 rounded-lg px-4 py-2 text-sm">
-                            <option value="">全部部门</option>
-                            <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+                            <option value="">全部办公室</option>
+                            <option v-for="office in offices" :key="office.id" :value="office.name">{{ office.name }}</option>
                         </select>
                         
                         <!-- 重置筛选 -->
@@ -1353,7 +1360,7 @@
                                 <th class="w-[50px]"><input type="checkbox" @change="toggleAllTransactions" :checked="allTransactionsSelected"></th>
                                 <th>时间</th>
                                 <th>用户</th>
-                                <th>部门</th>
+                                <th>办公室</th>
                                 <th>产品名称</th>
                                 <th>规格</th>
                                 <th>数量</th>
@@ -1655,42 +1662,200 @@
 
             <!-- Office Accounts Tab - 预付账户 -->
             <div v-if="activeTab === 'officeAccounts'" class="stat-card">
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
                     <div class="flex items-center gap-3">
                         <h2 class="text-xl font-bold text-slate-800">预付账户管理</h2>
                         <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">{{ officeAccounts.length }}个账户</span>
                     </div>
-                    <button @click="loadOfficeAccounts" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        刷新
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="openOfficeAccountModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            新建账户
+                        </button>
+                        <button @click="loadOfficeAccounts" class="text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-slate-50 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            刷新
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                        <p class="text-sm text-slate-500">账户总数</p>
+                        <p class="text-2xl font-bold text-slate-800">{{ officeAccounts.length }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                        <p class="text-sm text-slate-500">可用桶数</p>
+                        <p class="text-2xl font-bold text-green-600">{{ accountStats.totalRemaining }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                        <p class="text-sm text-slate-500">库存不足</p>
+                        <p class="text-2xl font-bold text-amber-600">{{ accountStats.lowStock }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 border border-red-100">
+                        <p class="text-sm text-slate-500">已用完</p>
+                        <p class="text-2xl font-bold text-red-600">{{ accountStats.empty }}</p>
+                    </div>
+                </div>
+
+                <!-- 筛选器 -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <select v-model="officeAccountFilter.officeId" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="">全部办公室</option>
+                        <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
+                    </select>
+                    <select v-model="officeAccountFilter.productId" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="">全部产品</option>
+                        <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                    </select>
+                    <select v-model="officeAccountFilter.status" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="">全部状态</option>
+                        <option value="normal">正常 (>10桶)</option>
+                        <option value="low">库存不足 (1-10桶)</option>
+                        <option value="empty">已用完 (0桶)</option>
+                    </select>
+                    <input v-model="officeAccountFilter.search" @input="filterOfficeAccounts" type="text" placeholder="搜索办公室/房间号..." class="px-3 py-2 border rounded-lg text-sm">
+                    <button @click="resetOfficeAccountFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500 hover:bg-slate-50">重置</button>
                 </div>
 
                 <!-- 账户列表 -->
-                <div v-if="officeAccounts.length > 0" class="grid gap-3">
-                    <div v-for="acc in officeAccounts" :key="acc.id" class="bg-white border rounded-xl p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <div class="font-bold text-slate-800">{{ acc.office_name }}</div>
-                                <div class="text-sm text-slate-500">{{ acc.product_name }} · 规格: {{ acc.product_specification }}</div>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-2xl font-bold" :class="acc.remaining_qty > 10 ? 'text-green-600' : (acc.remaining_qty > 0 ? 'text-yellow-600' : 'text-red-600')">
-                                    {{ acc.remaining_qty }}
-                                </div>
-                                <div class="text-xs text-slate-500">剩余桶数</div>
-                            </div>
-                        </div>
-                        <div class="mt-3 pt-3 border-t text-sm text-slate-500 flex justify-between">
-                            <span>预留: {{ acc.reserved_qty }}桶</span>
-                            <span>已用: {{ acc.reserved_qty - acc.remaining_qty }}桶</span>
-                        </div>
-                    </div>
+                <div v-if="filteredOfficeAccounts.length > 0" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">办公室</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">产品</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-slate-600">预留</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-slate-600">剩余</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-slate-600">已用</th>
+                                <th class="text-center py-3 px-4 text-sm font-medium text-slate-600">状态</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">负责人</th>
+                                <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">创建时间</th>
+                                <th class="text-right py-3 px-4 text-sm font-medium text-slate-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="acc in filteredOfficeAccounts" :key="acc.id" class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="py-3 px-4">
+                                    <div class="font-medium text-slate-800">{{ acc.office_name }}</div>
+                                    <div class="text-xs text-slate-500">{{ acc.office_room_number || '-' }}</div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="text-slate-600">{{ acc.product_name }}</div>
+                                    <div class="text-xs text-slate-500">{{ acc.product_specification }}</div>
+                                </td>
+                                <td class="py-3 px-4 text-right text-slate-600">{{ acc.reserved_qty }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <span class="font-bold" :class="acc.status === 'normal' ? 'text-green-600' : (acc.status === 'low' ? 'text-amber-600' : 'text-red-600')">
+                                        {{ acc.remaining_qty }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right text-slate-600">{{ acc.used_qty }}</td>
+                                <td class="py-3 px-4 text-center">
+                                    <span :class="acc.status === 'normal' ? 'bg-green-100 text-green-700' : (acc.status === 'low' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')" class="px-2 py-1 rounded-full text-xs font-medium">
+                                        {{ acc.status === 'normal' ? '正常' : (acc.status === 'low' ? '不足' : '用完') }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600">{{ acc.reserved_person || '-' }}</td>
+                                <td class="py-3 px-4 text-slate-500 text-sm">{{ formatDate(acc.created_at) }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button @click="rechargeOfficeAccount(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="充值">
+                                            💰
+                                        </button>
+                                        <button @click="openOfficeAccountModal(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="编辑">
+                                            ✏️
+                                        </button>
+                                        <button @click="deleteOfficeAccount(acc)" class="text-red-600 hover:text-red-800 text-sm font-medium" title="删除">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div v-else class="text-center py-12 text-slate-400">
+                <div v-else class="text-center py-12 text-slate-400 bg-white rounded-xl border">
                     <p>暂无预付账户</p>
+                </div>
+            </div>
+
+            <!-- 新建/编辑预付账户弹窗 -->
+            <div v-if="showOfficeAccountModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showOfficeAccountModal = false">
+                <div class="bg-white rounded-2xl p-6 max-w-lg mx-4 shadow-2xl" @click.stop>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">{{ editingOfficeAccount ? '编辑预付账户' : '新建预付账户' }}</h3>
+                    <form @submit.prevent="saveOfficeAccount">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">选择办公室 *</label>
+                                <select v-model="officeAccountForm.office_id" required class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="">请选择办公室</option>
+                                    <option v-for="o in activeOffices" :value="o.id">{{ o.name }} ({{ o.room_number }})</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">选择产品 *</label>
+                                <select v-model="officeAccountForm.product_id" required class="w-full px-3 py-2 border rounded-lg" @change="onProductChange">
+                                    <option value="">请选择产品</option>
+                                    <option v-for="p in products" :value="p.id">{{ p.name }} - {{ p.specification }} (¥{{ p.price }})</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">预留桶数 *</label>
+                                    <input v-model.number="officeAccountForm.reserved_qty" type="number" min="1" required class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">剩余桶数 *</label>
+                                    <input v-model.number="officeAccountForm.remaining_qty" type="number" min="0" required class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">负责人</label>
+                                <input v-model="officeAccountForm.reserved_person" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="负责人姓名">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">配置人数</label>
+                                <input v-model.number="officeAccountForm.configured_count" type="number" min="0" class="w-full px-3 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">备注</label>
+                                <textarea v-model="officeAccountForm.note" class="w-full px-3 py-2 border rounded-lg" rows="2" placeholder="备注信息"></textarea>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button type="button" @click="showOfficeAccountModal = false" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">取消</button>
+                            <button type="submit" class="flex-1 btn-primary text-white px-4 py-2 rounded-lg">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 充值弹窗 -->
+            <div v-if="showRechargeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showRechargeModal = false">
+                <div class="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl" @click.stop>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">💰 账户充值/扣减</h3>
+                    <div class="bg-slate-50 rounded-lg p-4 mb-4">
+                        <div class="text-sm text-slate-500">当前账户</div>
+                        <div class="font-bold text-slate-800">{{ rechargeAccount?.office_name }} - {{ rechargeAccount?.product_name }}</div>
+                        <div class="text-lg mt-2">剩余: <span class="font-bold text-green-600">{{ rechargeAccount?.remaining_qty }}</span> 桶</div>
+                    </div>
+                    <form @submit.prevent="processRecharge">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">充值数量（正数）或扣减数量（负数）</label>
+                            <input v-model.number="rechargeQuantity" type="number" class="w-full px-3 py-2 border rounded-lg" placeholder="例如: 10 (充值) 或 -2 (扣减)">
+                            <p class="text-xs text-slate-500 mt-1">输入正数充值，输入负数扣减</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" @click="showRechargeModal = false" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">取消</button>
+                            <button type="submit" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">确认</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -2061,6 +2226,24 @@
 
                 <!-- 办公室列表 -->
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <!-- 批量操作工具栏 -->
+                    <div v-if="selectedOffices.length > 0" class="bg-blue-50 border-b border-blue-100 px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-medium text-blue-700">已选择 {{ selectedOffices.length }} 项</span>
+                            <button @click="selectedOffices = []" class="text-sm text-blue-600 hover:text-blue-800">取消选择</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="batchSetCommon(1)" class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition">
+                                批量设常用
+                            </button>
+                            <button @click="batchSetCommon(0)" class="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition">
+                                批量设不常用
+                            </button>
+                            <button @click="batchDeleteOffices" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition">
+                                批量删除
+                            </button>
+                        </div>
+                    </div>
                     <table class="w-full">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -2084,14 +2267,15 @@
                                     <span v-if="officeSortBy === 'water_user_count'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
                                 </th>
                                 <th @click="officeSortBy = 'user_count'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
-                                    实际用户
+                                    登记用户
                                     <span v-if="officeSortBy === 'user_count'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
                                 </th>
                                 <th @click="officeSortBy = 'created_at'; officeSortOrder = officeSortOrder === 'asc' ? 'desc' : 'asc'" class="text-left py-3 px-3 text-sm font-medium text-slate-600 cursor-pointer hover:text-blue-600">
                                     创建时间
                                     <span v-if="officeSortBy === 'created_at'">{{ officeSortOrder === 'asc' ? '↑' : '↓' }}</span>
                                 </th>
-                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">使用状态</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">常用状态</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">启用状态</th>
                                 <th class="text-right py-3 px-3 text-sm font-medium text-slate-600">操作</th>
                             </tr>
                         </thead>
@@ -2122,13 +2306,22 @@
                                         {{ office.is_common === 1 ? '常用' : '不常用' }}
                                     </button>
                                 </td>
+                                <td class="py-3 px-3">
+                                    <button type="button" 
+                                            @click="toggleOfficeActive(office)"
+                                            :title="Number(office.is_active) === 1 ? '点击禁用' : '点击启用'"
+                                            :class="Number(office.is_active) === 1 ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-600 hover:bg-red-200'"
+                                            class="px-3 py-1 rounded-full text-sm font-medium transition cursor-pointer select-none">
+                                        {{ Number(office.is_active) === 1 ? '启用' : '禁用' }}
+                                    </button>
+                                </td>
                                 <td class="py-3 px-3 text-right">
                                     <button @click="openOfficeModal(office)" class="text-blue-600 hover:text-blue-800 text-sm font-medium mr-3">编辑</button>
                                     <button @click="deleteOffice(office)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
                                 </td>
                             </tr>
                             <tr v-if="filteredOffices.length === 0">
-                                <td colspan="9" class="py-12 text-center text-slate-400">
+                                <td colspan="10" class="py-12 text-center text-slate-400">
                                     <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                     </svg>
@@ -2188,15 +2381,15 @@
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-4 border border-purple-100">
+                    <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-4 border border-purple-100 cursor-pointer hover:shadow-md transition" @click="userFilterDepartment = ''">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-slate-500">超级管理员</p>
-                                <p class="text-2xl font-bold text-purple-600 mt-1">{{ superAdminsCount }}</p>
+                                <p class="text-sm text-slate-500">办公室数量</p>
+                                <p class="text-2xl font-bold text-purple-600 mt-1">{{ officeCount }}</p>
                             </div>
                             <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
                         </div>
@@ -2225,7 +2418,7 @@
                         <input
                             v-model="userSearchQuery"
                             type="text"
-                            placeholder="搜索用户名或部门..."
+                            placeholder="搜索用户名或办公室..."
                             class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
@@ -2240,46 +2433,80 @@
                         <option value="active">活跃</option>
                         <option value="inactive">禁用</option>
                     </select>
+                    <select v-model="userFilterDepartment" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        <option value="">全部办公室</option>
+                        <option v-for="office in offices" :key="office.id" :value="office.name">{{ office.name }}</option>
+                    </select>
                 </div>
 
                 <!-- 用户列表表格 -->
+                <!-- 批量操作工具栏 -->
+                <div v-if="selectedUsers.length > 0" class="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl mb-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-medium text-blue-700">已选择 {{ selectedUsers.length }} 项</span>
+                        <button @click="selectedUsers = []" class="text-sm text-blue-600 hover:text-blue-800">取消选择</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="batchEnableUsers" class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition">
+                            批量启用
+                        </button>
+                        <button @click="batchDisableUsers" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition">
+                            批量禁用
+                        </button>
+                        <button @click="batchDeleteUsers" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition">
+                            批量删除
+                        </button>
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
-                        <thead>
+                        <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th>ID</th>
-                                <th>用户名</th>
-                                <th>部门</th>
-                                <th>角色</th>
-                                <th>状态</th>
-                                <th>创建时间</th>
-                                <th>操作</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600 w-8">
+                                    <input type="checkbox" @change="toggleAllUsers" :checked="allUsersSelected">
+                                </th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">ID</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">用户名</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">办公室</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">角色</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">状态</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">领水记录</th>
+                                <th class="text-left py-3 px-3 text-sm font-medium text-slate-600">创建时间</th>
+                                <th class="text-right py-3 px-3 text-sm font-medium text-slate-600">操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="u in filteredUsers" :key="u.id">
-                                <td class="text-slate-500">#{{ u.id }}</td>
-                                <td class="font-medium">{{ u.name }}</td>
-                                <td>{{ u.department }}</td>
-                                <td>
+                            <tr v-for="u in filteredUsers" :key="u.id" class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="py-3 px-3">
+                                    <input type="checkbox" :value="u.id" v-model="selectedUsers" :disabled="u.role === 'super_admin'">
+                                </td>
+                                <td class="py-3 px-3 text-slate-500">#{{ u.id }}</td>
+                                <td class="py-3 px-3 font-medium text-slate-800">{{ u.name }}</td>
+                                <td class="py-3 px-3 text-slate-600">{{ u.department }}</td>
+                                <td class="py-3 px-3">
                                     <span :class="getUserRoleClass(u.role)" class="role-badge-inline">
                                         {{ getUserRoleName(u.role) }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="py-3 px-3">
                                     <span :class="u.is_active ? 'status-active' : 'status-inactive'" class="status-badge-inline">
                                         {{ u.is_active ? '活跃' : '禁用' }}
                                     </span>
                                 </td>
-                                <td class="text-slate-500 text-sm">{{ formatDate(u.created_at) }}</td>
-                                <td>
-                                    <div class="flex gap-2">
-                                        <button @click="editUser(u)" class="text-blue-600 hover:text-blue-800 text-sm font-medium">编辑</button>
-                                        <button @click="toggleUserStatus(u)" class="text-sm font-medium" :class="u.is_active ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'">
-                                            {{ u.is_active ? '禁用' : '启用' }}
-                                        </button>
-                                        <button @click="confirmDeleteUser(u)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
-                                    </div>
+                                <td class="py-3 px-3 text-slate-500 text-sm">
+                                    <span v-if="u.stats && u.stats.total_records > 0" class="text-blue-600">
+                                        {{ u.stats.total_records }}次
+                                    </span>
+                                    <span v-else class="text-slate-400">-</span>
+                                </td>
+                                <td class="py-3 px-3 text-slate-500 text-sm">{{ formatDate(u.created_at) }}</td>
+                                <td class="py-3 px-3 text-right">
+                                    <button @click="editUser(u)" class="text-blue-600 hover:text-blue-800 text-sm font-medium mr-3">编辑</button>
+                                    <button v-if="u.role !== 'super_admin'" @click="toggleUserStatus(u)" class="text-sm font-medium mr-3" :class="u.is_active ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'">
+                                        {{ u.is_active ? '禁用' : '启用' }}
+                                    </button>
+                                    <span v-if="u.role === 'super_admin'" class="text-xs text-slate-400 mr-3">系统保留</span>
+                                    <button v-if="u.role !== 'super_admin'" @click="confirmDeleteUser(u)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
                                 </td>
                             </tr>
                         </tbody>
@@ -2321,9 +2548,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">部门</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">办公室</label>
                         <select v-model="userForm.department" required class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">请选择部门</option>
+                            <option value="">请选择办公室</option>
                             <option v-for="office in offices" :key="office.id" :value="office.name">{{ office.name }}</option>
                             <option value="其他">其他</option>
                         </select>
@@ -2347,9 +2574,112 @@
         </div>
 
         <!-- 删除用户确认模态框 -->
-        <div v-if="showUserDeleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showUserDeleteModal = false">
-            <div class="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl" @click.stop>
-                <div class="text-center">
+        <div v-if="showUserDeleteModal || deleteUserRecords" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showUserDeleteModal = false; deleteUserRecords = null">
+            <div class="bg-white rounded-2xl p-6 max-w-2xl mx-4 shadow-2xl max-h-[80vh] overflow-y-auto" @click.stop>
+                <!-- 有关联记录时显示详情 -->
+                <div v-if="deleteUserRecords">
+                    <div class="text-center mb-4">
+                        <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">用户有关联记录</h3>
+                        <p class="text-slate-500 mb-4">用户 "{{ deleteUser?.name }}" 存在以下记录，已禁用而非删除</p>
+                    </div>
+                    
+                    <!-- 交易记录 -->
+                    <div v-if="deleteUserRecords.transactions && deleteUserRecords.transactions.length > 0" class="mb-4">
+                        <h4 class="font-semibold text-slate-700 mb-2">交易记录 ({{ deleteUserRecords.transactions.length }})</h4>
+                        <div class="bg-slate-50 rounded-lg overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">ID</th>
+                                        <th class="px-3 py-2 text-left">金额</th>
+                                        <th class="px-3 py-2 text-left">状态</th>
+                                        <th class="px-3 py-2 text-left">时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="t in deleteUserRecords.transactions" :key="t.id" class="border-t border-slate-200">
+                                        <td class="px-3 py-2">{{ t.id }}</td>
+                                        <td class="px-3 py-2">¥{{ t.amount.toFixed(2) }}</td>
+                                        <td class="px-3 py-2">
+                                            <span :class="t.status === 'settled' ? 'text-green-600' : 'text-orange-600'">{{ t.status }}</span>
+                                        </td>
+                                        <td class="px-3 py-2">{{ t.pickup_time ? new Date(t.pickup_time).toLocaleString() : '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 领水记录 -->
+                    <div v-if="deleteUserRecords.office_pickups && deleteUserRecords.office_pickups.length > 0" class="mb-4">
+                        <h4 class="font-semibold text-slate-700 mb-2">领水记录 ({{ deleteUserRecords.office_pickups.length }})</h4>
+                        <div class="bg-slate-50 rounded-lg overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">ID</th>
+                                        <th class="px-3 py-2 text-left">办公室</th>
+                                        <th class="px-3 py-2 text-left">水量</th>
+                                        <th class="px-3 py-2 text-left">状态</th>
+                                        <th class="px-3 py-2 text-left">时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="p in deleteUserRecords.office_pickups" :key="p.id" class="border-t border-slate-200">
+                                        <td class="px-3 py-2">{{ p.id }}</td>
+                                        <td class="px-3 py-2">{{ p.office_name }}</td>
+                                        <td class="px-3 py-2">{{ p.water_quantity }}</td>
+                                        <td class="px-3 py-2">
+                                            <span :class="p.status === 'completed' ? 'text-green-600' : 'text-orange-600'">{{ p.status }}</span>
+                                        </td>
+                                        <td class="px-3 py-2">{{ p.pickup_time ? new Date(p.pickup_time).toLocaleString() : '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 办公室结算 -->
+                    <div v-if="deleteUserRecords.office_settlements && deleteUserRecords.office_settlements.length > 0" class="mb-4">
+                        <h4 class="font-semibold text-slate-700 mb-2">办公室结算 ({{ deleteUserRecords.office_settlements.length }})</h4>
+                        <div class="bg-slate-50 rounded-lg overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">ID</th>
+                                        <th class="px-3 py-2 text-left">办公室</th>
+                                        <th class="px-3 py-2 text-left">产品</th>
+                                        <th class="px-3 py-2 text-left">数量</th>
+                                        <th class="px-3 py-2 text-left">金额</th>
+                                        <th class="px-3 py-2 text-left">创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="s in deleteUserRecords.office_settlements" :key="s.id" class="border-t border-slate-200">
+                                        <td class="px-3 py-2">{{ s.id }}</td>
+                                        <td class="px-3 py-2">{{ s.office_name }}</td>
+                                        <td class="px-3 py-2">{{ s.product_name }}</td>
+                                        <td class="px-3 py-2">{{ s.quantity }}</td>
+                                        <td class="px-3 py-2">¥{{ s.amount.toFixed(2) }}</td>
+                                        <td class="px-3 py-2">{{ s.created_at ? new Date(s.created_at).toLocaleString() : '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button @click="deleteUserRecords = null; showUserDeleteModal = false; loadUsersData()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">关闭</button>
+                    </div>
+                </div>
+                
+                <!-- 无关联记录时显示删除确认 -->
+                <div v-else class="text-center">
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -2383,7 +2713,7 @@
                         <input v-model="officeForm.leader_name" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="负责人姓名" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">桶装水用户数</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">配置人数</label>
                         <input v-model.number="officeForm.water_user_count" type="number" min="0" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="用于备水参考" />
                     </div>
                     <div>
@@ -2802,8 +3132,13 @@
                 // 加载结算统计数据
                 const loadSettlementStats = async () => {
                     try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
                         // 获取办公室结算
-                        const officeRes = await fetch(`${API_BASE}/admin/office-settlements`);
+                        const officeRes = await fetch(`${API_BASE}/admin/office-settlements`, { headers });
                         if (!officeRes.ok) {
                             console.error('Failed to load office settlements:', officeRes.status);
                             return;
@@ -2849,12 +3184,21 @@
                 // 加载结算申请列表
                 const loadSettlementApplications = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/admin/settlement-applications`);
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        const res = await fetch(`${API_BASE}/admin/settlement-applications`, { headers });
                         if (res.ok) {
                             settlementApplications.value = await res.json();
+                        } else {
+                            console.error('Failed to load settlement applications:', res.status);
+                            settlementApplications.value = [];
                         }
                     } catch (e) {
                         console.error('加载结算申请失败:', e);
+                        settlementApplications.value = [];
                     }
                 };
                 
@@ -2988,7 +3332,21 @@
                 
                 // ========== 预付账户相关状态 ==========
                 const officeAccounts = ref([]); // 预付账户列表
-                const officeAccountFilter = ref({}); // 筛选状态
+                const officeAccountFilter = ref({ officeId: '', productId: '', status: '', search: '' }); // 筛选状态
+                const showOfficeAccountModal = ref(false); // 新建/编辑弹窗
+                const editingOfficeAccount = ref(null); // 当前编辑的账户
+                const officeAccountForm = ref({
+                    office_id: '',
+                    product_id: '',
+                    reserved_qty: 10,
+                    remaining_qty: 10,
+                    reserved_person: '',
+                    configured_count: 0,
+                    note: ''
+                });
+                const showRechargeModal = ref(false); // 充值弹窗
+                const rechargeAccount = ref(null); // 充值的账户
+                const rechargeQuantity = ref(0); // 充值数量
                 
                 // ========== 办公室结算相关状态 ==========
                 const officeSettlements = ref([]); // 办公室结算列表
@@ -3000,16 +3358,36 @@
                 const userSearchQuery = ref(''); // 用户搜索关键词
                 const userFilterRole = ref(''); // 用户角色筛选
                 const userFilterStatus = ref(''); // 用户状态筛选
+                const userFilterDepartment = ref(''); // 用户办公室筛选
+                const selectedUsers = ref([]); // 批量选中的用户
                 const showUserCreateModal = ref(false); // 新建用户模态框
                 const showUserEditModal = ref(false); // 编辑用户模态框
                 const showUserDeleteModal = ref(false); // 删除确认模态框
                 const editingUser = ref(null); // 当前编辑的用户
                 const deleteUser = ref(null); // 待删除的用户
+                const deleteUserRecords = ref(null); // 删除用户时的关联记录
                 const userForm = ref({ // 用户表单
                     name: '',
                     password: '',
                     department: '',
                     role: 'staff'
+                });
+                
+                // 预付账户计算属性
+                const filteredOfficeAccounts = computed(() => {
+                    return officeAccounts.value;
+                });
+                
+                const accountStats = computed(() => {
+                    const total = officeAccounts.value.length;
+                    const totalRemaining = officeAccounts.value.reduce((sum, acc) => sum + (acc.remaining_qty || 0), 0);
+                    const lowStock = officeAccounts.value.filter(acc => acc.status === 'low').length;
+                    const empty = officeAccounts.value.filter(acc => acc.status === 'empty').length;
+                    return { total, totalRemaining, lowStock, empty };
+                });
+                
+                const activeOffices = computed(() => {
+                    return offices.value.filter(o => o.is_active === 1);
                 });
                 
                 // 用户管理计算属性
@@ -3022,12 +3400,14 @@
                         const matchStatus = !userFilterStatus.value || 
                             (userFilterStatus.value === 'active' && u.is_active) ||
                             (userFilterStatus.value === 'inactive' && !u.is_active);
-                        return matchSearch && matchRole && matchStatus;
+                        const matchDept = !userFilterDepartment.value || u.department === userFilterDepartment.value;
+                        return matchSearch && matchRole && matchStatus && matchDept;
                     });
                 });
                 const activeUsersCount = computed(() => allUsers.value.filter(u => u.is_active).length);
                 const inactiveUsersCount = computed(() => allUsers.value.filter(u => !u.is_active).length);
-                const superAdminsCount = computed(() => allUsers.value.filter(u => u.role === 'super_admin').length);
+                const officeCount = computed(() => offices.value.length);
+                const allUsersSelected = computed(() => filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length);
                 
                 // 页面配置（用于面包屑和标题）
                 const pageConfig = {
@@ -3037,7 +3417,7 @@
                     inventory: { name: '库存管理', title: '📦 库存管理', desc: '管理产品库存' },
                     products: { name: '产品管理', title: '🏷️ 产品管理', desc: '管理产品信息和规格' },
                     remind: { name: '提醒结算', title: '🔔 提醒结算', desc: '提醒长期未结算用户' },
-                    departments: { name: '部门统计', title: '📊 部门统计', desc: '查看各部门用水统计' },
+                    departments: { name: '办公室统计', title: '📊 办公室统计', desc: '查看各办公室用水统计' },
                     users: { name: '用户管理', title: '👥 用户管理', desc: '管理系统用户、角色和权限' }
                 };
                 
@@ -3295,10 +3675,17 @@
                 // 办公室管理函数
                 const loadOffices = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/offices`);
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        const res = await fetch(`${API_BASE}/offices`, { headers });
                         if (res.ok) offices.value = await res.json();
+                        else offices.value = [];
                     } catch (e) {
                         console.error('加载办公室失败:', e);
+                        offices.value = [];
                     }
                 };
                 
@@ -3336,19 +3723,69 @@
                     }
                 };
                 
-                const deleteOffice = async (office) => {
-                    if (!confirm(`确认删除办公室"${office.name}"？`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/offices/${office.id}`, { method: 'DELETE' });
-                        if (!res.ok) {
-                            const err = await res.json();
-                            alert(err.detail || '删除失败');
+                const deleteOffice = async (office, force = false) => {
+                    if (!force) {
+                        // First check if there are related data
+                        try {
+                            const token = localStorage.getItem('token');
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (token) {
+                                headers['Authorization'] = `Bearer ${token}`;
+                            }
+                            const res = await fetch(`${API_BASE}/offices/${office.id}?force=false`, { 
+                                method: 'DELETE',
+                                headers
+                            });
+                            const data = await res.json();
+                            
+                            if (res.ok && data.deleted) {
+                                // No related data, successfully deleted
+                                alert(data.message || '办公室已删除');
+                                loadOffices();
+                                return;
+                            }
+                            
+                            if (data.requires_confirmation) {
+                                // Has related data, ask for confirmation to force delete
+                                const confirmMsg = `${data.message}\n\n确定要强制删除吗？此操作将同时删除相关数据，且不可恢复！`;
+                                if (!confirm(confirmMsg)) return;
+                                // Retry with force=true
+                                await deleteOffice(office, true);
+                                return;
+                            }
+                            
+                            if (!res.ok) {
+                                alert(data.detail || '删除失败');
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('删除办公室失败:', e);
+                            alert('删除失败: ' + e.message);
                             return;
                         }
-                        loadOffices();
-                    } catch (e) {
-                        console.error('删除办公室失败:', e);
-                        alert('删除失败');
+                    } else {
+                        // Force delete
+                        try {
+                            const token = localStorage.getItem('token');
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (token) {
+                                headers['Authorization'] = `Bearer ${token}`;
+                            }
+                            const res = await fetch(`${API_BASE}/offices/${office.id}?force=true`, { 
+                                method: 'DELETE',
+                                headers
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                alert(data.message || '办公室已删除');
+                                loadOffices();
+                            } else {
+                                alert(data.detail || '删除失败');
+                            }
+                        } catch (e) {
+                            console.error('删除办公室失败:', e);
+                            alert('删除失败: ' + e.message);
+                        }
                     }
                 };
                 
@@ -3384,16 +3821,19 @@
                     }
                     if (!confirm(`确认将选中的 ${selectedOffices.value.length} 个办公室设为${isCommon === 1 ? '常用' : '不常用'}？`)) return;
                     try {
-                        for (const id of selectedOffices.value) {
-                            await fetch(`${API_BASE}/offices/${id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ is_common: isCommon })
-                            });
+                        const res = await fetch(`${API_BASE}/offices/batch-common?is_common=${isCommon}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedOffices.value)
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            selectedOffices.value = [];
+                            loadOffices();
+                            alert(data.message || '批量设置成功');
+                        } else {
+                            alert(data.detail || '批量设置失败');
                         }
-                        selectedOffices.value = [];
-                        loadOffices();
-                        alert('批量设置成功');
                     } catch (e) {
                         console.error('批量设置失败:', e);
                         alert('批量设置失败');
@@ -3409,6 +3849,61 @@
                         }
                     } catch (e) {
                         console.error('加载员工失败:', e);
+                    }
+                };
+                
+                const toggleOfficeActive = async (office) => {
+                    const currentValue = Number(office.is_active);
+                    const newValue = currentValue === 1 ? 0 : 1;
+                    const action = newValue === 1 ? '启用' : '禁用';
+                    if (!confirm(`确认${action}办公室"${office.name}"？`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/offices/${office.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: newValue })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            office.is_active = newValue;
+                            alert(`办公室已${action}`);
+                            loadOffices();
+                        } else {
+                            alert(`${action}失败: ${data.detail || '未知错误'}`);
+                        }
+                    } catch (e) {
+                        console.error(`${action}办公室失败:`, e);
+                        alert(`操作失败: ${e.message}`);
+                    }
+                };
+                
+                const batchDeleteOffices = async () => {
+                    if (selectedOffices.value.length === 0) {
+                        alert('请先选择要删除的办公室（勾选列表左侧的复选框）');
+                        return;
+                    }
+                    if (!confirm(`确认删除选中的 ${selectedOffices.value.length} 个办公室？此操作将禁用这些办公室。`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/offices/batch-delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedOffices.value)
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            selectedOffices.value = [];
+                            loadOffices();
+                            let msg = `成功删除 ${data.deleted_count} 个办公室`;
+                            if (data.errors && data.errors.length > 0) {
+                                msg += '\n部分办公室无法删除:\n' + data.errors.join('\n');
+                            }
+                            alert(msg);
+                        } else {
+                            alert(data.detail || '批量删除失败');
+                        }
+                    } catch (e) {
+                        console.error('批量删除失败:', e);
+                        alert('批量删除失败');
                     }
                 };
                 
@@ -3688,12 +4183,15 @@
                 };
 
                 const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
                     const date = new Date(dateStr);
                     return date.toLocaleString('zh-CN', { 
+                        year: 'numeric',
                         month: '2-digit', 
                         day: '2-digit', 
                         hour: '2-digit', 
-                        minute: '2-digit' 
+                        minute: '2-digit',
+                        second: '2-digit'
                     });
                 };
 
@@ -3779,19 +4277,25 @@
                 // ========== 办公室结算相关方法 ==========
                 const loadOfficeSettlements = async () => {
                     try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
                         const status = officeSettlementFilter.value;
                         const url = status === 'all' 
                             ? `${API_BASE}/admin/office-settlements`
                             : `${API_BASE}/admin/office-settlements?status=${status}`;
-                        const res = await fetch(url);
-                        officeSettlements.value = await res.json();
+                        const res = await fetch(url, { headers });
+                        officeSettlements.value = res.ok ? await res.json() : [];
                         
                         // 计算待确认数量
-                        const appliedRes = await fetch(`${API_BASE}/admin/office-settlements?status=applied`);
-                        const appliedData = await appliedRes.json();
+                        const appliedRes = await fetch(`${API_BASE}/admin/office-settlements?status=applied`, { headers });
+                        const appliedData = appliedRes.ok ? await appliedRes.json() : [];
                         officeSettlementAppliedCount.value = appliedData.length;
                     } catch (e) {
                         console.error('Failed to load office settlements:', e);
+                        officeSettlements.value = [];
                     }
                 };
                 
@@ -3819,12 +4323,24 @@
                 // ========== 领水记录相关方法 ==========
                 const loadOfficePickups = async () => {
                     try {
-                        const url = `${API_BASE}/user/office-pickups?limit=10000`;
-                        const res = await fetch(url);
+                        let url = `${API_BASE}/admin/office-pickups?limit=10000`;
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        const res = await fetch(url, { headers });
+                        if (!res.ok) {
+                            const err = await res.json();
+                            console.error('Load office pickups error:', err);
+                            officePickups.value = [];
+                            return;
+                        }
                         officePickups.value = await res.json();
                         selectedPickups.value = [];
                     } catch (e) {
                         console.error('Failed to load office pickups:', e);
+                        officePickups.value = [];
                     }
                 };
                 
@@ -3835,9 +4351,9 @@
                 };
                 
                 const filterByStatus = (status) => {
+                    // 后端返回的状态: pending(待付款)/applied(付款待确认)/settled(已结清)
                     officePickupFilter.value.status = status;
                     selectedPickups.value = [];
-                    loadOfficePickups();
                 };
                 
                 const toggleAllPickups = () => {
@@ -3867,6 +4383,111 @@
                     } catch (e) {
                         console.error('Failed to confirm pickup:', e);
                         alert('确认失败: ' + e.message);
+                    }
+                };
+                
+                // 删除单条领水记录
+                const deleteSinglePickup = async (id) => {
+                    if (!confirm('确定要删除该领水记录吗？此操作不可恢复。')) return;
+                    
+                    // Debug: 检查所有localStorage
+                    console.log('=== LocalStorage Keys ===');
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        console.log(key + ':', localStorage.getItem(key)?.substring(0, 50));
+                    }
+                    
+                    let token = localStorage.getItem('token');
+                    console.log('Token found:', token ? 'YES (' + token.substring(0, 20) + '...)' : 'NO');
+                    
+                    if (!token) {
+                        // 尝试其他可能的key
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            const val = localStorage.getItem(key);
+                            if (val && val.length > 20 && val.includes('eyJ')) {
+                                console.log('Found potential token in key:', key);
+                                token = val;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!token) {
+                        alert('未找到登录信息，请重新登录');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    try {
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const res = await fetch(`${API_BASE}/admin/office-pickup/${id}`, {
+                            method: 'DELETE',
+                            headers: headers
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (res.status === 401) {
+                            alert('登录已失效，请重新登录');
+                            window.location.href = 'login.html';
+                            return;
+                        }
+                        if (!res.ok) {
+                            alert(data.detail || '删除失败');
+                            return;
+                        }
+                        alert(data.message || '领水记录已删除');
+                        loadOfficePickups();
+                        loadDashboard();
+                    } catch (e) {
+                        console.error('Delete error:', e);
+                        alert('删除失败: ' + e.message);
+                    }
+                };
+                
+                // 批量删除领水记录
+                const batchDeletePickups = async () => {
+                    if (selectedPickups.value.length === 0) {
+                        alert('请先选择要删除的记录');
+                        return;
+                    }
+                    if (!confirm(`确定要删除选中的 ${selectedPickups.value.length} 条领水记录吗？此操作不可恢复。`)) return;
+                    
+                    const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+                    
+                    if (!token) {
+                        alert('登录已失效，请重新登录');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    try {
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        const res = await fetch(`${API_BASE}/admin/office-pickups/batch-delete`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify({ pickup_ids: selectedPickups.value })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            alert(data.detail || '批量删除失败');
+                            return;
+                        }
+                        alert(data.message || `已删除 ${data.deleted_count} 条记录`);
+                        selectedPickups.value = [];
+                        loadOfficePickups();
+                        loadDashboard();
+                    } catch (e) {
+                        console.error('Failed to batch delete pickups:', e);
+                        alert('批量删除失败: ' + e.message);
                     }
                 };
                 
@@ -3980,10 +4601,180 @@
                 // ========== 预付账户相关方法 ==========
                 const loadOfficeAccounts = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/office-accounts`);
-                        officeAccounts.value = await res.json();
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        // Build query params
+                        const params = new URLSearchParams();
+                        if (officeAccountFilter.value.officeId) params.append('office_id', officeAccountFilter.value.officeId);
+                        if (officeAccountFilter.value.productId) params.append('product_id', officeAccountFilter.value.productId);
+                        if (officeAccountFilter.value.status) params.append('status', officeAccountFilter.value.status);
+                        if (officeAccountFilter.value.search) params.append('search', officeAccountFilter.value.search);
+                        
+                        const url = `${API_BASE}/office-accounts?${params.toString()}`;
+                        const res = await fetch(url, { headers });
+                        officeAccounts.value = res.ok ? await res.json() : [];
                     } catch (e) {
                         console.error('Failed to load office accounts:', e);
+                        officeAccounts.value = [];
+                    }
+                };
+                
+                const filterOfficeAccounts = () => {
+                    loadOfficeAccounts();
+                };
+                
+                const resetOfficeAccountFilter = () => {
+                    officeAccountFilter.value = { officeId: '', productId: '', status: '', search: '' };
+                    loadOfficeAccounts();
+                };
+                
+                const openOfficeAccountModal = (account = null) => {
+                    editingOfficeAccount.value = account;
+                    if (account) {
+                        officeAccountForm.value = {
+                            office_id: account.office_id,
+                            product_id: account.product_id,
+                            reserved_qty: account.reserved_qty,
+                            remaining_qty: account.remaining_qty,
+                            reserved_person: account.reserved_person || '',
+                            configured_count: account.configured_count || 0,
+                            note: account.note || ''
+                        };
+                    } else {
+                        officeAccountForm.value = {
+                            office_id: '',
+                            product_id: '',
+                            reserved_qty: 10,
+                            remaining_qty: 10,
+                            reserved_person: '',
+                            configured_count: 0,
+                            note: ''
+                        };
+                    }
+                    showOfficeAccountModal.value = true;
+                };
+                
+                const onProductChange = () => {
+                    const product = products.value.find(p => p.id === officeAccountForm.value.product_id);
+                    if (product) {
+                        // Auto-fill product info if needed
+                    }
+                };
+                
+                const saveOfficeAccount = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        // Get office info
+                        const office = offices.value.find(o => o.id === officeAccountForm.value.office_id);
+                        const product = products.value.find(p => p.id === officeAccountForm.value.product_id);
+                        
+                        const formData = {
+                            ...officeAccountForm.value,
+                            office_name: office?.name || '',
+                            office_room_number: office?.room_number || '',
+                            product_name: product?.name || '',
+                            product_specification: product?.specification || ''
+                        };
+                        
+                        let url = `${API_BASE}/office-accounts`;
+                        let method = 'POST';
+                        
+                        if (editingOfficeAccount.value) {
+                            url = `${API_BASE}/office-accounts/${editingOfficeAccount.value.id}`;
+                            method = 'PUT';
+                        }
+                        
+                        const res = await fetch(url, {
+                            method: method,
+                            headers: headers,
+                            body: JSON.stringify(formData)
+                        });
+                        
+                        if (!res.ok) {
+                            const err = await res.json();
+                            alert(err.detail || '保存失败');
+                            return;
+                        }
+                        
+                        alert(editingOfficeAccount.value ? '账户已更新' : '账户已创建');
+                        showOfficeAccountModal.value = false;
+                        loadOfficeAccounts();
+                        loadOffices();
+                    } catch (e) {
+                        console.error('Save office account error:', e);
+                        alert('保存失败: ' + e.message);
+                    }
+                };
+                
+                const deleteOfficeAccount = async (account) => {
+                    if (!confirm(`确定要删除账户"${account.office_name} - ${account.product_name}"吗？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/office-accounts/${account.id}`, {
+                            method: 'DELETE',
+                            headers: headers
+                        });
+                        
+                        if (!res.ok) {
+                            const err = await res.json();
+                            alert(err.detail || '删除失败');
+                            return;
+                        }
+                        
+                        alert('账户已删除');
+                        loadOfficeAccounts();
+                    } catch (e) {
+                        console.error('Delete office account error:', e);
+                        alert('删除失败: ' + e.message);
+                    }
+                };
+                
+                const rechargeOfficeAccount = (account) => {
+                    rechargeAccount.value = account;
+                    rechargeQuantity.value = 0;
+                    showRechargeModal.value = true;
+                };
+                
+                const processRecharge = async () => {
+                    if (rechargeQuantity.value === 0) {
+                        alert('请输入充值或扣减数量');
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/office-accounts/${rechargeAccount.value.id}/recharge`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify({ quantity: rechargeQuantity.value })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (!res.ok) {
+                            alert(data.detail || '操作失败');
+                            return;
+                        }
+                        
+                        alert(data.message || '操作成功');
+                        showRechargeModal.value = false;
+                        loadOfficeAccounts();
+                    } catch (e) {
+                        console.error('Recharge error:', e);
+                        alert('操作失败: ' + e.message);
                     }
                 };
 
@@ -4172,9 +4963,10 @@
                     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                     // 加载对应数据
                     if (tab === 'offices') loadOffices();
+                    if (tab === 'users') loadOffices(); // 用户管理需要办公室列表
+                    if (tab === 'officeAccounts') { loadOffices(); loadOfficeAccounts(); }
                     if (tab === 'officePickups') loadOfficePickups();
                     if (tab === 'settlement') { selectedSettlementApps.value = []; expandedSettlementAppId.value = null; loadSettlementStats(); loadOfficeSettlements(); }
-                    if (tab === 'officeAccounts') loadOfficeAccounts();
                     if (tab === 'officeSettlement') loadOfficeSettlements();
                     if (tab === 'remind') { loadReminderSettings(); loadRemindData(); }
                 };
@@ -4191,15 +4983,28 @@
 
                 // ========== 用户管理相关函数 ==========
                 
-                // 加载用户列表
+                // 加载用户列表（含统计信息）
                 const loadUsersData = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/users`);
+                        const token = localStorage.getItem('token');
+                        const headers = {
+                            'Content-Type': 'application/json'
+                        };
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        const res = await fetch(`${API_BASE}/admin/users-with-stats`, { headers });
                         if (!res.ok) throw new Error('Failed to load users');
                         allUsers.value = await res.json();
                     } catch (e) {
                         console.error('Failed to load users:', e);
-                        alert('加载用户列表失败');
+                        // 如果新API失败，尝试旧API
+                        try {
+                            const res = await fetch(`${API_BASE}/users`);
+                            if (res.ok) allUsers.value = await res.json();
+                        } catch (e2) {
+                            console.error('Failed to load users (fallback):', e2);
+                        }
                     }
                 };
 
@@ -4299,17 +5104,62 @@
                 // 删除用户
                 const deleteUserAction = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/users/${deleteUser.value.id}`, {
-                            method: 'DELETE'
+                        let token = localStorage.getItem('token');
+                        if (!token) {
+                            // 尝试从其他地方获取
+                            const stored = localStorage.getItem('user');
+                            if (stored) {
+                                try {
+                                    const userData = JSON.parse(stored);
+                                    // 如果有其他方式获取token可以在这里添加
+                                } catch(e) {}
+                            }
+                            alert('登录已失效，请重新登录');
+                            window.location.href = 'login.html';
+                            return;
+                        }
+                        
+                        const headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const deleteUrl = `${API_BASE}/users/${deleteUser.value.id}`;
+                        console.log('Deleting user:', deleteUser.value.id, 'URL:', deleteUrl);
+                        
+                        const res = await fetch(deleteUrl, {
+                            method: 'DELETE',
+                            headers: headers
                         });
+                        
+                        const data = await res.json();
+                        
                         if (!res.ok) {
-                            const data = await res.json();
+                            if (data.detail === '未登录' || data.detail === 'Token verification failed') {
+                                alert('登录已失效，请重新登录');
+                                window.location.href = 'login.html';
+                                return;
+                            }
                             throw new Error(data.detail || '删除失败');
                         }
-                        alert(data.message || '用户已删除');
-                        showUserDeleteModal.value = false;
-                        loadUsersData();
+                        
+                        // 检查是否有记录需要显示
+                        if (data.detailed_records && (
+                            (data.detailed_records.transactions && data.detailed_records.transactions.length > 0) ||
+                            (data.detailed_records.office_pickups && data.detailed_records.office_pickups.length > 0) ||
+                            (data.detailed_records.office_settlements && data.detailed_records.office_settlements.length > 0)
+                        )) {
+                            deleteUserRecords.value = data.detailed_records;
+                            showUserDeleteModal.value = false; // 先关闭确认框
+                            // 不需要alert，因为模态框会显示详细信息
+                        } else {
+                            showUserDeleteModal.value = false;
+                            deleteUserRecords.value = null;
+                            alert(data.message || '用户已删除');
+                            loadUsersData();
+                        }
                     } catch (e) {
+                        console.error('Delete error:', e);
                         alert(e.message || '删除失败');
                     }
                 };
@@ -4320,9 +5170,16 @@
                     if (!confirm(`确定要${action}用户 "${u.name}" 吗？`)) return;
                     
                     try {
+                        const token = localStorage.getItem('token');
+                        const headers = {
+                            'Content-Type': 'application/json'
+                        };
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`;
+                        }
                         const res = await fetch(`${API_BASE}/users/${u.id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: headers,
                             body: JSON.stringify({ is_active: u.is_active ? 0 : 1 })
                         });
                         if (!res.ok) throw new Error('操作失败');
@@ -4330,6 +5187,88 @@
                         loadUsersData();
                     } catch (e) {
                         alert(e.message || '操作失败');
+                    }
+                };
+                
+                // 批量选择
+                const toggleAllUsers = () => {
+                    if (allUsersSelected.value) {
+                        selectedUsers.value = [];
+                    } else {
+                        selectedUsers.value = filteredUsers.value.filter(u => u.role !== 'super_admin').map(u => u.id);
+                    }
+                };
+                
+                // 批量启用用户
+                const batchEnableUsers = async () => {
+                    if (selectedUsers.value.length === 0) return;
+                    if (!confirm(`确定要启用选中的 ${selectedUsers.value.length} 个用户吗？`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/users/batch-status`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_ids: selectedUsers.value, is_active: 1 })
+                        });
+                        if (res.ok) {
+                            alert('批量启用成功');
+                            selectedUsers.value = [];
+                            loadUsersData();
+                        } else {
+                            const data = await res.json();
+                            alert(data.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                // 批量禁用用户
+                const batchDisableUsers = async () => {
+                    if (selectedUsers.value.length === 0) return;
+                    if (!confirm(`确定要禁用选中的 ${selectedUsers.value.length} 个用户吗？`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/users/batch-status`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_ids: selectedUsers.value, is_active: 0 })
+                        });
+                        if (res.ok) {
+                            alert('批量禁用成功');
+                            selectedUsers.value = [];
+                            loadUsersData();
+                        } else {
+                            const data = await res.json();
+                            alert(data.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                // 批量删除用户
+                const batchDeleteUsers = async () => {
+                    if (selectedUsers.value.length === 0) return;
+                    if (!confirm(`确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复！`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/users/batch-delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedUsers.value)
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || '批量删除成功');
+                            selectedUsers.value = [];
+                            loadUsersData();
+                        } else {
+                            const data = await res.json();
+                            alert(data.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
                     }
                 };
                 
@@ -4390,25 +5329,37 @@
 
                 onMounted(() => {
                     console.log('=== Vue onMounted Called ===');
-                    console.log('Current state:', { isLoading: isLoading.value, authError: authError.value });
+                    console.log('Current state:', { isLoading: isLoading.value, authError: authError.value, activeTab: activeTab.value });
                     // 检查登录状态（会在检查后设置 isLoading）
                     checkAuth();
-                    
+
                     // 添加滚动监听
                     window.addEventListener('scroll', handleScroll);
                     // 添加快捷键监听
                     window.addEventListener('keydown', handleKeydown);
-                    
+
                     // 加载用户数据（用于用户管理 Tab）
                     loadUsersData();
                     
+                    // 加载办公室数据（用户管理和预付账户需要）
+                    loadOffices();
+
                     // 根据当前标签页加载对应数据
+                    if (activeTab.value === 'offices') {
+                        loadOffices();
+                    }
                     if (activeTab.value === 'officePickups') {
                         loadOfficePickups();
                     }
                     if (activeTab.value === 'settlement') {
                         selectedSettlementApps.value = [];
                         loadSettlementStats();
+                        loadOfficeSettlements();
+                    }
+                    if (activeTab.value === 'officeAccounts') {
+                        loadOfficeAccounts();
+                    }
+                    if (activeTab.value === 'officeSettlement') {
                         loadOfficeSettlements();
                     }
                 });
@@ -4553,21 +5504,27 @@
                     allOfficesSelected,
                     toggleAllOffices,
                     toggleOfficeCommon,
+                    toggleOfficeActive,
                     batchSetCommon,
+                    batchDeleteOffices,
                     // 用户管理相关
                     allUsers,
                     userSearchQuery,
                     userFilterRole,
                     userFilterStatus,
+                    userFilterDepartment,
+                    officeCount,
+                    selectedUsers,
+                    allUsersSelected,
                     filteredUsers,
                     activeUsersCount,
                     inactiveUsersCount,
-                    superAdminsCount,
                     showUserCreateModal,
                     showUserEditModal,
                     showUserDeleteModal,
                     editingUser,
                     deleteUser,
+                    deleteUserRecords,
                     userForm,
                     getUserRoleName,
                     getUserRoleClass,
@@ -4579,6 +5536,10 @@
                     confirmDeleteUser,
                     deleteUserAction,
                     toggleUserStatus,
+                    toggleAllUsers,
+                    batchEnableUsers,
+                    batchDisableUsers,
+                    batchDeleteUsers,
                     // 方法
                     getRoleName,
                     handleLogout,
@@ -4611,6 +5572,13 @@
                     loadOfficePickups,
                     filterOfficePickups,
                     loadOfficeAccounts,
+                    filterOfficeAccounts,
+                    resetOfficeAccountFilter,
+                    openOfficeAccountModal,
+                    saveOfficeAccount,
+                    deleteOfficeAccount,
+                    rechargeOfficeAccount,
+                    processRecharge,
                     loadOfficeSettlements,
                     confirmOfficeSettlement,
                     filterOfficeSettlements,
@@ -4629,12 +5597,24 @@
                     filterByStatus,
                     toggleAllPickups,
                     confirmSinglePickup,
+                    deleteSinglePickup,
+                    batchDeletePickups,
                     sendRemindForPickup,
                     batchConfirmPickups,
                     batchRemindPickups,
                     exportFilteredPickups,
                     exportAllPickups,
                     officeAccounts,
+                    officeAccountFilter,
+                    filteredOfficeAccounts,
+                    accountStats,
+                    activeOffices,
+                    showOfficeAccountModal,
+                    editingOfficeAccount,
+                    officeAccountForm,
+                    showRechargeModal,
+                    rechargeAccount,
+                    rechargeQuantity,
                     settlementTab,
                     unsettledStats,
                     settlementStats,
