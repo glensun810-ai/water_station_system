@@ -223,6 +223,7 @@ class OfficeAccount(Base):
     办公室账户表 - 按办公室管理的预付账户
 
     每个办公室有一个账户，用于管理该办公室的饮用水预定
+    支持两种模式：credit(信用模式) / prepaid(预付模式)
     """
 
     __tablename__ = "office_account"
@@ -235,20 +236,36 @@ class OfficeAccount(Base):
     product_name = Column(String(100), nullable=False)
     product_specification = Column(String(50), nullable=True)
 
-    # 预定数量
+    # 账户余额相关字段
+    total_qty = Column(Integer, default=0)  # 账户总数量 (含赠送)
+    paid_qty = Column(Integer, default=0)  # 付费数量
+    free_qty = Column(Integer, default=0)  # 赠送数量 (优惠获得)
+    remaining_qty = Column(Integer, default=0)  # 剩余可用数量
+
+    # 预定数量 (兼容旧字段)
     reserved_qty = Column(Integer, default=0)  # 预定总数量
-    remaining_qty = Column(Integer, default=0)  # 剩余数量
+    # remaining_qty 已在上面定义
 
     # 预定人信息
     reserved_person = Column(String(100), nullable=True)  # 预定人姓名
     reserved_person_id = Column(Integer, nullable=True)  # 预定人用户ID
 
-    # 负责人信息（新增）
+    # 负责人信息
     manager_name = Column(String(100), nullable=True)  # 负责人姓名
     manager_id = Column(Integer, nullable=True)  # 负责人用户 ID
 
-    # 配置人数（新增）
+    # 配置人数
     configured_count = Column(Integer, default=0)  # 办公室配置人数
+
+    # 账户类型和状态
+    account_type = Column(String(20), default="credit")  # credit(信用)/prepaid(预付)
+    status = Column(
+        String(20), default="active"
+    )  # active(正常)/frozen(冻结)/closed(关闭)
+
+    # 预警设置
+    low_stock_threshold = Column(Integer, default=5)  # 低库存预警阈值
+
     # 备注
     note = Column(String(500), nullable=True)
 
@@ -336,6 +353,57 @@ class OfficePickup(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
+class AccountTransaction(Base):
+    """账户变动流水记录"""
+
+    __tablename__ = "account_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("office_account.id"), nullable=False)
+    office_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, nullable=False)
+
+    type = Column(
+        String(20), nullable=False
+    )  # recharge/pickup/adjust/refund/expire/settlement_deduction
+    quantity = Column(Integer, nullable=False)  # 变动数量 (正数增加/负数减少)
+    before_qty = Column(Integer, nullable=False)  # 变动前数量
+    after_qty = Column(Integer, nullable=False)  # 变动后数量
+
+    quantity_type = Column(String(20))  # paid/free
+    amount = Column(Float)  # 变动金额 (充值/退款)
+    unit_price = Column(Float)  # 单价
+
+    reference_type = Column(String(50))  # 关联单据类型
+    reference_id = Column(Integer)  # 关联单据ID
+
+    operator_id = Column(Integer)  # 操作人
+    operator_name = Column(String(100))  # 操作人姓名
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class PrepaidPackage(Base):
+    """预付套餐 (充值方案)"""
+
+    __tablename__ = "prepaid_packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)  # 套餐名称 "充值100送15"
+    product_id = Column(Integer, nullable=False)  # 适用产品
+
+    price = Column(Float, nullable=False)  # 售价 (实付金额)
+    buy_quantity = Column(Integer, nullable=False)  # 购买数量
+    gift_quantity = Column(Integer, nullable=False)  # 赠送数量
+
+    validity_days = Column(Integer, default=90)  # 有效期(天)
+    start_date = Column(DateTime)  # 生效开始日期
+    end_date = Column(DateTime)  # 生效结束日期
+
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
 class OfficeSettlement(Base):
     """
     办公室结算记录表
@@ -390,6 +458,38 @@ class SystemConfig(Base):
     config_value = Column(Text, nullable=True)
     description = Column(String(500), nullable=True)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class InventoryRecord(Base):
+    """库存流水记录"""
+
+    __tablename__ = "inventory_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    type = Column(String(20), nullable=False)  # in/out/adjust/loss
+    quantity = Column(Integer, nullable=False)
+    before_stock = Column(Integer, nullable=False)
+    after_stock = Column(Integer, nullable=False)
+    reference_type = Column(String(50))
+    reference_id = Column(Integer)
+    operator_id = Column(Integer)
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class InventoryAlertConfig(Base):
+    """库存预警配置 (按产品单独设置)"""
+
+    __tablename__ = "inventory_alert_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    warning_threshold = Column(Integer, default=10)
+    critical_threshold = Column(Integer, default=5)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime)
 
 
 class Product(Base):

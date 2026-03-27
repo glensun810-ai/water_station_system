@@ -173,6 +173,113 @@ class Product(Base):
     transactions = relationship("Transaction", back_populates="product")
 
 
+class InventoryRecord(Base):
+    """库存流水记录"""
+
+    __tablename__ = "inventory_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    type = Column(String(20), nullable=False)  # in/out/adjust/loss
+    quantity = Column(Integer, nullable=False)
+    before_stock = Column(Integer, nullable=False)
+    after_stock = Column(Integer, nullable=False)
+    reference_type = Column(String(50))
+    reference_id = Column(Integer)
+    operator_id = Column(Integer)
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class InventoryAlertConfig(Base):
+    """库存预警配置 (按产品单独设置)"""
+
+    __tablename__ = "inventory_alert_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    warning_threshold = Column(Integer, default=10)
+    critical_threshold = Column(Integer, default=5)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime)
+
+
+class OfficeAccount(Base):
+    """办公室账户表"""
+
+    __tablename__ = "office_account"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+
+    total_qty = Column(Integer, default=0)
+    paid_qty = Column(Integer, default=0)
+    free_qty = Column(Integer, default=0)
+    remaining_qty = Column(Integer, default=0)
+    reserved_qty = Column(Integer, default=0)
+
+    reserved_person = Column(String(100), nullable=True)
+    reserved_person_id = Column(Integer, nullable=True)
+    manager_name = Column(String(100), nullable=True)
+    manager_id = Column(Integer, nullable=True)
+    configured_count = Column(Integer, default=0)
+
+    account_type = Column(String(20), default="credit")  # credit/prepaid
+    status = Column(String(20), default="active")  # active/frozen/closed
+    low_stock_threshold = Column(Integer, default=5)
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class AccountTransaction(Base):
+    """账户变动流水记录"""
+
+    __tablename__ = "account_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("office_account.id"), nullable=False)
+    office_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, nullable=False)
+    type = Column(String(20), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    before_qty = Column(Integer, nullable=False)
+    after_qty = Column(Integer, nullable=False)
+    quantity_type = Column(String(20))
+    amount = Column(Float)
+    unit_price = Column(Float)
+    reference_type = Column(String(50))
+    reference_id = Column(Integer)
+    operator_id = Column(Integer)
+    operator_name = Column(String(100))
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class PrepaidPackage(Base):
+    """预付套餐"""
+
+    __tablename__ = "prepaid_packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    product_id = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    buy_quantity = Column(Integer, nullable=False)
+    gift_quantity = Column(Integer, nullable=False)
+    validity_days = Column(Integer, default=90)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
 class Transaction(Base):
     __tablename__ = "transactions"
 
@@ -1451,6 +1558,426 @@ def delete_product_category(category_id: int, db: Session = Depends(get_db)):
     db.delete(db_category)
     db.commit()
     return {"message": "分类已删除", "category_id": category_id}
+
+
+# --- Inventory APIs ---
+class InventoryRecordResponse(BaseModel):
+    id: int
+    product_id: int
+    product_name: Optional[str] = None
+    type: str
+    quantity: int
+    before_stock: int
+    after_stock: int
+    reference_type: Optional[str] = None
+    reference_id: Optional[int] = None
+    operator_id: Optional[int] = None
+    note: Optional[str] = None
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryRecordCreate(BaseModel):
+    product_id: int
+    type: str = "in"  # in/out/adjust/loss
+    quantity: int
+    note: Optional[str] = None
+
+
+class InventoryAlertConfigResponse(BaseModel):
+    id: int
+    product_id: int
+    product_name: Optional[str] = None
+    warning_threshold: int
+    critical_threshold: int
+    is_active: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryAlertConfigUpdate(BaseModel):
+    warning_threshold: int
+    critical_threshold: int
+    is_active: int = 1
+
+
+@app.get("/api/admin/inventory/records", response_model=List[InventoryRecordResponse])
+def get_inventory_records(
+    product_id: Optional[int] = None,
+    type_filter: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Get inventory records"""
+    query = db.query(InventoryRecord).order_by(InventoryRecord.created_at.desc())
+
+    if product_id:
+        query = query.filter(InventoryRecord.product_id == product_id)
+    if type_filter:
+        query = query.filter(InventoryRecord.type == type_filter)
+
+    records = query.limit(limit).all()
+
+    # Add product name
+    for r in records:
+        product = db.query(Product).filter(Product.id == r.product_id).first()
+        r.product_name = product.name if product else None
+
+    return records
+
+
+@app.post("/api/admin/inventory/in", response_model=InventoryRecordResponse)
+def inventory_in(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory in (入库)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    before_stock = product.stock
+    product.stock += record.quantity
+    after_stock = product.stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="in",
+        quantity=record.quantity,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.post("/api/admin/inventory/out", response_model=InventoryRecordResponse)
+def inventory_out(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory out (出库)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if product.stock < record.quantity:
+        raise HTTPException(
+            status_code=400, detail=f"库存不足，当前库存: {product.stock}"
+        )
+
+    before_stock = product.stock
+    product.stock -= record.quantity
+    after_stock = product.stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="out",
+        quantity=-record.quantity,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.post("/api/admin/inventory/adjust", response_model=InventoryRecordResponse)
+def inventory_adjust(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory adjust (库存调整)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    before_stock = product.stock
+    product.stock = record.quantity
+    after_stock = product.stock
+
+    diff = record.quantity - before_stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="adjust",
+        quantity=diff,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.get(
+    "/api/admin/inventory/alert-configs",
+    response_model=List[InventoryAlertConfigResponse],
+)
+def get_inventory_alert_configs(db: Session = Depends(get_db)):
+    """Get all inventory alert configs"""
+    configs = db.query(InventoryAlertConfig).all()
+    for c in configs:
+        product = db.query(Product).filter(Product.id == c.product_id).first()
+        c.product_name = product.name if product else None
+    return configs
+
+
+@app.put(
+    "/api/admin/inventory/alert-configs/{product_id}",
+    response_model=InventoryAlertConfigResponse,
+)
+def update_inventory_alert_config(
+    product_id: int, config: InventoryAlertConfigUpdate, db: Session = Depends(get_db)
+):
+    """Update inventory alert config for a product"""
+    db_config = (
+        db.query(InventoryAlertConfig)
+        .filter(InventoryAlertConfig.product_id == product_id)
+        .first()
+    )
+
+    if db_config:
+        db_config.warning_threshold = config.warning_threshold
+        db_config.critical_threshold = config.critical_threshold
+        db_config.is_active = config.is_active
+    else:
+        db_config = InventoryAlertConfig(
+            product_id=product_id,
+            warning_threshold=config.warning_threshold,
+            critical_threshold=config.critical_threshold,
+            is_active=config.is_active,
+        )
+        db.add(db_config)
+
+    db.commit()
+    db.refresh(db_config)
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    db_config.product_name = product.name if product else None
+    return db_config
+
+
+# --- Account Management APIs ---
+class PrepaidPackageResponse(BaseModel):
+    id: int
+    name: str
+    product_id: int
+    product_name: Optional[str] = None
+    price: float
+    buy_quantity: int
+    gift_quantity: int
+    validity_days: int
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
+    is_active: int
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PrepaidPackageCreate(BaseModel):
+    name: str
+    product_id: int
+    price: float
+    buy_quantity: int
+    gift_quantity: int
+    validity_days: int = 90
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: int = 1
+
+
+class PrepaidPackageUpdate(BaseModel):
+    name: Optional[str] = None
+    product_id: Optional[int] = None
+    price: Optional[float] = None
+    buy_quantity: Optional[int] = None
+    gift_quantity: Optional[int] = None
+    validity_days: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[int] = None
+
+
+@app.get("/api/admin/prepaid-packages", response_model=List[PrepaidPackageResponse])
+def get_prepaid_packages(
+    product_id: Optional[int] = None, db: Session = Depends(get_db)
+):
+    """Get all prepaid packages"""
+    query = db.query(PrepaidPackage)
+    if product_id:
+        query = query.filter(PrepaidPackage.product_id == product_id)
+    packages = query.all()
+    for p in packages:
+        product = db.query(Product).filter(Product.id == p.product_id).first()
+        p.product_name = product.name if product else None
+    return packages
+
+
+@app.post("/api/admin/prepaid-packages", response_model=PrepaidPackageResponse)
+def create_prepaid_package(
+    package: PrepaidPackageCreate, db: Session = Depends(get_db)
+):
+    """Create a prepaid package"""
+    db_package = PrepaidPackage(**package.model_dump())
+    db.add(db_package)
+    db.commit()
+    db.refresh(db_package)
+    product = db.query(Product).filter(Product.id == package.product_id).first()
+    db_package.product_name = product.name if product else None
+    return db_package
+
+
+@app.put(
+    "/api/admin/prepaid-packages/{package_id}", response_model=PrepaidPackageResponse
+)
+def update_prepaid_package(
+    package_id: int, package: PrepaidPackageUpdate, db: Session = Depends(get_db)
+):
+    """Update a prepaid package"""
+    db_package = (
+        db.query(PrepaidPackage).filter(PrepaidPackage.id == package_id).first()
+    )
+    if not db_package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    for key, value in package.model_dump(exclude_unset=True).items():
+        setattr(db_package, key, value)
+
+    db.commit()
+    db.refresh(db_package)
+    product = db.query(Product).filter(Product.id == db_package.product_id).first()
+    db_package.product_name = product.name if product else None
+    return db_package
+
+
+@app.delete("/api/admin/prepaid-packages/{package_id}")
+def delete_prepaid_package(package_id: int, db: Session = Depends(get_db)):
+    """Delete a prepaid package"""
+    db_package = (
+        db.query(PrepaidPackage).filter(PrepaidPackage.id == package_id).first()
+    )
+    if not db_package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    db.delete(db_package)
+    db.commit()
+    return {"message": "套餐已删除", "package_id": package_id}
+
+
+@app.get("/api/admin/office-accounts", response_model=List[dict])
+def get_office_accounts(
+    office_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+    account_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get office accounts with filters"""
+    query = db.query(OfficeAccount)
+    if office_id:
+        query = query.filter(OfficeAccount.office_id == office_id)
+    if product_id:
+        query = query.filter(OfficeAccount.product_id == product_id)
+    if account_type:
+        query = query.filter(OfficeAccount.account_type == account_type)
+
+    accounts = query.all()
+    result = []
+    for a in accounts:
+        result.append(
+            {
+                "id": a.id,
+                "office_id": a.office_id,
+                "office_name": a.office_name,
+                "office_room_number": a.office_room_number,
+                "product_id": a.product_id,
+                "product_name": a.product_name,
+                "product_specification": a.product_specification,
+                "total_qty": a.total_qty,
+                "paid_qty": a.paid_qty,
+                "free_qty": a.free_qty,
+                "remaining_qty": a.remaining_qty,
+                "account_type": a.account_type,
+                "status": a.status,
+                "low_stock_threshold": a.low_stock_threshold,
+                "configured_count": a.configured_count,
+                "manager_name": a.manager_name,
+                "note": a.note,
+                "created_at": a.created_at,
+                "updated_at": a.updated_at,
+            }
+        )
+    return result
+
+
+@app.get(
+    "/api/admin/office-accounts/{account_id}/transactions", response_model=List[dict]
+)
+def get_account_transactions(
+    account_id: int, limit: int = 50, db: Session = Depends(get_db)
+):
+    """Get account transaction history"""
+    transactions = (
+        db.query(AccountTransaction)
+        .filter(AccountTransaction.account_id == account_id)
+        .order_by(AccountTransaction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    result = []
+    for t in transactions:
+        result.append(
+            {
+                "id": t.id,
+                "account_id": t.account_id,
+                "office_id": t.office_id,
+                "product_id": t.product_id,
+                "type": t.type,
+                "quantity": t.quantity,
+                "before_qty": t.before_qty,
+                "after_qty": t.after_qty,
+                "quantity_type": t.quantity_type,
+                "amount": t.amount,
+                "unit_price": t.unit_price,
+                "reference_type": t.reference_type,
+                "reference_id": t.reference_id,
+                "operator_name": t.operator_name,
+                "note": t.note,
+                "created_at": t.created_at,
+            }
+        )
+    return result
+
+
+@app.put("/api/admin/office-accounts/{account_id}/type")
+def update_account_type(
+    account_id: int, account_type: str, db: Session = Depends(get_db)
+):
+    """Update account type (credit/prepaid)"""
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    if account_type not in ["credit", "prepaid"]:
+        raise HTTPException(status_code=400, detail="Invalid account type")
+
+    account.account_type = account_type
+    db.commit()
+    return {
+        "message": "账户类型已更新",
+        "account_id": account_id,
+        "account_type": account_type,
+    }
 
 
 # --- Transaction APIs ---

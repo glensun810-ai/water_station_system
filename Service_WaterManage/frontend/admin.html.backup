@@ -1027,7 +1027,12 @@
                         <div v-for="(dept, index) in dashboardSummary.department_ranking || departmentReport" :key="dept.department" 
                              class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 text-center border border-slate-200">
                             <div class="flex items-center justify-center mb-2">
-                                <span :class="index === 0 ? 'bg-yellow-400 text-yellow-900' : (index === 1 ? 'bg-slate-400 text-slate-900' : (index === 2 ? 'bg-amber-600 text-amber-900' : 'bg-slate-300 text-slate-700'))" class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mr-2">
+                                <span :class="[
+                                    index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                                    index === 1 ? 'bg-slate-400 text-slate-900' :
+                                    index === 2 ? 'bg-amber-600 text-amber-900' :
+                                    'bg-slate-300 text-slate-700'
+                                ]" class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mr-2">
                                     {{ index + 1 }}
                                 </span>
                                 <span class="font-medium text-slate-800 text-sm">{{ dept.department }}</span>
@@ -1205,7 +1210,7 @@
                                                 确认收款
                                             </button>
                                         </template>
-                                        <span v-if="true" class="text-xs text-green-500 font-medium px-2 py-1">
+                                        <span v-else class="text-xs text-green-500 font-medium px-2 py-1">
                                             已结清
                                         </span>
                                         <button @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded ml-1" title="删除">
@@ -1217,7 +1222,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div v-if="filteredPickups.length === 0" class="text-center py-12 text-slate-400">
+                <div v-else class="text-center py-12 text-slate-400">
                     <p>暂无领水记录</p>
                 </div>
             </div>
@@ -1242,7 +1247,7 @@
                 </div>
 
                 <!-- 响应式表格容器 -->
-                <div v-if="applications.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 card-shadow">
+                <div class="table-responsive bg-white rounded-xl border border-slate-200 card-shadow" v-else>
                     <table>
                         <thead>
                             <tr>
@@ -1809,7 +1814,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div v-if="filteredOfficeAccounts.length === 0" class="text-center py-12 text-slate-400 bg-white rounded-xl border">
+                <div v-else class="text-center py-12 text-slate-400 bg-white rounded-xl border">
                     <p>暂无预付账户</p>
                 </div>
             </div>
@@ -1920,7 +1925,7 @@
                     <p>回收站为空</p>
                 </div>
                 
-                <div v-if="true" class="bg-white rounded-xl shadow overflow-hidden">
+                <div v-else class="bg-white rounded-xl shadow overflow-hidden">
                     <div class="table-responsive">
                         <table class="w-full">
                             <thead class="bg-slate-50">
@@ -2046,7 +2051,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
+                    <div v-else class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
                         <p>暂无库存预警</p>
                     </div>
@@ -2100,26 +2105,24 @@
                 <!-- 操作栏 -->
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex gap-2">
-                        <button class="bg-green-600 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2" title="暂时禁用">
+                        <button @click="openInventoryInModal" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
                             入库
                         </button>
-                        <button class="bg-orange-600 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2" title="暂时禁用">
+                        <button @click="openInventoryOutModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                             </svg>
                             出库
                         </button>
-                        <!-- 库存流水按钮暂时禁用
                         <button @click="showInventoryRecords = true" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
                             库存流水
                         </button>
-                        -->
                         <button @click="updateStock" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16m8-16v16m-8-8h16"></path>
@@ -2163,14 +2166,14 @@
                                     <span v-if="p.category_name" class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
                                         {{ p.category_name }}
                                     </span>
-                                    <span v-if="true" class="text-xs text-slate-400">-</span>
+                                    <span v-else class="text-xs text-slate-400">-</span>
                                 </td>
                                 <td>{{ p.specification }}</td>
                                 <td>¥{{ p.price }}</td>
                                 <td>
                                     <span v-if="p.stock === 0" class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">缺货</span>
                                     <span v-else-if="p.stock <= (p.stock_alert || 10)" class="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-sm font-medium">预警 {{ p.stock }}</span>
-                                    <span v-if="true" class="text-green-600 font-medium">{{ p.stock }}</span>
+                                    <span v-else class="text-green-600 font-medium">{{ p.stock }}</span>
                                 </td>
                                 <td>{{ p.unit }}</td>
                                 <td>
@@ -2185,9 +2188,7 @@
                                 </td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <!-- 阈值按钮暂时禁用 
                                         <button @click="openAlertConfigModal(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium btn-active">阈值</button>
-                                        -->
                                         <button @click="updateStockOne(p)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">补货</button>
                                         <button @click="editProduct(p)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">编辑</button>
                                         <button @click="deleteProduct(p)" class="text-red-600 hover:text-red-800 text-sm font-medium btn-active">删除</button>
@@ -2561,7 +2562,7 @@
                                     <span v-if="u.stats && u.stats.total_records > 0" class="text-blue-600">
                                         {{ u.stats.total_records }}次
                                     </span>
-                                    <span v-if="true" class="text-slate-400">-</span>
+                                    <span v-else class="text-slate-400">-</span>
                                 </td>
                                 <td class="py-3 px-3 text-slate-500 text-sm">{{ formatDate(u.created_at) }}</td>
                                 <td class="py-3 px-3 text-right">
@@ -2743,7 +2744,7 @@
                 </div>
                 
                 <!-- 无关联记录时显示删除确认 -->
-                <div v-if="true" class="text-center">
+                <div v-else class="text-center">
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -2801,7 +2802,7 @@
             <div class="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl w-full max-h-[80vh] overflow-y-auto" @click.stop>
                 <h2 class="text-xl font-bold text-slate-800 mb-4">员工列表</h2>
                 <div v-if="officeUsers.length === 0" class="text-center text-slate-400 py-8">暂无员工</div>
-                <div v-if="true" class="space-y-2">
+                <div v-else class="space-y-2">
                     <div v-for="u in officeUsers" :key="u.id" class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
                         <div>
                             <p class="font-medium text-slate-800">{{ u.name }}</p>
@@ -3013,7 +3014,7 @@
                                             </button>
                                         </template>
                                         <!-- 已结清 Tab -->
-                                        <template v-if="true">
+                                        <template v-else>
                                             <span class="text-green-600 text-sm font-medium">已结清</span>
                                         </template>
                                     </div>
@@ -3061,7 +3062,7 @@
                             </template>
                         </div>
                     </div>
-                    <div v-if="filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
+                    <div v-else class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         <p>暂无结算记录</p>
                     </div>
@@ -4323,22 +4324,20 @@
                         const [usersRes, productsRes, categoriesRes] = await Promise.all([
                             fetch(`${API_BASE}/users`),
                             fetch(`${API_BASE}/products`),
-                            fetch(`${API_BASE}/admin/product-categories`).then(r => r.ok ? r : Promise.resolve({ok: false}))
+                            fetch(`${API_BASE}/admin/product-categories`)
                         ]);
-                        // 即使部分API失败也继续
-                        if (usersRes.ok) users.value = await usersRes.json();
-                        if (productsRes.ok) products.value = await productsRes.json();
-                        if (categoriesRes.ok) productCategories.value = await categoriesRes.json();
-                        
+                        if (!usersRes.ok || !productsRes.ok) {
+                            throw new Error('API 服务不可用');
+                        }
+                        users.value = await usersRes.json();
+                        products.value = await productsRes.json();
+                        productCategories.value = categoriesRes.ok ? await categoriesRes.json() : [];
                         API_AVAILABLE.value = true;
                         apiError.value = null;
                     } catch (e) {
                         console.error('Failed to load data:', e);
-                        // 不强制显示错误，让页面继续运行
-                        if (users.value.length === 0 && products.value.length === 0) {
-                            API_AVAILABLE.value = false;
-                            apiError.value = '部分数据加载失败，请刷新页面重试';
-                        }
+                        API_AVAILABLE.value = false;
+                        apiError.value = '无法连接到后端 API 服务，请确保服务已启动 (http://localhost:8000)';
                     }
                 };
 
@@ -4617,15 +4616,15 @@
                 const loadDashboard = async () => {
                     try {
                         const [reportRes, alertsRes, summaryRes, quickStatsRes] = await Promise.all([
-                            fetch(`${API_BASE}/admin/report`).then(r => r.ok ? r.json() : Promise.resolve({})),
-                            fetch(`${API_BASE}/admin/inventory-alert?threshold=10`).then(r => r.ok ? r.json() : Promise.resolve([])),
-                            fetch(`${API_BASE}/admin/dashboard/summary`).then(r => r.ok ? r.json() : Promise.resolve({})),
-                            fetch(`${API_BASE}/admin/dashboard/quick-stats`).then(r => r.ok ? r.json() : Promise.resolve({}))
+                            fetch(`${API_BASE}/admin/report`).then(r => r.ok ? r : Promise.reject(r.status)),
+                            fetch(`${API_BASE}/admin/inventory-alert?threshold=10`).then(r => r.ok ? r : Promise.reject(r.status)),
+                            fetch(`${API_BASE}/admin/dashboard/summary`).then(r => r.ok ? r : Promise.reject(r.status)),
+                            fetch(`${API_BASE}/admin/dashboard/quick-stats`).then(r => r.ok ? r : Promise.reject(r.status))
                         ]);
-                        departmentReport.value = reportRes || [];
-                        inventoryAlerts.value = alertsRes || [];
-                        dashboardSummary.value = summaryRes || {};
-                        quickStats.value = quickStats || {};
+                        departmentReport.value = await reportRes.json();
+                        inventoryAlerts.value = await alertsRes.json();
+                        dashboardSummary.value = await summaryRes.json();
+                        quickStats.value = await quickStatsRes.json();
                     } catch (e) {
                         console.error('Failed to load dashboard:', e);
                         departmentReport.value = [];
@@ -5905,9 +5904,21 @@
                         headers['Authorization'] = `Bearer ${token}`;
                     }
                     // 先尝试 admin API（不抛异常，手动检查状态）
-                    // 直接跳过，不尝试 admin API，避免403错误
                     let adminData = null;
-                    
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/users-with-stats`, { headers });
+                        if (res.ok) {
+                            adminData = await res.json();
+                        } else if (res.status === 403) {
+                            // 静默处理权限不足
+                        }
+                    } catch (e) {
+                        // 静默处理网络错误
+                    }
+                    if (adminData) {
+                        allUsers.value = adminData;
+                        return;
+                    }
                     // 回退到普通用户列表 API
                     try {
                         const fallbackRes = await fetch(`${API_BASE}/users`);
@@ -5917,7 +5928,6 @@
                             allUsers.value = [];
                         }
                     } catch (e2) {
-                        console.log('普通API失败:', e2.message);
                         allUsers.value = [];
                     }
                 };
@@ -6274,13 +6284,8 @@
                         loadOfficeAccounts();
                     }
                     if (activeTab.value === 'officeSettlement') {
-                        loadOfficeSettlement();
+                        loadOfficeSettlements();
                     }
-                    // 库存相关功能暂时禁用，避免加载失败
-                    // if (activeTab.value === 'inventory') {
-                    //     loadInventoryRecords();
-                    //     loadInventoryAlertConfigs();
-                    // }
                 });
 
                 // ==================== 认证相关函数 ====================
@@ -6608,7 +6613,7 @@
         }).mount('#app');
     </script>
     
-    <!-- 入库弹窗 (暂时禁用)
+    <!-- 入库弹窗 -->
     <div v-if="showInventoryInModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryInModal = false">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold mb-4">入库操作</h3>
@@ -6636,7 +6641,7 @@
         </div>
     </div>
     
-    <!-- 出库弹窗 (暂时禁用)
+    <!-- 出库弹窗 -->
     <div v-if="showInventoryOutModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryOutModal = false">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold mb-4">出库操作</h3>
@@ -6663,9 +6668,8 @@
             </div>
         </div>
     </div>
-    -->
     
-    <!-- 库存流水弹窗 (暂时禁用)
+    <!-- 库存流水弹窗 -->
     <div v-if="showInventoryRecords" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryRecords = false">
         <div class="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto">
             <div class="flex justify-between items-center mb-4">
@@ -6718,9 +6722,8 @@
             </table>
         </div>
     </div>
-    -->
     
-    <!-- 预警配置弹窗 (暂时禁用)
+    <!-- 预警配置弹窗 -->
     <div v-if="showAlertConfigModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showAlertConfigModal = false">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold mb-4">库存预警配置</h3>
@@ -6746,5 +6749,4 @@
             </div>
         </div>
     </div>
-    -->
 </body>
