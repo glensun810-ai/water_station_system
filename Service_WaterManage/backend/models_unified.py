@@ -2,7 +2,7 @@
 Unified Account Models - 双模式业务统一架构
 水站管理系统 - 统一账户数据模型
 """
-
+from __future__ import annotations
 from sqlalchemy import (
     create_engine,
     Column,
