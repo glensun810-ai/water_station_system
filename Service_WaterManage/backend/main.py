@@ -2,7 +2,7 @@
 Water Management System - Backend API
 智能水站管理系统 - 后端服务
 """
-
+from typing import Tuple
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -799,7 +799,7 @@ def get_db():
 # ==================== Helper Functions ====================
 def calculate_promotion_price(
     db: Session, user_id: int, product_id: int, quantity: int, mode: str = "pay_later"
-) -> tuple[float, str]:
+) -> Tuple(float, str):
     """
     Calculate price with promotion logic (买 N 赠 M)
     Returns (actual_price, note)
