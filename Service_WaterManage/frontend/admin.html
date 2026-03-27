@@ -603,7 +603,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
                         </svg>
                         <span>库存管理</span>
-                        <span v-if="inventoryAlerts.length > 0" class="nav-item-badge">{{ inventoryAlerts.length }}</span>
+                        <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="nav-item-badge">{{ inventoryAlerts.length }}</span>
                         <span class="shortcut-hint">G I</span>
                     </button>
                     <button @click="navigateTo('officeAccounts')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officeAccounts' }">
@@ -790,7 +790,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
                     </svg>
                     <span class="text-[10px] mt-0.5">库存</span>
-                    <span v-if="inventoryAlerts.length > 0" class="absolute top-0 right-1 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ inventoryAlerts.length }}</span>
+                    <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="absolute top-0 right-1 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ inventoryAlerts.length }}</span>
                 </button>
                 <button @click="navigateTo('offices')" :class="['flex flex-col items-center p-1.5', activeTab === 'offices' ? 'text-blue-600' : 'text-slate-500']">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -994,7 +994,7 @@
                 </div>
 
                 <!-- 库存预警 -->
-                <div v-if="inventoryAlerts.length > 0" class="alert-card mb-6">
+                <div v-if="inventoryAlerts && inventoryAlerts.length > 0" class="alert-card mb-6">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-bold text-red-800 flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1131,7 +1131,7 @@
                 </div>
 
                 <!-- 批量操作栏 -->
-                <div v-if="selectedPickups.length > 0" class="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <div v-if="selectedPickups && selectedPickups.length > 0" class="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                     <div>
                         <span class="text-sm text-blue-700">已选择 <strong>{{ selectedPickups.length }}</strong> 条记录</span>
                         <span v-if="selectedPendingAmount > 0" class="text-sm text-amber-600 ml-2">待付款: ¥{{ selectedPendingAmount.toFixed(2) }}</span>
@@ -1155,7 +1155,7 @@
                 </div>
 
                 <!-- 记录列表 - 表格形式 -->
-                <div v-if="filteredPickups.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div v-if="filteredPickups && filteredPickups.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <table>
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -1205,9 +1205,11 @@
                                                 确认收款
                                             </button>
                                         </template>
-                                        <span v-if="true" class="text-xs text-green-500 font-medium px-2 py-1">
-                                            已结清
-                                        </span>
+                                        <template v-else-if="p.settlement_status === 'settled'">
+                                            <span class="text-xs text-green-500 font-medium px-2 py-1">
+                                                已结清
+                                            </span>
+                                        </template>
                                         <button @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded ml-1" title="删除">
                                             删除
                                         </button>
@@ -1217,7 +1219,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div v-if="filteredPickups.length === 0" class="text-center py-12 text-slate-400">
+                <div v-if="!filteredPickups || filteredPickups.length === 0" class="text-center py-12 text-slate-400">
                     <p>暂无领水记录</p>
                 </div>
             </div>
@@ -1234,15 +1236,11 @@
                     </button>
                 </div>
                 
-                <div v-if="applications.length === 0" class="text-center text-slate-400 py-12">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <p>暂无待确认的结算申请</p>
+                <div v-if="!applications || applications.length === 0" class="text-center text-slate-400 py-12">
+                    <p>暂无结算申请</p>
                 </div>
-
-                <!-- 响应式表格容器 -->
-                <div v-if="applications.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 card-shadow">
+                
+                <div v-if="applications && applications.length > 0" class="table-responsive bg-white rounded-xl border border-slate-200 card-shadow">
                     <table>
                         <thead>
                             <tr>
@@ -1271,7 +1269,7 @@
                     </table>
                 </div>
 
-                <div v-if="selectedApplications.length > 0" class="mt-4 flex justify-between items-center pt-4 border-t border-slate-200">
+                <div v-if="selectedApplications && selectedApplications.length > 0" class="mt-4 flex justify-between items-center pt-4 border-t border-slate-200">
                     <span class="text-slate-600">已选择 {{ selectedApplications.length }} 条记录</span>
                     <button @click="confirmSettlement" class="btn-success text-white px-6 py-3 rounded-xl font-medium">
                         批量确认收款
@@ -1428,10 +1426,10 @@
                         </tbody>
                     </table>
                 </div>
-                <p v-if="transactions.length === 0" class="text-center text-slate-500 py-8">暂无数据</p>
+                <p v-if="!transactions || transactions.length === 0" class="text-center text-slate-500 py-8">暂无数据</p>
                 
                 <!-- 批量删除按钮（仅超级管理员） -->
-                <div v-if="selectedTransactions.length > 0 && user?.role === 'super_admin'" class="mt-4 flex justify-between items-center pt-4 border-t border-slate-200">
+                <div v-if="selectedTransactions && selectedTransactions.length > 0 && user?.role === 'super_admin'" class="mt-4 flex justify-between items-center pt-4 border-t border-slate-200">
                     <span class="text-slate-600">已选择 {{ selectedTransactions.length }} 条记录</span>
                     <div class="flex gap-3">
                         <button @click="showBatchDeleteConfirm" class="bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-red-700 transition">
@@ -1753,7 +1751,7 @@
                 </div>
 
                 <!-- 账户列表 -->
-                <div v-if="filteredOfficeAccounts.length > 0" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div v-if="filteredOfficeAccounts && filteredOfficeAccounts.length > 0" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <table class="w-full">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -1809,7 +1807,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div v-if="filteredOfficeAccounts.length === 0" class="text-center py-12 text-slate-400 bg-white rounded-xl border">
+                <div v-if="!filteredOfficeAccounts || filteredOfficeAccounts.length === 0" class="text-center py-12 text-slate-400 bg-white rounded-xl border">
                     <p>暂无预付账户</p>
                 </div>
             </div>
@@ -1900,7 +1898,7 @@
                 </div>
                 
                 <!-- 批量操作 -->
-                <div v-if="selectedTrash.length > 0" class="mb-4 flex justify-between items-center bg-white rounded-xl p-4 shadow-sm">
+                <div v-if="selectedTrash && selectedTrash.length > 0" class="mb-4 flex justify-between items-center bg-white rounded-xl p-4 shadow-sm">
                     <span class="text-slate-600">已选择 {{ selectedTrash.length }} 条记录</span>
                     <div class="flex gap-3">
                         <button @click="batchRestoreTrash" class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition">
@@ -1913,7 +1911,7 @@
                 </div>
                 
                 <!-- 回收站列表 -->
-                <div v-if="trashList.length === 0" class="text-center text-slate-400 py-12 bg-white rounded-xl">
+                <div v-if="!trashList || trashList.length === 0" class="text-center text-slate-400 py-12 bg-white rounded-xl">
                     <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -2046,7 +2044,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
+                    <div v-if="!filteredOfficeSettlements || filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
                         <p>暂无库存预警</p>
                     </div>
@@ -2100,20 +2098,24 @@
                 <!-- 操作栏 -->
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex gap-2">
-                        <button class="bg-green-600 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2" title="暂时禁用">
+                        <!-- 入库按钮暂时禁用，避免页面卡死
+                        <button @click="openInventoryInModal" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
                             入库
                         </button>
-                        <button class="bg-orange-600 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2" title="暂时禁用">
+                        -->
+                        <!-- 出库按钮暂时禁用，避免页面卡死
+                        <button @click="openInventoryOutModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                             </svg>
                             出库
                         </button>
-                        <!-- 库存流水按钮暂时禁用
-                        <button @click="showInventoryRecords = true" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
+                        -->
+                        <!-- 库存流水按钮暂时禁用，避免页面卡死
+                        <button @click="openInventoryRecordsModal" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
@@ -2185,7 +2187,7 @@
                                 </td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <!-- 阈值按钮暂时禁用 
+                                        <!-- 阈值按钮暂时禁用，避免页面卡死
                                         <button @click="openAlertConfigModal(p)" class="text-amber-600 hover:text-amber-800 text-sm font-medium btn-active">阈值</button>
                                         -->
                                         <button @click="updateStockOne(p)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">补货</button>
@@ -2240,7 +2242,7 @@
                 </div>
 
                 <!-- 批量操作栏 -->
-                <div v-if="selectedOffices.length > 0" class="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <div v-if="selectedOffices && selectedOffices.length > 0" class="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                     <span class="text-sm text-blue-700">已选择 <strong>{{ selectedOffices.length }}</strong> 个办公室</span>
                     <button @click="selectedOffices = []" class="px-3 py-1.5 text-slate-500 text-sm hover:text-slate-700">取消选择</button>
                 </div>
@@ -2291,7 +2293,7 @@
                 <!-- 办公室列表 -->
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <!-- 批量操作工具栏 -->
-                    <div v-if="selectedOffices.length > 0" class="bg-blue-50 border-b border-blue-100 px-4 py-3 flex items-center justify-between">
+                    <div v-if="selectedOffices && selectedOffices.length > 0" class="bg-blue-50 border-b border-blue-100 px-4 py-3 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <span class="text-sm font-medium text-blue-700">已选择 {{ selectedOffices.length }} 项</span>
                             <button @click="selectedOffices = []" class="text-sm text-blue-600 hover:text-blue-800">取消选择</button>
@@ -2384,7 +2386,7 @@
                                     <button @click="deleteOffice(office)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
                                 </td>
                             </tr>
-                            <tr v-if="filteredOffices.length === 0">
+                            <tr v-if="!filteredOffices || filteredOffices.length === 0">
                                 <td colspan="10" class="py-12 text-center text-slate-400">
                                     <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -2505,7 +2507,7 @@
 
                 <!-- 用户列表表格 -->
                 <!-- 批量操作工具栏 -->
-                <div v-if="selectedUsers.length > 0" class="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl mb-4 flex items-center justify-between">
+                <div v-if="selectedUsers && selectedUsers.length > 0" class="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl mb-4 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-medium text-blue-700">已选择 {{ selectedUsers.length }} 项</span>
                         <button @click="selectedUsers = []" class="text-sm text-blue-600 hover:text-blue-800">取消选择</button>
@@ -2938,7 +2940,7 @@
 
                 
                 <!-- 记录卡片列表 -->
-                <div v-if="filteredOfficeSettlements.length > 0" class="space-y-3">
+                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-3">
                     <div v-for="record in filteredOfficeSettlements" :key="record.id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
                         <div @click="toggleSettlementAppDetail(record.id)" class="p-4 cursor-pointer">
                             <div class="flex items-start justify-between">
@@ -3061,7 +3063,7 @@
                             </template>
                         </div>
                     </div>
-                    <div v-if="filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
+                    <div v-if="!filteredOfficeSettlements || filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         <p>暂无结算记录</p>
                     </div>
@@ -3115,7 +3117,7 @@
                 const officePickupFilter = ref({ officeId: '', status: '', dateFrom: '', dateTo: '', productId: '', searchPerson: '', quickDate: '' }); // 筛选状态
                 
                 const filteredPickups = computed(() => {
-                    let result = officePickups.value;
+                    let result = officePickups.value || [];
                     const f = officePickupFilter.value;
                     if (f.status) {
                         result = result.filter(p => p.settlement_status === f.status);
@@ -3176,11 +3178,12 @@
                 });
                 
                 const pickupStats = computed(() => {
-                    const pending = officePickups.value.filter(p => p.settlement_status === 'pending');
-                    const applied = officePickups.value.filter(p => p.settlement_status === 'applied');
-                    const settled = officePickups.value.filter(p => p.settlement_status === 'settled');
+                    const pickups = officePickups.value || [];
+                    const pending = pickups.filter(p => p.settlement_status === 'pending');
+                    const applied = pickups.filter(p => p.settlement_status === 'applied');
+                    const settled = pickups.filter(p => p.settlement_status === 'settled');
                     return {
-                        total: { count: officePickups.value.length, amount: officePickups.value.reduce((s, p) => s + (p.total_amount || 0), 0) },
+                        total: { count: pickups.length, amount: pickups.reduce((s, p) => s + (p.total_amount || 0), 0) },
                         pending: { count: pending.length, amount: pending.reduce((s, p) => s + (p.total_amount || 0), 0) },
                         applied: { count: applied.length, amount: applied.reduce((s, p) => s + (p.total_amount || 0), 0) },
                         settled: { count: settled.length, amount: settled.reduce((s, p) => s + (p.total_amount || 0), 0) }
@@ -3229,7 +3232,7 @@
                 
                 // 计算当前Tab的统计信息
                 const currentTabStats = computed(() => {
-                    const offices = officeSettlements.value;
+                    const offices = officeSettlements.value || [];
                     let officeCount = 0;
                     let recordCount = 0;
                     let totalAmount = 0;
@@ -3259,18 +3262,18 @@
 
                 // 各Tab的独立统计（不依赖当前选中的Tab）
                 const appliedTabCount = computed(() => {
-                    return officeSettlements.value.filter(o => o.applied_count > 0).length;
+                    return (officeSettlements.value || []).filter(o => o.applied_count > 0).length;
                 });
                 const pendingTabCount = computed(() => {
-                    return officeSettlements.value.filter(o => o.pending_count > 0).length;
+                    return (officeSettlements.value || []).filter(o => o.pending_count > 0).length;
                 });
                 const confirmedTabCount = computed(() => {
-                    return officeSettlements.value.filter(o => o.confirmed_count > 0).length;
+                    return (officeSettlements.value || []).filter(o => o.confirmed_count > 0).length;
                 });
                 
                 // 计算属性
                 const filteredSettlementApps = computed(() => {
-                    let result = settlementApplications.value;
+                    let result = settlementApplications.value || [];
                     if (settlementAppFilter.value !== 'all') {
                         result = result.filter(a => a.status === settlementAppFilter.value);
                     }
@@ -3286,7 +3289,7 @@
                 });
                 
                 const filteredSettlementRecords = computed(() => {
-                    let result = settlementRecords.value;
+                    let result = settlementRecords.value || [];
                     
                     // 按状态筛选（包括逾期）
                     if (settlementRecordFilter.value !== 'all') {
@@ -3335,6 +3338,9 @@
                 
                 // 筛选后的办公室结算申请（根据Tab筛选）
                 const filteredOfficeSettlements = computed(() => {
+                    if (!officeSettlements.value || !Array.isArray(officeSettlements.value)) {
+                        return [];
+                    }
                     let result = officeSettlements.value;
                     
                     // 根据Tab筛选
@@ -3385,7 +3391,7 @@
                         result = result.filter(s => s.applied_at && new Date(s.applied_at) <= to);
                     }
                     // 按未结清金额倒序排列（欠款最多的在前）
-                    result = [...result].sort((a, b) => {
+                    result = [...(result || [])].sort((a, b) => {
                         const aAmount = (a.pending_amount || 0) + (a.applied_amount || 0);
                         const bAmount = (b.pending_amount || 0) + (b.applied_amount || 0);
                         return bAmount - aAmount;
@@ -3987,7 +3993,7 @@
                 
                 // 预付账户计算属性
                 const filteredOfficeAccounts = computed(() => {
-                    let result = officeAccounts.value;
+                    let result = officeAccounts.value || [];
                     
                     if (officeAccountFilter.value.officeId) {
                         result = result.filter(acc => acc.office_id === parseInt(officeAccountFilter.value.officeId));
@@ -4012,22 +4018,23 @@
                 });
                 
                 const accountStats = computed(() => {
-                    const total = officeAccounts.value.length;
-                    const credit = officeAccounts.value.filter(acc => acc.account_type === 'credit').length;
-                    const prepaid = officeAccounts.value.filter(acc => acc.account_type === 'prepaid').length;
-                    const totalRemaining = officeAccounts.value.reduce((sum, acc) => sum + (acc.remaining_qty || 0), 0);
-                    const lowStock = officeAccounts.value.filter(acc => acc.status === 'low').length;
-                    const empty = officeAccounts.value.filter(acc => acc.status === 'empty').length;
+                    const accounts = officeAccounts.value || [];
+                    const total = accounts.length;
+                    const credit = accounts.filter(acc => acc.account_type === 'credit').length;
+                    const prepaid = accounts.filter(acc => acc.account_type === 'prepaid').length;
+                    const totalRemaining = accounts.reduce((sum, acc) => sum + (acc.remaining_qty || 0), 0);
+                    const lowStock = accounts.filter(acc => acc.status === 'low').length;
+                    const empty = accounts.filter(acc => acc.status === 'empty').length;
                     return { total, credit, prepaid, totalRemaining, lowStock, empty };
                 });
                 
                 const activeOffices = computed(() => {
-                    return offices.value.filter(o => o.is_active === 1);
+                    return (offices.value || []).filter(o => o.is_active === 1);
                 });
                 
                 // 用户管理计算属性
                 const filteredUsers = computed(() => {
-                    return allUsers.value.filter(u => {
+                    return (allUsers.value || []).filter(u => {
                         const matchSearch = !userSearchQuery.value || 
                             u.name.toLowerCase().includes(userSearchQuery.value.toLowerCase()) ||
                             u.department.toLowerCase().includes(userSearchQuery.value.toLowerCase());
@@ -4039,9 +4046,9 @@
                         return matchSearch && matchRole && matchStatus && matchDept;
                     });
                 });
-                const activeUsersCount = computed(() => allUsers.value.filter(u => u.is_active).length);
-                const inactiveUsersCount = computed(() => allUsers.value.filter(u => !u.is_active).length);
-                const officeCount = computed(() => offices.value.length);
+                const activeUsersCount = computed(() => (allUsers.value || []).filter(u => u.is_active).length);
+                const inactiveUsersCount = computed(() => (allUsers.value || []).filter(u => !u.is_active).length);
+                const officeCount = computed(() => (offices.value || []).length);
                 const allUsersSelected = computed(() => filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length);
                 
                 // 页面配置（用于面包屑和标题）
@@ -4101,7 +4108,7 @@
                     over7Amount: 0
                 });
                 
-                const inventoryAlertCount = computed(() => inventoryAlerts.value.length);
+                const inventoryAlertCount = computed(() => (inventoryAlerts.value || []).length);
                 
                 const totalWaterUsers = computed(() => {
                     return quickStats.value?.water_users || 0;
@@ -4112,7 +4119,7 @@
                 });
                 
                 const officeSettlementAppliedCount = computed(() => {
-                    return officePickups.value.filter(p => p.settlement_status === 'applied').length;
+                    return (officePickups.value || []).filter(p => p.settlement_status === 'applied').length;
                 });
                 
                 const filteredRemindList = computed(() => {
@@ -4253,7 +4260,7 @@
 
 
                 const filteredProducts = computed(() => {
-                    let result = products.value;
+                    let result = products.value || [];
                     
                     // 产品分类筛选
                     if (productCategoryFilter.value) {
@@ -4280,39 +4287,45 @@
                 });
 
                 const totalStats = computed(() => {
+                    const depts = departmentReport.value || [];
+                    const apps = applications.value || [];
                     return {
-                        total_qty: departmentReport.value.reduce((sum, d) => sum + d.total_qty, 0),
-                        unsettled_amount: departmentReport.value.reduce((sum, d) => sum + d.unsettled_amount, 0),
-                        settled_amount: departmentReport.value.reduce((sum, d) => sum + d.settled_amount, 0),
-                        applied_amount: applications.value.reduce((sum, a) => sum + a.amount, 0)
+                        total_qty: depts.reduce((sum, d) => sum + d.total_qty, 0),
+                        unsettled_amount: depts.reduce((sum, d) => sum + d.unsettled_amount, 0),
+                        settled_amount: depts.reduce((sum, d) => sum + d.settled_amount, 0),
+                        applied_amount: apps.reduce((sum, a) => sum + a.amount, 0)
                     };
                 });
 
                 const departments = computed(() => {
-                    return [...new Set(users.value.map(u => u.department))];
+                    return [...new Set((users.value || []).map(u => u.department))];
                 });
 
                 const allApplicationsSelected = computed(() => {
-                    return applications.value.length > 0 && applications.value.every(a => selectedApplications.value.includes(a.id));
+                    const apps = applications.value || [];
+                    return apps.length > 0 && apps.every(a => selectedApplications.value.includes(a.id));
                 });
 
                 const allTransactionsSelected = computed(() => {
-                    const availableTransactions = transactions.value.filter(t => t.status !== 'settled').map(t => t.id);
+                    const txns = transactions.value || [];
+                    const availableTransactions = txns.filter(t => t.status !== 'settled').map(t => t.id);
                     return availableTransactions.length > 0 && availableTransactions.every(id => selectedTransactions.value.includes(id));
                 });
 
                 const allRemindSelected = computed(() => {
-                    return remindList.value.length > 0 && remindList.value.every(u => selectedRemind.value.includes(u.user_id));
+                    const list = remindList.value || [];
+                    return list.length > 0 && list.every(u => selectedRemind.value.includes(u.user_id));
                 });
 
                 // 筛选后的统计信息
                 const filteredStats = computed(() => {
+                    const txns = transactions.value || [];
                     return {
-                        totalAmount: transactions.value.reduce((sum, t) => sum + (t.actual_price || 0), 0),
-                        settledAmount: transactions.value
+                        totalAmount: txns.reduce((sum, t) => sum + (t.actual_price || 0), 0),
+                        settledAmount: txns
                             .filter(t => t.status === 'settled')
                             .reduce((sum, t) => sum + (t.actual_price || 0), 0),
-                        unsettledAmount: transactions.value
+                        unsettledAmount: txns
                             .filter(t => t.status === 'unsettled')
                             .reduce((sum, t) => sum + (t.actual_price || 0), 0)
                     };
@@ -4335,7 +4348,7 @@
                     } catch (e) {
                         console.error('Failed to load data:', e);
                         // 不强制显示错误，让页面继续运行
-                        if (users.value.length === 0 && products.value.length === 0) {
+                        if ((users.value || []).length === 0 && (products.value || []).length === 0) {
                             API_AVAILABLE.value = false;
                             apiError.value = '部分数据加载失败，请刷新页面重试';
                         }
@@ -4578,11 +4591,11 @@
                 };
                 
                 const totalOfficeUsers = computed(() => {
-                    return offices.value.reduce((sum, o) => sum + (o.user_count || 0), 0);
+                    return (offices.value || []).reduce((sum, o) => sum + (o.user_count || 0), 0);
                 });
 
                 const filteredOffices = computed(() => {
-                    let result = offices.value;
+                    let result = offices.value || [];
                     
                     // 常用状态筛选
                     if (officeCommonFilter.value !== 'all') {
@@ -5678,61 +5691,16 @@
                 };
 
                 const openInventoryInModal = () => {
-                    inventoryForm.value = { product_id: null, quantity: 0, note: '' };
-                    showInventoryInModal.value = true;
+                    alert('入库功能暂时不可用');
                 };
                 
                 const openInventoryOutModal = () => {
-                    inventoryForm.value = { product_id: null, quantity: 0, note: '' };
-                    showInventoryOutModal.value = true;
+                    alert('出库功能暂时不可用');
                 };
                 
-                const submitInventoryIn = async () => {
-                    if (!inventoryForm.value.product_id || inventoryForm.value.quantity <= 0) {
-                        alert('请填写产品 和数量');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/inventory/in`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(inventoryForm.value)
-                        });
-                        if (res.ok) {
-                            alert('入库成功');
-                            showInventoryInModal.value = false;
-                            loadData();
-                        } else {
-                            const e = await res.json();
-                            alert(e.detail || '入库失败');
-                        }
-                    } catch (e) {
-                        alert('操作失败');
-                    }
-                };
-                
-                const submitInventoryOut = async () => {
-                    if (!inventoryForm.value.product_id || inventoryForm.value.quantity <= 0) {
-                        alert('请填写产品和数量');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`${API_BASE}/admin/inventory/out`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(inventoryForm.value)
-                        });
-                        if (res.ok) {
-                            alert('出库成功');
-                            showInventoryOutModal.value = false;
-                            loadData();
-                        } else {
-                            const e = await res.json();
-                            alert(e.detail || '出库失败');
-                        }
-                    } catch (e) {
-                        alert('操作失败');
-                    }
+                // 打开库存流水弹窗（暂时禁用，避免页面卡死）
+                const openInventoryRecordsModal = async () => {
+                    alert('库存流水功能暂时不可用');
                 };
                 
                 const loadInventoryRecords = async () => {
@@ -5741,18 +5709,30 @@
                         if (inventoryRecordFilter.value.productId) params.append('product_id', inventoryRecordFilter.value.productId);
                         if (inventoryRecordFilter.value.type) params.append('type_filter', inventoryRecordFilter.value.type);
                         const res = await fetch(`${API_BASE}/admin/inventory/records?${params}`);
-                        inventoryRecords.value = res.ok ? await res.json() : [];
+                        if (res.ok) {
+                            inventoryRecords.value = await res.json();
+                        } else {
+                            console.log('加载库存流水失败（权限不足）');
+                            inventoryRecords.value = [];
+                        }
                     } catch (e) {
                         console.error('Failed to load inventory records:', e);
+                        inventoryRecords.value = [];
                     }
                 };
                 
                 const loadInventoryAlertConfigs = async () => {
                     try {
                         const res = await fetch(`${API_BASE}/admin/inventory/alert-configs`);
-                        inventoryAlertConfigs.value = res.ok ? await res.json() : [];
+                        if (res.ok) {
+                            inventoryAlertConfigs.value = await res.json();
+                        } else {
+                            console.log('加载预警配置失败（权限不足）');
+                            inventoryAlertConfigs.value = [];
+                        }
                     } catch (e) {
                         console.error('Failed to load alert configs:', e);
+                        inventoryAlertConfigs.value = [];
                     }
                 };
                 
@@ -5784,9 +5764,12 @@
                             alert('预警配置已保存');
                             showAlertConfigModal.value = false;
                             loadInventoryAlertConfigs();
+                        } else {
+                            const e = await res.json();
+                            alert(e.detail || '保存失败');
                         }
                     } catch (e) {
-                        alert('保存失败');
+                        alert('保存失败: ' + e.message);
                     }
                 };
 
@@ -6397,6 +6380,9 @@
                     selectedTransactions,
                     selectedApplications,
                     selectedRemind,
+                    trashList,
+                    selectedTrash,
+                    selectAllTrash,
                     transactionFilter,
                     datePreset,
                     specifications,
@@ -6592,8 +6578,7 @@
                     toggleProduct,
                     openInventoryInModal,
                     openInventoryOutModal,
-                    submitInventoryIn,
-                    submitInventoryOut,
+                    openInventoryRecordsModal,
                     loadInventoryRecords,
                     loadInventoryAlertConfigs,
                     openAlertConfigModal,
@@ -6608,143 +6593,4 @@
         }).mount('#app');
     </script>
     
-    <!-- 入库弹窗 (暂时禁用)
-    <div v-if="showInventoryInModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryInModal = false">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-bold mb-4">入库操作</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">选择产品</label>
-                    <select v-model="inventoryForm.product_id" class="w-full px-3 py-2 border rounded-lg">
-                        <option :value="null">请选择产品</option>
-                        <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.specification }}) - 库存: {{ p.stock }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">入库数量</label>
-                    <input v-model.number="inventoryForm.quantity" type="number" min="1" class="w-full px-3 py-2 border rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">备注</label>
-                    <input v-model="inventoryForm.note" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="可选">
-                </div>
-            </div>
-            <div class="flex gap-2 mt-6">
-                <button @click="submitInventoryIn" class="flex-1 bg-green-600 text-white py-2 rounded-lg">确认入库</button>
-                <button @click="showInventoryInModal = false" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">取消</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 出库弹窗 (暂时禁用)
-    <div v-if="showInventoryOutModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryOutModal = false">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-bold mb-4">出库操作</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">选择产品</label>
-                    <select v-model="inventoryForm.product_id" class="w-full px-3 py-2 border rounded-lg">
-                        <option :value="null">请选择产品</option>
-                        <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.specification }}) - 库存: {{ p.stock }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">出库数量</label>
-                    <input v-model.number="inventoryForm.quantity" type="number" min="1" class="w-full px-3 py-2 border rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">备注</label>
-                    <input v-model="inventoryForm.note" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="可选">
-                </div>
-            </div>
-            <div class="flex gap-2 mt-6">
-                <button @click="submitInventoryOut" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">确认出库</button>
-                <button @click="showInventoryOutModal = false" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">取消</button>
-            </div>
-        </div>
-    </div>
-    -->
-    
-    <!-- 库存流水弹窗 (暂时禁用)
-    <div v-if="showInventoryRecords" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showInventoryRecords = false">
-        <div class="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold">库存流水记录</h3>
-                <button @click="showInventoryRecords = false" class="text-gray-500 hover:text-gray-700">✕</button>
-            </div>
-            <div class="flex gap-2 mb-4">
-                <select v-model="inventoryRecordFilter.productId" @change="loadInventoryRecords" class="px-3 py-2 border rounded-lg text-sm">
-                    <option value="">全部产品</option>
-                    <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-                </select>
-                <select v-model="inventoryRecordFilter.type" @change="loadInventoryRecords" class="px-3 py-2 border rounded-lg text-sm">
-                    <option value="">全部类型</option>
-                    <option value="in">入库</option>
-                    <option value="out">出库</option>
-                    <option value="adjust">调整</option>
-                </select>
-                <button @click="loadInventoryRecords" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">刷新</button>
-            </div>
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-100">
-                        <th class="px-3 py-2 text-left">时间</th>
-                        <th class="px-3 py-2 text-left">产品</th>
-                        <th class="px-3 py-2 text-left">类型</th>
-                        <th class="px-3 py-2 text-right">数量</th>
-                        <th class="px-3 py-2 text-right">变动前</th>
-                        <th class="px-3 py-2 text-right">变动后</th>
-                        <th class="px-3 py-2 text-left">备注</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="r in inventoryRecords" :key="r.id" class="border-b">
-                        <td class="px-3 py-2">{{ r.created_at ? new Date(r.created_at).toLocaleString('zh-CN') : '-' }}</td>
-                        <td class="px-3 py-2">{{ r.product_name }}</td>
-                        <td class="px-3 py-2">
-                            <span :class="{'text-green-600': r.type==='in', 'text-orange-600': r.type==='out', 'text-blue-600': r.type==='adjust'}">
-                                {{ {'in':'入库','out':'出库','adjust':'调整'}[r.type] }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-2 text-right" :class="r.quantity > 0 ? 'text-green-600' : 'text-orange-600'">{{ r.quantity > 0 ? '+' : '' }}{{ r.quantity }}</td>
-                        <td class="px-3 py-2 text-right">{{ r.before_stock }}</td>
-                        <td class="px-3 py-2 text-right">{{ r.after_stock }}</td>
-                        <td class="px-3 py-2 text-gray-500">{{ r.note || '-' }}</td>
-                    </tr>
-                    <tr v-if="inventoryRecords.length === 0">
-                        <td colspan="7" class="px-3 py-4 text-center text-gray-500">暂无记录</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    -->
-    
-    <!-- 预警配置弹窗 (暂时禁用)
-    <div v-if="showAlertConfigModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showAlertConfigModal = false">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-bold mb-4">库存预警配置</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">预警阈值</label>
-                    <input v-model.number="alertConfigForm.warning_threshold" type="number" min="1" class="w-full px-3 py-2 border rounded-lg">
-                    <p class="text-xs text-gray-500 mt-1">库存 ≤ 此值时触发预警</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">严重阈值</label>
-                    <input v-model.number="alertConfigForm.critical_threshold" type="number" min="1" class="w-full px-3 py-2 border rounded-lg">
-                    <p class="text-xs text-gray-500 mt-1">库存 ≤ 此值时触发严重预警</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="alertActive" :checked="alertConfigForm.is_active === 1" @change="alertConfigForm.is_active = $event.target.checked ? 1 : 0" class="w-4 h-4">
-                    <label for="alertActive" class="text-sm">启用预警</label>
-                </div>
-            </div>
-            <div class="flex gap-2 mt-6">
-                <button @click="saveAlertConfig" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">保存配置</button>
-                <button @click="showAlertConfigModal = false" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">取消</button>
-            </div>
-        </div>
-    </div>
-    -->
 </body>

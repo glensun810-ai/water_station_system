@@ -168,6 +168,9 @@ class Product(Base):
     promo_threshold = Column(Integer, default=10)  # 买 N
     promo_gift = Column(Integer, default=1)  # 赠 M
     is_active = Column(Integer, default=1)  # 1: 启用/在售，0: 停用/归档
+    is_protected = Column(
+        Integer, default=0
+    )  # 0: 可删除, 1: 受保护(发布后自动保护真实数据)
 
     category = relationship("ProductCategory", backref="products")
     transactions = relationship("Transaction", back_populates="product")
@@ -299,6 +302,11 @@ class Transaction(Base):
     deleted_at = Column(DateTime, nullable=True)  # 删除时间
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # 删除人 ID
     delete_reason = Column(String, nullable=True)  # 删除原因
+
+    # 保护字段
+    is_protected = Column(
+        Integer, default=0
+    )  # 0: 可删除, 1: 受保护(发布后自动保护真实数据)
 
     # 双模式业务字段
     mode = Column(String(20), default="pay_later")  # 'pay_later' 或 'prepay'
@@ -566,6 +574,7 @@ class ProductCreate(ProductBase):
 class ProductResponse(ProductBase):
     id: int
     category_name: Optional[str] = None
+    is_protected: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1367,13 +1376,22 @@ def get_user_status(user_id: int, db: Session = Depends(get_db)):
 
 # --- Product APIs ---
 @app.get("/api/products", response_model=List[ProductResponse])
-def get_products(active_only: bool = False, db: Session = Depends(get_db)):
+def get_products(
+    active_only: bool = False, is_active: int = None, db: Session = Depends(get_db)
+):
     """
     Get all products
     - active_only=True: only return active products (for user-facing APIs)
-    - active_only=False: return all products (for admin)
+    - is_active=1: only return active products
+    - is_active=0: only return inactive products
+    - is_active=None: return all products (for admin)
     """
-    products = db.query(Product).all()
+    query = db.query(Product)
+    if active_only or is_active == 1:
+        query = query.filter(Product.is_active == 1)
+    elif is_active == 0:
+        query = query.filter(Product.is_active == 0)
+    products = query.all()
     result = []
     for p in products:
         product_dict = {
@@ -1391,6 +1409,7 @@ def get_products(active_only: bool = False, db: Session = Depends(get_db)):
             "promo_threshold": p.promo_threshold,
             "promo_gift": p.promo_gift,
             "is_active": p.is_active,
+            "is_protected": p.is_protected,
             "category_name": p.category.name if p.category else None,
         }
         result.append(product_dict)
@@ -1424,15 +1443,75 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Check if product has associated transactions
-    transaction_count = (
-        db.query(Transaction).filter(Transaction.product_id == product_id).count()
-    )
-    if transaction_count > 0:
+    # 检查产品是否受保护
+    if product.is_protected == 1:
         raise HTTPException(
             status_code=400,
-            detail=f"无法删除：该产品已有 {transaction_count} 条交易记录，请先删除相关记录",
+            detail="该产品为受保护数据，无法删除。如需删除，请先解除保护状态。",
         )
+
+    # Check if product has associated records in all related tables (including soft-deleted)
+    errors = []
+
+    # 1. Check Transaction table (only active records, exclude soft-deleted)
+    transaction_count = (
+        db.query(Transaction)
+        .filter(Transaction.product_id == product_id, Transaction.is_deleted == 0)
+        .count()
+    )
+    if transaction_count > 0:
+        errors.append(f"用户交易记录 {transaction_count} 条")
+
+    # 1.5. Also handle soft-deleted transactions - clear product_id to allow product deletion
+    soft_deleted_transactions = (
+        db.query(Transaction)
+        .filter(Transaction.product_id == product_id, Transaction.is_deleted == 1)
+        .all()
+    )
+    for t in soft_deleted_transactions:
+        t.product_id = None  # 清除已删除交易的产品关联
+
+    # 2. Check OfficePickup table
+    try:
+        office_pickup_count = (
+            db.query(OfficePickup).filter(OfficePickup.product_id == product_id).count()
+        )
+        if office_pickup_count > 0:
+            errors.append(f"办公室领水记录 {office_pickup_count} 条")
+    except:
+        pass
+
+    # 3. Check ReservationPickup table
+    try:
+        reservation_count = (
+            db.query(ReservationPickup)
+            .filter(ReservationPickup.product_id == product_id)
+            .count()
+        )
+        if reservation_count > 0:
+            errors.append(f"预定记录 {reservation_count} 条")
+    except:
+        pass
+
+    # 4. Check PrepaidPickup table
+    try:
+        prepaid_count = (
+            db.query(PrepaidPickup)
+            .filter(PrepaidPickup.product_id == product_id)
+            .count()
+        )
+        if prepaid_count > 0:
+            errors.append(f"预付领取记录 {prepaid_count} 条")
+    except:
+        pass
+
+    if errors:
+        detail = (
+            f"无法删除：该产品存在以下关联记录：\n- "
+            + "\n- ".join(errors)
+            + "\n\n请先处理相关记录后再删除产品。"
+        )
+        raise HTTPException(status_code=400, detail=detail)
 
     db.delete(product)
     db.commit()
@@ -1454,6 +1533,25 @@ def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
     return {
         "product_id": product_id,
         "is_active": product.is_active,
+        "message": status_text,
+    }
+
+
+@app.put("/api/products/{product_id}/protect")
+def toggle_product_protection(product_id: int, db: Session = Depends(get_db)):
+    """Toggle product protection status (only for super_admin)"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product.is_protected = 0 if product.is_protected == 1 else 1
+    db.commit()
+    db.refresh(product)
+
+    status_text = "已保护" if product.is_protected == 1 else "已解除保护"
+    return {
+        "product_id": product_id,
+        "is_protected": product.is_protected,
         "message": status_text,
     }
 
@@ -2815,10 +2913,43 @@ def permanently_delete_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="记录不存在")
 
+    # 检查记录是否受保护
+    if transaction.is_protected == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="该记录为受保护数据，无法删除。如需删除，请先解除保护状态。",
+        )
+
     db.delete(transaction)
     db.commit()
 
     return {"message": "记录已永久删除", "deleted_id": transaction_id}
+
+
+@app.put("/api/admin/transactions/{transaction_id}/protect")
+def toggle_transaction_protection(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle transaction protection status (only for super_admin)"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足：只有超级管理员才能操作")
+
+    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    transaction.is_protected = 0 if transaction.is_protected == 1 else 1
+    db.commit()
+    db.refresh(transaction)
+
+    status_text = "已保护" if transaction.is_protected == 1 else "已解除保护"
+    return {
+        "transaction_id": transaction_id,
+        "is_protected": transaction.is_protected,
+        "message": status_text,
+    }
 
 
 # --- Dashboard APIs ---
