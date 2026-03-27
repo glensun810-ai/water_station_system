@@ -1,0 +1,98 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Info
+        run: |
+          echo "=========================================="
+          echo "Deploying to: ${{ secrets.SERVER_HOST }}"
+          echo "Domain: ${{ secrets.DOMAIN }}"
+          echo "=========================================="
+
+      - name: Check connection
+        run: |
+          if ! ssh -o ConnectTimeout=10 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo OK" 2>/dev/null; then
+            echo "::error::Cannot connect to server"
+            exit 1
+          fi
+          echo "OK"
+
+      - name: Deploy
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
+            set -e
+            DOMAIN="jhw-ai.com"
+            PROJECT_ROOT="/var/www/${DOMAIN}"
+            BACKUP_DIR="/var/backup/${DOMAIN}"
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            
+            echo "[1/5] Backup..."
+            mkdir -p ${BACKUP_DIR}
+            [ -d "${PROJECT_ROOT}/water" ] && tar -czf ${BACKUP_DIR}/water_${TIMESTAMP}.tar.gz -C ${PROJECT_ROOT} water 2>/dev/null
+            [ -d "${PROJECT_ROOT}/water-admin" ] && tar -czf ${BACKUP_DIR}/admin_${TIMESTAMP}.tar.gz -C ${PROJECT_ROOT} water-admin 2>/dev/null
+            echo "Backup done"
+            
+            echo "[2/5] Git pull..."
+            cd ${PROJECT_ROOT}
+            git fetch origin main
+            git reset --hard origin/main
+            echo "Git done"
+            
+            echo "[3/5] Permissions..."
+            chown -R www-data:www-data ${PROJECT_ROOT}/water ${PROJECT_ROOT}/water-admin 2>/dev/null || true
+            
+            echo "[4/5] Nginx reload..."
+            nginx -t && nginx -s reload 2>/dev/null || aa_nginx -s reload 2>/dev/null || true
+            
+            echo "[5/5] Cleanup old backups..."
+            find ${BACKUP_DIR} -name "*.tar.gz" -mtime +7 -delete 2>/dev/null || true
+            
+            echo "=========================================="
+            echo "Deployment completed!"
+            echo "=========================================="
+          '
+
+      - name: Verify
+        run: |
+          sleep 2
+          F=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ secrets.DOMAIN }}/water/index.html")
+          A=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ secrets.DOMAIN }}/water-admin/admin.html")
+          echo "Frontend: $F, Admin: $A"
+          [ "$F" = "200" ] && [ "$A" = "200" ] && echo "OK" || echo "Warning"
+
+      - name: Success
+        if: success()
+        run: |
+          echo "=========================================="
+          echo "Deployment SUCCESS!"
+          echo "Frontend: https://${{ secrets.DOMAIN }}/water/"
+          echo "Admin: https://${{ secrets.DOMAIN }}/water-admin/"
+          echo "=========================================="
+
+      - name: Failure
+        if: failure()
+        run: |
+          echo "=========================================="
+          echo "Deployment FAILED!"
+          echo "=========================================="
+          echo "Check:"
+          echo "1. SSH key in GitHub secrets"
+          echo "2. Server: ${{ secrets.SERVER_HOST }}"
+          echo "Recovery: ssh root@${{ secrets.SERVER_HOST }}"
+          echo "=========================================="
+          exit 1
