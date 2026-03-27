@@ -799,7 +799,7 @@ def get_db():
 # ==================== Helper Functions ====================
 def calculate_promotion_price(
     db: Session, user_id: int, product_id: int, quantity: int, mode: str = "pay_later"
-) -> Tuple(float, str):
+) -> tuple:
     """
     Calculate price with promotion logic (买 N 赠 M)
     Returns (actual_price, note)
