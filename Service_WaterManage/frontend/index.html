@@ -35,6 +35,142 @@
         .status-pending { background: #FEF3C7; color: #92400E; }
         .status-applied { background: #DBEAFE; color: #1E40AF; }
         .status-settled, .status-confirmed { background: #D1FAE5; color: #065F46; }
+        
+        /* ========== 移动端适配优化 ========== */
+        
+        /* 安全区域适配 */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+            .pt-safe { padding-top: env(safe-area-inset-top); }
+        }
+        
+        /* 移动端弹窗 */
+        .modal-mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        
+        .modal-mobile-content {
+            background: white;
+            width: 100%;
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 16px 16px 0 0;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* 移动端响应式布局 */
+        @media (max-width: 768px) {
+            /* 头部优化 */
+            header {
+                padding: 12px 16px !important;
+            }
+            header h1 {
+                font-size: 15px !important;
+                line-height: 1.3;
+            }
+            
+            /* Tab 优化 */
+            .tab-btn {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+            
+            /* 办公室选择网格 - 改为2列 */
+            .grid.grid-cols-3 {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            /* 产品卡片优化 */
+            .product-item {
+                padding: 12px;
+            }
+            .product-item .text-sm {
+                font-size: 13px;
+            }
+            .product-item .text-xs {
+                font-size: 11px;
+            }
+            
+            /* 数量按钮优化 - 增大触摸区域 */
+            .qty-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            .qty-input {
+                width: 48px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            /* 底部提交按钮 */
+            .fixed.bottom-0 {
+                padding: 12px 16px;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            }
+            .fixed.bottom-0 button {
+                min-height: 48px;
+                font-size: 16px;
+            }
+            
+            /* 记录列表优化 */
+            .record-card {
+                padding: 12px;
+                margin-bottom: 8px;
+            }
+            
+            /* 弹窗优化 */
+            .rounded-2xl {
+                border-radius: 16px 16px 0 0;
+            }
+            
+            /* 输入框优化 - 防止 iOS 缩放 */
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+            
+            /* 状态标签 */
+            .status-tag {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+        }
+        
+        /* 超小屏幕优化 */
+        @media (max-width: 375px) {
+            header h1 {
+                font-size: 14px !important;
+            }
+            .grid.grid-cols-3 {
+                grid-template-columns: 1fr 1fr;
+            }
+            .product-item {
+                padding: 10px 8px;
+            }
+        }
+        
+        /* 触摸友好 */
+        @media (hover: none) and (pointer: coarse) {
+            button:active {
+                opacity: 0.7;
+            }
+            .office-card:active {
+                border-color: #2563EB;
+            }
+        }
     </style>
     <script>
         if (window.location.protocol === 'file:') {
@@ -47,15 +183,13 @@
     <div id="loading"><div class="spinner"></div></div>
     
     <div id="app" v-cloak>
-        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white">
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-2.5 sm:px-4 sm:py-3 text-white">
             <div class="flex items-center justify-between">
-                <h1 class="text-lg font-bold">深圳湾科技生态园2A11用水登记系统</h1>
-                <div class="flex items-center gap-2">
-                    <button @click="showOfficeSettings = true" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
-                        <i class="fas fa-cog"></i>
-                        <span class="max-w-[80px] truncate">设置</span>
-                    </button>
-                </div>
+                <h1 class="text-base sm:text-lg font-bold truncate">水站管理系统</h1>
+                <button @click="showOfficeSettings = true" class="bg-white/20 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-transform">
+                    <i class="fas fa-cog"></i>
+                    <span class="hidden xs:inline max-w-[60px] sm:max-w-[80px] truncate">设置</span>
+                </button>
             </div>
         </header>
         
@@ -139,17 +273,16 @@
             
             <div v-show="activeTab === 'records'" class="pb-4">
                 <div class="px-3 pt-4">
-                    <!-- 日期快捷筛选 -->
-                    <div class="flex flex-wrap gap-1 mb-3">
-                        <span class="text-sm text-slate-500 mr-1 self-center">日期:</span>
-                        <button @click="setRecordDateFilter('today')" :class="recordQuickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">今天</button>
-                        <button @click="setRecordDateFilter('yesterday')" :class="recordQuickDate === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">昨天</button>
-                        <button @click="setRecordDateFilter('3days')" :class="recordQuickDate === '3days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近3天</button>
-                        <button @click="setRecordDateFilter('7days')" :class="recordQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近1周</button>
-                        <button @click="setRecordDateFilter('30days')" :class="recordQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近1月</button>
-                        <button @click="setRecordDateFilter('60days')" :class="recordQuickDate === '60days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">最近2月</button>
-                        <button @click="setRecordDateFilter('thisMonth')" :class="recordQuickDate === 'thisMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">本月</button>
-                        <button @click="setRecordDateFilter('lastMonth')" :class="recordQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">上月</button>
+                    <!-- 日期快捷筛选 - 移动端优化 -->
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        <button @click="setRecordDateFilter('today')" :class="recordQuickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">今天</button>
+                        <button @click="setRecordDateFilter('yesterday')" :class="recordQuickDate === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">昨天</button>
+                        <button @click="setRecordDateFilter('3days')" :class="recordQuickDate === '3days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">3天</button>
+                        <button @click="setRecordDateFilter('7days')" :class="recordQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">1周</button>
+                        <button @click="setRecordDateFilter('30days')" :class="recordQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">1月</button>
+                        <button @click="setRecordDateFilter('60days')" :class="recordQuickDate === '60days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">2月</button>
+                        <button @click="setRecordDateFilter('thisMonth')" :class="recordQuickDate === 'thisMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">本月</button>
+                        <button @click="setRecordDateFilter('lastMonth')" :class="recordQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">上月</button>
                     </div>
                     <div class="flex gap-2 mb-3">
                         <input type="date" v-model="recordDateFrom" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
@@ -158,26 +291,27 @@
                         <button @click="resetRecordFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                     </div>
 
-                    <div class="grid grid-cols-4 gap-2 mb-3">
-                        <div @click="recordStatusFilter = 'pending'" :class="recordStatusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''" class="bg-yellow-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
-                            <div class="text-xl font-bold text-yellow-600">{{ recordStats.pending.count }}</div>
-                            <div class="text-xs text-yellow-600">待付款</div>
-                            <div class="text-xs text-yellow-400">¥{{ recordStats.pending.amount.toFixed(2) }}</div>
+                    <!-- 状态筛选卡片 - 移动端2x2布局 -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                        <div @click="recordStatusFilter = 'pending'" :class="recordStatusFilter === 'pending' ? 'ring-2 ring-yellow-500 bg-yellow-100' : 'bg-yellow-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-yellow-600">{{ recordStats.pending.count }}</div>
+                            <div class="text-[10px] sm:text-xs text-yellow-600">待付款</div>
+                            <div class="text-[9px] sm:text-xs text-yellow-400 hidden sm:block">¥{{ recordStats.pending.amount.toFixed(2) }}</div>
                         </div>
-                        <div @click="recordStatusFilter = 'applied'" :class="recordStatusFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
-                            <div class="text-xl font-bold text-blue-600">{{ recordStats.applied.count }}</div>
-                            <div class="text-xs text-blue-600">付款待确认</div>
-                            <div class="text-xs text-blue-400">¥{{ recordStats.applied.amount.toFixed(2) }}</div>
+                        <div @click="recordStatusFilter = 'applied'" :class="recordStatusFilter === 'applied' ? 'ring-2 ring-blue-500 bg-blue-100' : 'bg-blue-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-blue-600">{{ recordStats.applied.count }}</div>
+                            <div class="text-[10px] sm:text-xs text-blue-600">待确认</div>
+                            <div class="text-[9px] sm:text-xs text-blue-400 hidden sm:block">¥{{ recordStats.applied.amount.toFixed(2) }}</div>
                         </div>
-                        <div @click="recordStatusFilter = 'settled'" :class="recordStatusFilter === 'settled' ? 'ring-2 ring-green-500' : ''" class="bg-green-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
-                            <div class="text-xl font-bold text-green-600">{{ recordStats.settled.count }}</div>
-                            <div class="text-xs text-green-600">已结清</div>
-                            <div class="text-xs text-green-400">¥{{ recordStats.settled.amount.toFixed(2) }}</div>
+                        <div @click="recordStatusFilter = 'settled'" :class="recordStatusFilter === 'settled' ? 'ring-2 ring-green-500 bg-green-100' : 'bg-green-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-green-600">{{ recordStats.settled.count }}</div>
+                            <div class="text-[10px] sm:text-xs text-green-600">已结清</div>
+                            <div class="text-[9px] sm:text-xs text-green-400 hidden sm:block">¥{{ recordStats.settled.amount.toFixed(2) }}</div>
                         </div>
-                        <div @click="recordStatusFilter = ''" :class="recordStatusFilter === '' ? 'ring-2 ring-blue-500' : ''" class="bg-slate-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
-                            <div class="text-xl font-bold text-slate-600">{{ recordStats.total.count }}</div>
-                            <div class="text-xs text-slate-600">总记录</div>
-                            <div class="text-xs text-slate-400">¥{{ recordStats.total.amount.toFixed(2) }}</div>
+                        <div @click="recordStatusFilter = ''" :class="recordStatusFilter === '' ? 'ring-2 ring-blue-500 bg-slate-200' : 'bg-slate-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-slate-600">{{ recordStats.total.count }}</div>
+                            <div class="text-[10px] sm:text-xs text-slate-600">总记录</div>
+                            <div class="text-[9px] sm:text-xs text-slate-400 hidden sm:block">¥{{ recordStats.total.amount.toFixed(2) }}</div>
                         </div>
                     </div>
 
@@ -201,8 +335,10 @@
                         </button>
                     </div>
 
+                    <!-- 记录列表 - 移动端卡片式展示 -->
                     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
+                        <!-- 桌面端表格 -->
+                        <div class="hidden sm:block overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-slate-50 border-b border-slate-200">
                                     <tr>
@@ -256,6 +392,41 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- 移动端卡片式列表 -->
+                        <div class="sm:hidden divide-y divide-slate-100">
+                            <div v-for="r in filteredRecordList" :key="r.id" class="p-3 hover:bg-slate-50">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="r.settlement_status === 'settled'" class="w-4 h-4 rounded">
+                                        <span class="text-sm font-medium text-slate-800">{{ r.office_name }}</span>
+                                        <span v-if="r.office_room_number" class="text-xs text-slate-400">{{ r.office_room_number }}</span>
+                                    </div>
+                                    <span :class="getRecordStatusClass(r.settlement_status)" class="text-[10px] px-1.5 py-0.5 rounded-full">
+                                        {{ getRecordStatusText(r.settlement_status) }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
+                                    <span>{{ r.product_name }} × {{ r.quantity }}</span>
+                                    <span class="font-medium text-slate-800">¥{{ r.total_amount.toFixed(2) }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400">{{ formatRecordDateFull(r.pickup_time) }} · {{ r.pickup_person }}</span>
+                                    <button v-if="r.settlement_status === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
+                                        去付款
+                                    </button>
+                                    <span v-else-if="r.settlement_status === 'applied'" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                                        待确认
+                                    </span>
+                                    <span v-else class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded">
+                                        已结清
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-if="filteredRecordList.length === 0" class="py-12 text-center text-slate-400">
+                                <i class="fas fa-inbox text-3xl mb-2"></i>
+                                <p class="text-sm">暂无记录</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -414,8 +585,8 @@
             <img :src="paymentQrCode" @error="paymentQrCode = null" class="w-14 h-14 rounded-lg border-2 border-white shadow-lg" alt="支付">
         </div>
         
-        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showSuccess = false">
-            <div class="bg-white rounded-2xl p-6 text-center max-w-xs">
+        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 md:items-center" @click="showSuccess = false">
+            <div class="bg-white rounded-2xl p-6 text-center max-w-xs modal-mobile-content">
                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-check text-xl text-green-500"></i></div>
                 <h3 class="font-bold mb-2">提交成功</h3>
                 <p class="text-sm text-gray-500 mb-3">{{ successMessage }}</p>
@@ -425,8 +596,8 @@
         
         <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg z-50 text-sm">{{ errorMessage }}</div>
         
-        <div v-if="showRechargeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showRechargeModal = false">
-            <div class="bg-white rounded-2xl p-5 max-w-sm w-full">
+        <div v-if="showRechargeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 md:items-center" @click.self="showRechargeModal = false">
+            <div class="bg-white rounded-2xl p-5 max-w-sm w-full modal-mobile-content">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-lg">💳 账户充值</h3>
                     <button @click="showRechargeModal = false" class="text-gray-400">
@@ -468,8 +639,8 @@
             </div>
         </div>
         
-        <div v-if="showRechargeListModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showRechargeListModal = false">
-            <div class="bg-white rounded-2xl p-5 max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
+        <div v-if="showRechargeListModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 md:items-center" @click.self="showRechargeListModal = false">
+            <div class="bg-white rounded-2xl p-5 max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col modal-mobile-content">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-lg">📋 充值记录</h3>
                     <button @click="showRechargeListModal = false" class="text-gray-400">
@@ -500,8 +671,8 @@
             </div>
         </div>
         
-        <div v-if="showFirstTimeGuide" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+        <div v-if="showFirstTimeGuide" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 md:items-center">
+            <div class="bg-white rounded-2xl p-6 max-w-sm w-full modal-mobile-content">
                 <div class="text-center mb-4">
                     <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-building text-2xl text-blue-600"></i>
@@ -521,8 +692,8 @@
         </div>
 
         <!-- 设置弹窗：选择办公室 -->
-        <div v-if="showOfficeSettings" class="fixed inset-0 bg-black/50 flex items-end z-50" @click.self="showOfficeSettings = false">
-            <div class="bg-white rounded-t-2xl w-full max-h-[80vh] overflow-y-auto p-4">
+        <div v-if="showOfficeSettings" class="fixed inset-0 bg-black/50 flex items-end z-50 md:items-center" @click.self="showOfficeSettings = false">
+            <div class="bg-white rounded-t-2xl w-full max-h-[80vh] overflow-y-auto p-4 modal-mobile-content">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-lg">设置我的办公室</h3>
                     <button @click="showOfficeSettings = false" class="text-gray-400">
