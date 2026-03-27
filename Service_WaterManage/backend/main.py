@@ -98,7 +98,7 @@ def verify_token(token: str) -> Optional[dict]:
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
-) -> Optional[User]:
+) -> Optional["User"]:
     """获取当前登录用户"""
     if not credentials:
         return None
