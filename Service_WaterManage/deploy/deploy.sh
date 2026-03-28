@@ -58,6 +58,10 @@ deploy_step_2_backup() {
 deploy_step_3_upload_backend() {
     log_header "步骤 3: 上传后端"
     
+    # 备份服务器数据库（如果存在）
+    log_info "备份服务器数据库..."
+    ssh_exec "if [ -f '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' ]; then cp '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' '/tmp/waterms_db_backup_\$(date +%Y%m%d_%H%M%S).db'; fi"
+    
     log_info "上传后端目录..."
     
     # 创建服务器目录
@@ -66,8 +70,20 @@ deploy_step_3_upload_backend() {
     # 删除旧的后端目录（如果存在）
     ssh_exec "rm -rf ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}"
     
-    # 上传新的后端目录
-    scp_upload -r "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}" "${SERVER_PROJECT_ROOT}/"
+    # 上传新的后端目录（排除本地数据库文件）
+    log_info "上传后端文件（排除数据库）..."
+    if command -v rsync &>/dev/null; then
+        rsync -avz --exclude='*.db' --exclude='__pycache__' -e "ssh ${SSH_OPTS}" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/"
+    else
+        # 如果 rsync 不可用，使用 tar 排除文件
+        log_warn "rsync 不可用，使用 tar 方式上传"
+        ssh_exec "mkdir -p ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}"
+        (cd "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}" && tar --exclude='*.db' --exclude='__pycache__' -cf - .) | ssh_exec "cd ${SERVER_PROJECT_ROOT}/${BACKEND_DIR} && tar -xf -"
+    fi
+    
+    # 恢复服务器数据库（如果有备份）
+    log_info "恢复服务器数据库..."
+    ssh_exec "if [ -f '/tmp/waterms_db_backup_*.db' ]; then latest=\$(ls -t /tmp/waterms_db_backup_*.db | head -1); cp \"\$latest\" '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db'; fi"
     
     # 创建虚拟环境并安装依赖
     log_info "安装 Python 依赖..."
