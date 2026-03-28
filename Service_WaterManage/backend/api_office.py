@@ -957,6 +957,32 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
 
+    # 恢复库存
+    product = db.query(Product).filter(Product.id == pickup.product_id).first()
+    if product and pickup.quantity:
+        if product.stock is None:
+            product.stock = 0
+        before_stock = product.stock
+        product.stock += pickup.quantity
+
+        # 记录库存流水
+        try:
+            from main import InventoryRecord
+
+            inventory_record = InventoryRecord(
+                product_id=product.id,
+                type="adjust",
+                quantity=pickup.quantity,
+                before_stock=before_stock,
+                after_stock=product.stock,
+                reference_type="office_pickup_delete",
+                reference_id=pickup.id,
+                note=f"删除领水记录回退库存: {pickup.office_name}",
+            )
+            db.add(inventory_record)
+        except Exception as e:
+            print(f"创建库存流水失败: {e}")
+
     db.delete(pickup)
     db.commit()
 
@@ -967,9 +993,35 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db)):
     """批量删除办公室领水记录"""
     deleted_count = 0
+    from main import InventoryRecord
+
     for pickup_id in pickup_ids:
         pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
         if pickup:
+            # 恢复库存
+            product = db.query(Product).filter(Product.id == pickup.product_id).first()
+            if product and pickup.quantity:
+                if product.stock is None:
+                    product.stock = 0
+                before_stock = product.stock
+                product.stock += pickup.quantity
+
+                # 记录库存流水
+                try:
+                    inventory_record = InventoryRecord(
+                        product_id=product.id,
+                        type="adjust",
+                        quantity=pickup.quantity,
+                        before_stock=before_stock,
+                        after_stock=product.stock,
+                        reference_type="office_pickup_batch_delete",
+                        reference_id=pickup.id,
+                        note=f"批量删除领水记录回退库存: {pickup.office_name}",
+                    )
+                    db.add(inventory_record)
+                except Exception as e:
+                    print(f"创建库存流水失败: {e}")
+
             db.delete(pickup)
             deleted_count += 1
 

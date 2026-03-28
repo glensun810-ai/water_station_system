@@ -625,8 +625,9 @@ class SettlementApplyRequest(BaseModel):
 
 
 class InventoryUpdate(BaseModel):
-    product_id: int
-    stock: int
+    product_id: int = None
+    stock: int = None
+    quantity: int = None  # 用于补货时增加库存
 
 
 class DeleteTransactionRequest(BaseModel):
@@ -1581,7 +1582,30 @@ def update_product_stock(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    product.stock = inventory.stock
+
+    # 支持两种模式：直接设置库存 或 增加库存
+    if hasattr(inventory, "quantity") and inventory.quantity is not None:
+        # 增加库存模式
+        before_stock = product.stock or 0
+        product.stock = before_stock + inventory.quantity
+
+        # 记录库存流水
+        from datetime import datetime
+
+        inventory_record = InventoryRecord(
+            product_id=product.id,
+            type="in",
+            quantity=inventory.quantity,
+            before_stock=before_stock,
+            after_stock=product.stock,
+            reference_type="admin_restock",
+            note=f"管理员补货",
+        )
+        db.add(inventory_record)
+    else:
+        # 直接设置库存模式
+        product.stock = inventory.stock
+
     db.commit()
     db.refresh(product)
     return {"product_id": product_id, "stock": product.stock}
@@ -2285,6 +2309,17 @@ def create_office_pickup(
     if not product:
         raise HTTPException(status_code=404, detail="产品不存在")
 
+    # Check and deduct stock
+    if product.stock is None:
+        product.stock = 0
+    if product.stock < pickup.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"库存不足，当前库存: {product.stock} {product.unit}，领取数量: {pickup.quantity} {product.unit}",
+        )
+    before_stock = product.stock
+    product.stock -= pickup.quantity
+
     # Parse pickup time
     pickup_time = datetime.now()
     if pickup.pickup_time:
@@ -2326,6 +2361,21 @@ def create_office_pickup(
     )
 
     db.add(new_pickup)
+    db.flush()
+
+    # 生成库存流水记录
+    inventory_record = InventoryRecord(
+        product_id=product.id,
+        type="out",
+        quantity=pickup.quantity,
+        before_stock=before_stock,
+        after_stock=product.stock,
+        reference_type="office_pickup",
+        reference_id=new_pickup.id,
+        operator_id=pickup_person_id_val,
+        note=f"办公室领水: {office.name}",
+    )
+    db.add(inventory_record)
     db.commit()
     db.refresh(new_pickup)
 
