@@ -2,16 +2,523 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>统一账户管理 - 水站管理系统</title>
-    <script src="vue.global.js"></script>
+    <script src="../frontend/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [v-cloak] { display: none; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: #F1F5F9;
+            -webkit-overflow-scrolling: touch;
         }
+        
+        /* 移动端基础优化 */
+        @media (max-width: 768px) {
+            body {
+                background-color: #F8FAFC;
+            }
+            
+            /* 移动端顶部导航 */
+            .mobile-header {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                padding: 12px 16px !important;
+                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+                box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+                display: flex !important;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .mobile-header h1 {
+                color: white !important;
+                font-size: 16px !important;
+                text-align: center;
+                flex: 1;
+            }
+            
+            .mobile-header .back-btn {
+                color: white !important;
+                background: rgba(255,255,255,0.2);
+                padding: 6px 10px;
+                border-radius: 6px;
+                font-size: 13px;
+                text-decoration: none;
+                flex-shrink: 0;
+            }
+            
+            .mobile-header .user-info {
+                color: rgba(255,255,255,0.9) !important;
+                font-size: 12px;
+                flex-shrink: 0;
+                max-width: 60px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            /* 移动端标签页 */
+            .mobile-tabs {
+                display: flex !important;
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding: 0 12px;
+                gap: 8px;
+                background: white;
+                border-bottom: 1px solid #E5E7EB;
+            }
+            
+            .mobile-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            
+            .mobile-tabs button {
+                padding: 12px 16px !important;
+                white-space: nowrap;
+                font-size: 14px;
+                border-bottom: 2px solid transparent;
+                transition: all 0.2s;
+            }
+            
+            .mobile-tabs .tab-active {
+                color: #2563EB !important;
+                border-bottom-color: #2563EB !important;
+                font-weight: 600;
+            }
+            
+            /* 隐藏桌面端标签页 */
+            .desktop-tabs {
+                display: none !important;
+            }
+            
+            /* 移动端主内容区 */
+            main {
+                padding: 16px 12px 100px !important;
+                min-height: 100vh;
+            }
+            
+            /* 移动端卡片 */
+            .mobile-card {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                margin-bottom: 16px;
+                overflow: visible;
+            }
+            
+            /* 移动端工具栏 */
+            .mobile-toolbar {
+                flex-direction: column !important;
+                gap: 12px !important;
+                padding: 16px !important;
+            }
+            
+            .mobile-toolbar input {
+                width: 100% !important;
+                min-width: unset !important;
+                padding: 14px 16px !important;
+                font-size: 15px;
+                border-radius: 12px;
+            }
+            
+            .mobile-toolbar button {
+                width: 100%;
+                padding: 14px 20px !important;
+                font-size: 15px;
+                border-radius: 12px;
+                font-weight: 500;
+            }
+            
+            /* 移动端列表项 */
+            .mobile-list-item {
+                padding: 14px;
+                border-bottom: 1px solid #F3F4F6;
+                transition: background 0.2s;
+                overflow: visible;
+            }
+            
+            .mobile-list-item:active {
+                background: #F9FAFB;
+            }
+            
+            .mobile-list-item:last-child {
+                border-bottom: none;
+            }
+            
+            /* 移动端账户信息卡片 - 紧凑布局 */
+            .account-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            
+            .account-office-name {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1F2937;
+            }
+            
+            .account-office-room {
+                font-size: 12px;
+                color: #6B7280;
+                margin-top: 2px;
+            }
+            
+            .account-badge {
+                padding: 3px 8px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .account-badge-active {
+                background: #DCFCE7;
+                color: #16A34A;
+            }
+            
+            .account-badge-warning {
+                background: #FEE2E2;
+                color: #DC2626;
+            }
+            
+            .account-info-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin: 10px 0;
+            }
+            
+            .account-info-item {
+                background: #F9FAFB;
+                padding: 8px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            .account-info-label {
+                font-size: 10px;
+                color: #9CA3AF;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+            
+            .account-info-value {
+                font-size: 14px;
+                font-weight: 600;
+                color: #1F2937;
+                margin-top: 2px;
+                white-space: nowrap;
+            }
+            
+            .account-info-value.green { color: #10B981; }
+            .account-info-value.red { color: #EF4444; }
+            .account-info-value.blue { color: #3B82F6; }
+            
+            .account-actions {
+                display: flex;
+                gap: 6px;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid #F3F4F6;
+            }
+            
+            .account-actions button {
+                flex: 1;
+                padding: 8px 4px;
+                font-size: 12px;
+                border-radius: 8px;
+                min-height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                white-space: nowrap;
+                font-weight: 500;
+            }
+            
+            /* 移动端表单 */
+            .mobile-form {
+                padding: 16px;
+            }
+            
+            .mobile-form-group {
+                margin-bottom: 16px;
+            }
+            
+            .mobile-form-label {
+                display: block;
+                font-size: 14px;
+                font-weight: 500;
+                color: #374151;
+                margin-bottom: 8px;
+            }
+            
+            .mobile-form-label .required {
+                color: #EF4444;
+            }
+            
+            .mobile-form-input {
+                width: 100%;
+                padding: 14px 16px;
+                font-size: 15px;
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
+                background: #F9FAFB;
+                transition: all 0.2s;
+            }
+            
+            .mobile-form-input:focus {
+                outline: none;
+                border-color: #3B82F6;
+                background: white;
+                box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+            }
+            
+            .mobile-form-select {
+                width: 100%;
+                padding: 14px 16px;
+                font-size: 15px;
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
+                background: #F9FAFB;
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 12px center;
+                background-size: 20px;
+            }
+            
+            .mobile-amount-card {
+                background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+                border-radius: 16px;
+                padding: 20px;
+                margin: 16px 0;
+            }
+            
+            .mobile-amount-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                font-size: 14px;
+            }
+            
+            .mobile-amount-row:last-child {
+                border-top: 1px solid #A7F3D0;
+                margin-top: 8px;
+                padding-top: 12px;
+            }
+            
+            .mobile-total-amount {
+                font-size: 24px;
+                font-weight: 700;
+                color: #059669;
+            }
+            
+            .mobile-submit-btn {
+                width: 100%;
+                padding: 16px;
+                font-size: 16px;
+                font-weight: 600;
+                border-radius: 14px;
+                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+                color: white;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+            }
+            
+            /* 移动端弹窗 */
+            .mobile-modal-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                display: flex;
+                align-items: flex-end;
+                justify-content: center;
+                z-index: 100;
+                backdrop-filter: blur(4px);
+            }
+            
+            .mobile-modal-content {
+                background: white;
+                border-radius: 24px 24px 0 0;
+                padding: 24px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                animation: slideUp 0.3s ease;
+            }
+            
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+            
+            .mobile-modal-handle {
+                width: 40px;
+                height: 4px;
+                background: #D1D5DB;
+                border-radius: 2px;
+                margin: 0 auto 16px;
+            }
+            
+            /* 移动端统计卡片 */
+            .mobile-stat-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+            
+            .mobile-stat-card {
+                background: white;
+                border-radius: 16px;
+                padding: 16px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+            
+            .mobile-stat-value {
+                font-size: 22px;
+                font-weight: 700;
+                color: #1F2937;
+                margin-top: 4px;
+            }
+            
+            .mobile-stat-card.blue .mobile-stat-value { color: #2563EB; }
+            .mobile-stat-card.green .mobile-stat-value { color: #10B981; }
+            .mobile-stat-card.amber .mobile-stat-value { color: #F59E0B; }
+            
+            /* 移动端记录卡片 */
+            .mobile-record-item {
+                background: white;
+                border-radius: 14px;
+                padding: 14px;
+                margin-bottom: 10px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            }
+            
+            .mobile-record-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+            
+            .mobile-record-office {
+                font-weight: 600;
+                color: #1F2937;
+            }
+            
+            .mobile-record-amount {
+                font-weight: 700;
+                color: #10B981;
+            }
+            
+            .mobile-record-detail {
+                display: flex;
+                gap: 12px;
+                font-size: 13px;
+                color: #6B7280;
+            }
+            
+            /* 移动端筛选 */
+            .mobile-filter-bar {
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                padding: 0 16px 12px;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .mobile-filter-chip {
+                padding: 8px 14px;
+                border-radius: 20px;
+                font-size: 13px;
+                white-space: nowrap;
+                border: 1px solid #E5E7EB;
+                background: white;
+            }
+            
+            .mobile-filter-chip.active {
+                background: #EFF6FF;
+                color: #2563EB;
+                border-color: #2563EB;
+            }
+            
+            /* 移动端空状态 */
+            .mobile-empty {
+                padding: 40px 20px;
+                text-align: center;
+            }
+            
+            .mobile-empty-icon {
+                font-size: 48px;
+                margin-bottom: 12px;
+            }
+            
+            .mobile-empty-text {
+                color: #9CA3AF;
+                font-size: 14px;
+            }
+            
+            /* 移动端浮动操作按钮 */
+            .mobile-fab {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+                color: white;
+                font-size: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+                z-index: 40;
+            }
+            
+            /* 移动端toast */
+            .mobile-toast {
+                position: fixed;
+                bottom: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 12px 24px;
+                border-radius: 12px;
+                color: white;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 200;
+                animation: fadeInUp 0.3s ease;
+                max-width: 90%;
+                text-align: center;
+            }
+            
+            @keyframes fadeInUp {
+                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                to { opacity: 1; transform: translateX(-50%) translateY(0); }
+            }
+            
+            /* 隐藏桌面端元素 */
+            .desktop-only { display: none !important; }
+        }
+        
+        @media (min-width: 769px) {
+            .mobile-only { display: none !important; }
+            .mobile-modal-overlay { display: none !important; }
+        }
+        
+        /* 桌面端样式 */
         .card {
             background: white;
             border-radius: 12px;
@@ -83,19 +590,40 @@
     <div id="app" v-cloak class="min-h-screen">
         <!-- 顶部导航 -->
         <header class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center desktop-only">
                 <h1 class="text-xl font-bold text-gray-800">💼 统一账户管理</h1>
                 <div class="flex items-center gap-4">
-                    <a href="admin.html" class="text-gray-600 hover:text-gray-800">返回主后台</a>
+                    <a href="../frontend/admin.html" class="text-gray-600 hover:text-gray-800">返回主后台</a>
                     <span class="text-sm text-gray-500">{{ currentUser?.name || '' }}</span>
                 </div>
             </div>
+            <!-- 移动端顶部导航 -->
+            <div class="mobile-header mobile-only flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <a href="../frontend/admin.html" class="back-btn">← 返回</a>
+                </div>
+                <h1 class="font-bold">💼 办公室管理</h1>
+                <span class="user-info">{{ currentUser?.name || '' }}</span>
+            </div>
         </header>
+
+        <!-- 移动端标签页 -->
+        <div class="mobile-tabs mobile-only">
+            <button @click="activeTab = 'account'" :class="activeTab === 'account' ? 'tab-active' : 'text-gray-500'" class="pb-3 px-2 font-medium">
+                账户管理
+            </button>
+            <button @click="activeTab = 'topup'" :class="activeTab === 'topup' ? 'tab-active' : 'text-gray-500'" class="pb-3 px-2 font-medium">
+                充值管理
+            </button>
+            <button @click="activeTab = 'report'" :class="activeTab === 'report' ? 'tab-active' : 'text-gray-500'" class="pb-3 px-2 font-medium">
+                财务报表
+            </button>
+        </div>
 
         <!-- 主内容区 -->
         <main class="max-w-7xl mx-auto px-4 py-6">
-            <!-- 标签页切换 -->
-            <div class="flex gap-6 mb-6 border-b">
+            <!-- 桌面端标签页 -->
+            <div class="desktop-only flex gap-6 mb-6 border-b">
                 <button @click="activeTab = 'account'" :class="tabClass('account')" class="pb-3 px-2 font-medium">
                     账户管理
                 </button>
@@ -109,8 +637,8 @@
 
             <!-- 账户管理 -->
             <div v-show="activeTab === 'account'">
-                <!-- 工具栏 -->
-                <div class="card p-4 mb-6">
+                <!-- 桌面端工具栏 -->
+                <div class="card p-4 mb-6 desktop-only">
                     <div class="flex gap-4 flex-wrap">
                         <input v-model="searchQuery" type="text" placeholder="搜索办公室名称..." class="input-field flex-1 min-w-[200px]">
                         <button @click="loadOfficeAccounts" class="btn-primary px-6 py-2 rounded-lg">搜索</button>
@@ -118,8 +646,14 @@
                     </div>
                 </div>
 
-                <!-- 办公室账户列表 -->
-                <div class="card overflow-hidden">
+                <!-- 移动端工具栏 -->
+                <div class="mobile-card mobile-toolbar mobile-only">
+                    <input v-model="searchQuery" type="text" placeholder="搜索办公室名称...">
+                    <button @click="loadOfficeAccounts" class="btn-primary">搜索</button>
+                </div>
+
+                <!-- 桌面端办公室账户列表 -->
+                <div class="card overflow-hidden desktop-only">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
@@ -191,12 +725,67 @@
                         <button @click="openAddAccountModal" class="btn-primary px-4 py-2 rounded-lg">创建第一个账户</button>
                     </div>
                 </div>
+
+                <!-- 移动端账户卡片列表 -->
+                <div class="mobile-only" style="padding: 0 12px; padding-bottom: 80px;">
+                    <div v-if="filteredAccounts.length === 0" class="mobile-empty">
+                        <div class="mobile-empty-icon">📋</div>
+                        <div class="text-lg font-medium text-gray-600 mb-2">暂无办公室账户</div>
+                        <button @click="openAddAccountModal" class="btn-primary px-6 py-3 rounded-xl">创建第一个账户</button>
+                    </div>
+                    <div v-for="account in filteredAccounts" :key="account.id" class="mobile-card mobile-list-item">
+                        <div class="account-card-header">
+                            <div class="flex-1 min-w-0">
+                                <div class="account-office-name">{{ account.office_name }}</div>
+                                <div class="account-office-room">{{ account.office_room_number || '-' }}</div>
+                            </div>
+                            <span :class="account.remaining_qty > 0 ? 'account-badge-active' : 'account-badge-warning'" class="account-badge" style="flex-shrink: 0; margin-left: 8px;">
+                                {{ account.remaining_qty > 0 ? '正常' : '用完' }}
+                            </span>
+                        </div>
+                        <div class="account-info-grid">
+                            <div class="account-info-item">
+                                <div class="account-info-label">规格</div>
+                                <div class="account-info-value" style="font-size: 12px;">{{ account.product_name }}</div>
+                            </div>
+                            <div class="account-info-item">
+                                <div class="account-info-label">预定</div>
+                                <div class="account-info-value blue">{{ account.reserved_qty }}</div>
+                            </div>
+                            <div class="account-info-item">
+                                <div class="account-info-label">剩余</div>
+                                <div :class="account.remaining_qty > 0 ? 'green' : 'red'" class="account-info-value">{{ account.remaining_qty }}</div>
+                            </div>
+                            <div class="account-info-item">
+                                <div class="account-info-label">预定人</div>
+                                <div class="account-info-value" style="font-size: 12px;">{{ account.reserved_person || '-' }}</div>
+                            </div>
+                        </div>
+                        <div v-if="account.note" class="text-xs text-gray-500 mt-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            📝 {{ account.note }}
+                        </div>
+                        <div class="account-actions">
+                            <button @click="openTopupModal(account)" class="btn-primary" style="font-size: 13px; padding: 10px 6px;">
+                                充值
+                            </button>
+                            <button @click="editAccount(account)" class="btn-warning" style="font-size: 13px; padding: 10px 6px;">
+                                编辑
+                            </button>
+                            <button @click="deleteAccount(account)" class="bg-red-500 text-white" style="font-size: 13px; padding: 10px 6px;">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 移动端悬浮按钮 -->
+                <button v-if="activeTab === 'account'" @click="openAddAccountModal" class="mobile-fab mobile-only">+</button>
             </div>
 
             <!-- 充值管理 -->
             <div v-show="activeTab === 'topup'">
-                <!-- 充值表单 -->
-                <div class="card p-6 mb-6">
+                <!-- 桌面端充值表单 -->
+                <div class="card p-6 mb-6 desktop-only">
                     <h2 class="text-lg font-bold mb-4">账户充值</h2>
                     
                     <div class="space-y-4">
@@ -270,8 +859,79 @@
                     </div>
                 </div>
 
-                <!-- 充值记录 -->
-                <div class="card p-6">
+                <!-- 移动端充值表单 -->
+                <div class="mobile-card mobile-form mobile-only">
+                    <h2 class="text-lg font-bold mb-4">💳 账户充值</h2>
+                    
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">选择办公室 <span class="required">*</span></label>
+                        <select v-model="topupForm.officeId" class="mobile-form-select" @change="onOfficeChange">
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :value="office.id">
+                                {{ office.room_number }} - {{ office.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">充值人 <span class="required">*</span></label>
+                        <select v-model="topupForm.personType" class="mobile-form-select mb-2" @change="topupForm.personId = ''">
+                            <option value="user">选择用户</option>
+                            <option value="manual">手动录入</option>
+                        </select>
+                        <select v-if="topupForm.personType === 'user'" v-model="topupForm.personId" class="mobile-form-select">
+                            <option value="">请选择充值人</option>
+                            <option v-for="user in officeUsers" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <input v-else v-model="topupForm.personName" type="text" class="mobile-form-input" placeholder="请输入充值人姓名">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">选择产品 <span class="required">*</span></label>
+                        <select v-model="topupForm.productId" class="mobile-form-select" @change="calculateAmount">
+                            <option value="">请选择产品</option>
+                            <option v-for="product in products" :value="product.id">
+                                {{ product.name }} ({{ product.specification }}) - ¥{{ product.price }}/{{ product.unit }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">充值数量（桶/瓶） <span class="required">*</span></label>
+                        <input v-model.number="topupForm.quantity" type="number" min="1" class="mobile-form-input" @input="calculateAmount" placeholder="请输入充值数量">
+                    </div>
+
+                    <div v-if="calculatedAmount > 0" class="mobile-amount-card">
+                        <div class="mobile-amount-row">
+                            <span class="text-gray-600">单价</span>
+                            <span class="font-medium">¥{{ unitPrice }}</span>
+                        </div>
+                        <div class="mobile-amount-row">
+                            <span class="text-gray-600">数量</span>
+                            <span class="font-medium">{{ topupForm.quantity }}</span>
+                        </div>
+                        <div class="mobile-amount-row" style="color: #059669;">
+                            <span>优惠</span>
+                            <span>买{{ currentPromotion?.trigger_qty || 10 }}赠{{ currentPromotion?.gift_qty || 1 }}</span>
+                        </div>
+                        <div class="mobile-amount-row">
+                            <span class="font-bold">实收金额</span>
+                            <span class="mobile-total-amount">¥{{ calculatedAmount.toFixed(2) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">备注</label>
+                        <textarea v-model="topupForm.note" rows="2" class="mobile-form-input" placeholder="可选填写备注信息" style="height: auto;"></textarea>
+                    </div>
+
+                    <button @click="submitTopup" class="mobile-submit-btn">
+                        确认充值
+                    </button>
+                </div>
+
+                <!-- 桌面端充值记录 -->
+                <div class="card p-6 desktop-only">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold">充值记录</h2>
                         <div class="flex gap-2">
@@ -318,12 +978,44 @@
                         暂无充值记录
                     </div>
                 </div>
+
+                <!-- 移动端充值记录 -->
+                <div class="mobile-only" style="padding: 0 12px;">
+                    <h2 class="text-lg font-bold mb-3" style="padding: 0 4px;">📋 充值记录</h2>
+                    
+                    <!-- 移动端筛选 -->
+                    <div class="mobile-filter-bar">
+                        <select v-model="rechargeFilter.officeId" @change="loadRechargeRecords" class="mobile-filter-chip" :class="rechargeFilter.officeId ? 'active' : ''">
+                            <option value="">全部办公室</option>
+                            <option v-for="office in offices" :value="office.id">{{ office.name }}</option>
+                        </select>
+                        <button @click="rechargeFilter.sortOrder = rechargeFilter.sortOrder === 'asc' ? 'desc' : 'asc'; loadRechargeRecords()" class="mobile-filter-chip">
+                            {{ rechargeFilter.sortOrder === 'asc' ? '↑升序' : '↓降序' }}
+                        </button>
+                    </div>
+
+                    <div v-if="rechargeRecords.length === 0" class="mobile-empty">
+                        <div class="mobile-empty-icon">💰</div>
+                        <div class="mobile-empty-text">暂无充值记录</div>
+                    </div>
+                    <div v-for="record in rechargeRecords" :key="record.id" class="mobile-record-item">
+                        <div class="mobile-record-header">
+                            <span class="mobile-record-office">{{ record.office_name }}</span>
+                            <span class="mobile-record-amount">+¥{{ record.total_amount.toFixed(2) }}</span>
+                        </div>
+                        <div class="mobile-record-detail">
+                            <span>{{ record.product_name }} × {{ record.quantity }}</span>
+                            <span>{{ record.recharge_person || '-' }}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">{{ formatDate(record.created_at) }}</div>
+                    </div>
+                </div>
             </div>
 
             <!-- 财务报表 -->
             <div v-show="activeTab === 'report'">
-                <!-- 日期筛选 -->
-                <div class="card p-4 mb-6">
+                <!-- 桌面端日期筛选 -->
+                <div class="card p-4 mb-6 desktop-only">
                     <div class="flex gap-4 items-end">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
@@ -337,8 +1029,21 @@
                     </div>
                 </div>
 
-                <!-- 核心指标 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- 移动端日期筛选 -->
+                <div class="mobile-card mobile-form mobile-only">
+                    <div class="mobile-form-group" style="margin-bottom: 12px;">
+                        <label class="mobile-form-label">开始日期</label>
+                        <input v-model="reportForm.dateFrom" type="date" class="mobile-form-input">
+                    </div>
+                    <div class="mobile-form-group" style="margin-bottom: 16px;">
+                        <label class="mobile-form-label">结束日期</label>
+                        <input v-model="reportForm.dateTo" type="date" class="mobile-form-input">
+                    </div>
+                    <button @click="loadFinancialReport" class="mobile-submit-btn">查询报表</button>
+                </div>
+
+                <!-- 桌面端核心指标 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 desktop-only">
                     <div class="stat-card">
                         <div class="text-sm text-blue-600 mb-2">总领取量</div>
                         <div class="text-3xl font-bold text-gray-800">{{ report.summary?.total_qty || 0 }} <span class="text-sm">桶</span></div>
@@ -353,9 +1058,26 @@
                     </div>
                 </div>
 
-                <!-- 按模式分类 -->
-                <div class="grid grid-cols-1">
-                    <!-- 先付后用 -->
+                <!-- 移动端核心指标 -->
+                <div class="mobile-only" style="padding: 0 12px;">
+                    <div class="mobile-stat-grid">
+                        <div class="mobile-stat-card blue">
+                            <div class="text-sm text-gray-500">总领取量</div>
+                            <div class="mobile-stat-value">{{ report.summary?.total_qty || 0 }} <span class="text-sm">桶</span></div>
+                        </div>
+                        <div class="mobile-stat-card green">
+                            <div class="text-sm text-gray-500">预付收入</div>
+                            <div class="mobile-stat-value">¥{{ (report.prepaid?.total_amount || 0).toFixed(2) }}</div>
+                        </div>
+                        <div class="mobile-stat-card amber">
+                            <div class="text-sm text-gray-500">充值笔数</div>
+                            <div class="mobile-stat-value">{{ report.recharge_count || 0 }} <span class="text-sm">笔</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 桌面端按模式分类 -->
+                <div class="grid grid-cols-1 desktop-only">
                     <div class="card p-6">
                         <h3 class="text-lg font-bold mb-4 text-green-700">💰 先付后用（预付）</h3>
                         <div class="space-y-3">
@@ -378,15 +1100,44 @@
                     </div>
                 </div>
 
-                <!-- 统计周期 -->
-                <div class="card p-4 mt-6 text-center text-gray-500 text-sm">
+                <!-- 移动端按模式分类 -->
+                <div class="mobile-only" style="padding: 0 12px;">
+                    <div class="mobile-card" style="padding: 20px;">
+                        <h3 class="text-base font-bold mb-4 text-green-700">💰 先付后用（预付）</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">领取量</span>
+                                <span class="font-medium">{{ report.prepaid?.total_qty || 0 }} 桶</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">实收金额</span>
+                                <span class="font-medium text-green-600">¥{{ (report.prepaid?.total_amount || 0).toFixed(2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">订单数</span>
+                                <span class="font-medium">{{ report.prepaid?.transaction_count || 0 }} 单</span>
+                            </div>
+                            <div class="border-t pt-3 mt-3">
+                                <div class="text-sm text-gray-500">平均单价 ¥{{ calculateAvgPrice(report.prepaid) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 桌面端统计周期 -->
+                <div class="card p-4 mt-6 text-center text-gray-500 text-sm desktop-only">
+                    统计周期：{{ report.period?.date_from || '-' }} 至 {{ report.period?.date_to || '-' }}
+                </div>
+
+                <!-- 移动端统计周期 -->
+                <div class="mobile-only text-center text-gray-500 text-sm" style="padding: 16px;">
                     统计周期：{{ report.period?.date_from || '-' }} 至 {{ report.period?.date_to || '-' }}
                 </div>
             </div>
         </main>
 
-        <!-- 新建/编辑账户弹窗 -->
-        <div v-if="showAccountModal" class="modal-overlay" @click.self="showAccountModal = false">
+        <!-- 桌面端新建/编辑账户弹窗 -->
+        <div v-if="showAccountModal" class="modal-overlay desktop-only" @click.self="showAccountModal = false">
             <div class="modal-content">
                 <h3 class="text-lg font-bold mb-4">{{ accountForm.id ? '编辑账户' : '新建账户' }}</h3>
                 <div class="space-y-4">
@@ -462,8 +1213,82 @@
             </div>
         </div>
 
-        <!-- 充值确认弹窗 -->
-        <div v-if="showTopupConfirm" class="modal-overlay" @click.self="showTopupConfirm = false">
+        <!-- 移动端新建/编辑账户弹窗 -->
+        <div v-if="showAccountModal" class="mobile-modal-overlay mobile-only" @click.self="showAccountModal = false">
+            <div class="mobile-modal-content">
+                <div class="mobile-modal-handle"></div>
+                <h3 class="text-lg font-bold mb-4 text-center">{{ accountForm.id ? '编辑账户' : '新建账户' }}</h3>
+                <div class="space-y-4">
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">办公室 <span class="required">*</span></label>
+                        <select v-model="accountForm.officeId" class="mobile-form-select" :disabled="!!accountForm.id">
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :value="office.id">
+                                {{ office.room_number }} - {{ office.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">产品 <span class="required">*</span></label>
+                        <select v-model="accountForm.productId" class="mobile-form-select" :disabled="!!accountForm.id">
+                            <option value="">请选择产品</option>
+                            <option v-for="product in products" :value="product.id">
+                                {{ product.name }} ({{ product.specification }})
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">预定数量 <span class="required">*</span></label>
+                        <input v-model.number="accountForm.reservedQty" type="number" min="0" class="mobile-form-input" placeholder="请输入预定数量">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">预定人</label>
+                        <select v-model="accountForm.personType" class="mobile-form-select mb-2" @change="accountForm.personId = ''">
+                            <option value="user">选择用户</option>
+                            <option value="manual">手动录入</option>
+                        </select>
+                        <select v-if="accountForm.personType === 'user'" v-model="accountForm.personId" class="mobile-form-select">
+                            <option value="">请选择预定人</option>
+                            <option v-for="user in users" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <input v-else v-model="accountForm.personName" type="text" class="mobile-form-input" placeholder="请输入预定人姓名">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">负责人</label>
+                        <select v-model="accountForm.managerType" class="mobile-form-select mb-2" @change="accountForm.managerId = ''">
+                            <option value="user">选择用户</option>
+                            <option value="manual">手动录入</option>
+                        </select>
+                        <select v-if="accountForm.managerType === 'user'" v-model="accountForm.managerId" class="mobile-form-select">
+                            <option value="">请选择负责人</option>
+                            <option v-for="user in users" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <input v-else v-model="accountForm.managerName" type="text" class="mobile-form-input" placeholder="请输入负责人姓名">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">配置人数 <span class="required">*</span></label>
+                        <input v-model.number="accountForm.configuredCount" type="number" min="0" class="mobile-form-input" placeholder="请输入办公室配置人数">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label class="mobile-form-label">备注</label>
+                        <textarea v-model="accountForm.note" rows="2" class="mobile-form-input" placeholder="可选填写备注" style="height: auto;"></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button @click="showAccountModal = false" class="flex-1 py-3 border rounded-xl text-gray-600">取消</button>
+                    <button @click="saveAccount" class="flex-1 btn-primary py-3 rounded-xl font-semibold">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 桌面端充值确认弹窗 -->
+        <div v-if="showTopupConfirm" class="modal-overlay desktop-only" @click.self="showTopupConfirm = false">
             <div class="modal-content">
                 <h3 class="text-lg font-bold mb-4">确认充值</h3>
                 <div class="space-y-3 mb-6">
@@ -495,9 +1320,49 @@
             </div>
         </div>
 
-        <!-- 消息提示 -->
+        <!-- 移动端充值确认弹窗 -->
+        <div v-if="showTopupConfirm" class="mobile-modal-overlay mobile-only" @click.self="showTopupConfirm = false">
+            <div class="mobile-modal-content">
+                <div class="mobile-modal-handle"></div>
+                <h3 class="text-lg font-bold mb-4 text-center">确认充值 💳</h3>
+                <div class="mobile-amount-card" style="margin: 20px 0;">
+                    <div class="mobile-amount-row">
+                        <span class="text-gray-600">办公室</span>
+                        <span class="font-medium">{{ getOfficeName(topupForm.officeId) }}</span>
+                    </div>
+                    <div class="mobile-amount-row">
+                        <span class="text-gray-600">充值人</span>
+                        <span class="font-medium">{{ getPersonName() }}</span>
+                    </div>
+                    <div class="mobile-amount-row">
+                        <span class="text-gray-600">产品</span>
+                        <span class="font-medium">{{ getProductName(topupForm.productId) }}</span>
+                    </div>
+                    <div class="mobile-amount-row">
+                        <span class="text-gray-600">数量</span>
+                        <span class="font-medium">{{ topupForm.quantity }} {{ getProductUnit(topupForm.productId) }}</span>
+                    </div>
+                    <div class="mobile-amount-row" style="border-top: 1px solid #A7F3D0; margin-top: 12px; padding-top: 12px;">
+                        <span class="font-bold text-lg">实收金额</span>
+                        <span class="mobile-total-amount">¥{{ calculatedAmount.toFixed(2) }}</span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button @click="showTopupConfirm = false" class="flex-1 py-3 border rounded-xl text-gray-600">取消</button>
+                    <button @click="confirmTopup" class="flex-1 btn-primary py-3 rounded-xl font-semibold">确认充值</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 桌面端消息提示 -->
         <div v-if="message" :class="messageType === 'error' ? 'bg-red-500' : 'bg-green-500'" 
-             class="fixed bottom-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg">
+             class="fixed bottom-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg desktop-only">
+            {{ message }}
+        </div>
+
+        <!-- 移动端Toast提示 -->
+        <div v-if="message" :class="messageType === 'error' ? 'bg-red-500' : 'bg-green-500'" 
+             class="mobile-toast mobile-only" style="bottom: 100px;">
             {{ message }}
         </div>
     </div>
