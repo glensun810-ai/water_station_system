@@ -3231,60 +3231,86 @@
 
             <!-- Settlement Tab (结算记录) -->
             <div v-if="activeTab === 'settlement'" class="stat-card">
-                <!-- 页面标题、Tab切换和刷新 - 紧凑布局 -->
-                    <!-- 桌面端标题 -->
-                    <div class="hidden sm:flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-lg font-bold text-slate-800">结算记录</h2>
-                            <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                <!-- 页面标题和刷新按钮 -->
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-xl font-bold text-slate-800">结算记录</h2>
+                            <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
                                 {{ settlementRecordFilter === 'pending' ? '待付款' : settlementRecordFilter === 'applied' ? '待确认' : settlementRecordFilter === 'confirmed' ? '已结清' : '逾期' }}
                             </span>
-                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{{ filteredSettlementRecords.length }}条</span>
-                            <span v-if="settlementStats.overdueCount > 0" class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">⚠️ {{ settlementStats.overdueCount }}笔逾期</span>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full">{{ filteredSettlementRecords.length }} 条记录</span>
                         </div>
-                        <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition">
+                        <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            刷新
+                            刷新数据
                         </button>
                     </div>
                     
-                    <!-- 统计卡片 - 点击可筛选 -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                        <!-- 总记录 -->
-                        <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-slate-600">总记录</span>
-                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    <!-- 统计卡片 - 国际顶级设计 -->
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                        <!-- 待付款卡片 -->
+                        <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-100/30 hover:shadow-lg hover:border-amber-200 transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <span class="w-2 h-2 rounded-full bg-amber-500 group-hover:scale-125 transition-transform"></span>
                             </div>
-                            <div class="text-xl font-bold text-slate-800 mt-1">{{ settlementStats.totalCount || 0 }}</div>
-                            <div class="text-xs text-slate-500 mt-0.5">¥{{ (settlementStats.totalAmount || 0).toFixed(0) }}</div>
+                            <div class="text-xs font-medium text-amber-600 mb-1">待付款</div>
+                            <div class="text-2xl font-bold text-amber-700">{{ settlementStats.pendingCount || 0 }} <span class="text-sm font-normal text-amber-600">笔</span></div>
+                            <div class="text-sm font-semibold text-amber-600 mt-1">¥{{ (settlementStats.pendingAmount || 0).toFixed(2) }}</div>
                         </div>
-                        <!-- 待付款 -->
-                        <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500 bg-amber-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-amber-600">待付款</span>
-                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        
+                        <!-- 待确认卡片 -->
+                        <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/30 hover:shadow-lg hover:border-blue-200 transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <span class="w-2 h-2 rounded-full bg-blue-500 group-hover:scale-125 transition-transform"></span>
                             </div>
-                            <div class="text-xl font-bold text-amber-700 mt-1">{{ settlementStats.pendingCount || 0 }}</div>
-                            <div class="text-xs text-amber-500 mt-0.5">¥{{ (settlementStats.pendingAmount || 0).toFixed(0) }}</div>
+                            <div class="text-xs font-medium text-blue-600 mb-1">待确认</div>
+                            <div class="text-2xl font-bold text-blue-700">{{ settlementStats.appliedCount || 0 }} <span class="text-sm font-normal text-blue-600">笔</span></div>
+                            <div class="text-sm font-semibold text-blue-600 mt-1">¥{{ (settlementStats.appliedAmount || 0).toFixed(2) }}</div>
                         </div>
-                        <!-- 待确认 -->
-                        <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-blue-600">待确认</span>
-                                <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        
+                        <!-- 逾期卡片 -->
+                        <div @click="settlementRecordFilter = 'overdue'" :class="settlementRecordFilter === 'overdue' ? 'ring-2 ring-red-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-red-100 bg-gradient-to-br from-red-50 to-red-100/30 hover:shadow-lg hover:border-red-200 transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                </div>
+                                <span v-if="settlementStats.overdueCount > 0" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                             </div>
-                            <div class="text-xl font-bold text-blue-700 mt-1">{{ settlementStats.appliedCount || 0 }}</div>
-                            <div class="text-xs text-blue-500 mt-0.5">¥{{ (settlementStats.appliedAmount || 0).toFixed(0) }}</div>
+                            <div class="text-xs font-medium text-red-600 mb-1">逾期未付</div>
+                            <div class="text-2xl font-bold text-red-700">{{ settlementStats.overdueCount || 0 }} <span class="text-sm font-normal text-red-600">笔</span></div>
+                            <div class="text-sm font-semibold text-red-600 mt-1">¥{{ (settlementStats.overdueAmount || 0).toFixed(2) }}</div>
                         </div>
-                        <!-- 已结清 -->
-                        <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500 bg-green-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-green-600">已结清</span>
-                                <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                        
+                        <!-- 已结清卡片 -->
+                        <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-100/30 hover:shadow-lg hover:border-emerald-200 transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                </div>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform"></span>
                             </div>
-                            <div class="text-xl font-bold text-green-700 mt-1">{{ settlementStats.confirmedCount || 0 }}</div>
-                            <div class="text-xs text-green-500 mt-0.5">¥{{ (settlementStats.confirmedAmount || 0).toFixed(0) }}</div>
+                            <div class="text-xs font-medium text-emerald-600 mb-1">已结清</div>
+                            <div class="text-2xl font-bold text-emerald-700">{{ settlementStats.confirmedCount || 0 }} <span class="text-sm font-normal text-emerald-600">笔</span></div>
+                            <div class="text-sm font-semibold text-emerald-600 mt-1">¥{{ (settlementStats.confirmedAmount || 0).toFixed(2) }}</div>
+                        </div>
+                        
+                        <!-- 汇总卡片 -->
+                        <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-slate-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:shadow-lg hover:border-slate-300 transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-600 flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                </div>
+                                <span class="w-2 h-2 rounded-full bg-slate-400 group-hover:scale-125 transition-transform"></span>
+                            </div>
+                            <div class="text-xs font-medium text-slate-500 mb-1">总待收</div>
+                            <div class="text-2xl font-bold text-slate-700">{{ (settlementStats.pendingCount || 0) + (settlementStats.appliedCount || 0) }} <span class="text-sm font-normal text-slate-500">笔</span></div>
+                            <div class="text-sm font-semibold text-slate-600 mt-1">¥{{ ((settlementStats.pendingAmount || 0) + (settlementStats.appliedAmount || 0)).toFixed(2) }}</div>
                         </div>
                     </div>
 
@@ -3359,164 +3385,245 @@
                 </div>
 
                 <!-- 记录卡片列表 -->
-                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-2 sm:space-y-3">
+                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-3">
                     <template v-for="record in filteredOfficeSettlements">
-                    <div v-if="record && record.id" :key="record.id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
-                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-4 cursor-pointer select-none">
-                            <div class="flex items-start justify-between">
-                                <div class="flex items-start gap-3">
-                                    <input type="checkbox" :value="record?.id || record?.office_id" v-model="selectedSettlementApps" @click.stop />
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="font-semibold text-slate-800">{{ record?.office_name }}</span>
+                    <div v-if="record && record.id" :key="record.id" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300">
+                        <!-- 主卡片区域 -->
+                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-5 cursor-pointer select-none">
+                            <div class="flex items-start justify-between gap-4">
+                                <!-- 左侧：办公室信息 -->
+                                <div class="flex items-start gap-4 flex-1 min-w-0">
+                                    <!-- 复选框 -->
+                                    <div class="pt-1" @click.stop>
+                                        <input type="checkbox" :value="record?.id || record?.office_id" v-model="selectedSettlementApps" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                    </div>
+                                    
+                                    <!-- 办公室信息 -->
+                                    <div class="flex-1 min-w-0">
+                                        <!-- 标题行：名称 + 状态标签 -->
+                                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                            <h3 class="text-base font-semibold text-slate-900 truncate">{{ record?.office_name }}</h3>
                                             <span class="text-slate-400 text-sm">({{ record?.office_room_number || '-' }})</span>
-                                            <span :class="record?.status === 'confirmed' ? 'bg-green-100 text-green-700' : (record?.status === 'applied' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700')" class="text-xs px-2 py-0.5 rounded-full">
-                                                {{ record?.status === 'confirmed' ? '已结清' : (record?.status === 'applied' ? '付款待确认' : '待付款') }}
+                                            <span v-if="record?.status === 'pending'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>待付款
                                             </span>
-                                            <span v-if="record?.status === 'pending' && record?.overdue_days > 0" class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">⚠️ 逾期{{ record?.overdue_days }}天</span>
+                                            <span v-else-if="record?.status === 'applied'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>待确认
+                                            </span>
+                                            <span v-else-if="record?.status === 'confirmed'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>已结清
+                                            </span>
+                                            <span v-if="record?.status === 'pending' && record?.overdue_days > 0" class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                                                ⚠️ 逾期{{ record?.overdue_days }}天
+                                            </span>
                                         </div>
-                                        <!-- 根据记录实际状态显示不同的时间信息 -->
-                                        <template v-if="record?.status === 'applied'">
-                                            <div class="text-sm text-slate-500">
-                                                用户提交时间: {{ record?.applied_submit_time ? new Date(record?.applied_submit_time).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                        </template>
-                                        <template v-else-if="record?.status === 'pending'">
-                                            <div class="text-sm text-slate-500">
-                                                首次领水时间: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                            <div v-if="record?.last_reminder_at" class="text-xs text-amber-600 mt-1">
-                                                📢 {{ record?.last_reminder_at ? new Date(record?.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
-                                            </div>
-                                        </template>
-                                        <template v-else-if="record?.status === 'confirmed'">
-                                            <div class="text-sm text-slate-500">
-                                                结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                        </template>
-                                        <template v-else-if="record?.status === 'pending'">
-                                            <div class="text-sm text-slate-500">
-                                                首次领水时间: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                            <div v-if="record?.last_reminder_at" class="text-xs text-amber-600 mt-1">
-                                                📢 {{ record?.last_reminder_at ? new Date(record?.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
-                                            </div>
-                                        </template>
-                                        <template v-else-if="record?.status === 'confirmed'">
-                                            <div class="text-sm text-slate-500">
-                                                结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                        </template>
-                                        <!-- 金额汇总（根据记录实际状态显示对应的笔数和金额） -->
-                                        <div class="flex flex-wrap gap-3 mt-2 text-xs">
-                                            <template v-if="record?.status === 'pending'">
-                                                <span class="text-amber-600">待付款: {{ record?.pending_count }}笔 ¥{{ record?.pending_amount?.toFixed(2) }}</span>
+                                        
+                                        <!-- 时间信息 -->
+                                        <div class="text-sm text-slate-500 space-y-1">
+                                            <template v-if="record?.status === 'applied'">
+                                                <div class="flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    <span>提交时间: {{ record?.applied_submit_time ? new Date(record?.applied_submit_time).toLocaleString('zh-CN') : '-' }}</span>
+                                                </div>
                                             </template>
-                                            <template v-else-if="record?.status === 'applied'">
-                                                <span class="text-blue-600">待确认: {{ record?.applied_count }}笔 ¥{{ record?.applied_amount?.toFixed(2) }}</span>
+                                            <template v-else-if="record?.status === 'pending'">
+                                                <div class="flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    <span>首次领水: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleDateString('zh-CN') : '-' }}</span>
+                                                </div>
+                                                <div v-if="record?.last_reminder_at" class="flex items-center gap-2 text-amber-600">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                                                    <span class="text-xs">{{ new Date(record?.last_reminder_at).toLocaleDateString('zh-CN') }} 已提醒</span>
+                                                </div>
                                             </template>
                                             <template v-else-if="record?.status === 'confirmed'">
-                                                <span class="text-green-600">已结清: {{ record?.confirmed_count }}笔 ¥{{ record?.confirmed_amount?.toFixed(2) }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    <span>结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        <!-- 统计信息 -->
+                                        <div class="flex flex-wrap gap-3 mt-3">
+                                            <template v-if="record?.status === 'pending'">
+                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-100">
+                                                    <span class="text-amber-700 text-sm font-medium">{{ record?.pending_count }} 笔待付</span>
+                                                </div>
+                                            </template>
+                                            <template v-else-if="record?.status === 'applied'">
+                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100">
+                                                    <span class="text-blue-700 text-sm font-medium">{{ record?.applied_count }} 笔待确认</span>
+                                                </div>
+                                            </template>
+                                            <template v-else-if="record?.status === 'confirmed'">
+                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+                                                    <span class="text-emerald-700 text-sm font-medium">{{ record?.confirmed_count }} 笔已结清</span>
+                                                </div>
                                             </template>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <template v-if="record?.status === 'pending'">
-                                        <div class="text-2xl font-bold text-amber-700">¥{{ (record?.pending_amount || 0).toFixed(2) }}</div>
-                                        <div class="flex gap-1 mt-2">
-                                            <button @click.stop="remindOfficePayment(record)" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-medium">
-                                                提醒付款
+                                
+                                <!-- 右侧：金额 + 操作按钮 -->
+                                <div class="flex flex-col items-end gap-3">
+                                    <!-- 金额 -->
+                                    <div class="text-right">
+                                        <template v-if="record?.status === 'pending'">
+                                            <div class="text-2xl font-bold text-amber-600">¥{{ (record?.pending_amount || 0).toFixed(2) }}</div>
+                                        </template>
+                                        <template v-else-if="record?.status === 'applied'">
+                                            <div class="text-2xl font-bold text-blue-600">¥{{ (record?.applied_amount || 0).toFixed(2) }}</div>
+                                        </template>
+                                        <template v-else-if="record?.status === 'confirmed'">
+                                            <div class="text-2xl font-bold text-emerald-600">¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</div>
+                                        </template>
+                                    </div>
+                                    
+                                    <!-- 操作按钮 -->
+                                    <div class="flex gap-2">
+                                        <template v-if="record?.status === 'pending'">
+                                            <button @click.stop="remindOfficePayment(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-colors">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                                                提醒
                                             </button>
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium">
-                                                确认收款
+                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow transition-all">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                确认
                                             </button>
-                                        </div>
-                                    </template>
-                                    <template v-else-if="record?.status === 'applied'">
-                                        <div class="text-2xl font-bold text-blue-700">¥{{ (record?.applied_amount || 0).toFixed(2) }}</div>
-                                        <div class="mt-2">
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium">
-                                                确认收款
+                                        </template>
+                                        <template v-else-if="record?.status === 'applied'">
+                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow transition-all">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                确认
                                             </button>
-                                        </div>
-                                    </template>
-                                    <template v-else-if="record?.status === 'confirmed'">
-                                        <div class="text-2xl font-bold text-green-700">¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</div>
-                                    </template>
-                                        <!-- 删除按钮 - 仅超级管理员可见 -->
+                                        </template>
                                         <template v-if="user?.role === 'super_admin'">
-                                            <button @click.stop="deleteOfficeSettlement(record)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium mt-2">
-                                                删除记录
+                                            <button @click.stop="deleteOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                删除
                                             </button>
                                         </template>
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                                <span class="text-xs text-slate-500">点击查看明细</span>
-                                <span class="text-xs text-slate-400">{{ expandedSettlementAppId === (record?.id || record?.office_id) ? '▲ 收起' : '▼ 展开' }}</span>
+                            
+                            <!-- 底部展开提示 -->
+                            <div class="flex items-center justify-center mt-4 pt-3 border-t border-slate-100">
+                                <div class="flex items-center gap-2 text-sm text-slate-400 group-hover:text-slate-600 transition-colors">
+                                    <span>{{ expandedSettlementAppId === record.id ? '点击收起明细' : '点击展开明细' }}</span>
+                                    <svg :class="expandedSettlementAppId === record.id ? 'rotate-180' : ''" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
                             </div>
                         </div>
+                        
                         <!-- 明细展开区域 -->
-                        <div v-if="expandedSettlementAppId === record.id" class="border-t border-slate-200 bg-slate-50 p-3">
-                            <!-- 待付款明细 -->
-                            <div v-if="record?.pending_count > 0" class="mb-3">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded">待付款</span>
-                                    <span class="text-xs text-slate-500">{{ record?.pending_count }}笔 ¥{{ (record?.pending_amount || 0).toFixed(2) }}</span>
-                                </div>
-                                <div class="space-y-1 max-h-32 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'pending')" :key="p.id" class="bg-amber-50 rounded p-2 text-xs">
-                                        <div class="flex justify-between items-start">
-                                            <div class="flex-1">
-                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
-                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                            </div>
-                                            <div class="font-medium text-amber-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                        <div v-if="expandedSettlementAppId === record.id" class="border-t border-slate-200 bg-slate-50/50">
+                            <div class="p-5">
+                                <!-- 待付款明细 -->
+                                <div v-if="record?.pending_count > 0" class="mb-5">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-200">
+                                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                            <span class="text-sm font-medium text-amber-700">待付款</span>
                                         </div>
+                                        <span class="text-sm text-slate-500">{{ record?.pending_count }} 笔 · ¥{{ (record?.pending_amount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="bg-white rounded-xl border border-amber-100 overflow-hidden">
+                                        <table class="w-full">
+                                            <thead class="bg-amber-50/50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">产品</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">数量</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">领取人</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">日期</th>
+                                                    <th class="px-4 py-2 text-right text-xs font-medium text-amber-700">金额</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'pending')" :key="p.id" class="border-t border-amber-50">
+                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-4 py-3 text-sm text-right font-medium text-amber-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                            </div>
-                            <!-- 待确认明细 -->
-                            <div v-if="record?.applied_count > 0" class="mb-3">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded">待确认</span>
-                                    <span class="text-xs text-slate-500">{{ record?.applied_count }}笔 ¥{{ (record?.applied_amount || 0).toFixed(2) }}</span>
-                                </div>
-                                <div class="space-y-1 max-h-32 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'applied')" :key="p.id" class="bg-blue-50 rounded p-2 text-xs">
-                                        <div class="flex justify-between items-start">
-                                            <div class="flex-1">
-                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
-                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                            </div>
-                                            <div class="font-medium text-blue-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                
+                                <!-- 待确认明细 -->
+                                <div v-if="record?.applied_count > 0" class="mb-5">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 border border-blue-200">
+                                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                            <span class="text-sm font-medium text-blue-700">待确认</span>
                                         </div>
+                                        <span class="text-sm text-slate-500">{{ record?.applied_count }} 笔 · ¥{{ (record?.applied_amount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="bg-white rounded-xl border border-blue-100 overflow-hidden">
+                                        <table class="w-full">
+                                            <thead class="bg-blue-50/50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">产品</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">数量</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">领取人</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">日期</th>
+                                                    <th class="px-4 py-2 text-right text-xs font-medium text-blue-700">金额</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'applied')" :key="p.id" class="border-t border-blue-50">
+                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-4 py-3 text-sm text-right font-medium text-blue-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                            </div>
-                            <!-- 已结清明细 -->
-                            <div v-if="record?.confirmed_count > 0">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">已结清</span>
-                                    <span class="text-xs text-slate-500">{{ record?.confirmed_count }}笔 ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</span>
-                                </div>
-                                <div class="space-y-1 max-h-32 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'settled')" :key="p.id" class="bg-green-50 rounded p-2 text-xs">
-                                        <div class="flex justify-between items-start">
-                                            <div class="flex-1">
-                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
-                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                            </div>
-                                            <div class="font-medium text-green-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                
+                                <!-- 已结清明细 -->
+                                <div v-if="record?.confirmed_count > 0">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 border border-emerald-200">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            <span class="text-sm font-medium text-emerald-700">已结清</span>
                                         </div>
+                                        <span class="text-sm text-slate-500">{{ record?.confirmed_count }} 笔 · ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="bg-white rounded-xl border border-emerald-100 overflow-hidden">
+                                        <table class="w-full">
+                                            <thead class="bg-emerald-50/50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">产品</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">数量</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">领取人</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">日期</th>
+                                                    <th class="px-4 py-2 text-right text-xs font-medium text-emerald-700">金额</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'settled')" :key="p.id" class="border-t border-emerald-50">
+                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-4 py-3 text-sm text-right font-medium text-emerald-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                            </div>
-                            <!-- 无明细时 -->
-                            <div v-if="!record?.pickups?.length" class="text-xs text-slate-400 text-center py-4">
-                                暂无领水明细
+                                
+                                <!-- 无明细时 -->
+                                <div v-if="!record?.pickups?.length" class="text-center py-8">
+                                    <svg class="w-12 h-12 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                    <p class="text-sm text-slate-400">暂无领水明细</p>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -3751,20 +3858,17 @@
                 });
                 
                 const filteredSettlementRecords = computed(() => {
-                    let result = settlementRecords.value || [];
+                    // 直接使用 officeSettlements 数据
+                    let result = officeSettlements.value || [];
+                    
+                    // 过滤掉没有任何结算记录的办公室
+                    result = result.filter(r => r && (r.pending_count > 0 || r.applied_count > 0 || r.confirmed_count > 0));
                     
                     // 按状态筛选（包括逾期）
                     if (settlementRecordFilter.value !== 'all') {
                         if (settlementRecordFilter.value === 'overdue') {
-                            // 逾期：超过30天未结清
-                            const now = new Date();
-                            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                            result = result.filter(r => {
-                                if (r.status === 'confirmed') return false;
-                                const appliedDate = r.applied_at ? new Date(r.applied_at) : (r.created_at ? new Date(r.created_at) : null);
-                                if (!appliedDate) return false;
-                                return appliedDate <= thirtyDaysAgo;
-                            });
+                            // 逾期：超过30天未结清且状态为 pending
+                            result = result.filter(r => r.status !== 'confirmed' && r.is_overdue);
                         } else {
                             result = result.filter(r => r.status === settlementRecordFilter.value);
                         }
