@@ -1292,10 +1292,12 @@
                         <button @click="activeTab = 'inventory'" class="text-red-600 text-sm font-medium hover:underline">去补货 →</button>
                     </div>
                     <div class="space-y-2">
-                        <div v-for="alert in inventoryAlerts" :key="alert.id" class="bg-white/60 rounded-lg px-4 py-3 flex justify-between items-center">
-                            <span class="text-red-800 font-medium">{{ alert.name }} ({{ alert.specification }})</span>
-                            <span class="text-red-600 font-bold">仅剩 {{ alert.stock }} {{ alert.unit }} | 预警线：{{ alert.threshold }}</span>
+                        <template v-if="inventoryAlerts && Array.isArray(inventoryAlerts)">
+                        <div v-for="alert in inventoryAlerts" :key="alert && alert.id" class="bg-white/60 rounded-lg px-4 py-3 flex justify-between items-center">
+                            <span class="text-red-800 font-medium">{{ alert && alert.name }} {{ alert && alert.specification ? `(${alert.specification})` : '' }}</span>
+                            <span class="text-red-600 font-bold">仅剩 {{ alert && alert.stock }} {{ alert && alert.unit }} | 预警线：{{ alert && alert.threshold }}</span>
                         </div>
+                        </template>
                     </div>
                 </div>
 
@@ -1653,18 +1655,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="app in applications" :key="app.id">
-                                <td><input type="checkbox" v-model="selectedApplications" :value="app.id"></td>
-                                <td class="font-medium">{{ app.user_name }}</td>
-                                <td>{{ app.department }}</td>
-                                <td class="text-blue-600 font-bold">¥{{ app.amount.toFixed(2) }}</td>
-                                <td class="text-sm text-slate-600">{{ formatDate(app.created_at) }}</td>
+                            <template v-if="applications && Array.isArray(applications)">
+                            <tr v-for="app in applications" :key="app && app.id">
+                                <td><input type="checkbox" v-model="selectedApplications" :value="app && app.id"></td>
+                                <td class="font-medium">{{ app && app.user_name }}</td>
+                                <td>{{ app && app.department }}</td>
+                                <td class="text-blue-600 font-bold">¥{{ (app && app.amount || 0).toFixed(2) }}</td>
+                                <td class="text-sm text-slate-600">{{ formatDate(app && app.created_at) }}</td>
                                 <td>
-                                    <button @click="confirmSingle(app.id, app.user_name)" class="btn-success text-white px-4 py-2 rounded-lg text-sm font-medium btn-active">
+                                    <button @click="confirmSingle(app && app.id, app && app.user_name)" class="btn-success text-white px-4 py-2 rounded-lg text-sm font-medium btn-active">
                                         确认收款
                                     </button>
                                 </td>
                             </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -1790,40 +1794,29 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="t in transactions" :key="t.id" :class="{'bg-red-50 opacity-60': t.is_deleted}">
-                                <td><input type="checkbox" v-model="selectedTransactions" :value="t.id" :disabled="t.status === 'settled'"></td>
-                                <td class="text-sm text-slate-600">{{ formatDate(t.created_at) }}</td>
-                                <td class="font-medium">{{ t.user_name }}</td>
-                                <td>{{ t.department }}</td>
-                                <td class="font-medium">{{ t.product_name || getProductName(t.product_id) }}</td>
-                                <td><span class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">{{ t.specification || getProductSpec(t.product_id) }}</span></td>
-                                <td>{{ t.quantity }}</td>
-                                <td :class="t.actual_price === 0 ? 'text-green-600 font-semibold' : ''">¥{{ t.actual_price.toFixed(2) }}</td>
-                                <td>{{ t.type === 'pickup' ? '领取' : '预定' }}</td>
+                            <template v-if="transactions && Array.isArray(transactions)">
+                            <tr v-for="t in transactions" :key="t && t.id" :class="{'bg-red-50 opacity-60': t && t.is_deleted}">
+                                <td><input type="checkbox" v-model="selectedTransactions" :value="t && t.id" :disabled="t && t.status === 'settled'"></td>
+                                <td class="text-sm text-slate-600">{{ formatDate(t && t.created_at) }}</td>
+                                <td class="font-medium">{{ t && t.user_name }}</td>
+                                <td>{{ t && t.department }}</td>
+                                <td class="font-medium">{{ (t && t.product_name) || getProductName(t && t.product_id) }}</td>
+                                <td><span class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">{{ (t && t.specification) || getProductSpec(t && t.product_id) }}</span></td>
+                                <td>{{ t && t.quantity }}</td>
+                                <td :class="t && t.actual_price === 0 ? 'text-green-600 font-semibold' : ''">¥{{ (t && t.actual_price || 0).toFixed(2) }}</td>
+                                <td>{{ t && t.type === 'pickup' ? '领取' : '预定' }}</td>
                                 <td>
-                                    <span :class="['status-badge', t.settlement_applied === 1 ? 'status-applied' : 'status-' + t.status]">
-                                        {{ t.status === 'unsettled' ? (t.settlement_applied === 1 ? '付款待确认' : '待付款') : t.status === 'settled' ? '已结算' : '已预定' }}
+                                    <span :class="['status-badge', t && t.settlement_applied === 1 ? 'status-applied' : 'status-' + (t && t.status)]">
+                                        {{ t && t.status === 'unsettled' ? (t.settlement_applied === 1 ? '付款待确认' : '待付款') : t && t.status === 'settled' ? '已结算' : '已预定' }}
                                     </span>
-                                    <span v-if="t.is_deleted" class="ml-1 status-badge bg-red-100 text-red-700">已删除</span>
+                                    <span v-if="t && t.is_deleted" class="ml-1 status-badge bg-red-100 text-red-700">已删除</span>
                                 </td>
-                                <td class="text-sm text-slate-500 max-w-[150px] truncate">{{ t.note || '-' }}</td>
+                                <td class="text-sm text-slate-500 max-w-[150px] truncate">{{ (t && t.note) || '-' }}</td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <!-- 待付款状态：显示提醒付款和确认收款按钮 -->
-                                        <template v-if="t.status === 'unsettled' && t.settlement_applied !== 1 && !t.is_deleted">
-                                            <button @click="remindTransactionPayment(t)" class="text-amber-600 hover:text-amber-800 text-sm font-medium btn-active">
-                                                提醒
-                                            </button>
-                                            <button @click="confirmTransactionPayment(t)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">
-                                                确认
-                                            </button>
-                                        </template>
-                                        <!-- 待确认状态：显示确认收款按钮 -->
-                                        <template v-else-if="t.status === 'unsettled' && t.settlement_applied === 1 && !t.is_deleted">
-                                            <button @click="confirmTransactionPayment(t)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">
-                                                确认
-                                            </button>
-                                        </template>
+                                        <button v-if="t.status === 'unsettled' && t.settlement_applied !== 1 && !t.is_deleted" @click="settleOne(t.id)" class="text-blue-600 hover:text-blue-800 text-sm font-medium btn-active">
+                                            结算
+                                        </button>
                                         <!-- 删除按钮：仅超级管理员可见 -->
                                         <button v-if="user?.role === 'super_admin' && !t.is_deleted" @click="showDeleteConfirm(t.id)" class="text-red-600 hover:text-red-800 text-sm font-medium btn-active">
                                             删除
@@ -2386,7 +2379,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-red-600 font-medium">库存不足</p>
-                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (inventoryAlerts?.filter(a => a && a.stock === 0).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (inventoryAlerts?.filter(a => a.stock === 0).length || 0) }}</p>
                             </div>
                             <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center">
                                 <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
@@ -2397,7 +2390,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-amber-600 font-medium">库存预警</p>
-                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (inventoryAlerts?.filter(a => a && a.stock > 0 && a.stock <= a.threshold).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (inventoryAlerts?.filter(a => a.stock > 0 && a.stock <= a.threshold).length || 0) }}</p>
                             </div>
                             <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center">
                                 <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
@@ -2408,7 +2401,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-green-600 font-medium">库存正常</p>
-                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p && p.stock > p.stock_alert).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p.stock > p.stock_alert).length || 0) }}</p>
                             </div>
                             <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
                                 <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -2456,7 +2449,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="!filteredOfficeSettlements || filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
+                    <div v-if="!inventoryAlerts || inventoryAlerts.length === 0" class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path></svg>
                         <p>暂无库存预警</p>
                     </div>
@@ -2473,7 +2466,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-red-600 font-medium">库存不足</p>
-                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (products?.filter(p => p && p.stock === 0).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-red-700 mt-1">{{ (products?.filter(p => p.stock === 0).length || 0) }}</p>
                                 <p class="text-sm text-red-500 mt-1">需要立即补货</p>
                             </div>
                             <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center">
@@ -2485,7 +2478,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-amber-600 font-medium">库存预警</p>
-                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (products?.filter(p => p && p.stock > 0 && p.stock <= (p.stock_alert || 10)).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-amber-700 mt-1">{{ (products?.filter(p => p.stock > 0 && p.stock <= (p.stock_alert || 10)).length || 0) }}</p>
                                 <p class="text-sm text-amber-500 mt-1">需要关注</p>
                             </div>
                             <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -2497,7 +2490,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-green-600 font-medium">库存正常</p>
-                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p && p.stock > (p.stock_alert || 10)).length || 0) }}</p>
+                                <p class="text-3xl font-bold text-green-700 mt-1">{{ (products?.filter(p => p.stock > (p.stock_alert || 10)).length || 0) }}</p>
                                 <p class="text-sm text-green-500 mt-1">库存充足</p>
                             </div>
                             <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
@@ -3236,10 +3229,16 @@
                     <div class="hidden sm:flex justify-between items-center mb-3">
                         <div class="flex items-center gap-2">
                             <h2 class="text-lg font-bold text-slate-800">结算记录</h2>
-                            <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                                {{ settlementRecordFilter === 'pending' ? '待付款' : settlementRecordFilter === 'applied' ? '待确认' : settlementRecordFilter === 'confirmed' ? '已结清' : '逾期' }}
+                            <span v-if="settlementTab === 'pending'" class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">
+                                待付款
                             </span>
-                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{{ filteredSettlementRecords.length }}条</span>
+                            <span v-if="settlementTab === 'applied'" class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                待确认
+                            </span>
+                            <span v-if="settlementTab === 'confirmed'" class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                                已结清
+                            </span>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{{ (filteredOfficeSettlements || []).length }}条</span>
                             <span v-if="settlementStats.overdueCount > 0" class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">⚠️ {{ settlementStats.overdueCount }}笔逾期</span>
                         </div>
                         <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition">
@@ -3248,19 +3247,10 @@
                         </button>
                     </div>
                     
-                    <!-- 统计卡片 - 点击可筛选 -->
+                    <!-- 统计卡片 - 点击切换Tab -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                        <!-- 总记录 -->
-                        <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-slate-600">总记录</span>
-                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                            </div>
-                            <div class="text-xl font-bold text-slate-800 mt-1">{{ settlementStats.totalCount || 0 }}</div>
-                            <div class="text-xs text-slate-500 mt-0.5">¥{{ (settlementStats.totalAmount || 0).toFixed(0) }}</div>
-                        </div>
                         <!-- 待付款 -->
-                        <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500 bg-amber-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
+                        <div @click="setSettlementTab('pending')" :class="settlementTab === 'pending' ? 'ring-2 ring-amber-500 bg-amber-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-medium text-amber-600">待付款</span>
                                 <span class="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -3269,7 +3259,7 @@
                             <div class="text-xs text-amber-500 mt-0.5">¥{{ (settlementStats.pendingAmount || 0).toFixed(0) }}</div>
                         </div>
                         <!-- 待确认 -->
-                        <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
+                        <div @click="setSettlementTab('applied')" :class="settlementTab === 'applied' ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-medium text-blue-600">待确认</span>
                                 <span class="w-2 h-2 rounded-full bg-blue-400"></span>
@@ -3278,13 +3268,22 @@
                             <div class="text-xs text-blue-500 mt-0.5">¥{{ (settlementStats.appliedAmount || 0).toFixed(0) }}</div>
                         </div>
                         <!-- 已结清 -->
-                        <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500 bg-green-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
+                        <div @click="setSettlementTab('confirmed')" :class="settlementTab === 'confirmed' ? 'ring-2 ring-green-500 bg-green-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-medium text-green-600">已结清</span>
                                 <span class="w-2 h-2 rounded-full bg-green-400"></span>
                             </div>
                             <div class="text-xl font-bold text-green-700 mt-1">{{ settlementStats.confirmedCount || 0 }}</div>
                             <div class="text-xs text-green-500 mt-0.5">¥{{ (settlementStats.confirmedAmount || 0).toFixed(0) }}</div>
+                        </div>
+                        <!-- 全部 -->
+                        <div @click="setSettlementTab('all')" :class="settlementTab === 'all' ? 'ring-2 ring-slate-500 bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" class="cursor-pointer rounded-xl p-3 border transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-slate-600">全部</span>
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            </div>
+                            <div class="text-xl font-bold text-slate-700 mt-1">{{ settlementStats.totalCount || 0 }}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">¥{{ (settlementStats.totalAmount || 0).toFixed(0) }}</div>
                         </div>
                     </div>
 
@@ -3359,93 +3358,82 @@
                 </div>
 
                 <!-- 记录卡片列表 -->
-                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-2 sm:space-y-3">
-                    <div v-for="record in filteredOfficeSettlements" :key="record?.id || record?.office_id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
-                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-4 cursor-pointer select-none">
+                <div class="space-y-2 sm:space-y-3">
+                    <template v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0">
+                    <div v-for="(record, index) in filteredOfficeSettlements" :key="'settle-' + index" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
+                        <div v-if="record && record.office_name" @click="toggleSettlementAppDetail(record.id || record.office_id)" class="p-4 cursor-pointer">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-start gap-3">
-                                    <input type="checkbox" :value="record?.id || record?.office_id" v-model="selectedSettlementApps" @click.stop />
+                                    <input type="checkbox" :value="record.id || record.office_id" v-model="selectedSettlementApps" @click.stop />
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 mb-1">
-                                            <span class="font-semibold text-slate-800">{{ record?.office_name }}</span>
-                                            <span class="text-slate-400 text-sm">({{ record?.office_room_number || '-' }})</span>
-                                            <span :class="record?.status === 'confirmed' ? 'bg-green-100 text-green-700' : (record?.status === 'applied' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700')" class="text-xs px-2 py-0.5 rounded-full">
-                                                {{ record?.status === 'confirmed' ? '已结清' : (record?.status === 'applied' ? '付款待确认' : '待付款') }}
+                                            <span class="font-semibold text-slate-800">{{ record.office_name }}</span>
+                                            <span class="text-slate-400 text-sm">({{ record.office_room_number || '-' }})</span>
+                                            <span :class="settlementTab === 'pending' ? 'bg-amber-100 text-amber-700' : (settlementTab === 'applied' ? 'bg-blue-100 text-blue-700' : (settlementTab === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'))" class="text-xs px-2 py-0.5 rounded-full">
+                                                {{ settlementTab === 'pending' ? '待付款' : (settlementTab === 'applied' ? '付款待确认' : (settlementTab === 'confirmed' ? '已结清' : '全部')) }}
                                             </span>
-                                            <span v-if="record?.status === 'pending' && record?.overdue_days > 0" class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">⚠️ 逾期{{ record?.overdue_days }}天</span>
+                                            <span v-if="settlementTab === 'pending' && record.overdue_days > 0" class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">⚠️ 逾期{{ record.overdue_days }}天</span>
                                         </div>
                                         <!-- 根据记录实际状态显示不同的时间信息 -->
-                                        <template v-if="record?.status === 'applied'">
+                                        <template v-if="settlementTab === 'applied'">
                                             <div class="text-sm text-slate-500">
-                                                用户提交时间: {{ record?.applied_submit_time ? new Date(record?.applied_submit_time).toLocaleString('zh-CN') : '-' }}
+                                                用户提交时间: {{ record.applied_submit_time ? new Date(record.applied_submit_time).toLocaleString('zh-CN') : '-' }}
                                             </div>
                                         </template>
-                                        <template v-else-if="record?.status === 'pending'">
+                                        <template v-else-if="settlementTab === 'pending'">
                                             <div class="text-sm text-slate-500">
-                                                首次领水时间: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleString('zh-CN') : '-' }}
+                                                首次领水时间: {{ record.pending_first_time ? new Date(record.pending_first_time).toLocaleString('zh-CN') : '-' }}
                                             </div>
-                                            <div v-if="record?.last_reminder_at" class="text-xs text-amber-600 mt-1">
-                                                📢 {{ record?.last_reminder_at ? new Date(record?.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
+                                            <div v-if="record.last_reminder_at" class="text-xs text-amber-600 mt-1">
+                                                📢 {{ new Date(record.last_reminder_at).toLocaleString('zh-CN') }} 发送过催款提醒
                                             </div>
                                         </template>
-                                        <template v-else-if="record?.status === 'confirmed'">
+                                        <template v-else-if="settlementTab === 'confirmed'">
                                             <div class="text-sm text-slate-500">
-                                                结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}
+                                                结算时间: {{ record.confirmed_at ? new Date(record.confirmed_at).toLocaleString('zh-CN') : '-' }}
                                             </div>
                                         </template>
-                                        <template v-else-if="record?.status === 'pending'">
+                                        <template v-else>
                                             <div class="text-sm text-slate-500">
-                                                首次领水时间: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleString('zh-CN') : '-' }}
-                                            </div>
-                                            <div v-if="record?.last_reminder_at" class="text-xs text-amber-600 mt-1">
-                                                📢 {{ record?.last_reminder_at ? new Date(record.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
-                                            </div>
-                                        </template>
-                                        <template v-else-if="record?.status === 'confirmed'">
-                                            <div class="text-sm text-slate-500">
-                                                结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}
+                                                待付款: {{ record.pending_count || 0 }}笔 / 待确认: {{ record.applied_count || 0 }}笔 / 已结清: {{ record.confirmed_count || 0 }}笔
                                             </div>
                                         </template>
                                         <!-- 金额汇总（根据记录实际状态显示对应的笔数和金额） -->
                                         <div class="flex flex-wrap gap-3 mt-2 text-xs">
-                                            <template v-if="record?.status === 'pending'">
-                                                <span class="text-amber-600">待付款: {{ record?.pending_count }}笔 ¥{{ record?.pending_amount?.toFixed(2) }}</span>
+                                            <template v-if="settlementTab === 'pending'">
+                                                <span class="text-amber-600">待付款: {{ record.pending_count }}笔 ¥{{ record.pending_amount?.toFixed(2) }}</span>
                                             </template>
-                                            <template v-else-if="record?.status === 'applied'">
-                                                <span class="text-blue-600">待确认: {{ record?.applied_count }}笔 ¥{{ record?.applied_amount?.toFixed(2) }}</span>
+                                            <template v-else-if="settlementTab === 'applied'">
+                                                <span class="text-blue-600">待确认: {{ record.applied_count }}笔 ¥{{ record.applied_amount?.toFixed(2) }}</span>
                                             </template>
-                                            <template v-else-if="record?.status === 'confirmed'">
-                                                <span class="text-green-600">已结清: {{ record?.confirmed_count }}笔 ¥{{ record?.confirmed_amount?.toFixed(2) }}</span>
+                                            <template v-else-if="settlementTab === 'confirmed'">
+                                                <span class="text-green-600">已结清: {{ record.confirmed_count }}笔 ¥{{ record.confirmed_amount?.toFixed(2) }}</span>
+                                            </template>
+                                            <template v-else>
+                                                <span class="text-amber-600">待付款: {{ record.pending_count || 0 }}笔 ¥{{ (record.pending_amount || 0).toFixed(2) }}</span>
+                                                <span class="text-blue-600">待确认: {{ record.applied_count || 0 }}笔 ¥{{ (record.applied_amount || 0).toFixed(2) }}</span>
+                                                <span class="text-green-600">已结清: {{ record.confirmed_count || 0 }}笔 ¥{{ (record.confirmed_amount || 0).toFixed(2) }}</span>
                                             </template>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <template v-if="record?.status === 'pending'">
-                                        <div class="text-2xl font-bold text-amber-700">¥{{ (record?.pending_amount || 0).toFixed(2) }}</div>
-                                        <div class="flex gap-1 mt-2">
-                                            <button @click.stop="remindOfficePayment(record)" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-medium">
-                                                提醒付款
-                                            </button>
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium">
-                                                确认收款
-                                            </button>
-                                        </div>
+                                    <template v-if="settlementTab === 'pending'">
+                                        <div class="text-2xl font-bold text-amber-700">¥{{ (record.pending_amount || 0).toFixed(2) }}</div>
                                     </template>
-                                    <template v-else-if="record?.status === 'applied'">
-                                        <div class="text-2xl font-bold text-blue-700">¥{{ (record?.applied_amount || 0).toFixed(2) }}</div>
-                                        <div class="mt-2">
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium">
-                                                确认收款
-                                            </button>
-                                        </div>
+                                    <template v-else-if="settlementTab === 'applied'">
+                                        <div class="text-2xl font-bold text-blue-700">¥{{ (record.applied_amount || 0).toFixed(2) }}</div>
                                     </template>
-                                    <template v-else-if="record?.status === 'confirmed'">
-                                        <div class="text-2xl font-bold text-green-700">¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</div>
+                                    <template v-else-if="settlementTab === 'confirmed'">
+                                        <div class="text-2xl font-bold text-green-700">¥{{ (record.confirmed_amount || 0).toFixed(2) }}</div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="text-2xl font-bold text-slate-700">¥{{ ((record.pending_amount || 0) + (record.applied_amount || 0)).toFixed(2) }}</div>
+                                        <div class="text-xs text-slate-500">未结清总额</div>
                                     </template>
                                         <!-- 删除按钮 - 仅超级管理员可见 -->
                                         <template v-if="user?.role === 'super_admin'">
-                                            <button @click.stop="deleteOfficeSettlement(record)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium mt-2">
+                                            <button @click.stop="deleteOfficeSettlement(record)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
                                                 删除记录
                                             </button>
                                         </template>
@@ -3454,66 +3442,64 @@
                             </div>
                             <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                                 <span class="text-xs text-slate-500">点击查看明细</span>
-                                <span class="text-xs text-slate-400">{{ expandedSettlementAppId === (record?.id || record?.office_id) ? '▲ 收起' : '▼ 展开' }}</span>
+                                <span class="text-xs text-slate-400">{{ expandedSettlementAppId === (record.id || record.office_id) ? '▲ 收起' : '▼ 展开' }}</span>
                             </div>
                         </div>
-                        <div v-if="expandedSettlementAppId === (record?.id || record?.office_id) && record?.pickups?.length > 0" class="border-t border-slate-200 bg-slate-50 p-3">
-                            <!-- 明细表头 -->
-                            <div class="grid grid-cols-4 gap-2 text-xs font-medium text-slate-500 pb-2 border-b border-slate-200 mb-2">
-                                <div>领水时间</div>
-                                <div>产品信息</div>
-                                <div>数量</div>
-                                <div class="text-right">金额</div>
-                            </div>
+                        <div v-if="expandedSettlementAppId === (record.id || record.office_id) && record && record.pickups && record.pickups.length > 0" class="border-t border-slate-200 bg-slate-50 p-3">
                             <!-- 根据记录实际状态显示对应的明细 -->
-                            <template v-if="record?.status === 'pending'">
-                                <div v-if="record?.pending_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'pending')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-amber-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-amber-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                            <template v-if="settlementTab === 'pending'">
+                                <div v-if="record.pending_count > 0 && record.pickups" class="space-y-1 max-h-24 overflow-y-auto">
+                                    <div v-for="p in (record.pickups || []).filter(x => x && x.settlement_status === 'pending')" :key="p.id" class="bg-amber-50 rounded p-1.5 text-xs flex justify-between items-center">
+                                        <div>
+                                            <span class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</span>
+                                            <span class="text-slate-400 ml-1">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</span>
+                                        </div>
+                                        <span class="font-medium text-amber-700">¥{{ (p.total_amount || 0).toFixed(2) }}</span>
                                     </div>
                                 </div>
                             </template>
-                            <template v-else-if="record?.status === 'applied'">
-                                <div v-if="record?.applied_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'applied')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-blue-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-blue-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                            <template v-else-if="settlementTab === 'applied'">
+                                <div v-if="record.applied_count > 0 && record.pickups" class="space-y-1 max-h-24 overflow-y-auto">
+                                    <div v-for="p in (record.pickups || []).filter(x => x && x.settlement_status === 'applied')" :key="p.id" class="bg-blue-50 rounded p-1.5 text-xs flex justify-between items-center">
+                                        <div>
+                                            <span class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</span>
+                                            <span class="text-slate-400 ml-1">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</span>
+                                        </div>
+                                        <span class="font-medium text-blue-700">¥{{ (p.total_amount || 0).toFixed(2) }}</span>
                                     </div>
                                 </div>
                             </template>
-                            <template v-else-if="record?.status === 'confirmed'">
-                                <div v-if="record?.confirmed_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'settled')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-green-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-green-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                            <template v-else-if="settlementTab === 'confirmed'">
+                                <div v-if="record.confirmed_count > 0 && record.pickups" class="space-y-1 max-h-24 overflow-y-auto">
+                                    <div v-for="p in (record.pickups || []).filter(x => x && x.settlement_status === 'settled')" :key="p.id" class="bg-green-50 rounded p-1.5 text-xs flex justify-between items-center">
+                                        <div>
+                                            <span class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</span>
+                                            <span class="text-slate-400 ml-1">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</span>
+                                        </div>
+                                        <span class="font-medium text-green-700">¥{{ (p.total_amount || 0).toFixed(2) }}</span>
                                     </div>
                                 </div>
                             </template>
-                            <!-- 汇总信息 -->
-                            <div v-if="record?.status === 'pending' && record?.pending_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-amber-600">
-                                待付款合计: {{ record?.pending_count }}笔 ¥{{ (record?.pending_amount || 0).toFixed(2) }}
-                            </div>
-                            <div v-if="record?.status === 'applied' && record?.applied_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-blue-600">
-                                待确认合计: {{ record?.applied_count }}笔 ¥{{ (record?.applied_amount || 0).toFixed(2) }}
-                            </div>
-                            <div v-if="record?.status === 'confirmed' && record?.confirmed_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-green-600">
-                                已结清合计: {{ record?.confirmed_count }}笔 ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}
-                            </div>
+                            <template v-else>
+                                <div class="space-y-1 max-h-24 overflow-y-auto">
+                                    <div v-for="p in (record.pickups || [])" :key="p.id" :class="p.settlement_status === 'settled' ? 'bg-green-50' : (p.settlement_status === 'applied' ? 'bg-blue-50' : 'bg-amber-50')" class="rounded p-1.5 text-xs flex justify-between items-center">
+                                        <div>
+                                            <span class="text-slate-700">{{ p.product_name }} × {{ p.quantity }}</span>
+                                            <span class="text-slate-400 ml-1">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</span>
+                                        </div>
+                                        <span :class="p.settlement_status === 'settled' ? 'font-medium text-green-700' : (p.settlement_status === 'applied' ? 'font-medium text-blue-700' : 'font-medium text-amber-700')">¥{{ (p.total_amount || 0).toFixed(2) }}</span>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
+                    </template>
                     <div v-if="!filteredOfficeSettlements || filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         <p>暂无结算记录</p>
+                        <p class="text-xs mt-2">数据源: officeSettlements={{ (officeSettlements || []).length }}, settlementTab={{ settlementTab }}</p>
                     </div>
                 </div>
-            </div>
             </div>
     </div>
     <!-- 关闭主内容区 v-if -->
@@ -3566,7 +3552,10 @@
                 const showOfficePickupFilters = ref(false); // 移动端筛选器展开状态
                 
                 const filteredPickups = computed(() => {
-                    let result = officePickups.value || [];
+                    if (!officePickups.value || !Array.isArray(officePickups.value)) {
+                        return [];
+                    }
+                    let result = [...officePickups.value];
                     const f = officePickupFilter.value;
                     if (f.status) {
                         result = result.filter(p => p && p.settlement_status === f.status);
@@ -3725,11 +3714,11 @@
                 const filteredSettlementApps = computed(() => {
                     let result = settlementApplications.value || [];
                     if (settlementAppFilter.value !== 'all') {
-                        result = result.filter(a => a.status === settlementAppFilter.value);
+                        result = result.filter(a => a && a.status === settlementAppFilter.value);
                     }
                     if (settlementSearch.value) {
                         const q = settlementSearch.value.toLowerCase();
-                        result = result.filter(a => 
+                        result = result.filter(a => a && 
                             (a.user_name && a.user_name.toLowerCase().includes(q)) ||
                             (a.applied_by && a.applied_by.toLowerCase().includes(q)) ||
                             (a.office_name && a.office_name.toLowerCase().includes(q))
@@ -3748,13 +3737,13 @@
                             const now = new Date();
                             const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                             result = result.filter(r => {
-                                if (r.status === 'confirmed') return false;
+                                if (!r || r.status === 'confirmed') return false;
                                 const appliedDate = r.applied_at ? new Date(r.applied_at) : (r.created_at ? new Date(r.created_at) : null);
                                 if (!appliedDate) return false;
                                 return appliedDate <= thirtyDaysAgo;
                             });
                         } else {
-                            result = result.filter(r => r.status === settlementRecordFilter.value);
+                            result = result.filter(r => r && r.status === settlementRecordFilter.value);
                         }
                     }
                     
@@ -3793,37 +3782,22 @@
                     if (!officeSettlements.value || !Array.isArray(officeSettlements.value)) {
                         return [];
                     }
-                    // 过滤掉无效记录（没有id也没有office_id，且没有office_name，以及null/undefined）
-                    let result = officeSettlements.value.filter(s => s && typeof s === 'object' && (s.id || s.office_id) && s.office_name);
+                    // 过滤掉无效记录
+                    let result = (officeSettlements.value || []).filter(s => s && typeof s === 'object' && (s.id || s.office_id) && s.office_name);
                     
-                    // 过滤掉没有任何结算记录的办公室（pending_count=0, applied_count=0, confirmed_count=0）
-                    result = result.filter(s => s && (s.pending_count > 0 || s.applied_count > 0 || s.confirmed_count > 0));
-                    
-                    // 根据settlementRecordFilter筛选（点击统计卡片触发）
-                    if (settlementRecordFilter.value && settlementRecordFilter.value !== 'all') {
-                        if (settlementRecordFilter.value === 'overdue') {
-                            // 逾期：状态不是confirmed且超过30天
-                            result = result.filter(s => s && s.status !== 'confirmed' && s.is_overdue);
-                        } else if (settlementRecordFilter.value === 'overdue15') {
-                            // 逾期15天以上
-                            result = result.filter(s => s && s.status !== 'confirmed' && s.overdue_days >= 15);
-                        } else if (settlementRecordFilter.value === 'overdue60') {
-                            // 逾期60天以上
-                            result = result.filter(s => s && s.status !== 'confirmed' && s.overdue_days >= 60);
-                        } else if (settlementRecordFilter.value === 'unsettled') {
-                            // 待结算（待付款+待确认）
-                            result = result.filter(s => s && (s.pending_count > 0 || s.applied_count > 0));
-                        } else {
-                            // pending/applied/confirmed - 显示有对应记录的办公室
-                            if (settlementRecordFilter.value === 'pending') {
-                                result = result.filter(s => s && s.pending_count > 0);
-                            } else if (settlementRecordFilter.value === 'applied') {
-                                result = result.filter(s => s && s.applied_count > 0);
-                            } else if (settlementRecordFilter.value === 'confirmed') {
-                                result = result.filter(s => s && s.confirmed_count > 0);
-                            }
-                        }
+                    // 根据settlementTab筛选（点击统计卡片触发）
+                    if (settlementTab.value === 'applied') {
+                        // 付款待确认：显示有applied记录的办公室
+                        result = result.filter(s => s && s.applied_count > 0);
+                    } else if (settlementTab.value === 'pending') {
+                        // 待付款：显示有pending记录的办公室
+                        result = result.filter(s => s && s.pending_count > 0);
+                    } else if (settlementTab.value === 'confirmed') {
+                        // 已结清：显示有confirmed记录的办公室
+                        result = result.filter(s => s && s.confirmed_count > 0);
                     }
+                    // settlementTab为'all'时显示全部
+                    
                     // 按办公室名称搜索
                     if (settlementSearch.value) {
                         const q = settlementSearch.value.toLowerCase();
@@ -3843,9 +3817,8 @@
                     }
                     // 按未结清金额倒序排列（欠款最多的在前）
                     result = [...(result || [])].sort((a, b) => {
-                        if (!a || !b) return 0;
-                        const aAmount = (a.pending_amount || 0) + (a.applied_amount || 0);
-                        const bAmount = (b.pending_amount || 0) + (b.applied_amount || 0);
+                        const aAmount = (a ? (a.pending_amount || 0) : 0) + (a ? (a.applied_amount || 0) : 0);
+                        const bAmount = (b ? (b.pending_amount || 0) : 0) + (b ? (b.applied_amount || 0) : 0);
                         return bAmount - aAmount;
                     });
                     return result;
@@ -3962,9 +3935,6 @@
                         const overdue30to60Count = overdueCount - overdue60Count;
                         const overdue30to60Amount = overdueAmount - overdue60Amount;
                         
-                        // 统计有结算记录的办公室数量
-                        const officesWithSettlement = offices.filter(o => (o.pending_count || 0) > 0 || (o.applied_count || 0) > 0 || (o.confirmed_count || 0) > 0);
-                        
                         settlementStats.value = {
                             // 待付款
                             pendingCount: totalPendingCount,
@@ -3981,8 +3951,8 @@
                             // 本周结算
                             weeklyCount: weeklyCount,
                             weeklyAmount: weeklyAmount,
-                            // 累计 - 改为统计有结算记录的办公室数量
-                            totalCount: officesWithSettlement.length,
+                            // 累计
+                            totalCount: offices.length,
                             totalAmount: totalPendingAmount + totalAppliedAmount + totalConfirmedAmount,
                             // 逾期15天（15-30天之间）
                             overdue15Count: Math.max(0, overdue15Count),
@@ -4321,6 +4291,10 @@
                     settlementQuickDate.value = '';
                 };
                 
+                const setSettlementTab = (tab) => {
+                    settlementTab.value = tab;
+                };
+                
                 const setSettlementDateFilter = (type) => {
                     const today = new Date();
                     today.setHours(23, 59, 59, 999);
@@ -4452,7 +4426,10 @@
                 
                 // 预付账户计算属性
                 const filteredOfficeAccounts = computed(() => {
-                    let result = officeAccounts.value || [];
+                    if (!officeAccounts.value || !Array.isArray(officeAccounts.value)) {
+                        return [];
+                    }
+                    let result = [...officeAccounts.value];
                     
                     if (officeAccountFilter.value.officeId) {
                         result = result.filter(acc => acc && acc.office_id === parseInt(officeAccountFilter.value.officeId));
@@ -4468,10 +4445,7 @@
                     }
                     if (officeAccountFilter.value.search) {
                         const search = officeAccountFilter.value.search.toLowerCase();
-                        result = result.filter(acc => 
-                            acc && (acc.office_name && acc.office_name.toLowerCase().includes(search) || 
-                            (acc.office_room_number && acc.office_room_number.toLowerCase().includes(search)))
-                        );
+                        result = result.filter(acc => acc && acc.office_name && acc.office_name.toLowerCase().includes(search));
                     }
                     return result;
                 });
@@ -4479,16 +4453,16 @@
                 const accountStats = computed(() => {
                     const accounts = officeAccounts.value || [];
                     const total = accounts.length;
-                    const credit = accounts.filter(acc => acc && acc.account_type === 'credit').length;
-                    const prepaid = accounts.filter(acc => acc && acc.account_type === 'prepaid').length;
-                    const totalRemaining = accounts.reduce((sum, acc) => sum + (acc && acc.remaining_qty || 0), 0);
-                    const lowStock = accounts.filter(acc => acc && acc.status === 'low').length;
-                    const empty = accounts.filter(acc => acc && acc.status === 'empty').length;
+                    const credit = accounts.filter(acc => acc.account_type === 'credit').length;
+                    const prepaid = accounts.filter(acc => acc.account_type === 'prepaid').length;
+                    const totalRemaining = accounts.reduce((sum, acc) => sum + (acc.remaining_qty || 0), 0);
+                    const lowStock = accounts.filter(acc => acc.status === 'low').length;
+                    const empty = accounts.filter(acc => acc.status === 'empty').length;
                     return { total, credit, prepaid, totalRemaining, lowStock, empty };
                 });
                 
                 const activeOffices = computed(() => {
-                    return (offices.value || []).filter(o => o && o.is_active === 1);
+                    return (offices.value || []).filter(o => o.is_active === 1);
                 });
                 
                 // 用户管理计算属性
@@ -4506,8 +4480,8 @@
                         return matchSearch && matchRole && matchStatus && matchDept;
                     });
                 });
-                const activeUsersCount = computed(() => (allUsers.value || []).filter(u => u && u.is_active).length);
-                const inactiveUsersCount = computed(() => (allUsers.value || []).filter(u => u && !u.is_active).length);
+                const activeUsersCount = computed(() => (allUsers.value || []).filter(u => u.is_active).length);
+                const inactiveUsersCount = computed(() => (allUsers.value || []).filter(u => !u.is_active).length);
                 const officeCount = computed(() => (offices.value || []).length);
                 const allUsersSelected = computed(() => filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length);
                 
@@ -4588,16 +4562,16 @@
                 });
                 
                 const filteredRemindList = computed(() => {
-                    let result = remindList.value;
+                    let result = remindList.value || [];
                     if (remindFilter.value !== 'all') {
-                        if (remindFilter.value === 'over60') result = result.filter(r => r.overdue_days >= 60);
-                        else if (remindFilter.value === 'over30') result = result.filter(r => r.overdue_days >= 30 && r.overdue_days < 60);
-                        else if (remindFilter.value === 'over7') result = result.filter(r => r.overdue_days >= 7 && r.overdue_days < 30);
-                        else if (remindFilter.value === 'below7') result = result.filter(r => r.overdue_days < 7);
+                        if (remindFilter.value === 'over60') result = result.filter(r => r && r.overdue_days >= 60);
+                        else if (remindFilter.value === 'over30') result = result.filter(r => r && r.overdue_days >= 30 && r.overdue_days < 60);
+                        else if (remindFilter.value === 'over7') result = result.filter(r => r && r.overdue_days >= 7 && r.overdue_days < 30);
+                        else if (remindFilter.value === 'below7') result = result.filter(r => r && r.overdue_days < 7);
                     }
                     if (remindSearch.value) {
                         const q = remindSearch.value.toLowerCase();
-                        result = result.filter(r => (r.office_name && r.office_name.toLowerCase().includes(q)) || (r.department && r.department.toLowerCase().includes(q)));
+                        result = result.filter(r => r && ((r.office_name && r.office_name.toLowerCase().includes(q)) || (r.department && r.department.toLowerCase().includes(q))));
                     }
                     return result;
                 });
@@ -4725,7 +4699,10 @@
 
 
                 const filteredProducts = computed(() => {
-                    let result = products.value || [];
+                    if (!products.value || !Array.isArray(products.value)) {
+                        return [];
+                    }
+                    let result = [...products.value];
                     
                     // 产品分类筛选
                     if (productCategoryFilter.value) {
@@ -5060,7 +5037,10 @@
                 });
 
                 const filteredOffices = computed(() => {
-                    let result = offices.value || [];
+                    if (!offices.value || !Array.isArray(offices.value)) {
+                        return [];
+                    }
+                    let result = [...offices.value];
                     
                     // 常用状态筛选
                     if (officeCommonFilter.value !== 'all') {
@@ -5071,17 +5051,17 @@
                     // 搜索筛选
                     if (officeSearch.value) {
                         const q = officeSearch.value.toLowerCase();
-                        result = result.filter(o => 
-                            o && o.name && o.name.toLowerCase().includes(q) ||
-                            (o && o.room_number && o.room_number.toLowerCase().includes(q)) ||
-                            (o && o.leader_name && o.leader_name.toLowerCase().includes(q))
+                        result = result.filter(o => o && o.name && 
+                            o.name.toLowerCase().includes(q) ||
+                            (o.room_number && o.room_number.toLowerCase().includes(q)) ||
+                            (o.leader_name && o.leader_name.toLowerCase().includes(q))
                         );
                     }
                     
                     // 排序
                     result = [...result].sort((a, b) => {
-                        let va = a && a[officeSortBy.value] || '';
-                        let vb = b && b[officeSortBy.value] || '';
+                        let va = a ? (a[officeSortBy.value] || '') : '';
+                        let vb = b ? (b[officeSortBy.value] || '') : '';
                         if (typeof va === 'number') {
                             return officeSortOrder.value === 'asc' ? va - vb : vb - va;
                         }
@@ -5402,67 +5382,7 @@
                         console.error('Failed to settle:', e);
                     }
                 };
-                
-                // 提醒流水记录付款
-                const remindTransactionPayment = async (t) => {
-                    const userName = t?.user_name || '';
-                    const productName = t?.product_name || '';
-                    
-                    if (!confirm(`向用户"${userName}"发送付款提醒？\n\n产品: ${productName}`)) return;
-                    
-                    try {
-                        const token = localStorage.getItem('token');
-                        const headers = { 'Content-Type': 'application/json' };
-                        if (token) headers['Authorization'] = `Bearer ${token}`;
-                        
-                        await fetch(`${API_BASE}/office-pickup/${t.id}/remind`, { 
-                            method: 'POST',
-                            headers: headers
-                        });
-                        
-                        alert('已发送付款提醒');
-                    } catch (e) {
-                        console.error('Failed to send remind:', e);
-                        alert('发送提醒失败: ' + e.message);
-                    }
-                };
-                
-                // 确认流水记录收款
-                const confirmTransactionPayment = async (t) => {
-                    const userName = t?.user_name || '';
-                    const productName = t?.product_name || '';
-                    const amount = t?.actual_price || 0;
-                    
-                    if (!confirm(`确认收到用户"${userName}"的付款？\n\n产品: ${productName}\n金额: ¥${amount}`)) return;
-                    
-                    try {
-                        const token = localStorage.getItem('token');
-                        const headers = { 'Content-Type': 'application/json' };
-                        if (token) headers['Authorization'] = `Bearer ${token}`;
-                        
-                        const res = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
-                            method: 'POST',
-                            headers: headers,
-                            body: JSON.stringify([t.id])
-                        });
-                        
-                        if (!res.ok) {
-                            const err = await res.json();
-                            alert(err.detail || '确认失败');
-                            return;
-                        }
-                        
-                        alert('已确认收款');
-                        loadTransactions();
-                        loadOfficeSettlements();
-                        loadOfficePickups();
-                        loadDashboard();
-                    } catch (e) {
-                        console.error('Failed to confirm payment:', e);
-                        alert('确认失败: ' + e.message);
-                    }
-                };
-                
+
                 const settleSelected = async () => {
                     if (!confirm(`确认结算选中的 ${selectedTransactions.value.length} 条记录？`)) return;
                     try {
@@ -5509,27 +5429,26 @@
                     }
                 };
                 
-                const confirmOfficeSettlement = async (record) => {
-                    const officeName = record?.office_name || '';
-                    const pendingCount = record?.pending_count || 0;
-                    const appliedCount = record?.applied_count || 0;
-                    const totalCount = pendingCount + appliedCount;
-                    
-                    if (totalCount === 0) {
-                        alert('没有待确认的记录');
-                        return;
-                    }
-                    
-                    if (!confirm(`确认收到办公室"${officeName}"的结算款项？\n\n待付款: ${pendingCount}笔\n待确认: ${appliedCount}笔`)) return;
-                    
+                const confirmOfficeSettlement = async (id) => {
+                    if (!confirm('确认收到该办公室的结算款项？')) return;
                     try {
                         const token = localStorage.getItem('token');
                         const headers = { 'Content-Type': 'application/json' };
                         if (token) headers['Authorization'] = `Bearer ${token}`;
                         
+                        // 获取该办公室的所有未结清记录
+                        const res = await fetch(`${API_BASE}/admin/office-settlements`, { headers });
+                        const allSettlements = await res.json();
+                        const settlement = allSettlements.find(s => s.id === id);
+                        
+                        if (!settlement) {
+                            alert('未找到结算记录');
+                            return;
+                        }
+                        
                         // 收集所有pending和applied状态的pickup id
-                        const pickupIds = (record?.pickups || [])
-                            .filter(p => p && (p.settlement_status === 'pending' || p.settlement_status === 'applied'))
+                        const pickupIds = settlement.pickups
+                            .filter(p => p.settlement_status === 'pending' || p.settlement_status === 'applied')
                             .map(p => p.id);
                         
                         if (pickupIds.length === 0) {
@@ -5553,58 +5472,10 @@
                         alert(`已确认收款，共 ${pickupIds.length} 条记录`);
                         loadSettlementStats();
                         loadOfficeSettlements();
-                        loadOfficePickups();
                         loadDashboard();
                     } catch (e) {
                         console.error('Failed to confirm settlement:', e);
                         alert('确认失败: ' + e.message);
-                    }
-                };
-                
-                // 提醒办公室付款（针对待付款记录）
-                const remindOfficePayment = async (record) => {
-                    const officeName = record?.office_name || '';
-                    const pendingCount = record?.pending_count || 0;
-                    
-                    if (pendingCount === 0) {
-                        alert('没有待付款的记录');
-                        return;
-                    }
-                    
-                    if (!confirm(`向办公室"${officeName}"发送付款提醒？\n\n待付款: ${pendingCount}笔`)) return;
-                    
-                    try {
-                        const token = localStorage.getItem('token');
-                        const headers = { 'Content-Type': 'application/json' };
-                        if (token) headers['Authorization'] = `Bearer ${token}`;
-                        
-                        // 获取所有pending状态的pickup id
-                        const pendingPickups = (record?.pickups || [])
-                            .filter(p => p && p.settlement_status === 'pending');
-                        
-                        if (pendingPickups.length === 0) {
-                            alert('没有待付款的记录');
-                            return;
-                        }
-                        
-                        // 为每个pending记录发送提醒
-                        let successCount = 0;
-                        for (const pickup of pendingPickups) {
-                            try {
-                                await fetch(`${API_BASE}/office-pickup/${pickup.id}/remind`, { 
-                                    method: 'POST',
-                                    headers: headers
-                                });
-                                successCount++;
-                            } catch (e) {
-                                console.error(`提醒失败: pickup ${pickup.id}`, e);
-                            }
-                        }
-                        
-                        alert(`已发送 ${successCount} 条付款提醒`);
-                    } catch (e) {
-                        console.error('Failed to send remind:', e);
-                        alert('发送提醒失败: ' + e.message);
                     }
                 };
                 
@@ -6431,16 +6302,16 @@
                 };
 
                 const toggleAllApplications = () => {
-                    selectedApplications.value = allApplicationsSelected.value ? [] : applications.value.filter(a => a).map(a => a.id);
+                    selectedApplications.value = allApplicationsSelected.value ? [] : applications.value.map(a => a.id);
                 };
 
                 const toggleAllTransactions = () => {
-                    const availableTransactions = transactions.value.filter(t => t && t.status !== 'settled').map(t => t.id);
+                    const availableTransactions = transactions.value.filter(t => t.status !== 'settled').map(t => t.id);
                     selectedTransactions.value = allTransactionsSelected.value ? [] : availableTransactions;
                 };
 
                 const toggleAllRemind = () => {
-                    selectedRemind.value = allRemindSelected.value ? [] : remindList.value.filter(u => u).map(u => u.user_id);
+                    selectedRemind.value = allRemindSelected.value ? [] : remindList.value.map(u => u.user_id);
                 };
 
                 const sendRemind = (user) => {
@@ -6492,7 +6363,7 @@
                     if (tab === 'settlement') { 
                         selectedSettlementApps.value = []; 
                         expandedSettlementAppId.value = null; 
-                        settlementTab.value = 'applied'; // 默认显示付款待确认
+                        settlementTab.value = 'all'; // 默认显示全部
                         loadSettlementStats(); 
                         loadOfficeSettlements(); 
                     }
@@ -7120,8 +6991,6 @@
                     confirmSingle,
                     confirmSettlement,
                     settleOne,
-                    remindTransactionPayment,
-                    confirmTransactionPayment,
                     settleSelected,
                     settleDepartment,
                     loadOfficePickups,
@@ -7134,8 +7003,8 @@
                     deleteOfficeAccount,
                     rechargeOfficeAccount,
                     processRecharge,
+                    loadOfficeSettlements,
                     confirmOfficeSettlement,
-                    remindOfficePayment,
                     deleteOfficeSettlement,
                     filterOfficeSettlements,
                     toggleSettlementAppDetail,
@@ -7199,6 +7068,7 @@
                     filteredSettlementRecords,
                     loadSettlementStats,
                     resetSettlementFilter,
+                    setSettlementTab,
                     setSettlementDateFilter,
                     clearSettlementQuickDate,
                     loadSettlementApplications,
