@@ -10,8 +10,12 @@
 PROJECT_NAME="water"
 PROJECT_DESC="智能水站管理系统"
 
-# 本地项目根目录（相对于脚本所在目录）
-LOCAL_PROJECT_ROOT="$(dirname "$0")/.."
+# 本地项目根目录（使用 SCRIPT_DIR 如果可用，否则基于当前脚本位置）
+if [ -n "$SCRIPT_DIR" ]; then
+    LOCAL_PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    LOCAL_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
+fi
 
 # ==========================================
 # 服务器配置
@@ -47,15 +51,16 @@ PYTHON_VERSION="3.8"
 # 格式: "本地文件:服务器目录"
 # 本地路径相对于 LOCAL_PROJECT_ROOT
 FRONTEND_FILES=(
-    "Service_WaterManage/frontend/index.html:/water/index.html"
-    "Service_WaterManage/frontend/admin.html:/water-admin/admin.html"
-    "Service_WaterManage/frontend/login.html:/water-admin/login.html"
-    "Service_WaterManage/frontend/vue.global.js:/water/vue.global.js"
-    "Service_WaterManage/frontend/vue.global.js:/water-admin/vue.global.js"
+    "frontend/index.html:/water/index.html"
+    "frontend/admin.html:/water-admin/admin.html"
+    "frontend/login.html:/water-admin/login.html"
+    "frontend/change-password.html:/water-admin/change-password.html"
+    "frontend/vue.global.js:/water/vue.global.js"
+    "frontend/vue.global.js:/water-admin/vue.global.js"
 )
 
 # 后端目录
-BACKEND_DIR="Service_WaterManage/backend"
+BACKEND_DIR="backend"
 
 # ==========================================
 # 高级配置（通常不需要修改）
@@ -71,9 +76,26 @@ NGINX_TEMPLATE="nginx-template.conf"
 AUTO_BACKUP=true
 BACKUP_RETENTION_DAYS=7
 
+# ==========================================
+# 生产数据保护配置（绝对不允许覆盖的文件/目录）
+# ==========================================
+PROTECTED_PATTERNS=(
+    "*.db"           # SQLite 数据库（包含所有业务数据）
+    "*.sqlite"       # SQLite 数据库
+    "*.sqlite3"     # SQLite 数据库
+    "waterms.db"     # 主数据库文件
+    "*.log"          # 日志文件
+    "uploads/"       # 上传的文件
+    "*.env"          # 环境变量文件
+)
+
+# 是否启用生产数据保护（强烈建议开启）
+PROTECT_PRODUCTION_DATA=true
+
 # 部署前检查
 PRE_DEPLOY_CHECKS=(
     "check_ssh_connection"
     "check_disk_space"
     "check_nginx"
+    "verify_production_data_exists"
 )

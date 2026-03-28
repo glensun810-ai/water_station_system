@@ -53,12 +53,20 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o Connect
 
 ssh_exec() {
     local cmd="$1"
-    ssh $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
+    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
+    else
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
+    fi
 }
 
 ssh_exec_quiet() {
     local cmd="$1"
-    ssh $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
+    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
+    else
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
+    fi
 }
 
 # ==========================================
@@ -68,13 +76,21 @@ ssh_exec_quiet() {
 scp_upload() {
     local local_path="$1"
     local remote_path="$2"
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
+    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
+    else
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
+    fi
 }
 
 scp_download() {
     local remote_path="$1"
     local local_path="$2"
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
+    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
+    else
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
+    fi
 }
 
 # ==========================================
@@ -92,12 +108,22 @@ check_command() {
 
 check_ssh_connection() {
     log_info "检查 SSH 连接..."
-    if ssh $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "echo ok" &>/dev/null; then
-        log_success "SSH 连接正常"
-        return 0
+    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        if sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "echo ok" &>/dev/null; then
+            log_success "SSH 连接正常"
+            return 0
+        else
+            log_error "无法连接到服务器 ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT:-22}"
+            return 1
+        fi
     else
-        log_error "无法连接到服务器 ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT:-22}"
-        return 1
+        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "echo ok" &>/dev/null; then
+            log_success "SSH 连接正常"
+            return 0
+        else
+            log_error "无法连接到服务器 ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT:-22}"
+            return 1
+        fi
     fi
 }
 
@@ -281,6 +307,36 @@ verify_deployment() {
         return 0
     else
         log_warn "部分验证失败 ($checks_passed/$checks_total)"
+        return 1
+    fi
+}
+
+# ==========================================
+# 生产数据保护函数
+# ==========================================
+
+verify_production_data_exists() {
+    log_info "验证生产数据完整性..."
+    
+    # 检查数据库文件
+    if [ -n "$SERVER_PROJECT_ROOT" ] && [ -n "$BACKEND_DIR" ]; then
+        local db_path="${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db"
+        local db_exists=$(ssh_exec_quiet "test -f '$db_path' && echo 'yes' || echo 'no'")
+        
+        if [ "$db_exists" = "yes" ]; then
+            local db_size=$(ssh_exec_quiet "ls -lh '$db_path' 2>/dev/null | awk '{print \$5}'")
+            local db_mtime=$(ssh_exec_quiet "stat -c '%y' '$db_path' 2>/dev/null | cut -d' ' -f1,2 | cut -d'.' -f1")
+            log_success "生产数据库存在: $db_path"
+            log_info "  大小: $db_size"
+            log_info "  修改时间: $db_mtime"
+            return 0
+        else
+            log_warn "未找到生产数据库: $db_path"
+            log_warn "将创建新的空数据库"
+            return 0
+        fi
+    else
+        log_error "无法验证生产数据：路径配置不正确"
         return 1
     fi
 }

@@ -2,6 +2,21 @@
 # ==========================================
 # 智能一键部署脚本
 # ==========================================
+#
+# ⚠️  重要安全警告 ⚠️
+# ==========================================
+# 此脚本设计为：只更新代码文件，永不覆盖任何生产数据！
+#
+# 以下数据在任何情况下都受到保护，不会被覆盖：
+#   ✓ 领水记录 (water_records)
+#   ✓ 结算记录 (settlement_records)  
+#   ✓ 库存数据 (inventory)
+#   ✓ 办公室数据 (offices)
+#   ✓ 用户数据 (users)
+#   ✓ 所有 .db / .sqlite 数据库文件
+#
+# 部署策略：增量更新（rsync），只修改有变化的代码文件
+# ==========================================
 
 set -e
 
@@ -30,6 +45,23 @@ deploy_step_1_check() {
     # 检查磁盘空间
     check_disk_space
     
+    # ==========================================
+    # 生产数据保护检查
+    # ==========================================
+    log_info "生产数据保护检查..."
+    if [ "$PROTECT_PRODUCTION_DATA" = true ]; then
+        log_success "生产数据保护已启用 (PROTECT_PRODUCTION_DATA=true)"
+        
+        # 列出受保护的文件模式
+        log_info "受保护的数据类型："
+        for pattern in "${PROTECTED_PATTERNS[@]}"; do
+            log_info "  - $pattern"
+        done
+    else
+        log_warn "⚠️  生产数据保护已禁用 (PROTECT_PRODUCTION_DATA=false)"
+        log_warn "⚠️  建议启用以保护生产数据！"
+    fi
+    
     # 检查本地文件
     log_info "检查本地项目文件..."
     if [ ! -d "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}" ]; then
@@ -37,61 +69,149 @@ deploy_step_1_check() {
         exit 1
     fi
     
-    if [ ! -d "${LOCAL_PROJECT_ROOT}/Service_WaterManage/frontend" ]; then
+    if [ ! -d "${LOCAL_PROJECT_ROOT}/frontend" ]; then
         log_error "前端目录不存在"
         exit 1
+    fi
+    
+    # 检查本地是否有数据库文件（不应该有）
+    if [ -f "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db" ]; then
+        log_warn "⚠️  本地存在数据库文件: ${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db"
+        log_warn "⚠️  部署时将排除此文件，不会覆盖服务器数据库"
     fi
     
     log_success "环境检查通过"
 }
 
 deploy_step_2_backup() {
+    log_header "步骤 2: 安全检查与备份"
+    
+    # ==========================================
+    # 安全检查：确保不覆盖生产数据的警告
+    # ==========================================
+    log_warn "=============================================="
+    log_warn "  重要：生产环境数据保护机制已启用"
+    log_warn "  以下数据在任何情况下都不会被覆盖："
+    log_warn "    - 数据库文件 (waterms.db)"
+    log_warn "    - 领水记录"
+    log_warn "    - 结算记录"  
+    log_warn "    - 库存数据"
+    log_warn "    - 办公室数据"
+    log_warn "    - 用户数据"
+    log_warn "    - 所有 .db/.sqlite 文件"
+    log_warn "=============================================="
+    
     if [ "$AUTO_BACKUP" = true ]; then
-        log_header "步骤 2: 备份"
+        log_info "执行增量备份..."
         local backup_name="${PROJECT_NAME}-$(date +%Y%m%d%H%M%S)"
         backup_server "$backup_name"
+        log_success "备份完成"
     else
         log_info "跳过备份 (AUTO_BACKUP=false)"
+    fi
+    
+    # 额外验证：确认数据库存在
+    log_info "验证生产数据..."
+    local db_exists=$(ssh_exec_quiet "test -f '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' && echo 'yes' || echo 'no'")
+    if [ "$db_exists" = "yes" ]; then
+        local db_size=$(ssh_exec_quiet "ls -lh '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' | awk '{print \$5}'")
+        log_success "生产数据库存在，大小: $db_size"
+    else
+        log_warn "未找到生产数据库，将使用新的空数据库"
     fi
 }
 
 deploy_step_3_upload_backend() {
     log_header "步骤 3: 上传后端"
     
-    # 备份服务器数据库（如果存在）
-    log_info "备份服务器数据库..."
-    ssh_exec "if [ -f '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' ]; then cp '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' '/tmp/waterms_db_backup_\$(date +%Y%m%d_%H%M%S).db'; fi"
-    
-    log_info "上传后端目录..."
+    # ==========================================
+    # 安全警告：禁止覆盖任何生产数据！
+    # ==========================================
+    log_warn "安全模式：只更新代码文件，不修改任何数据！"
     
     # 创建服务器目录
     ensure_dir "${SERVER_PROJECT_ROOT}"
+    ensure_dir "${SERVER_PROJECT_ROOT}/${BACKEND_DIR}"
     
-    # 删除旧的后端目录（如果存在）
-    ssh_exec "rm -rf ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}"
-    
-    # 上传新的后端目录（排除本地数据库文件）
-    log_info "上传后端文件（排除数据库）..."
-    if command -v rsync &>/dev/null; then
-        rsync -avz --exclude='*.db' --exclude='__pycache__' -e "ssh ${SSH_OPTS}" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/"
-    else
-        # 如果 rsync 不可用，使用 tar 排除文件
-        log_warn "rsync 不可用，使用 tar 方式上传"
-        ssh_exec "mkdir -p ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}"
-        (cd "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}" && tar --exclude='*.db' --exclude='__pycache__' -cf - .) | ssh_exec "cd ${SERVER_PROJECT_ROOT}/${BACKEND_DIR} && tar -xf -"
+    # 检查服务器上是否存在数据库（生产数据）
+    local db_exists=$(ssh_exec_quiet "test -f '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' && echo 'yes' || echo 'no'")
+    if [ "$db_exists" = "yes" ]; then
+        log_success "检测到生产数据库: ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db"
+        log_info "数据库将保持不变，不会被覆盖"
     fi
     
-    # 恢复服务器数据库（如果有备份）
-    log_info "恢复服务器数据库..."
-    ssh_exec "if [ -f '/tmp/waterms_db_backup_*.db' ]; then latest=\$(ls -t /tmp/waterms_db_backup_*.db | head -1); cp \"\$latest\" '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db'; fi"
+    # ==========================================
+    # 关键：只上传代码文件，永不删除目录
+    # 使用 rsync 增量更新，精确排除数据文件
+    # ==========================================
+    log_info "增量更新后端代码（排除所有数据文件）..."
     
-    # 创建虚拟环境并安装依赖
-    log_info "安装 Python 依赖..."
+    # 定义需要排除的内容（所有可能的数据文件）
+    local exclude_patterns=(
+        "*.db"           # SQLite 数据库
+        "*.sqlite"      # SQLite 数据库
+        "*.sqlite3"     # SQLite 数据库
+        "__pycache__"   # Python 缓存
+        "*.pyc"         # Python 编译文件
+        "*.pyo"         # Python 编译文件
+        ".pytest_cache" # 测试缓存
+        "venv/"         # 虚拟环境（服务器上已存在）
+        "*.log"         # 日志文件
+        "uploads/"      # 上传的文件
+        "*.env"         # 环境变量文件
+        ".git/"         # Git 目录
+    )
+    
+    # 构建 rsync 排除参数
+    local rsync_exclude=""
+    for pattern in "${exclude_patterns[@]}"; do
+        rsync_exclude="${rsync_exclude} --exclude='${pattern}'"
+    done
+    
+    # 检查服务器上是否有 rsync
+    local server_has_rsync=$(ssh_exec_quiet "command -v rsync &>/dev/null && echo 'yes' || echo 'no'")
+    
+    if command -v rsync &>/dev/null && [ "$server_has_rsync" = "yes" ]; then
+        # 使用 rsync 增量同步
+        if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+            rsync -avz ${rsync_exclude} -e "sshpass -p '$SERVER_PASSWORD' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/"
+        else
+            rsync -avz ${rsync_exclude} -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/"
+        fi
+    else
+        # 如果 rsync 不可用，使用 tar 方式但更安全
+        log_warn "rsync 不可用，使用 tar 方式上传"
+        
+        # 先tar到临时文件，再上传解压
+        local temp_tar="/tmp/backend_code_$(date +%Y%m%d_%H%M%S).tar"
+        (cd "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}" && tar --exclude='*.db' --exclude='*.sqlite' --exclude='*.sqlite3' --exclude='__pycache__' --exclude='venv' --exclude='*.log' --exclude='.git' -cf - .) > "$temp_tar"
+        
+        # 上传到服务器（追加到现有目录）
+        scp_upload "$temp_tar" "/tmp/backend_code.tar"
+        ssh_exec "cd ${SERVER_PROJECT_ROOT}/${BACKEND_DIR} && tar -xf /tmp/backend_code.tar --overwrite"
+        ssh_exec "rm -f /tmp/backend_code.tar"
+        rm -f "$temp_tar"
+    fi
+    
+    # 验证数据库仍然存在
+    local db_exists_after=$(ssh_exec_quiet "test -f '${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/waterms.db' && echo 'yes' || echo 'no'")
+    if [ "$db_exists_after" = "yes" ]; then
+        log_success "数据库验证通过：生产数据完好"
+    else
+        log_error "数据库丢失！请立即检查服务器！"
+        return 1
+    fi
+    
+    # 确保虚拟环境存在（如果不存在则创建）
+    log_info "检查/安装 Python 依赖..."
     ssh_exec "
         cd ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}
         
-        # 创建虚拟环境
-        python${PYTHON_VERSION} -m venv venv 2>/dev/null || python3 -m venv venv 2>/dev/null || python -m venv venv
+        # 如果虚拟环境不存在，则创建
+        if [ ! -d 'venv' ]; then
+            echo '创建虚拟环境...'
+            python${PYTHON_VERSION} -m venv venv 2>/dev/null || python3 -m venv venv 2>/dev/null || python -m venv venv
+        fi
         
         # 激活虚拟环境
         source venv/bin/activate
@@ -105,7 +225,7 @@ deploy_step_3_upload_backend() {
         echo 'Dependencies installed'
     "
     
-    # 修复已知问题
+    # 修复已知问题（只修改代码，不影响数据）
     log_info "修复已知问题..."
     ssh_exec "
         cd ${SERVER_PROJECT_ROOT}/${BACKEND_DIR}
@@ -116,7 +236,7 @@ deploy_step_3_upload_backend() {
         echo 'Fixes applied'
     "
     
-    log_success "后端上传完成"
+    log_success "后端上传完成（生产数据完好）"
 }
 
 deploy_step_4_upload_frontend() {

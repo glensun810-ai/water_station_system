@@ -1921,6 +1921,161 @@ def update_inventory_alert_config(
     return db_config
 
 
+# --- Inventory Reconciliation APIs ---
+class InventoryReconcileRequest(BaseModel):
+    product_id: int
+    stock_in_time: datetime
+    stock_in_quantity: int
+
+
+class InventoryReconcileResponse(BaseModel):
+    product_id: int
+    product_name: str
+    specification: Optional[str] = None
+    stock_in_time: datetime
+    stock_in_quantity: int
+    pickup_quantity: int = 0
+    office_pickup_quantity: int = 0
+    inventory_out_quantity: int = 0
+    inventory_loss_quantity: int = 0
+    current_stock: int
+    expected_stock: int
+    difference: int
+    difference_type: str  # 'normal', 'surplus', 'deficit'
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@app.get(
+    "/api/admin/inventory/reconcile", response_model=List[InventoryReconcileResponse]
+)
+def reconcile_inventory(
+    product_id: Optional[int] = None,
+    stock_in_time: Optional[str] = None,
+    stock_in_quantity: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    库存核对 API
+
+    根据入库时间和入库数量，核对以下数据：
+    - 用户领取数量 (transactions)
+    - 办公室领取数量 (office_pickup)
+    - 其他出库 (inventory_records type=out)
+    - 报损数量 (inventory_records type=loss)
+
+    返回差异：理论库存 vs 当前库存
+    """
+    results = []
+
+    # Get products to reconcile
+    if product_id:
+        products = db.query(Product).filter(Product.id == product_id).all()
+    else:
+        products = db.query(Product).filter(Product.is_active == 1).all()
+
+    stock_in_dt = None
+    if stock_in_time:
+        try:
+            stock_in_dt = datetime.fromisoformat(stock_in_time.replace("Z", "+00:00"))
+        except:
+            try:
+                stock_in_dt = datetime.strptime(stock_in_time, "%Y-%m-%d")
+            except:
+                pass
+
+    for product in products:
+        if not product:
+            continue
+
+        # Skip if no stock_in parameters provided
+        if not stock_in_dt or stock_in_quantity is None:
+            continue
+
+        # 1. Get user pickup quantity since stock_in_time
+        pickup_qty = (
+            db.query(func.coalesce(func.sum(Transaction.quantity), 0))
+            .filter(
+                Transaction.product_id == product.id,
+                Transaction.created_at >= stock_in_dt,
+                Transaction.is_deleted == 0,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 2. Get office pickup quantity since stock_in_time
+        office_pickup_qty = (
+            db.query(func.coalesce(func.sum(OfficePickup.quantity), 0))
+            .filter(
+                OfficePickup.product_id == product.id,
+                OfficePickup.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 3. Get inventory out quantity (type=out) since stock_in_time
+        inventory_out_qty = (
+            db.query(func.coalesce(func.sum(func.abs(InventoryRecord.quantity)), 0))
+            .filter(
+                InventoryRecord.product_id == product.id,
+                InventoryRecord.type == "out",
+                InventoryRecord.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 4. Get inventory loss quantity (type=loss) since stock_in_time
+        inventory_loss_qty = (
+            db.query(func.coalesce(func.sum(func.abs(InventoryRecord.quantity)), 0))
+            .filter(
+                InventoryRecord.product_id == product.id,
+                InventoryRecord.type == "loss",
+                InventoryRecord.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # Calculate expected stock
+        total_out = (
+            pickup_qty + office_pickup_qty + inventory_out_qty + inventory_loss_qty
+        )
+        expected_stock = stock_in_quantity - total_out
+        difference = product.stock - expected_stock
+
+        # Determine difference type
+        if difference == 0:
+            difference_type = "normal"
+        elif difference > 0:
+            difference_type = "surplus"  # 多出：可能漏登记领取
+        else:
+            difference_type = "deficit"  # 少了：可能多登记或产品损坏
+
+        result = InventoryReconcileResponse(
+            product_id=product.id,
+            product_name=product.name,
+            specification=product.specification,
+            stock_in_time=stock_in_dt,
+            stock_in_quantity=stock_in_quantity,
+            pickup_quantity=pickup_qty,
+            office_pickup_quantity=office_pickup_qty,
+            inventory_out_quantity=inventory_out_qty,
+            inventory_loss_quantity=inventory_loss_qty,
+            current_stock=product.stock,
+            expected_stock=expected_stock,
+            difference=difference,
+            difference_type=difference_type,
+            created_at=datetime.now(),
+        )
+        results.append(result)
+
+    return results
+
+
 # --- Account Management APIs ---
 class PrepaidPackageResponse(BaseModel):
     id: int
