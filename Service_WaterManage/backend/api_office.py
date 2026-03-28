@@ -913,14 +913,21 @@ def create_office_recharge(
 # --- Office Pickup APIs ---
 @router.get("/office-pickups", response_model=List[OfficePickupResponse])
 def get_office_pickups(
-    office_id: Optional[int] = None, limit: int = 100, db: Session = Depends(get_db)
+    office_id: Optional[int] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _t: Optional[int] = None,  # 时间戳参数，用于防止缓存
 ):
     """
     获取办公室领水记录列表
 
     - **office_id**: 按办公室 ID 筛选
     - **limit**: 返回记录数限制
+    - **_t**: 时间戳参数，用于防止浏览器缓存
     """
+    # 每次都创建新查询，确保获取最新数据
+    db.expire_all()  # 清除SQLAlchemy会话缓存
+
     query = db.query(OfficePickup)
 
     if office_id is not None:
@@ -1208,8 +1215,8 @@ def get_admin_office_settlements(
     返回每个办公室的详细结算信息，包括各状态的数量和金额
     返回所有办公室（即使没有领水记录也返回，计数为0）
     """
-    # 获取所有办公室
-    office_list = db.query(Office).filter(Office.is_active == 1).all()
+    # 获取所有办公室（包括非活跃的，因为可能有历史记录）
+    office_list = db.query(Office).all()
 
     results = []
     for office in office_list:
@@ -1227,7 +1234,7 @@ def get_admin_office_settlements(
         applied_amount = sum(p.total_amount or 0 for p in applied)
         confirmed_amount = sum(p.total_amount or 0 for p in confirmed)
 
-        # 根据status参数过滤
+        # 根据status参数过滤（仅当明确传入status参数时）
         if status and status != "all":
             if status == "pending" and len(pending) == 0:
                 continue
@@ -1406,3 +1413,33 @@ def get_user_office_settlements(
         )
 
     return results
+
+
+@router.delete("/office-settlements/{office_id}/pickups")
+def delete_office_settlement_pickups(
+    office_id: int, status: Optional[str] = None, db: Session = Depends(get_db)
+):
+    """
+    删除某个办公室的结算相关领水记录（超级管理员权限）
+    - office_id: 办公室ID
+    - status: 可选参数，指定删除特定状态的记录（pending/applied/settled）
+    删除后数据不可恢复，请谨慎使用
+    """
+    query = db.query(OfficePickup).filter(OfficePickup.office_id == office_id)
+
+    if status:
+        query = query.filter(OfficePickup.settlement_status == status)
+
+    pickups = query.all()
+    deleted_count = len(pickups)
+
+    for pickup in pickups:
+        db.delete(pickup)
+
+    db.commit()
+
+    status_text = f"状态为{status}" if status else "所有"
+    return {
+        "deleted_count": deleted_count,
+        "message": f"成功删除办公室ID {office_id} 的 {deleted_count} 条{status_text}领水记录",
+    }

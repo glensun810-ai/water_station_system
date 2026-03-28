@@ -734,7 +734,9 @@
     
     <script>
         const { createApp } = Vue;
-        const API_BASE = localStorage.getItem('API_BASE') || 'https://jhw-ai.com/api';
+        // 根据当前主机名自动选择API服务器
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = localStorage.getItem('API_BASE') || (isLocalhost ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
         
         createApp({
             data() {
@@ -897,7 +899,8 @@
                         this.settlementOfficeId = this.form.officeId;
                         this.loadSettlementData();
                     }
-                    if (newVal === 'records' && this.recordList.length === 0) {
+                    if (newVal === 'records') {
+                        // 每次切换到记录tab时都重新加载，确保获取最新数据（包括被管理员删除的记录）
                         this.loadRecordList();
                     }
                 },

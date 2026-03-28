@@ -2,6 +2,7 @@
 Water Management System - Backend API
 智能水站管理系统 - 后端服务
 """
+
 from typing import Tuple
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -2341,22 +2342,23 @@ def get_user_office_pickups(
     db: Session = Depends(get_db),
 ):
     """获取当前用户的办公室领水记录 - 从OfficePickup表读取"""
-    # Query from OfficePickup table
     query = db.query(OfficePickup)
 
-    # Filter by office_id if provided
+    # 如果用户不是管理员，只能查看自己部门的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        # 通过用户名匹配pickup_person，或者通过department匹配office_name
+        user_name = current_user.name
+        user_department = current_user.department
+        query = query.filter(
+            (OfficePickup.pickup_person == user_name)
+            | (OfficePickup.office_name == user_department)
+        )
+
     if office_id is not None:
         query = query.filter(OfficePickup.office_id == office_id)
 
-    # Filter by status if provided
     if status and status != "all":
         query = query.filter(OfficePickup.settlement_status == status)
-
-    # If user is logged in, filter by their office associations
-    if current_user:
-        # Get user's office names from localStorage (passed as parameter) or filter all
-        # For now, just return all records (admin can see all, users can see all for now)
-        pass
 
     pickups = (
         query.order_by(OfficePickup.pickup_time.desc())
@@ -2392,6 +2394,7 @@ def get_user_office_pickups(
                 "status": pickup.settlement_status,
             }
         )
+
     return results
 
 
