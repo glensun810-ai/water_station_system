@@ -3360,7 +3360,8 @@
 
                 <!-- 记录卡片列表 -->
                 <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-2 sm:space-y-3">
-                    <div v-for="record in filteredOfficeSettlements" :key="record?.id || record?.office_id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
+                    <template v-for="record in filteredOfficeSettlements">
+                    <div v-if="record && record.id" :key="record.id" class="bg-white border rounded-xl overflow-hidden hover:shadow-md transition">
                         <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-4 cursor-pointer select-none">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-start gap-3">
@@ -3398,7 +3399,7 @@
                                                 首次领水时间: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleString('zh-CN') : '-' }}
                                             </div>
                                             <div v-if="record?.last_reminder_at" class="text-xs text-amber-600 mt-1">
-                                                📢 {{ record?.last_reminder_at ? new Date(record.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
+                                                📢 {{ record?.last_reminder_at ? new Date(record?.last_reminder_at).toLocaleString('zh-CN') : '-' }} 发送过催款提醒
                                             </div>
                                         </template>
                                         <template v-else-if="record?.status === 'confirmed'">
@@ -3457,57 +3458,68 @@
                                 <span class="text-xs text-slate-400">{{ expandedSettlementAppId === (record?.id || record?.office_id) ? '▲ 收起' : '▼ 展开' }}</span>
                             </div>
                         </div>
-                        <div v-if="expandedSettlementAppId === (record?.id || record?.office_id) && record?.pickups?.length > 0" class="border-t border-slate-200 bg-slate-50 p-3">
-                            <!-- 明细表头 -->
-                            <div class="grid grid-cols-4 gap-2 text-xs font-medium text-slate-500 pb-2 border-b border-slate-200 mb-2">
-                                <div>领水时间</div>
-                                <div>产品信息</div>
-                                <div>数量</div>
-                                <div class="text-right">金额</div>
-                            </div>
-                            <!-- 根据记录实际状态显示对应的明细 -->
-                            <template v-if="record?.status === 'pending'">
-                                <div v-if="record?.pending_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'pending')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-amber-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-amber-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                        <!-- 明细展开区域 -->
+                        <div v-if="expandedSettlementAppId === record.id" class="border-t border-slate-200 bg-slate-50 p-3">
+                            <!-- 待付款明细 -->
+                            <div v-if="record?.pending_count > 0" class="mb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded">待付款</span>
+                                    <span class="text-xs text-slate-500">{{ record?.pending_count }}笔 ¥{{ (record?.pending_amount || 0).toFixed(2) }}</span>
+                                </div>
+                                <div class="space-y-1 max-h-32 overflow-y-auto">
+                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'pending')" :key="p.id" class="bg-amber-50 rounded p-2 text-xs">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
+                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
+                                            </div>
+                                            <div class="font-medium text-amber-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </template>
-                            <template v-else-if="record?.status === 'applied'">
-                                <div v-if="record?.applied_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'applied')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-blue-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-blue-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                            </div>
+                            <!-- 待确认明细 -->
+                            <div v-if="record?.applied_count > 0" class="mb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded">待确认</span>
+                                    <span class="text-xs text-slate-500">{{ record?.applied_count }}笔 ¥{{ (record?.applied_amount || 0).toFixed(2) }}</span>
+                                </div>
+                                <div class="space-y-1 max-h-32 overflow-y-auto">
+                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'applied')" :key="p.id" class="bg-blue-50 rounded p-2 text-xs">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
+                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
+                                            </div>
+                                            <div class="font-medium text-blue-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </template>
-                            <template v-else-if="record?.status === 'confirmed'">
-                                <div v-if="record?.confirmed_count > 0 && record?.pickups" class="space-y-1 max-h-48 overflow-y-auto">
-                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.id && x.settlement_status === 'settled')" :key="p.id" class="grid grid-cols-4 gap-2 text-xs bg-green-50 rounded p-2 items-center">
-                                        <div class="text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
-                                        <div class="text-slate-700 font-medium truncate">{{ p.product_name }}</div>
-                                        <div class="text-slate-600">× {{ p.quantity }}</div>
-                                        <div class="text-right font-medium text-green-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                            </div>
+                            <!-- 已结清明细 -->
+                            <div v-if="record?.confirmed_count > 0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">已结清</span>
+                                    <span class="text-xs text-slate-500">{{ record?.confirmed_count }}笔 ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</span>
+                                </div>
+                                <div class="space-y-1 max-h-32 overflow-y-auto">
+                                    <div v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'settled')" :key="p.id" class="bg-green-50 rounded p-2 text-xs">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-slate-700">{{ p.product_name }}</div>
+                                                <div class="text-slate-400">× {{ p.quantity }} | {{ p.pickup_person || '-' }} | {{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</div>
+                                            </div>
+                                            <div class="font-medium text-green-700">¥{{ (p.total_amount || 0).toFixed(2) }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </template>
-                            <!-- 汇总信息 -->
-                            <div v-if="record?.status === 'pending' && record?.pending_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-amber-600">
-                                待付款合计: {{ record?.pending_count }}笔 ¥{{ (record?.pending_amount || 0).toFixed(2) }}
                             </div>
-                            <div v-if="record?.status === 'applied' && record?.applied_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-blue-600">
-                                待确认合计: {{ record?.applied_count }}笔 ¥{{ (record?.applied_amount || 0).toFixed(2) }}
-                            </div>
-                            <div v-if="record?.status === 'confirmed' && record?.confirmed_count > 0" class="mt-2 pt-2 border-t border-slate-200 text-xs text-right text-green-600">
-                                已结清合计: {{ record?.confirmed_count }}笔 ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}
+                            <!-- 无明细时 -->
+                            <div v-if="!record?.pickups?.length" class="text-xs text-slate-400 text-center py-4">
+                                暂无领水明细
                             </div>
                         </div>
-                    </div>
+                    </template>
                     <div v-if="!filteredOfficeSettlements || filteredOfficeSettlements.length === 0" class="text-center py-12 text-slate-400">
                         <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         <p>暂无结算记录</p>

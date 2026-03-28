@@ -1330,6 +1330,7 @@ def get_admin_office_settlements(
                         "quantity": p.quantity,
                         "total_amount": p.total_amount,
                         "settlement_status": p.settlement_status,
+                        "pickup_person": p.pickup_person,
                         "pickup_time": p.pickup_time.isoformat()
                         if p.pickup_time
                         else None,
