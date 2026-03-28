@@ -1522,7 +1522,9 @@
                                 <th class="py-3 px-3 text-right text-sm font-medium text-slate-600">金额</th>
                                 <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">状态</th>
                                 <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">领取人</th>
-                                <th class="py-3 px-3 text-left text-sm font-medium text-slate-600">操作</th>
+                                <th class="py-3 px-2 text-center text-sm font-medium text-slate-600">提醒</th>
+                                <th class="py-3 px-2 text-center text-sm font-medium text-slate-600">确认</th>
+                                <th class="py-3 px-2 text-center text-sm font-medium text-slate-600">删除</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1543,30 +1545,20 @@
                                     </span>
                                 </td>
                                 <td class="py-3 px-3 text-sm text-slate-600">{{ p.pickup_person }}</td>
-                                <td class="py-3 px-3">
-                                    <div class="flex items-center gap-1">
-                                        <template v-if="p.settlement_status === 'pending'">
-                                            <button @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded">
-                                                提醒付款
-                                            </button>
-                                            <button @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-xs font-medium px-2 py-1 bg-green-50 rounded ml-1">
-                                                确认收款
-                                            </button>
-                                        </template>
-                                        <template v-else-if="p.settlement_status === 'applied'">
-                                            <button @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-xs font-medium px-2 py-1 bg-green-50 rounded">
-                                                确认收款
-                                            </button>
-                                        </template>
-                                        <template v-else-if="p.settlement_status === 'settled'">
-                                            <span class="text-xs text-green-500 font-medium px-2 py-1">
-                                                已结清
-                                            </span>
-                                        </template>
-                                        <button v-if="user?.role === 'super_admin'" @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded ml-1" title="删除">
-                                            删除
-                                        </button>
-                                    </div>
+                                <td class="py-3 px-2 text-center">
+                                    <button v-if="p.settlement_status === 'pending'" @click="sendRemindForPickup(p)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded w-14">
+                                        提醒
+                                    </button>
+                                </td>
+                                <td class="py-3 px-2 text-center">
+                                    <button v-if="p.settlement_status === 'pending' || p.settlement_status === 'applied'" @click="confirmSinglePickup(p.id)" class="text-green-600 hover:text-green-800 text-xs font-medium px-2 py-1 bg-green-50 rounded w-14">
+                                        确认
+                                    </button>
+                                </td>
+                                <td class="py-3 px-2 text-center">
+                                    <button v-if="user?.role === 'super_admin'" @click="deleteSinglePickup(p.id)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded w-14" title="删除">
+                                        删除
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
@@ -3231,112 +3223,101 @@
 
             <!-- Settlement Tab (结算记录) -->
             <div v-if="activeTab === 'settlement'" class="stat-card">
-                <!-- 页面标题和刷新按钮 -->
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-3">
-                            <h2 class="text-xl font-bold text-slate-800">结算记录</h2>
-                            <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                <!-- 页面标题和刷新按钮 - 手机端适配 -->
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="text-lg sm:text-xl font-bold text-slate-800">结算记录</h2>
+                            <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1 rounded-full font-medium">
                                 {{ settlementRecordFilter === 'pending' ? '待付款' : settlementRecordFilter === 'applied' ? '待确认' : settlementRecordFilter === 'confirmed' ? '已结清' : '逾期' }}
                             </span>
-                            <span class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full">{{ filteredSettlementRecords.length }} 条记录</span>
+                            <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1 rounded-full">{{ filteredSettlementRecords.length }} 条</span>
                         </div>
-                        <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            刷新数据
+                        <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300 self-start sm:self-auto">
+                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            <span class="hidden sm:inline">刷新数据</span>
+                            <span class="sm:hidden">刷新</span>
                         </button>
                     </div>
                     
-                    <!-- 统计卡片 - 国际顶级设计 -->
-                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-                        <!-- 待付款卡片 -->
-                        <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-100/30 hover:shadow-lg hover:border-amber-200 transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shadow-sm">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <!-- 统计卡片 - 手机端优化为紧凑横向滚动 -->
+                    <div class="overflow-x-auto mx-0 sm:mx-0 px-0 sm:px-0 -mx-2 sm:mx-0 px-2 sm:px-0 mb-3 scrollbar-thin">
+                        <div class="flex gap-2 min-w-max px-2 sm:px-0">
+                            <!-- 待付款卡片 -->
+                            <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="text-[8px] sm:text-xs font-medium text-amber-600">待付款</span>
                                 </div>
-                                <span class="w-2 h-2 rounded-full bg-amber-500 group-hover:scale-125 transition-transform"></span>
+                                <div class="text-base sm:text-lg font-bold text-amber-700">{{ settlementStats.pendingCount || 0 }}</div>
+                                <div class="text-[8px] sm:text-xs font-semibold text-amber-600">¥{{ (settlementStats.pendingAmount || 0).toFixed(0) }}</div>
                             </div>
-                            <div class="text-xs font-medium text-amber-600 mb-1">待付款</div>
-                            <div class="text-2xl font-bold text-amber-700">{{ settlementStats.pendingCount || 0 }} <span class="text-sm font-normal text-amber-600">笔</span></div>
-                            <div class="text-sm font-semibold text-amber-600 mt-1">¥{{ (settlementStats.pendingAmount || 0).toFixed(2) }}</div>
-                        </div>
-                        
-                        <!-- 待确认卡片 -->
-                        <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/30 hover:shadow-lg hover:border-blue-200 transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            
+                            <!-- 待确认卡片 -->
+                            <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="text-[8px] sm:text-xs font-medium text-blue-600">待确认</span>
                                 </div>
-                                <span class="w-2 h-2 rounded-full bg-blue-500 group-hover:scale-125 transition-transform"></span>
+                                <div class="text-base sm:text-lg font-bold text-blue-700">{{ settlementStats.appliedCount || 0 }}</div>
+                                <div class="text-[8px] sm:text-xs font-semibold text-blue-600">¥{{ (settlementStats.appliedAmount || 0).toFixed(0) }}</div>
                             </div>
-                            <div class="text-xs font-medium text-blue-600 mb-1">待确认</div>
-                            <div class="text-2xl font-bold text-blue-700">{{ settlementStats.appliedCount || 0 }} <span class="text-sm font-normal text-blue-600">笔</span></div>
-                            <div class="text-sm font-semibold text-blue-600 mt-1">¥{{ (settlementStats.appliedAmount || 0).toFixed(2) }}</div>
-                        </div>
-                        
-                        <!-- 逾期卡片 -->
-                        <div @click="settlementRecordFilter = 'overdue'" :class="settlementRecordFilter === 'overdue' ? 'ring-2 ring-red-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-red-100 bg-gradient-to-br from-red-50 to-red-100/30 hover:shadow-lg hover:border-red-200 transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center shadow-sm">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            
+                            <!-- 逾期卡片 -->
+                            <div @click="settlementRecordFilter = 'overdue'" :class="settlementRecordFilter === 'overdue' ? 'ring-2 ring-red-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-red-100 bg-gradient-to-br from-red-50 to-red-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="text-[8px] sm:text-xs font-medium text-red-600">逾期</span>
                                 </div>
-                                <span v-if="settlementStats.overdueCount > 0" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                <div class="text-base sm:text-lg font-bold text-red-700">{{ settlementStats.overdueCount || 0 }}</div>
+                                <div class="text-[8px] sm:text-xs font-semibold text-red-600">¥{{ (settlementStats.overdueAmount || 0).toFixed(0) }}</div>
                             </div>
-                            <div class="text-xs font-medium text-red-600 mb-1">逾期未付</div>
-                            <div class="text-2xl font-bold text-red-700">{{ settlementStats.overdueCount || 0 }} <span class="text-sm font-normal text-red-600">笔</span></div>
-                            <div class="text-sm font-semibold text-red-600 mt-1">¥{{ (settlementStats.overdueAmount || 0).toFixed(2) }}</div>
-                        </div>
-                        
-                        <!-- 已结清卡片 -->
-                        <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-100/30 hover:shadow-lg hover:border-emerald-200 transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            
+                            <!-- 已结清卡片 -->
+                            <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="text-[8px] sm:text-xs font-medium text-emerald-600">已结清</span>
                                 </div>
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform"></span>
+                                <div class="text-base sm:text-lg font-bold text-emerald-700">{{ settlementStats.confirmedCount || 0 }}</div>
+                                <div class="text-[8px] sm:text-xs font-semibold text-emerald-600">¥{{ (settlementStats.confirmedAmount || 0).toFixed(0) }}</div>
                             </div>
-                            <div class="text-xs font-medium text-emerald-600 mb-1">已结清</div>
-                            <div class="text-2xl font-bold text-emerald-700">{{ settlementStats.confirmedCount || 0 }} <span class="text-sm font-normal text-emerald-600">笔</span></div>
-                            <div class="text-sm font-semibold text-emerald-600 mt-1">¥{{ (settlementStats.confirmedAmount || 0).toFixed(2) }}</div>
-                        </div>
-                        
-                        <!-- 汇总卡片 -->
-                        <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-slate-500' : ''" class="group cursor-pointer rounded-2xl p-4 border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:shadow-lg hover:border-slate-300 transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-10 h-10 rounded-xl bg-slate-600 flex items-center justify-center shadow-sm">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            
+                            <!-- 汇总卡片 -->
+                            <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-slate-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="text-[8px] sm:text-xs font-medium text-slate-500">总待收</span>
                                 </div>
-                                <span class="w-2 h-2 rounded-full bg-slate-400 group-hover:scale-125 transition-transform"></span>
+                                <div class="text-base sm:text-lg font-bold text-slate-700">{{ (settlementStats.pendingCount || 0) + (settlementStats.appliedCount || 0) }}</div>
+                                <div class="text-[8px] sm:text-xs font-semibold text-slate-600">¥{{ ((settlementStats.pendingAmount || 0) + (settlementStats.appliedAmount || 0)).toFixed(0) }}</div>
                             </div>
-                            <div class="text-xs font-medium text-slate-500 mb-1">总待收</div>
-                            <div class="text-2xl font-bold text-slate-700">{{ (settlementStats.pendingCount || 0) + (settlementStats.appliedCount || 0) }} <span class="text-sm font-normal text-slate-500">笔</span></div>
-                            <div class="text-sm font-semibold text-slate-600 mt-1">¥{{ ((settlementStats.pendingAmount || 0) + (settlementStats.appliedAmount || 0)).toFixed(2) }}</div>
                         </div>
                     </div>
 
                 <!-- 桌面端筛选器 -->
                 <div class="hidden sm:block mb-3">
-                    <div class="flex flex-wrap gap-2">
+                    <!-- 第一行：快捷日期筛选 -->
+                    <div class="flex flex-wrap gap-2 mb-2 items-center">
                         <div class="flex flex-wrap gap-1">
-                            <button @click="setSettlementDateFilter('today')" :class="settlementQuickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">今天</button>
-                            <button @click="setSettlementDateFilter('yesterday')" :class="settlementQuickDate === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">昨天</button>
-                            <button @click="setSettlementDateFilter('3days')" :class="settlementQuickDate === '3days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">3天</button>
-                            <button @click="setSettlementDateFilter('7days')" :class="settlementQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">1周</button>
-                            <button @click="setSettlementDateFilter('30days')" :class="settlementQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">1月</button>
-                            <button @click="setSettlementDateFilter('thisMonth')" :class="settlementQuickDate === 'thisMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">本月</button>
+                            <button @click="toggleSettlementDateFilter('7days')" :class="settlementQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">近1周</button>
+                            <button @click="toggleSettlementDateFilter('30days')" :class="settlementQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">近1月</button>
+                            <button @click="toggleSettlementDateFilter('60days')" :class="settlementQuickDate === '60days' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">近2月</button>
                         </div>
-                        <input v-model="settlementSearch" type="text" placeholder="搜索办公室..." class="px-2 py-1.5 border border-slate-200 rounded-lg text-sm flex-1 min-w-[100px]" />
-                        <select v-model="settlementRecordFilter" class="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white">
-                            <option value="all">全部</option>
+                        <!-- 日期范围 -->
+                        <div class="flex items-center gap-1">
+                            <input type="date" v-model="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-1 border border-slate-200 rounded-lg text-sm" />
+                            <span class="text-slate-400 text-xs">至</span>
+                            <input type="date" v-model="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-1 border border-slate-200 rounded-lg text-sm" />
+                        </div>
+                    </div>
+                    <!-- 第二行：搜索 + 状态 + 重置 -->
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <input v-model="settlementSearch" type="text" placeholder="搜索办公室..." class="px-2 py-1.5 border border-slate-200 rounded-lg text-sm flex-1 min-w-[120px]" />
+                        <select v-model="settlementRecordFilter" class="px-2 py-1 border border-slate-200 rounded-lg text-sm bg-white">
+                            <option value="all">全部状态</option>
                             <option value="pending">待付款</option>
                             <option value="applied">待确认</option>
                             <option value="overdue">逾期</option>
                             <option value="confirmed">已结清</option>
                         </select>
-                        <input type="date" v-model="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
-                        <span class="text-slate-400 self-center">-</span>
-                        <input type="date" v-model="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
-                        <button @click="resetSettlementFilter" class="px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-500 hover:bg-slate-50">重置</button>
+                        <button v-if="settlementQuickDate || settlementSearch || settlementRecordFilter !== 'all' || settlementDateFrom || settlementDateTo" @click="resetSettlementFilter" class="px-2 py-1 border border-slate-200 rounded-lg text-xs text-slate-500 hover:bg-slate-50">
+                            重置
+                        </button>
                     </div>
                 </div>
 
@@ -3346,161 +3327,139 @@
                         <span class="flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
                             <span>筛选</span>
-                            <span v-if="settlementQuickDate || settlementSearch || settlementRecordFilter !== 'all'" class="bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded">已设置</span>
+                            <span v-if="settlementQuickDate || settlementSearch || settlementRecordFilter !== 'all' || settlementDateFrom || settlementDateTo" class="bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded">已设置</span>
                         </span>
                         <svg class="w-4 h-4 transition-transform" :class="showSettlementFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                 </div>
 
                 <!-- 移动端筛选面板 -->
-                <div v-show="showSettlementFilters" class="sm:hidden mb-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                    <div class="flex flex-col gap-2">
-                        <div>
-                            <label class="text-[10px] text-slate-500 mb-0.5 block">日期</label>
-                            <div class="flex flex-wrap gap-0.5">
-                                <button @click="setSettlementDateFilter('today')" :class="settlementQuickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-white'" class="px-1.5 py-1 rounded text-[10px] border">今天</button>
-                                <button @click="setSettlementDateFilter('yesterday')" :class="settlementQuickDate === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-white'" class="px-1.5 py-1 rounded text-[10px] border">昨天</button>
-                                <button @click="setSettlementDateFilter('3days')" :class="settlementQuickDate === '3days' ? 'bg-blue-600 text-white' : 'bg-white'" class="px-1.5 py-1 rounded text-[10px] border">3天</button>
-                                <button @click="setSettlementDateFilter('7days')" :class="settlementQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-white'" class="px-1.5 py-1 rounded text-[10px] border">1周</button>
-                                <button @click="setSettlementDateFilter('30days')" :class="settlementQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-white'" class="px-1.5 py-1 rounded text-[10px] border">1月</button>
-                            </div>
+                <div v-show="showSettlementFilters" class="sm:hidden mb-2 p-2 bg-white rounded-lg border border-slate-200">
+                    <!-- 第一行：快捷日期筛选 -->
+                    <div class="mb-2">
+                        <label class="text-[10px] text-slate-500 mb-1 block">日期</label>
+                        <div class="flex flex-wrap gap-1">
+                            <button @click="toggleSettlementDateFilter('7days')" :class="settlementQuickDate === '7days' ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="px-2 py-1 rounded text-[10px] font-medium">近1周</button>
+                            <button @click="toggleSettlementDateFilter('30days')" :class="settlementQuickDate === '30days' ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="px-2 py-1 rounded text-[10px] font-medium">近1月</button>
+                            <button @click="toggleSettlementDateFilter('60days')" :class="settlementQuickDate === '60days' ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="px-2 py-1 rounded text-[10px] font-medium">近2月</button>
                         </div>
-                        <div class="grid grid-cols-2 gap-1">
-                            <div>
-                                <label class="text-[10px] text-slate-500 mb-0.5 block">搜索</label>
-                                <input v-model="settlementSearch" type="text" placeholder="办公室" class="w-full px-2 py-1.5 border rounded text-xs">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-500 mb-0.5 block">状态</label>
-                                <select v-model="settlementRecordFilter" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-                                    <option value="all">全部</option>
-                                    <option value="pending">待付款</option>
-                                    <option value="applied">待确认</option>
-                                    <option value="confirmed">已结清</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button @click="resetSettlementFilter" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-500 hover:bg-slate-100">清除</button>
                     </div>
+                    <!-- 第二行：日期范围 -->
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="date" v-model="settlementDateFrom" @change="clearSettlementQuickDate" class="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs" />
+                        <span class="text-slate-400 text-xs">至</span>
+                        <input type="date" v-model="settlementDateTo" @change="clearSettlementQuickDate" class="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs" />
+                    </div>
+                    <!-- 第三行：搜索 + 状态 -->
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="text-[10px] text-slate-500 mb-1 block">搜索</label>
+                            <input v-model="settlementSearch" type="text" placeholder="办公室名称" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 mb-1 block">状态</label>
+                            <select v-model="settlementRecordFilter" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white">
+                                <option value="all">全部</option>
+                                <option value="pending">待付款</option>
+                                <option value="applied">待确认</option>
+                                <option value="confirmed">已结清</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- 重置按钮 -->
+                    <button @click="resetSettlementFilter" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-500 hover:bg-slate-50">清除筛选</button>
                 </div>
 
-                <!-- 记录卡片列表 -->
-                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-3">
+                <!-- 记录卡片列表 - 手机端适配 -->
+                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-1.5 sm:space-y-3">
                     <template v-for="record in filteredOfficeSettlements">
-                    <div v-if="record && record.id" :key="record.id" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300">
+                    <div v-if="record && record.id" :key="record.id" class="group bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-md sm:hover:shadow-lg transition-all">
                         <!-- 主卡片区域 -->
-                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-5 cursor-pointer select-none">
-                            <div class="flex items-start justify-between gap-4">
-                                <!-- 左侧：办公室信息 -->
-                                <div class="flex items-start gap-4 flex-1 min-w-0">
-                                    <!-- 复选框 -->
-                                    <div class="pt-1" @click.stop>
+                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-1.5 sm:p-4 cursor-pointer select-none">
+                            <!-- 手机端：垂直布局，桌面端：水平布局 -->
+                            <div class="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                                <!-- 左侧：复选框 + 办公室信息 -->
+                                <div class="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                                    <!-- 复选框 - 手机端隐藏 -->
+                                    <div class="pt-0.5 sm:pt-1 hidden sm:block" @click.stop>
                                         <input type="checkbox" :value="record?.id || record?.office_id" v-model="selectedSettlementApps" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                                     </div>
                                     
                                     <!-- 办公室信息 -->
                                     <div class="flex-1 min-w-0">
-                                        <!-- 标题行：名称 + 状态标签 -->
-                                        <div class="flex items-center gap-2 mb-2 flex-wrap">
-                                            <h3 class="text-base font-semibold text-slate-900 truncate">{{ record?.office_name }}</h3>
-                                            <span class="text-slate-400 text-sm">({{ record?.office_room_number || '-' }})</span>
-                                            <span v-if="record?.status === 'pending'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>待付款
+                                        <!-- 标题行：名称 + 状态 -->
+                                        <div class="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
+                                            <h3 class="text-sm sm:text-base font-semibold text-slate-900 truncate max-w-[100px] sm:max-w-none">{{ record?.office_name }}</h3>
+                                            <span class="text-slate-400 text-[10px] sm:text-sm">({{ record?.office_room_number || '-' }})</span>
+                                        </div>
+                                        
+                                        <!-- 状态标签 + 金额（手机端合并显示） -->
+                                        <div class="flex flex-wrap items-center gap-1 mb-1 sm:mb-2">
+                                            <span v-if="record?.status === 'pending'" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-700">
+                                                待付款
                                             </span>
-                                            <span v-else-if="record?.status === 'applied'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>待确认
+                                            <span v-else-if="record?.status === 'applied'" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-700">
+                                                待确认
                                             </span>
-                                            <span v-else-if="record?.status === 'confirmed'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>已结清
+                                            <span v-else-if="record?.status === 'confirmed'" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-green-100 text-green-700">
+                                                已结清
                                             </span>
-                                            <span v-if="record?.status === 'pending' && record?.overdue_days > 0" class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                                                ⚠️ 逾期{{ record?.overdue_days }}天
+                                            <span v-if="record?.status === 'pending' && record?.overdue_days > 0" class="inline-flex items-center px-1 py-0.5 rounded-lg text-[9px] sm:text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                                                ⚠️ {{ record?.overdue_days }}天
+                                            </span>
+                                            <!-- 金额（手机端显示） -->
+                                            <span class="sm:hidden ml-auto text-xs font-bold" :class="record?.status === 'pending' ? 'text-amber-600' : record?.status === 'applied' ? 'text-blue-600' : 'text-emerald-600'">
+                                                ¥{{ (record?.status === 'pending' ? record?.pending_amount : record?.status === 'applied' ? record?.applied_amount : record?.confirmed_amount || 0).toFixed(2) }}
                                             </span>
                                         </div>
                                         
-                                        <!-- 时间信息 -->
-                                        <div class="text-sm text-slate-500 space-y-1">
+                                        <!-- 时间信息 - 手机端隐藏 -->
+                                        <div class="hidden sm:block text-[9px] sm:text-sm text-slate-500">
                                             <template v-if="record?.status === 'applied'">
-                                                <div class="flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                    <span>提交时间: {{ record?.applied_submit_time ? new Date(record?.applied_submit_time).toLocaleString('zh-CN') : '-' }}</span>
-                                                </div>
+                                                <span>提交: {{ record?.applied_submit_time ? new Date(record?.applied_submit_time).toLocaleDateString('zh-CN') : '-' }}</span>
                                             </template>
                                             <template v-else-if="record?.status === 'pending'">
-                                                <div class="flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                    <span>首次领水: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleDateString('zh-CN') : '-' }}</span>
-                                                </div>
-                                                <div v-if="record?.last_reminder_at" class="flex items-center gap-2 text-amber-600">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                                                    <span class="text-xs">{{ new Date(record?.last_reminder_at).toLocaleDateString('zh-CN') }} 已提醒</span>
-                                                </div>
+                                                <span>首次: {{ record?.pending_first_time ? new Date(record?.pending_first_time).toLocaleDateString('zh-CN') : '-' }}</span>
                                             </template>
                                             <template v-else-if="record?.status === 'confirmed'">
-                                                <div class="flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                    <span>结算时间: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleString('zh-CN') : '-' }}</span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        
-                                        <!-- 统计信息 -->
-                                        <div class="flex flex-wrap gap-3 mt-3">
-                                            <template v-if="record?.status === 'pending'">
-                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-100">
-                                                    <span class="text-amber-700 text-sm font-medium">{{ record?.pending_count }} 笔待付</span>
-                                                </div>
-                                            </template>
-                                            <template v-else-if="record?.status === 'applied'">
-                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100">
-                                                    <span class="text-blue-700 text-sm font-medium">{{ record?.applied_count }} 笔待确认</span>
-                                                </div>
-                                            </template>
-                                            <template v-else-if="record?.status === 'confirmed'">
-                                                <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
-                                                    <span class="text-emerald-700 text-sm font-medium">{{ record?.confirmed_count }} 笔已结清</span>
-                                                </div>
+                                                <span>结算: {{ record?.confirmed_at ? new Date(record?.confirmed_at).toLocaleDateString('zh-CN') : '-' }}</span>
                                             </template>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- 右侧：金额 + 操作按钮 -->
-                                <div class="flex flex-col items-end gap-3">
-                                    <!-- 金额 -->
-                                    <div class="text-right">
+                                <!-- 右侧：金额（桌面端）+ 操作按钮 -->
+                                <div class="flex items-center justify-end gap-1 sm:flex-col sm:items-end sm:gap-3 ml-auto sm:ml-0 flex-shrink-0">
+                                    <!-- 金额（桌面端） -->
+                                    <div class="hidden sm:block text-right">
                                         <template v-if="record?.status === 'pending'">
-                                            <div class="text-2xl font-bold text-amber-600">¥{{ (record?.pending_amount || 0).toFixed(2) }}</div>
+                                            <div class="text-xl sm:text-2xl font-bold text-amber-600">¥{{ (record?.pending_amount || 0).toFixed(2) }}</div>
                                         </template>
                                         <template v-else-if="record?.status === 'applied'">
-                                            <div class="text-2xl font-bold text-blue-600">¥{{ (record?.applied_amount || 0).toFixed(2) }}</div>
+                                            <div class="text-xl sm:text-2xl font-bold text-blue-600">¥{{ (record?.applied_amount || 0).toFixed(2) }}</div>
                                         </template>
                                         <template v-else-if="record?.status === 'confirmed'">
-                                            <div class="text-2xl font-bold text-emerald-600">¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</div>
+                                            <div class="text-xl sm:text-2xl font-bold text-emerald-600">¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</div>
                                         </template>
                                     </div>
                                     
-                                    <!-- 操作按钮 -->
-                                    <div class="flex gap-2">
+                                    <!-- 操作按钮 - 手机端紧凑布局 -->
+                                    <div class="flex items-center gap-1 flex-shrink-0">
                                         <template v-if="record?.status === 'pending'">
-                                            <button @click.stop="remindOfficePayment(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-colors">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                                            <button @click.stop="remindOfficePayment(record)" class="inline-flex items-center justify-center px-1.5 py-1 sm:px-2 sm:py-1 rounded-md text-[9px] sm:text-xs font-medium bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 h-6 sm:h-7 whitespace-nowrap">
                                                 提醒
                                             </button>
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow transition-all">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center justify-center px-2 py-1 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 h-6 sm:h-7 whitespace-nowrap">
                                                 确认
                                             </button>
                                         </template>
                                         <template v-else-if="record?.status === 'applied'">
-                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow transition-all">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            <button @click.stop="confirmOfficeSettlement(record)" class="inline-flex items-center justify-center px-2 py-1 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 h-6 sm:h-7 whitespace-nowrap">
                                                 确认
                                             </button>
                                         </template>
                                         <template v-if="user?.role === 'super_admin'">
-                                            <button @click.stop="deleteOfficeSettlement(record)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            <button @click.stop="deleteOfficeSettlement(record)" class="inline-flex items-center justify-center px-1.5 py-1 sm:px-2 sm:py-1 rounded-md text-[9px] sm:text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50 h-6 sm:h-7 whitespace-nowrap">
                                                 删除
                                             </button>
                                         </template>
@@ -3509,44 +3468,44 @@
                             </div>
                             
                             <!-- 底部展开提示 -->
-                            <div class="flex items-center justify-center mt-4 pt-3 border-t border-slate-100">
-                                <div class="flex items-center gap-2 text-sm text-slate-400 group-hover:text-slate-600 transition-colors">
-                                    <span>{{ expandedSettlementAppId === record.id ? '点击收起明细' : '点击展开明细' }}</span>
-                                    <svg :class="expandedSettlementAppId === record.id ? 'rotate-180' : ''" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="flex items-center justify-center mt-0.5 sm:mt-3 pt-1 sm:pt-3 border-t border-slate-100">
+                                <div class="flex items-center gap-0.5 text-[10px] sm:text-sm text-slate-400 group-hover:text-slate-600 transition-colors">
+                                    <span>{{ expandedSettlementAppId === record.id ? '收起' : '查看明细' }}</span>
+                                    <svg :class="expandedSettlementAppId === record.id ? 'rotate-180' : ''" class="w-2.5 h-2.5 sm:w-4 sm:h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- 明细展开区域 -->
+                        <!-- 明细展开区域 - 手机端优化 -->
                         <div v-if="expandedSettlementAppId === record.id" class="border-t border-slate-200 bg-slate-50/50">
-                            <div class="p-5">
+                            <div class="p-3 sm:p-5 overflow-x-auto">
                                 <!-- 待付款明细 -->
-                                <div v-if="record?.pending_count > 0" class="mb-5">
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-200">
+                                <div v-if="record?.pending_count > 0" class="mb-4 sm:mb-5">
+                                    <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                                        <div class="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-amber-100 border border-amber-200">
                                             <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                            <span class="text-sm font-medium text-amber-700">待付款</span>
+                                            <span class="text-xs sm:text-sm font-medium text-amber-700">待付款</span>
                                         </div>
-                                        <span class="text-sm text-slate-500">{{ record?.pending_count }} 笔 · ¥{{ (record?.pending_amount || 0).toFixed(2) }}</span>
+                                        <span class="text-xs sm:text-sm text-slate-500">{{ record?.pending_count }} 笔 · ¥{{ (record?.pending_amount || 0).toFixed(2) }}</span>
                                     </div>
-                                    <div class="bg-white rounded-xl border border-amber-100 overflow-hidden">
-                                        <table class="w-full">
+                                    <div class="bg-white rounded-lg sm:rounded-xl border border-amber-100 overflow-x-auto">
+                                        <table class="w-full min-w-[400px]">
                                             <thead class="bg-amber-50/50">
                                                 <tr>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">产品</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">数量</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">领取人</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-amber-700">日期</th>
-                                                    <th class="px-4 py-2 text-right text-xs font-medium text-amber-700">金额</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-amber-700">产品</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-amber-700">数量</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-amber-700">领取人</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-amber-700">日期</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-right text-[10px] sm:text-xs font-medium text-amber-700">金额</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'pending')" :key="p.id" class="border-t border-amber-50">
-                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
-                                                    <td class="px-4 py-3 text-sm text-right font-medium text-amber-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-right font-medium text-amber-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -3554,32 +3513,32 @@
                                 </div>
                                 
                                 <!-- 待确认明细 -->
-                                <div v-if="record?.applied_count > 0" class="mb-5">
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 border border-blue-200">
+                                <div v-if="record?.applied_count > 0" class="mb-4 sm:mb-5">
+                                    <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                                        <div class="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-blue-100 border border-blue-200">
                                             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                            <span class="text-sm font-medium text-blue-700">待确认</span>
+                                            <span class="text-xs sm:text-sm font-medium text-blue-700">待确认</span>
                                         </div>
-                                        <span class="text-sm text-slate-500">{{ record?.applied_count }} 笔 · ¥{{ (record?.applied_amount || 0).toFixed(2) }}</span>
+                                        <span class="text-xs sm:text-sm text-slate-500">{{ record?.applied_count }} 笔 · ¥{{ (record?.applied_amount || 0).toFixed(2) }}</span>
                                     </div>
-                                    <div class="bg-white rounded-xl border border-blue-100 overflow-hidden">
-                                        <table class="w-full">
+                                    <div class="bg-white rounded-lg sm:rounded-xl border border-blue-100 overflow-x-auto">
+                                        <table class="w-full min-w-[400px]">
                                             <thead class="bg-blue-50/50">
                                                 <tr>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">产品</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">数量</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">领取人</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-blue-700">日期</th>
-                                                    <th class="px-4 py-2 text-right text-xs font-medium text-blue-700">金额</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-blue-700">产品</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-blue-700">数量</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-blue-700">领取人</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-blue-700">日期</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-right text-[10px] sm:text-xs font-medium text-blue-700">金额</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'applied')" :key="p.id" class="border-t border-blue-50">
-                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
-                                                    <td class="px-4 py-3 text-sm text-right font-medium text-blue-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-right font-medium text-blue-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -3588,31 +3547,31 @@
                                 
                                 <!-- 已结清明细 -->
                                 <div v-if="record?.confirmed_count > 0">
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 border border-emerald-200">
+                                    <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                                        <div class="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-emerald-100 border border-emerald-200">
                                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                            <span class="text-sm font-medium text-emerald-700">已结清</span>
+                                            <span class="text-xs sm:text-sm font-medium text-emerald-700">已结清</span>
                                         </div>
-                                        <span class="text-sm text-slate-500">{{ record?.confirmed_count }} 笔 · ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</span>
+                                        <span class="text-xs sm:text-sm text-slate-500">{{ record?.confirmed_count }} 笔 · ¥{{ (record?.confirmed_amount || 0).toFixed(2) }}</span>
                                     </div>
-                                    <div class="bg-white rounded-xl border border-emerald-100 overflow-hidden">
-                                        <table class="w-full">
+                                    <div class="bg-white rounded-lg sm:rounded-xl border border-emerald-100 overflow-x-auto">
+                                        <table class="w-full min-w-[400px]">
                                             <thead class="bg-emerald-50/50">
                                                 <tr>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">产品</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">数量</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">领取人</th>
-                                                    <th class="px-4 py-2 text-left text-xs font-medium text-emerald-700">日期</th>
-                                                    <th class="px-4 py-2 text-right text-xs font-medium text-emerald-700">金额</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-emerald-700">产品</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-emerald-700">数量</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-emerald-700">领取人</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-left text-[10px] sm:text-xs font-medium text-emerald-700">日期</th>
+                                                    <th class="px-2 py-1.5 sm:px-4 sm:py-2 text-right text-[10px] sm:text-xs font-medium text-emerald-700">金额</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr v-for="p in (record?.pickups || []).filter(x => x && x.settlement_status === 'settled')" :key="p.id" class="border-t border-emerald-50">
-                                                    <td class="px-4 py-3 text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">× {{ p.quantity }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
-                                                    <td class="px-4 py-3 text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
-                                                    <td class="px-4 py-3 text-sm text-right font-medium text-emerald-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-700 font-medium">{{ p.product_name }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">× {{ p.quantity }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-600">{{ p.pickup_person || '-' }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-slate-500">{{ new Date(p.pickup_time).toLocaleDateString('zh-CN') }}</td>
+                                                    <td class="px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-right font-medium text-emerald-600">¥{{ (p.total_amount || 0).toFixed(2) }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -4478,6 +4437,19 @@
                     settlementDateFrom.value = startDate.toISOString().slice(0, 10);
                     settlementDateTo.value = endDate.toISOString().slice(0, 10);
                     settlementQuickDate.value = type;
+                };
+                
+                // 切换日期筛选（点击选中，再点击取消）
+                const toggleSettlementDateFilter = (type) => {
+                    if (settlementQuickDate.value === type) {
+                        // 取消选择，清除日期
+                        settlementQuickDate.value = '';
+                        settlementDateFrom.value = '';
+                        settlementDateTo.value = '';
+                    } else {
+                        // 选择新的日期筛选
+                        setSettlementDateFilter(type);
+                    }
                     // 移动端筛选后关闭面板
                     if (window.innerWidth < 640) {
                         showSettlementFilters.value = false;
@@ -7316,6 +7288,7 @@
                     loadSettlementStats,
                     resetSettlementFilter,
                     setSettlementDateFilter,
+                    toggleSettlementDateFilter,
                     clearSettlementQuickDate,
                     loadSettlementApplications,
                     batchConfirmOfficeSettlements,
