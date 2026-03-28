@@ -198,7 +198,14 @@
 
         createApp({
             setup() {
-                const API_BASE = localStorage.getItem('API_BASE') || 'https://jhw-ai.com/api';
+                // 根据当前域名动态判断API地址
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const getApiBase = () => {
+                    const stored = localStorage.getItem('API_BASE');
+                    if (stored) return stored;
+                    return isLocalhost ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api';
+                };
+                const API_BASE = getApiBase();
 
                 const loginForm = ref({
                     name: '',
@@ -232,8 +239,12 @@
                     loading.value = true;
                     loginError.value = '';
 
+                    // 自动检测正确的API地址
+                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    const apiBase = localStorage.getItem('API_BASE') || (isLocalhost ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+
                     try {
-                        const response = await fetch(`${API_BASE}/auth/login`, {
+                        const response = await fetch(`${apiBase}/auth/login`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -272,7 +283,14 @@
                         }
                     } catch (error) {
                         console.error('Login error:', error);
-                        loginError.value = '网络错误，请稍后重试';
+                        // 如果是API地址问题，尝试另一个地址
+                        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                            // 尝试备用API地址
+                            const altApiBase = isLocalhost ? 'https://jhw-ai.com/api' : 'http://localhost:8000/api';
+                            loginError.value = `无法连接到服务器，请检查网络`;
+                        } else {
+                            loginError.value = '网络错误，请稍后重试';
+                        }
                     } finally {
                         loading.value = false;
                     }

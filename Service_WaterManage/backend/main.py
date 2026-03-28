@@ -979,27 +979,59 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 @app.post("/api/auth/change-password")
 def change_password(
     password_change: PasswordChange,
-    current_user: User = Depends(get_current_user),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ):
     """修改密码"""
-    if not current_user:
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # 验证token获取用户
+    if not credentials:
         raise HTTPException(status_code=401, detail="未登录")
 
+    token = credentials.credentials
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="登录已过期")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="无效的令牌")
+
+    # 从数据库查询用户
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+
+    logger.info(
+        f"Changing password for user: {user.name}, current hash: {user.password_hash[:30] if user.password_hash else 'None'}..."
+    )
+
     # 验证旧密码
-    if not current_user.password_hash:
+    if not user.password_hash:
         # 兼容旧数据
         if password_change.old_password != "admin123":
             raise HTTPException(status_code=400, detail="原密码错误")
     else:
-        if not verify_password(
-            password_change.old_password, current_user.password_hash
-        ):
+        if not verify_password(password_change.old_password, user.password_hash):
             raise HTTPException(status_code=400, detail="原密码错误")
 
     # 更新密码
-    current_user.password_hash = hash_password(password_change.new_password)
-    db.commit()
+    new_hash = hash_password(password_change.new_password)
+    logger.info(f"New hash: {new_hash[:30]}...")
+    user.password_hash = new_hash
+
+    try:
+        db.commit()
+        # 刷新用户对象
+        db.refresh(user)
+        logger.info("Password commit successful")
+    except Exception as e:
+        logger.error(f"Password commit failed: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="密码保存失败")
 
     return {"message": "密码修改成功"}
 
