@@ -349,8 +349,9 @@
             .stat-card {
                 padding: 0.75rem;
                 border-radius: 0.75rem;
-                margin-left: -0.25rem;
-                margin-right: -0.25rem;
+                margin-left: 0;
+                margin-right: 0;
+                overflow: visible;
             }
             /* 顶部导航 */
             .bg-white.border-b {
@@ -1474,38 +1475,47 @@
                         <span class="text-xs font-normal text-slate-500 ml-2">本月累计</span>
                     </h2>
                     
-                    <!-- 用量统计（按单位分类） -->
+                    <!-- 用量与库存统计（按单位分类） -->
                     <div class="mb-4">
                         <h3 class="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2">
                             <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
                             </svg>
-                            用量统计
+                            用量与库存
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <!-- 按单位动态显示 -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                            <!-- 按单位动态显示 - 方案C：左右分栏布局 -->
                             <template v-for="(unitStat, index) in dashboardSummary.usage_stats?.by_unit || []" :key="unitStat.unit">
-                                <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-xs text-slate-500">{{ getUnitDisplayName(unitStat.unit) }}</span>
-                                        <span class="text-xs text-slate-400">{{ unitStat.transaction_count }} 笔</span>
+                                <div class="bg-white rounded-xl md:rounded-2xl p-2 md:p-4 border border-slate-200 shadow-sm cursor-pointer hover:shadow-md transition active:opacity-90" @click="activeTab = 'officePickups'">
+                                    <!-- 左侧：产品名称和交易笔数 -->
+                                    <div class="mb-1 sm:mb-2">
+                                        <p class="text-sm md:text-xs font-semibold text-slate-800">{{ getUnitDisplayName(unitStat.unit) }}</p>
+                                        <p class="text-[10px] md:text-xs text-slate-400">{{ unitStat.transaction_count }} 笔</p>
                                     </div>
-                                    <p class="text-3xl font-bold text-slate-800">{{ unitStat.quantity }}</p>
-                                    <p class="text-xs text-slate-400 mt-1">{{ unitStat.unit }}</p>
-                                    <!-- 产品明细（超过 1 个产品时显示） -->
-                                    <div v-if="unitStat.products && Object.keys(unitStat.products).length > 1" class="mt-2 flex flex-wrap gap-1">
-                                        <template v-for="(qty, productName) in unitStat.products" :key="productName">
-                                            <span class="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                                                {{ productName.split('(')[0] }}: {{ qty }}
-                                            </span>
-                                        </template>
+                                    
+                                    <!-- 右侧：用量、库存、总计 -->
+                                    <div class="space-y-0.5 sm:space-y-1">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[10px] md:text-xs text-slate-500">用量</span>
+                                            <span class="text-sm md:text-3xl font-bold text-slate-800">{{ unitStat.quantity }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[10px] md:text-xs text-slate-500">库存</span>
+                                            <span class="text-sm md:text-3xl font-bold text-blue-600">{{ unitStat.stock }}</span>
+                                        </div>
+                                        <div class="border-t border-slate-100 pt-0.5 sm:pt-1 mt-0.5 sm:mt-1">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-[10px] md:text-xs text-slate-400">总计</span>
+                                                <span class="text-sm md:text-xl font-bold text-green-600">{{ unitStat.quantity + unitStat.stock }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </template>
                             <!-- 无数据提示 -->
                             <div v-if="(!dashboardSummary.usage_stats?.by_unit || dashboardSummary.usage_stats.by_unit.length === 0)" 
-                                 class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm col-span-4 text-center">
-                                <p class="text-slate-400 text-sm">暂无用量数据</p>
+                                 class="bg-white rounded-xl md:rounded-2xl p-2 md:p-4 border border-slate-200 shadow-sm col-span-4 text-center">
+                                <p class="text-slate-400 text-xs md:text-sm">暂无用量数据</p>
                             </div>
                         </div>
                     </div>
@@ -1518,37 +1528,37 @@
                             </svg>
                             金额统计
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                             <!-- 已结算金额 -->
-                            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs text-slate-500">已结算金额</span>
-                                    <span :class="dashboardSummary.metrics?.settled_growth_rate >= 0 ? 'text-green-600' : 'text-red-600'" class="text-xs font-medium">
+                            <div class="bg-white rounded-xl md:rounded-2xl p-2 md:p-4 border border-slate-200 shadow-sm cursor-pointer hover:shadow-md transition active:opacity-90" @click="activeTab = 'settlement'">
+                                <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                    <span class="text-[10px] sm:text-xs text-slate-500">已结算金额</span>
+                                    <span :class="dashboardSummary.metrics?.settled_growth_rate >= 0 ? 'text-green-600' : 'text-red-600'" class="text-[10px] sm:text-xs font-medium">
                                         {{ dashboardSummary.metrics?.settled_growth_rate >= 0 ? '↑' : '↓' }}{{ Math.abs(dashboardSummary.metrics?.settled_growth_rate || 0) }}%
                                     </span>
                                 </div>
-                                <p class="text-3xl font-bold text-green-600">¥{{ (dashboardSummary.metrics?.settled_amount || totalStats.settled_amount).toFixed(0) }}</p>
-                                <p class="text-xs text-slate-400 mt-1">已收款</p>
+                                <p class="text-lg sm:text-3xl font-bold text-green-600">¥{{ (dashboardSummary.metrics?.settled_amount || totalStats.settled_amount).toFixed(0) }}</p>
+                                <p class="text-[10px] sm:text-xs text-slate-400 mt-1">已收款</p>
                             </div>
 
                             <!-- 待付款金额 -->
-                            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs text-slate-500">待付款金额</span>
-                                    <span class="text-xs text-slate-400">{{ quickStats.pending?.unsettled_count || 0 }} 笔</span>
+                            <div class="bg-white rounded-xl md:rounded-2xl p-2 md:p-4 border border-slate-200 shadow-sm cursor-pointer hover:shadow-md transition active:opacity-90" @click="activeTab = 'settlement'; settlementRecordFilter = 'pending'">
+                                <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                    <span class="text-[10px] sm:text-xs text-slate-500">待付款金额</span>
+                                    <span class="text-[10px] sm:text-xs text-slate-400">{{ quickStats.pending?.unsettled_count || 0 }} 笔</span>
                                 </div>
-                                <p class="text-3xl font-bold text-amber-600">¥{{ (dashboardSummary.metrics?.unsettled_amount || totalStats.unsettled_amount).toFixed(0) }}</p>
-                                <p class="text-xs text-slate-400 mt-1">待收款</p>
+                                <p class="text-lg sm:text-3xl font-bold text-amber-600">¥{{ (dashboardSummary.metrics?.unsettled_amount || totalStats.unsettled_amount).toFixed(0) }}</p>
+                                <p class="text-[10px] sm:text-xs text-slate-400 mt-1">待收款</p>
                             </div>
 
                             <!-- 付款待确认 -->
-                            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs text-slate-500">付款待确认</span>
-                                    <span class="text-xs text-slate-400">{{ quickStats.pending?.applied_count || applications.length }} 笔</span>
+                            <div class="bg-white rounded-xl md:rounded-2xl p-2 md:p-4 border border-slate-200 shadow-sm cursor-pointer hover:shadow-md transition active:opacity-90" @click="activeTab = 'settlement'">
+                                <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                    <span class="text-[10px] sm:text-xs text-slate-500">付款待确认</span>
+                                    <span class="text-[10px] sm:text-xs text-slate-400">{{ quickStats.pending?.applied_count || applications.length }} 笔</span>
                                 </div>
-                                <p class="text-3xl font-bold text-blue-600">¥{{ (dashboardSummary.metrics?.applied_amount || totalStats.applied_amount).toFixed(0) }}</p>
-                                <p class="text-xs text-slate-400 mt-1">待确认</p>
+                                <p class="text-lg sm:text-3xl font-bold text-blue-600">¥{{ (dashboardSummary.metrics?.applied_amount || totalStats.applied_amount).toFixed(0) }}</p>
+                                <p class="text-[10px] sm:text-xs text-slate-400 mt-1">待确认</p>
                             </div>
                         </div>
                     </div>
@@ -4150,11 +4160,11 @@
                 </div>
 
                 <!-- 记录卡片列表 - 手机端适配 -->
-                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-1.5 sm:space-y-3">
+                <div v-if="filteredOfficeSettlements && filteredOfficeSettlements.length > 0" class="space-y-2 sm:space-y-3">
                     <template v-for="record in filteredOfficeSettlements">
-                    <div v-if="record && record.id" :key="record.id" class="group bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-md sm:hover:shadow-lg transition-all">
+                    <div v-if="record && record.id" :key="record.id" class="group bg-white border border-slate-200 rounded-lg sm:rounded-2xl overflow-hidden hover:shadow-md sm:hover:shadow-lg transition-all">
                         <!-- 主卡片区域 -->
-                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-1.5 sm:p-4 cursor-pointer select-none">
+                        <div @click="toggleSettlementAppDetail(record?.id || record?.office_id)" class="p-2 sm:p-4 cursor-pointer select-none">
                             <!-- 手机端：垂直布局，桌面端：水平布局 -->
                             <div class="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                                 <!-- 左侧：复选框 + 办公室信息 -->
