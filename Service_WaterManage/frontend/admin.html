@@ -5864,15 +5864,14 @@
                                 alert(data.detail || '删除失败');
                             }
                         } else if (type === 'pickup') {
-                            res = await fetch(`${API_BASE}/admin/transactions/delete`, {
-                                method: 'POST',
-                                headers,
-                                body: JSON.stringify({ transaction_ids: [item], reason: '管理员删除' })
+                            res = await fetch(`${API_BASE}/office-pickup/${item}`, {
+                                method: 'DELETE',
+                                headers
                             });
                             data = await res.json();
                             if (res.ok) {
                                 alert('领水记录已删除');
-                                loadTransactions();
+                                loadOfficePickups();
                             } else {
                                 alert(data.detail || '删除失败');
                             }
@@ -6177,9 +6176,9 @@
                         password: '',
                         reason: ''
                     };
-                    showDeleteModal.value = true;
+                    showDeleteConfirmModal.value = true;
                 };
-
+                
                 // 显示批量删除确认弹窗
                 const showBatchDeleteConfirm = () => {
                     if (selectedTransactions.value.length === 0) {
@@ -6191,12 +6190,12 @@
                         password: '',
                         reason: ''
                     };
-                    showDeleteModal.value = true;
+                    showDeleteConfirmModal.value = true;
                 };
 
                 // 关闭删除确认弹窗
                 const closeDeleteModal = () => {
-                    showDeleteModal.value = false;
+                    showDeleteConfirmModal.value = false;
                     deleteForm.value = {
                         transactionIds: [],
                         password: '',
