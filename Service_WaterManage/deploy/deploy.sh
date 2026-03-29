@@ -173,7 +173,9 @@ deploy_step_3_upload_backend() {
     
     if command -v rsync &>/dev/null && [ "$server_has_rsync" = "yes" ]; then
         # 使用 rsync 增量同步
-        if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+        if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+            rsync -avz ${rsync_exclude} -e "ssh -i '$SSH_KEY_PATH' -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/"
+        elif command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
             rsync -avz ${rsync_exclude} -e "sshpass -p '$SERVER_PASSWORD' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/"
         else
             rsync -avz ${rsync_exclude} -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" "${LOCAL_PROJECT_ROOT}/${BACKEND_DIR}/" "${SERVER_USER}@${SERVER_HOST}:${SERVER_PROJECT_ROOT}/${BACKEND_DIR}/"
@@ -295,10 +297,89 @@ deploy_step_4_upload_frontend() {
 deploy_step_5_configure_nginx() {
     log_header "步骤 5: 配置 Nginx"
     
+    # 检测 Nginx 类型
+    local nginx_type=$(ssh_exec_quiet "which aa_nginx && echo 'aa_nginx' || (which nginx && echo 'nginx' || echo 'not_found')")
+    
+    if [ "$nginx_type" = "aa_nginx" ]; then
+        log_info "检测到 aaPanel Nginx"
+    elif [ "$nginx_type" = "nginx" ]; then
+        log_info "检测到标准 Nginx"
+    else
+        log_warn "未检测到 Nginx，将使用标准配置"
+        nginx_type="nginx"
+    fi
+    
     # 创建 Nginx 配置
     log_info "生成 Nginx 配置..."
     
-    ssh_exec "cat > /etc/nginx/sites-available/${DOMAIN}-https << 'NGINX_EOF'
+    if [ "$nginx_type" = "aa_nginx" ]; then
+        # aaPanel Nginx 配置
+        ssh_exec "cat > /etc/aa_nginx/vhost/${DOMAIN}.conf << 'NGINX_EOF'
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate ${SSL_CERT_PATH};
+    ssl_certificate_key ${SSL_KEY_PATH};
+
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+
+    # 前端静态文件 - 用户端
+    location ${FRONTEND_USER_PATH}/ {
+        alias ${SERVER_PROJECT_ROOT}${FRONTEND_USER_PATH}/;
+        index index.html;
+        try_files \$uri \$uri/ ${FRONTEND_USER_PATH}/index.html;
+    }
+
+    # 前端静态文件 - 管理后台
+    location ${FRONTEND_ADMIN_PATH}/ {
+        alias ${SERVER_PROJECT_ROOT}${FRONTEND_ADMIN_PATH}/;
+        index admin.html;
+        try_files \$uri \$uri/ ${FRONTEND_ADMIN_PATH}/admin.html;
+    }
+
+    # API 反向代理
+    location /api/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \"upgrade\";
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # 默认重定向
+    location / {
+        return 301 https://${DOMAIN}${FRONTEND_USER_PATH}/;
+    }
+}
+NGINX_EOF"
+    else
+        # 标准 Nginx 配置
+        ssh_exec "cat > /etc/nginx/sites-available/${DOMAIN} << 'NGINX_EOF'
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    return 301 https://\$server_name\$request_uri;
+}
+
 server {
     listen 443 ssl;
     server_name ${DOMAIN};
@@ -350,11 +431,12 @@ server {
 }
 NGINX_EOF"
 
-    # 启用配置
-    ssh_exec "
-        mkdir -p /etc/nginx/sites-enabled
-        ln -sf /etc/nginx/sites-available/${DOMAIN}-https /etc/nginx/sites-enabled/
-    "
+        # 启用配置（标准 Nginx）
+        ssh_exec "
+            mkdir -p /etc/nginx/sites-enabled
+            ln -sf /etc/nginx/sites-available/${DOMAIN} /etc/nginx/sites-enabled/
+        "
+    fi
     
     # 重启 Nginx
     restart_nginx
@@ -362,18 +444,36 @@ NGINX_EOF"
     log_success "Nginx 配置完成"
 }
 
-deploy_step_6_start_backend() {
-    log_header "步骤 6: 启动后端服务"
+deploy_step_6_configure_security_group() {
+    log_header "步骤 6: 配置安全组（可选）"
+    
+    # 尝试配置阿里云安全组
+    configure_aliyun_security_group
+    
+    log_success "安全组配置步骤完成"
+}
+
+deploy_step_7_start_backend() {
+    log_header "步骤 7: 启动后端服务"
     
     restart_backend
     
     log_success "后端服务启动完成"
 }
 
-deploy_step_7_verify() {
-    log_header "步骤 7: 验证部署"
+deploy_step_8_verify() {
+    log_header "步骤 8: 验证部署"
     
     verify_deployment
+}
+
+deploy_step_9_cleanup() {
+    log_header "步骤 9: 清理部署文件"
+    
+    # 清理服务器上的临时文件
+    cleanup_deployment_artifacts
+    
+    log_success "清理完成"
 }
 
 # ==========================================
@@ -416,7 +516,18 @@ cmd_logs() {
 
 cmd_shell() {
     log_info "连接到服务器..."
-    ssh $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST}
+    if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+        ssh -i "$SSH_KEY_PATH" $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST}
+    else
+        ssh $SSH_OPTS -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST}
+    fi
+}
+
+cmd_backup() {
+    log_info "创建手动备份..."
+    local backup_name="${PROJECT_NAME}-manual-$(date +%Y%m%d%H%M%S)"
+    backup_server "$backup_name"
+    log_success "备份完成: $backup_name"
 }
 
 # ==========================================
@@ -434,19 +545,46 @@ show_usage() {
     stop            停止服务
     logs            查看后端日志
     shell           SSH 连接到服务器
+    backup          创建手动备份
     help            显示帮助信息
 
+选项:
+    --skip-backup   跳过备份执行部署
+    --skip-sg       跳过安全组配置
+
 示例:
-    $0 deploy           # 执行完整部署
-    $0 status          # 查看状态
-    $0 restart         # 重启服务
-    $0 shell           # SSH 到服务器
+    $0 deploy                  # 执行完整部署
+    $0 deploy --skip-backup    # 跳过备份执行部署
+    $0 status                  # 查看状态
+    $0 restart                 # 重启服务
+    $0 shell                   # SSH 到服务器
+    $0 backup                  # 创建备份
 
 EOF
 }
 
 main() {
     local command="${1:-deploy}"
+    local skip_backup=false
+    local skip_sg=false
+    
+    # 解析选项
+    shift
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --skip-backup)
+                skip_backup=true
+                shift
+                ;;
+            --skip-sg)
+                skip_sg=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
     
     # 显示欢迎信息
     echo ""
@@ -461,7 +599,7 @@ main() {
     case "$command" in
         deploy)
             # 执行完整部署
-            if [ "$2" = "--skip-backup" ]; then
+            if [ "$skip_backup" = true ]; then
                 log_warn "跳过备份..."
                 AUTO_BACKUP=false
             fi
@@ -471,8 +609,16 @@ main() {
             deploy_step_3_upload_backend
             deploy_step_4_upload_frontend
             deploy_step_5_configure_nginx
-            deploy_step_6_start_backend
-            deploy_step_7_verify
+            
+            if [ "$skip_sg" = false ]; then
+                deploy_step_6_configure_security_group
+            else
+                log_info "跳过安全组配置 (--skip-sg)"
+            fi
+            
+            deploy_step_7_start_backend
+            deploy_step_8_verify
+            deploy_step_9_cleanup
             
             echo ""
             log_success "🎉 部署完成！"
@@ -497,6 +643,9 @@ main() {
             ;;
         shell)
             cmd_shell
+            ;;
+        backup)
+            cmd_backup
             ;;
         help|--help|-h)
             show_usage

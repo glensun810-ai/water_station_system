@@ -18,13 +18,11 @@ else
 fi
 
 # ==========================================
-# 服务器配置
+# 服务器基础配置
 # ==========================================
 SERVER_HOST="120.76.156.83"
 SERVER_USER="root"
 SERVER_PORT=22
-# SSH 密码（可选，如果没有配置 SSH 密钥）
-SERVER_PASSWORD="sgl@810SGl"
 
 # ==========================================
 # 域名配置
@@ -99,3 +97,26 @@ PRE_DEPLOY_CHECKS=(
     "check_nginx"
     "verify_production_data_exists"
 )
+
+# ==========================================
+# 敏感信息配置（从外部文件加载）
+# ==========================================
+
+# 尝试加载敏感信息配置文件
+if [ -f "$(dirname "${BASH_SOURCE[0]}")/config-sensitive.sh" ]; then
+    source "$(dirname "${BASH_SOURCE[0]}")/config-sensitive.sh"
+fi
+
+# 如果未配置 SSH 密钥或密码，使用默认值
+SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/jhw-ai-server.pem}"
+SERVER_PASSWORD="${SERVER_PASSWORD:-}"
+
+# ==========================================
+# 阿里云安全组配置（可选）
+# ==========================================
+
+# 如果需要自动配置安全组，取消注释并填写
+# ALIYUN_ACCESS_KEY_ID=""
+# ALIYUN_ACCESS_KEY_SECRET=""
+# ALIYUN_REGION_ID=""
+# ALIYUN_INSTANCE_ID=""

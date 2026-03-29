@@ -53,7 +53,9 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o Connect
 
 ssh_exec() {
     local cmd="$1"
-    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+    if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+        ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
+    elif command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
         sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
     else
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd"
@@ -62,7 +64,9 @@ ssh_exec() {
 
 ssh_exec_quiet() {
     local cmd="$1"
-    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+    if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+        ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
+    elif command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
         sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
     else
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "$cmd" 2>/dev/null
@@ -76,7 +80,9 @@ ssh_exec_quiet() {
 scp_upload() {
     local local_path="$1"
     local remote_path="$2"
-    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+    if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+        scp -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
+    elif command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
         sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
     else
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "$local_path" "${SERVER_USER}@${SERVER_HOST}:${remote_path}"
@@ -86,7 +92,9 @@ scp_upload() {
 scp_download() {
     local remote_path="$1"
     local local_path="$2"
-    if command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
+    if [ -n "$SSH_KEY_PATH" ] && [ -f "$SSH_KEY_PATH" ]; then
+        scp -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
+    elif command -v sshpass &>/dev/null && [ -n "$SERVER_PASSWORD" ]; then
         sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
     else
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SERVER_PORT:-22} "${SERVER_USER}@${SERVER_HOST}:${remote_path}" "$local_path"
@@ -339,6 +347,106 @@ verify_production_data_exists() {
         log_error "无法验证生产数据：路径配置不正确"
         return 1
     fi
+}
+
+# ==========================================
+# 阿里云安全组配置函数
+# ==========================================
+
+configure_aliyun_security_group() {
+    log_info "配置阿里云安全组..."
+    
+    # 检查是否配置了阿里云凭证
+    if [ -z "$ALIYUN_ACCESS_KEY_ID" ] || [ -z "$ALIYUN_ACCESS_KEY_SECRET" ]; then
+        log_warn "未配置阿里云凭证，跳过安全组配置"
+        log_info "如需自动配置安全组，请在 config.sh 中设置以下变量："
+        log_info "  ALIYUN_ACCESS_KEY_ID"
+        log_info "  ALIYUN_ACCESS_KEY_SECRET"
+        log_info "  ALIYUN_REGION_ID"
+        log_info "  ALIYUN_INSTANCE_ID"
+        return 0
+    fi
+    
+    # 在服务器上安装和配置 aliyun CLI
+    ssh_exec "
+        # 检查 aliyun CLI 是否已安装
+        if ! command -v aliyun &>/dev/null; then
+            echo '安装 aliyun CLI...'
+            curl -L 'https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz' -o /tmp/aliyun-cli.tgz
+            tar -xzf /tmp/aliyun-cli.tgz -C /tmp
+            mv /tmp/aliyun /usr/local/bin/aliyun
+            chmod +x /usr/local/bin/aliyun
+            rm -f /tmp/aliyun-cli.tgz
+        fi
+        
+        # 配置 aliyun CLI
+        /usr/local/bin/aliyun configure set --profile default --mode AK \\
+            --access-key-id ${ALIYUN_ACCESS_KEY_ID} \\
+            --access-key-secret ${ALIYUN_ACCESS_KEY_SECRET} \\
+            --region ${ALIYUN_REGION_ID}
+    "
+    
+    # 获取实例的安全组 ID
+    log_info "获取实例安全组 ID..."
+    local sg_id=$(ssh_exec "
+        /usr/local/bin/aliyun ecs DescribeInstances --RegionId ${ALIYUN_REGION_ID} --InstanceIds '${ALIYUN_INSTANCE_ID}' \\
+        | grep -oP '\"SecurityGroupId\": \"\\K[^\"]+' | head -1
+    " 2>/dev/null)
+    
+    if [ -z "$sg_id" ]; then
+        log_error "无法获取安全组 ID"
+        return 1
+    fi
+    
+    log_success "安全组 ID: $sg_id"
+    
+    # 添加安全组规则
+    log_info "添加安全组规则..."
+    
+    # 添加端口 80 规则
+    ssh_exec "
+        /usr/local/bin/aliyun ecs AuthorizeSecurityGroup --RegionId ${ALIYUN_REGION_ID} \\
+            --SecurityGroupId '${sg_id}' \\
+            --IpProtocol tcp \\
+            --PortRange '80/80' \\
+            --SourceCidrIp '0.0.0.0/0' \\
+            --Description 'Water management system - HTTP'
+    " 2>/dev/null && log_success "已添加端口 80 规则" || log_warn "端口 80 规则可能已存在"
+    
+    # 添加端口 443 规则
+    ssh_exec "
+        /usr/local/bin/aliyun ecs AuthorizeSecurityGroup --RegionId ${ALIYUN_REGION_ID} \\
+            --SecurityGroupId '${sg_id}' \\
+            --IpProtocol tcp \\
+            --PortRange '443/443' \\
+            --SourceCidrIp '0.0.0.0/0' \\
+            --Description 'Water management system - HTTPS'
+    " 2>/dev/null && log_success "已添加端口 443 规则" || log_warn "端口 443 规则可能已存在"
+    
+    log_success "安全组配置完成"
+}
+
+# ==========================================
+# 清理函数
+# ==========================================
+
+cleanup_deployment_artifacts() {
+    log_info "清理部署文件..."
+    
+    ssh_exec "
+        # 清理服务器根目录的临时文件
+        rm -rf /root/main.py
+        rm -rf /root/qwen3.5.py
+        rm -rf /root/test_*.py
+        rm -rf /root/waterms.db
+        rm -rf /root/.git
+        rm -rf /root/.github
+        rm -rf /root/.idea
+        
+        echo '清理完成'
+    "
+    
+    log_success "清理完成"
 }
 
 # ==========================================
