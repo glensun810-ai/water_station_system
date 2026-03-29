@@ -7,6 +7,7 @@ from typing import Tuple
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     create_engine,
@@ -3197,11 +3198,13 @@ def toggle_transaction_protection(
 def get_dashboard_summary(db: Session = Depends(get_db)):
     """
     Get comprehensive dashboard summary with actionable insights
+    首页统计完全基于领水记录（office_pickup表），与领水记录详情列表保持一致
     Returns: pending tasks, key metrics with trends, quick stats
 
-    优化后的核心指标分为两大类：
-    - 用量统计：按单位（桶/瓶/提）分类统计，更贴合实际运营场景
-    - 金额统计：按结算状态分类，清晰掌握收款情况
+    核心指标说明：
+    - 用量统计：只统计办公室领水记录（office_pickup表），不包含个人用水
+    - 金额统计：只统计办公室领水结算金额，不包含个人用水
+    - 办公室排行：只统计办公室领水记录
     """
     from datetime import datetime, timedelta
 
@@ -3216,25 +3219,27 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         last_month_start = datetime(now.year, now.month - 1, 1)
         last_month_end = month_start - timedelta(days=1)
 
-    # 本月数据
-    this_month_transactions = (
-        db.query(Transaction).filter(Transaction.created_at >= month_start).all()
+    # ==================== 办公室领水统计（首页唯一数据源） ====================
+    # 本月领水记录
+    office_pickups_this_month = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= month_start).all()
     )
 
-    # 上月同期数据
-    last_month_transactions = (
-        db.query(Transaction)
+    # 上月同期领水记录
+    office_pickups_last_month = (
+        db.query(OfficePickup)
         .filter(
-            Transaction.created_at >= last_month_start,
-            Transaction.created_at <= last_month_end,
+            OfficePickup.pickup_time >= last_month_start,
+            OfficePickup.pickup_time <= last_month_end,
         )
         .all()
     )
 
     # 待办事项统计
-    pending_applications = (
-        db.query(Transaction)
-        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 1)
+    # 办公室用水待结算数量（来自领水记录）
+    pending_office_settlements = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.settlement_status == "pending")
         .count()
     )
 
@@ -3242,43 +3247,64 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         db.query(Product).filter(Product.stock < 10, Product.is_active == 1).count()
     )
 
-    # 超过 30 天未结算且未申请的用户数
+    # 办公室催付提醒（超过30天未结算的领水记录）
     cutoff_date = now - timedelta(days=30)
-    users_to_remind = (
-        db.query(Transaction)
+    offices_to_remind = (
+        db.query(OfficePickup)
         .filter(
-            Transaction.status == "unsettled",
-            Transaction.settlement_applied == 0,
-            Transaction.created_at < cutoff_date,
+            OfficePickup.settlement_status == "pending",
+            OfficePickup.pickup_time < cutoff_date,
         )
-        .distinct(Transaction.user_id)
+        .distinct(OfficePickup.office_id)
         .count()
     )
 
     # ==================== 用量统计（按单位分类） ====================
-    # 按产品单位分组统计本月领取量
+    # 按产品单位分组统计本月领水量（只统计office_pickup表）
     usage_by_unit = {}
-    for t in this_month_transactions:
-        product = db.query(Product).filter(Product.id == t.product_id).first()
+
+    for op in office_pickups_this_month:
+        product = db.query(Product).filter(Product.id == op.product_id).first()
         if product:
-            unit = product.unit  # 桶、瓶、提等
+            unit = product.unit
             if unit not in usage_by_unit:
                 usage_by_unit[unit] = {
                     "quantity": 0,
                     "transaction_count": 0,
                     "products": {},
+                    "stock": 0,  # 剩余库存
+                    "total": 0,  # 用量+库存总计
                 }
-            usage_by_unit[unit]["quantity"] += t.quantity
+            usage_by_unit[unit]["quantity"] += op.quantity
             usage_by_unit[unit]["transaction_count"] += 1
-            # 按产品细分
             product_key = f"{product.name}({product.specification})"
             if product_key not in usage_by_unit[unit]["products"]:
                 usage_by_unit[unit]["products"][product_key] = 0
-            usage_by_unit[unit]["products"][product_key] += t.quantity
+            usage_by_unit[unit]["products"][product_key] += op.quantity
+
+    # 获取所有活跃产品的库存数据
+    active_products = db.query(Product).filter(Product.is_active == 1).all()
+    for product in active_products:
+        unit = product.unit
+        if unit not in usage_by_unit:
+            usage_by_unit[unit] = {
+                "quantity": 0,
+                "transaction_count": 0,
+                "products": {},
+                "stock": 0,
+                "total": 0,
+            }
+        usage_by_unit[unit]["stock"] = product.stock or 0
+
+    # 计算用量+库存总计
+    for unit in usage_by_unit:
+        usage_by_unit[unit]["total"] = (
+            usage_by_unit[unit]["quantity"] + usage_by_unit[unit]["stock"]
+        )
 
     # 计算上月同期用量（用于环比）
-    last_month_qty = sum(t.quantity for t in last_month_transactions)
-    this_month_qty = sum(t.quantity for t in this_month_transactions)
+    last_month_qty = sum(op.quantity for op in office_pickups_last_month)
+    this_month_qty = sum(op.quantity for op in office_pickups_this_month)
     qty_growth = (
         ((this_month_qty - last_month_qty) / last_month_qty * 100)
         if last_month_qty > 0
@@ -3286,57 +3312,62 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     )
 
     # ==================== 金额统计（按状态分类） ====================
-    this_month_settled = sum(
-        t.actual_price for t in this_month_transactions if t.status == "settled"
+    # 已结算金额（本月）
+    this_month_office_settled = sum(
+        o.total_amount
+        for o in office_pickups_this_month
+        if o.settlement_status == "settled"
     )
-    last_month_settled = sum(
-        t.actual_price for t in last_month_transactions if t.status == "settled"
+    last_month_office_settled = sum(
+        o.total_amount
+        for o in office_pickups_last_month
+        if o.settlement_status == "settled"
     )
     settled_growth = (
-        ((this_month_settled - last_month_settled) / last_month_settled * 100)
-        if last_month_settled > 0
+        (
+            (this_month_office_settled - last_month_office_settled)
+            / last_month_office_settled
+            * 100
+        )
+        if last_month_office_settled > 0
         else 0
     )
 
-    unsettled_amount = sum(
-        t.actual_price
-        for t in this_month_transactions
-        if t.status == "unsettled" and t.settlement_applied == 0
-    )
-    applied_amount = sum(
-        t.actual_price
-        for t in this_month_transactions
-        if t.status == "unsettled" and t.settlement_applied == 1
+    # 未结算金额（本月待付款）
+    this_month_office_pending = sum(
+        o.total_amount
+        for o in office_pickups_this_month
+        if o.settlement_status == "pending"
     )
 
-    # 办公室排行
-    dept_stats = (
+    # ==================== 办公室排行（TOP 10） ====================
+    office_ranking = (
         db.query(
-            User.department,
-            func.sum(Transaction.quantity).label("total_qty"),
-            func.count(Transaction.id).label("transaction_count"),
+            OfficePickup.office_name,
+            func.sum(OfficePickup.quantity).label("total_qty"),
+            func.count(OfficePickup.id).label("transaction_count"),
         )
-        .join(Transaction, User.id == Transaction.user_id)
-        .filter(Transaction.created_at >= month_start)
-        .group_by(User.department)
-        .order_by(func.sum(Transaction.quantity).desc())
-        .limit(5)
+        .filter(OfficePickup.pickup_time >= month_start)
+        .group_by(OfficePickup.office_name)
+        .order_by(func.sum(OfficePickup.quantity).desc())
+        .limit(10)
         .all()
     )
 
     return {
         "pending_tasks": {
-            "applications_count": pending_applications,
+            "applications_count": pending_office_settlements,  # 待确认结算（办公室领水）
+            "pending_office_settlements": pending_office_settlements,  # 待付款（办公室领水）
             "low_stock_count": low_stock_products,
-            "remind_count": users_to_remind,
+            "remind_count": offices_to_remind,  # 待提醒（超过30天未结算）
             "abnormal_count": 0,
         },
         "metrics": {
-            # 金额统计
-            "settled_amount": round(this_month_settled, 2),
+            # 金额统计（只统计办公室领水记录）
+            "settled_amount": round(this_month_office_settled, 2),
             "settled_growth_rate": round(settled_growth, 1),
-            "unsettled_amount": round(unsettled_amount, 2),
-            "applied_amount": round(applied_amount, 2),
+            "unsettled_amount": round(this_month_office_pending, 2),
+            "applied_amount": 0,  # 无个人用水数据
             # 总体趋势
             "total_qty_growth_rate": round(qty_growth, 1),
         },
@@ -3345,6 +3376,8 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
                 {
                     "unit": unit,
                     "quantity": data["quantity"],
+                    "stock": data["stock"],
+                    "total": data["total"],
                     "transaction_count": data["transaction_count"],
                     "products": data["products"],
                 }
@@ -3354,18 +3387,18 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         },
         "department_ranking": [
             {
-                "department": dept.department,
-                "total_qty": dept.total_qty,
-                "transaction_count": dept.transaction_count,
+                "department": office.office_name,
+                "total_qty": office.total_qty,
+                "transaction_count": office.transaction_count,
             }
-            for dept in dept_stats
+            for office in office_ranking
         ],
     }
 
 
 @app.get("/api/admin/dashboard/quick-stats")
 def get_quick_stats(db: Session = Depends(get_db)):
-    """Get quick statistics for dashboard cards"""
+    """Get quick statistics for dashboard cards - 只统计办公室领水记录"""
     from datetime import datetime, timedelta
 
     now = datetime.now()
@@ -3373,49 +3406,47 @@ def get_quick_stats(db: Session = Depends(get_db)):
     yesterday_start = today_start - timedelta(days=1)
     week_start = today_start - timedelta(days=7)
 
-    # 今日领取
-    today_transactions = (
-        db.query(Transaction).filter(Transaction.created_at >= today_start).all()
+    # 今日领水（只统计办公室领水记录）
+    today_office = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= today_start).all()
     )
-    today_qty = sum(t.quantity for t in today_transactions)
+    today_qty = sum(o.quantity for o in today_office)
 
-    # 昨日领取
-    yesterday_transactions = (
-        db.query(Transaction)
+    # 昨日领水（只统计办公室领水记录）
+    yesterday_office = (
+        db.query(OfficePickup)
         .filter(
-            Transaction.created_at >= yesterday_start,
-            Transaction.created_at < today_start,
+            OfficePickup.pickup_time >= yesterday_start,
+            OfficePickup.pickup_time < today_start,
         )
         .all()
     )
-    yesterday_qty = sum(t.quantity for t in yesterday_transactions)
+    yesterday_qty = sum(o.quantity for o in yesterday_office)
     today_growth = (
         ((today_qty - yesterday_qty) / yesterday_qty * 100) if yesterday_qty > 0 else 0
     )
 
-    # 本周领取
-    week_transactions = (
-        db.query(Transaction).filter(Transaction.created_at >= week_start).all()
+    # 本周领水（只统计办公室领水记录）
+    week_office = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= week_start).all()
     )
-    week_qty = sum(t.quantity for t in week_transactions)
+    week_qty = sum(o.quantity for o in week_office)
 
-    # 待结算笔数（区分状态）
-    unsettled_count = (
-        db.query(Transaction)
-        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 0)
-        .count()
-    )
-
-    applied_count = (
-        db.query(Transaction)
-        .filter(Transaction.status == "unsettled", Transaction.settlement_applied == 1)
+    # 待结算笔数（只统计办公室领水记录）
+    unsettled_office_count = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.settlement_status == "pending")
         .count()
     )
 
     return {
         "today": {"quantity": today_qty, "growth_rate": round(today_growth, 1)},
         "week": {"quantity": week_qty},
-        "pending": {"unsettled_count": unsettled_count, "applied_count": applied_count},
+        "pending": {
+            "unsettled_count": unsettled_office_count,
+            "applied_count": 0,  # 无个人用水数据
+            "unsettled_office_count": unsettled_office_count,
+        },
     }
 
 

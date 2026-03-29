@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -1609,7 +1609,7 @@
                             </svg>
                             <span class="text-sm">用户管理</span>
                         </button>
-                        <button @click="activeTab = 'transactions'" class="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-3 py-2.5 rounded-xl font-medium hover:from-indigo-600 hover:to-indigo-700 transition">
+                        <button @click="activeTab = 'settlement'" class="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-3 py-2.5 rounded-xl font-medium hover:from-indigo-600 hover:to-indigo-700 transition">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                             </svg>
@@ -2490,55 +2490,100 @@
                     </div>
                 </div>
 
-                <!-- 筛选器 - 手机端优化 -->
-                <div class="flex flex-col sm:flex-row gap-2 mb-4">
-                    <!-- 手机端：垂直排列 -->
-                    <div class="flex flex-col gap-2 ">
-                        <select v-model="officeAccountFilter.officeId" @change="filterOfficeAccounts" class="w-full px-3 py-2.5 border rounded-lg text-sm bg-white">
-                            <option value="">全部办公室</option>
-                            <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
-                        </select>
-                        <select v-model="officeAccountFilter.productId" @change="filterOfficeAccounts" class="w-full px-3 py-2.5 border rounded-lg text-sm bg-white">
-                            <option value="">全部产品</option>
-                            <option v-for="p in products" :value="p.id">{{ p.name }}</option>
-                        </select>
-                        <select v-model="officeAccountFilter.accountType" @change="filterOfficeAccounts" class="w-full px-3 py-2.5 border rounded-lg text-sm bg-white">
-                            <option value="">全部类型</option>
-                            <option value="credit">信用模式</option>
-                            <option value="prepaid">预付模式</option>
-                        </select>
-                        <select v-model="officeAccountFilter.status" @change="filterOfficeAccounts" class="w-full px-3 py-2.5 border rounded-lg text-sm bg-white">
-                            <option value="">全部状态</option>
-                            <option value="normal">正常</option>
-                            <option value="low">库存不足</option>
-                            <option value="empty">已用完</option>
-                        </select>
-                        <input v-model="officeAccountFilter.search" @input="filterOfficeAccounts" type="text" placeholder="搜索..." class="w-full px-3 py-2.5 border rounded-lg text-sm">
-                        <button @click="resetOfficeAccountFilter" class="w-full px-3 py-2.5 border border-dashed rounded-lg text-sm text-slate-500 hover:bg-slate-50">重置筛选</button>
+                <!-- 筛选器 - 响应式优化 -->
+                <div class="mb-4">
+                    <!-- 桌面端：两行分组布局 -->
+                    <div class="hidden sm:block">
+                        <!-- 第一行：账户基本信息筛选 -->
+                        <div class="flex flex-wrap items-end gap-3 mb-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500 whitespace-nowrap">办公室:</label>
+                                <select v-model="officeAccountFilter.officeId" @change="filterOfficeAccounts" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[120px]">
+                                    <option value="">全部办公室</option>
+                                    <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500 whitespace-nowrap">产品:</label>
+                                <select v-model="officeAccountFilter.productId" @change="filterOfficeAccounts" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[120px]">
+                                    <option value="">全部产品</option>
+                                    <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500 whitespace-nowrap">类型:</label>
+                                <select v-model="officeAccountFilter.accountType" @change="filterOfficeAccounts" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[100px]">
+                                    <option value="">全部类型</option>
+                                    <option value="credit">信用模式</option>
+                                    <option value="prepaid">预付模式</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- 第二行：状态筛选 + 搜索 + 操作 -->
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500 whitespace-nowrap">状态:</label>
+                                <select v-model="officeAccountFilter.status" @change="filterOfficeAccounts" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-w-[120px]">
+                                    <option value="">全部状态</option>
+                                    <option value="normal">正常 (>10桶)</option>
+                                    <option value="low">库存不足 (1-10桶)</option>
+                                    <option value="empty">已用完 (0桶)</option>
+                                </select>
+                            </div>
+                            <div class="flex-1 min-w-[200px] flex items-center gap-2">
+                                <label class="text-xs text-slate-500 whitespace-nowrap">搜索:</label>
+                                <input v-model="officeAccountFilter.search" @input="filterOfficeAccounts" type="text" placeholder="办公室名称或房间号..." class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                            </div>
+                            <button @click="resetOfficeAccountFilter" class="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 whitespace-nowrap">
+                                重置筛选
+                            </button>
+                        </div>
                     </div>
-                    <!-- 桌面端：水平排列 -->
-                    <div class="hidden sm:flex flex-wrap gap-2">
-                        <select v-model="officeAccountFilter.officeId" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                            <option value="">全部办公室</option>
-                            <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
-                        </select>
-                        <select v-model="officeAccountFilter.productId" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                            <option value="">全部产品</option>
-                            <option v-for="p in products" :value="p.id">{{ p.name }}</option>
-                        </select>
-                        <select v-model="officeAccountFilter.accountType" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                            <option value="">全部类型</option>
-                            <option value="credit">信用模式</option>
-                            <option value="prepaid">预付模式</option>
-                        </select>
-                        <select v-model="officeAccountFilter.status" @change="filterOfficeAccounts" class="px-3 py-2 border rounded-lg text-sm bg-white">
-                            <option value="">全部状态</option>
-                            <option value="normal">正常 (>10桶)</option>
-                            <option value="low">库存不足 (1-10桶)</option>
-                            <option value="empty">已用完 (0桶)</option>
-                        </select>
-                        <input v-model="officeAccountFilter.search" @input="filterOfficeAccounts" type="text" placeholder="搜索办公室/房间号..." class="px-3 py-2 border rounded-lg text-sm">
-                        <button @click="resetOfficeAccountFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500 hover:bg-slate-50">重置</button>
+                    
+                    <!-- 移动端：可折叠筛选面板 -->
+                    <div class="sm:hidden">
+                        <!-- 筛选按钮 -->
+                        <button @click="showOfficeAccountFilters = !showOfficeAccountFilters" class="w-full flex items-center justify-between px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                                </svg>
+                                <span>筛选条件</span>
+                                <!-- 显示是否有筛选条件生效 -->
+                                <span v-if="officeAccountFilter.officeId || officeAccountFilter.productId || officeAccountFilter.accountType || officeAccountFilter.status || officeAccountFilter.search" class="bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded">已设置</span>
+                            </span>
+                            <svg class="w-4 h-4 transition-transform" :class="showOfficeAccountFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- 可折叠的筛选面板 -->
+                        <div v-show="showOfficeAccountFilters" class="mt-2 p-3 bg-white rounded-lg border border-slate-200 space-y-3">
+                            <select v-model="officeAccountFilter.officeId" @change="filterOfficeAccounts" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                                <option value="">全部办公室</option>
+                                <option v-for="o in offices" :value="o.id">{{ o.name }}</option>
+                            </select>
+                            <select v-model="officeAccountFilter.productId" @change="filterOfficeAccounts" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                                <option value="">全部产品</option>
+                                <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                            </select>
+                            <select v-model="officeAccountFilter.accountType" @change="filterOfficeAccounts" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                                <option value="">全部类型</option>
+                                <option value="credit">信用模式</option>
+                                <option value="prepaid">预付模式</option>
+                            </select>
+                            <select v-model="officeAccountFilter.status" @change="filterOfficeAccounts" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                                <option value="">全部状态</option>
+                                <option value="normal">正常</option>
+                                <option value="low">库存不足</option>
+                                <option value="empty">已用完</option>
+                            </select>
+                            <input v-model="officeAccountFilter.search" @input="filterOfficeAccounts" type="text" placeholder="搜索办公室/房间号..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                            <button @click="resetOfficeAccountFilter" class="w-full px-3 py-2 border border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:bg-slate-50">
+                                重置筛选
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -4019,13 +4064,25 @@
                             <span v-if="settlementRecordFilter !== 'all'" class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1 rounded-full font-medium">
                                 {{ settlementRecordFilter === 'pending' ? '待付款' : settlementRecordFilter === 'applied' ? '待确认' : settlementRecordFilter === 'confirmed' ? '已结清' : '逾期' }}
                             </span>
-                            <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1 rounded-full">{{ filteredSettlementRecords.length }} 条</span>
+                            <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 sm:text-xs sm:px-2.5 sm:py-1 rounded-full">{{ filteredOfficeSettlements.length }} 条</span>
                         </div>
-                        <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300 self-start sm:self-auto">
-                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span class="hidden sm:inline">刷新数据</span>
-                            <span class="sm:hidden">刷新</span>
-                        </button>
+                        <div class="flex gap-1 self-start sm:self-auto">
+                            <button @click="exportSettlementRecords('filtered')" class="text-slate-600 hover:text-slate-800 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span class="hidden sm:inline">导出筛选</span>
+                                <span class="sm:hidden">筛选导出</span>
+                            </button>
+                            <button @click="exportSettlementRecords('all')" class="text-slate-600 hover:text-slate-800 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span class="hidden sm:inline">导出全部</span>
+                                <span class="sm:hidden">全部导出</span>
+                            </button>
+                            <button @click="loadSettlementStats" class="text-slate-600 hover:text-slate-800 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200 hover:border-slate-300">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                <span class="hidden sm:inline">刷新数据</span>
+                                <span class="sm:hidden">刷新</span>
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- 统计卡片 - 手机端优化为紧凑横向滚动 -->
@@ -4885,6 +4942,116 @@
                     }
                 };
                 
+                // 导出结算记录为CSV - 优化版本（专注待付款明细）
+                const exportSettlementRecords = async (type) => {
+                    try {
+                        let recordsToExport = [];
+                        let filenameSuffix = '';
+                        
+                        if (type === 'filtered') {
+                            // 导出当前筛选结果
+                            recordsToExport = filteredOfficeSettlements.value || [];
+                            filenameSuffix = '_筛选结果';
+                        } else {
+                            // 导出全部记录
+                            recordsToExport = officeSettlements.value.filter(s => s && typeof s === 'object' && (s.id || s.office_id) && s.office_name);
+                            recordsToExport = recordsToExport.filter(s => s && (s.pending_count > 0 || s.applied_count > 0 || s.confirmed_count > 0));
+                            filenameSuffix = '_全部记录';
+                        }
+                        
+                        // 过滤出有待付款记录的办公室
+                        const officesWithPending = recordsToExport.filter(record => (record.pending_count || 0) > 0);
+                        
+                        if (!officesWithPending.length) {
+                            alert('没有待付款记录可以导出');
+                            return;
+                        }
+                        
+                        // ========== 待付款明细表（专注待付款） ==========
+                        const pendingHeaders = [
+                            '办公室名称',
+                            '房间号',
+                            '产品名称', 
+                            '规格',
+                            '单价(元)',
+                            '数量',
+                            '小计金额(元)',
+                            '领取人',
+                            '领取时间',
+                            '申请时间',
+                            '办公室待付款总计(元)'
+                        ];
+                        
+                        let pendingContent = pendingHeaders.join(',') + '\n';
+                        
+                        // 按办公室处理待付款记录
+                        for (const record of officesWithPending) {
+                            const officePendingTotal = record.pending_amount || 0;
+                            let firstRecordForOffice = true;
+                            
+                            // 只处理待付款状态的pickup记录
+                            const pendingPickups = (record.pickups || []).filter(pickup => 
+                                pickup && pickup.settlement_status === 'pending'
+                            );
+                            
+                            if (pendingPickups.length === 0) continue;
+                            
+                            // 按领取时间排序（最新的在前）
+                            pendingPickups.sort((a, b) => 
+                                new Date(b.pickup_time) - new Date(a.pickup_time)
+                            );
+                            
+                            // 为每个待付款记录创建一行
+                            for (const pickup of pendingPickups) {
+                                const totalAmountDisplay = firstRecordForOffice ? `"${officePendingTotal.toFixed(2)}"` : '""';
+                                firstRecordForOffice = false;
+                                
+                                const pendingRow = [
+                                    `"${record.office_name || ''}"`,
+                                    `"${record.office_room_number || ''}"`,
+                                    `"${pickup.product_name || ''}"`,
+                                    `"${pickup.specification || ''}"`,
+                                    `"${(pickup.unit_price || 0).toFixed(2)}"`,
+                                    `"${pickup.quantity || 0}"`,
+                                    `"${(pickup.total_amount || 0).toFixed(2)}"`,
+                                    `"${pickup.pickup_person || ''}"`,
+                                    `"${pickup.pickup_time ? new Date(pickup.pickup_time).toLocaleDateString('zh-CN') : ''}"`,
+                                    `"${pickup.applied_at ? new Date(pickup.applied_at).toLocaleDateString('zh-CN') : ''}"`,
+                                    totalAmountDisplay
+                                ];
+                                pendingContent += pendingRow.join(',') + '\n';
+                            }
+                            
+                            // 如果这个办公室还有待确认的记录，也可以考虑包含
+                            // 但根据需求，用户主要关心"待付款"，所以暂不包含
+                        }
+                        
+                        // 下载待付款明细表
+                        const pendingBlob = new Blob([pendingContent], { type: 'text/csv;charset=utf-8;' });
+                        const pendingUrl = URL.createObjectURL(pendingBlob);
+                        const pendingLink = document.createElement('a');
+                        const now = new Date();
+                        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+                        const pendingFilename = `待付款明细_${dateStr}${filenameSuffix}.csv`;
+                        pendingLink.setAttribute('href', pendingUrl);
+                        pendingLink.setAttribute('download', pendingFilename);
+                        pendingLink.style.visibility = 'hidden';
+                        document.body.appendChild(pendingLink);
+                        pendingLink.click();
+                        document.body.removeChild(pendingLink);
+                        URL.revokeObjectURL(pendingUrl);
+                        
+                        // 提示用户
+                        setTimeout(() => {
+                            alert(`导出成功！\n已下载文件：待付款明细_${dateStr}${filenameSuffix}.csv\n\n此文件包含：\n• 各办公室待付款总金额\n• 每笔待付款的详细组成\n• 便于各办公室核对领水记录`);
+                        }, 100);
+                        
+                    } catch (error) {
+                        console.error('导出失败:', error);
+                        alert('导出失败，请重试');
+                    }
+                };
+                
                 // 加载结算申请列表
                 const loadSettlementApplications = async () => {
                     try {
@@ -5245,21 +5412,6 @@
                     }
                 };
                 
-                // 导出结算记录
-                const exportSettlementRecords = () => {
-                    const data = filteredSettlementRecords.value;
-                    if (data.length === 0) { alert('没有可导出的数据'); return; }
-                    
-                    // 生成CSV
-                    let csv = '序号,结算单号,办公室,房间号,金额,桶数,状态,申请时间,确认时间,申请人\n';
-                    data.forEach((s, i) => { 
-                        const statusText = s.status === 'confirmed' ? '已结清' : (s.status === 'applied' ? '付款待确认' : '待付款');
-                        csv += `${i+1},${s.settlement_no || ''},${s.office_name || ''},${s.office_room_number || ''},${s.total_amount || 0},${s.total_quantity || 0},${statusText},${s.applied_at || ''},${s.confirmed_at || ''},${s.applied_by || ''}\n`; 
-                    });
-                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `结算记录_${new Date().toISOString().slice(0,10)}.csv`; link.click();
-                };
-                
                 // 加载所有结算记录
                 const loadAllSettlementRecords = async () => {
                     try {
@@ -5280,6 +5432,7 @@
                 // ========== 预付账户相关状态 ==========
                 const officeAccounts = ref([]); // 预付账户列表
                 const officeAccountFilter = ref({ officeId: '', productId: '', status: '', accountType: '', search: '' }); // 筛选状态
+                const showOfficeAccountFilters = ref(false);
                 const showOfficeAccountModal = ref(false); // 新建/编辑弹窗
                 const editingOfficeAccount = ref(null); // 当前编辑的账户
                 const officeAccountForm = ref({
@@ -6367,7 +6520,7 @@
                     // 根据单位显示友好的名称
                     const unitMap = {
                         '桶': '🪣 桶装水',
-                        '瓶': '🧴 瓶装水',
+                        '瓶': '🫙 瓶装水',
                         '提': '📦 提装水',
                         '箱': '📦 箱装水',
                         '件': '📦 件装水'
@@ -7066,7 +7219,8 @@
                 };
                 
                 const resetOfficeAccountFilter = () => {
-                    officeAccountFilter.value = { officeId: '', productId: '', status: '', search: '' };
+                    officeAccountFilter.value = { officeId: '', productId: '', status: '', accountType: '', search: '' };
+                    showOfficeAccountFilters.value = false; // 重置时收起移动端筛选面板
                     loadOfficeAccounts();
                 };
                 
@@ -8212,6 +8366,7 @@
                     exportAllPickups,
                     officeAccounts,
                     officeAccountFilter,
+                    showOfficeAccountFilters,
                     filteredOfficeAccounts,
                     accountStats,
                     activeOffices,
