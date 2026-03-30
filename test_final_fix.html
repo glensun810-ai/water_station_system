@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>买 N 赠 M 最终测试</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test-case { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .pass { background: #d4edda; }
+        .fail { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>买 10 赠 1 最终测试（12L 桶装水，单价 16.8 元）</h1>
+    <div id="results"></div>
+    
+    <script>
+        // 模拟 Vue 的 computed 属性
+        function testOriginalAmount(cart, products) {
+            const amount = products.reduce((sum, p) => {
+                if (!cart[p.id]) return sum;
+                return sum + cart[p.id] * p.price;
+            }, 0);
+            return amount.toFixed(2);
+        }
+        
+        function testDiscountAmount(cart, products) {
+            const amount = products.reduce((sum, p) => {
+                if (!cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
+                const qty = cart[p.id];
+                if (qty < p.promo_threshold) return sum;
+                const cycle = p.promo_threshold + p.promo_gift;
+                const cycles = Math.floor(qty / cycle);
+                const remainder = qty % cycle;
+                let gift = cycles * p.promo_gift;
+                if (remainder > p.promo_threshold) {
+                    gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                }
+                return sum + gift * p.price;
+            }, 0);
+            return amount.toFixed(2);
+        }
+        
+        function testTotalAmount(cart, products) {
+            const original = products.reduce((sum, p) => {
+                if (!cart[p.id]) return sum;
+                return sum + cart[p.id] * p.price;
+            }, 0);
+            const discount = products.reduce((sum, p) => {
+                if (!cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
+                const qty = cart[p.id];
+                if (qty < p.promo_threshold) return sum;
+                const cycle = p.promo_threshold + p.promo_gift;
+                const cycles = Math.floor(qty / cycle);
+                const remainder = qty % cycle;
+                let gift = cycles * p.promo_gift;
+                if (remainder > p.promo_threshold) {
+                    gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                }
+                return sum + gift * p.price;
+            }, 0);
+            return (original - discount).toFixed(2);
+        }
+        
+        const products = [{
+            id: 1,
+            name: '12L 桶装水',
+            price: 16.8,
+            promo_threshold: 10,
+            promo_gift: 1
+        }];
+        
+        const testCases = [
+            { qty: 10, expected: '168.00', expectedDiscount: '0.00' },
+            { qty: 11, expected: '168.00', expectedDiscount: '16.80' },
+            { qty: 12, expected: '184.80', expectedDiscount: '16.80' },
+            { qty: 22, expected: '336.00', expectedDiscount: '33.60' },
+        ];
+        
+        const resultsDiv = document.getElementById('results');
+        let html = '';
+        let allPass = true;
+        
+        testCases.forEach(test => {
+            const cart = { 1: test.qty };
+            
+            try {
+                const original = testOriginalAmount(cart, products);
+                const discount = testDiscountAmount(cart, products);
+                const total = testTotalAmount(cart, products);
+                
+                const pass = total === test.expected && discount === test.expectedDiscount;
+                if (!pass) allPass = false;
+                
+                html += `
+                    <div class="test-case ${pass ? 'pass' : 'fail'}">
+                        <strong>数量 ${test.qty} 桶:</strong><br>
+                        原价：¥${original}<br>
+                        优惠：-¥${discount}<br>
+                        实付：¥${total}<br>
+                        期望：¥${test.expected} (优惠 ¥${test.expectedDiscount})<br>
+                        结果：${pass ? '✅ 通过' : '❌ 失败'}
+                    </div>
+                `;
+            } catch (e) {
+                allPass = false;
+                html += `
+                    <div class="test-case fail">
+                        <strong>数量 ${test.qty} 桶:</strong><br>
+                        <span style="color: red;">❌ 错误：${e.message}</span>
+                    </div>
+                `;
+            }
+        });
+        
+        html += `<h2>${allPass ? '✅ 所有测试通过！' : '❌ 部分测试失败'}</h2>`;
+        resultsDiv.innerHTML = html;
+    </script>
+</body>
+</html>

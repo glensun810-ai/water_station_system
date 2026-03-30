@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>云协同创新空间用水系统</title>
-    <script src="vue.global.js?v=20260330"></script>
+    <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        [v-cloak] { display: none !important; }
+        [v-cloak] { display: none; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6; }
         #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .spinner { width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -198,7 +198,7 @@
             <button @click="activeTab = 'records'" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">我的记录</button>
         </div>
         
-        <div class="pb-96 px-3 py-4">
+        <div class="pb-28 px-3 py-4">
             <div v-show="activeTab === 'pickup'">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
@@ -226,22 +226,46 @@
                                 <div class="flex-1">
                                     <div class="text-sm font-medium text-gray-800">{{ product.name }}</div>
                                     <div class="text-xs text-gray-500">{{ product.specification }}</div>
-                                    <div v-if="product.promo_threshold && product.promo_gift" class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">
-                                        买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                    <!-- 增强版优惠标签 -->
+                                    <div v-if="product.promo_threshold && product.promo_gift" class="mt-1 p-1.5 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <span class="text-sm mr-1">🎁</span>
+                                                <span class="text-xs font-bold text-orange-600">
+                                                    买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                                </span>
+                                            </div>
+                                            <span class="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full">
+                                                省￥{{ (product.promo_gift * (product.price || 0) / (product.promo_threshold + product.promo_gift)).toFixed(2) }}/{{ product.unit }}
+                                            </span>
+                                        </div>
+                                        <!-- 智能提醒 -->
+                                        <div v-if="cart[product.id] > 0" class="mt-1 text-[10px] text-orange-700">
+                                            <span v-if="calculatePromoGift(product, cart[product.id]) > 0">
+                                                ✅ 已优惠{{ calculatePromoGift(product, cart[product.id]) }}{{ product.unit }}
+                                            </span>
+                                            <span v-else>
+                                                再买{{ product.promo_threshold - cart[product.id] }}{{ product.unit }}享优惠
+                                            </span>
+                                        </div>
                                     </div>
                                     <div v-if="product.stock !== undefined" :class="product.stock === 0 ? 'text-xs text-red-600 mt-1' : (product.stock <= 10 ? 'text-xs text-amber-600 mt-1' : 'text-xs text-green-600 mt-1')">
-                                        <i class="fas fa-box mr-1"></i>库存: {{ product.stock }}{{ product.unit }}
+                                        <i class="fas fa-box mr-1"></i>库存：{{ product.stock }}{{ product.unit }}
                                         <span v-if="product.stock === 0" class="font-medium">(已售罄)</span>
                                         <span v-else-if="product.stock <= 10" class="font-medium">(库存紧张)</span>
                                     </div>
-                                    <div v-if="getPrepaidQty(product.id) > 0" class="text-xs text-green-600 mt-1"><i class="fas fa-wallet mr-1"></i>已预付剩余: {{ getPrepaidQty(product.id) }}{{ product.unit }}</div>
+                                    <div v-if="getPrepaidQty(product.id) > 0" class="text-xs text-green-600 mt-1"><i class="fas fa-wallet mr-1"></i>已预付剩余：{{ getPrepaidQty(product.id) }}{{ product.unit }}</div>
                                 </div>
                                 <div class="w-16 text-right mr-4">
-                                    <div class="text-sm font-medium text-blue-600">¥{{ product.price }}</div>
+                                    <div class="text-sm font-medium text-blue-600">￥{{ product.price || 0 }}</div>
                                     <div class="text-xs text-gray-400">/{{ product.unit }}</div>
                                 </div>
                                 <div class="flex items-center gap-1">
                                     <button @click="decreaseQty(product.id)" :disabled="!cart[product.id]" class="qty-btn qty-btn-minus"><i class="fas fa-minus"></i></button>
+                                    <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
+                                    <button @click="increaseQty(product.id)" class="qty-btn qty-btn-plus"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
                                     <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
                                     <button @click="increaseQty(product.id)" class="qty-btn qty-btn-plus"><i class="fas fa-plus"></i></button>
                                 </div>
@@ -579,24 +603,38 @@
         </div>
         
         <div v-show="activeTab === 'pickup'" class="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 z-50">
-            <!-- 优惠明细 -->
-            <div v-if="totalGiftQty > 0" class="mb-2 p-2 bg-green-50 rounded border border-green-200">
-                <div class="text-xs text-green-800">
-                    🎉 已优惠 <span class="font-bold">{{ totalGiftQty }}</span> 件
-                    <span class="float-right">
-                        原价：<span class="line-through">¥{{ originalAmount }}</span>
-                        优惠：<span class="font-bold text-red-600">-¥{{ discountAmount }}</span>
-                        实付：<span class="font-bold text-blue-600">¥{{ totalAmount }}</span>
-                    </span>
+            <!-- 优惠明细卡片 -->
+            <div v-if="totalGiftQty > 0" class="mb-2 p-2 bg-green-50 rounded-lg border border-green-200">
+                <div class="text-xs font-bold text-green-800 mb-1">🎉 优惠明细</div>
+                <div class="text-[10px] space-y-0.5 text-green-700">
+                    <div class="flex justify-between">
+                        <span>商品总额：<span class="line-through">￥{{ totalAmount }}</span></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>赠送数量：<span class="font-bold">-{{ totalGiftQty }}{{ totalQty === 1 ? '件' : '件' }}</span></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>优惠金额：<span class="font-bold text-red-600">-￥{{ totalGiftAmount }}</span></span>
+                    </div>
+                    <div class="border-t border-green-300 mt-1 pt-1 flex justify-between font-bold text-xs">
+                        <span>应付金额：</span>
+                        <span>￥{{ actualAmount }}</span>
+                    </div>
                 </div>
             </div>
+            
             <div class="flex items-center justify-between mb-2">
                 <div class="text-sm"><span class="text-gray-500">已选 </span><span class="text-blue-600 font-bold">{{ totalQty }}</span><span class="text-gray-500"> 件</span></div>
                 <div>
-                    <div v-if="totalGiftQty > 0" class="text-xs text-gray-400 line-through">¥{{ originalAmount }}</div>
-                    <div class="text-xl font-bold text-blue-600">¥{{ totalAmount }}</div>
+                    <div v-if="totalGiftQty > 0" class="text-xs text-green-600 text-right">
+                        <span class="line-through text-gray-400">￥{{ totalAmount }}</span>
+                        <span class="font-bold text-lg text-blue-600 ml-1">￥{{ actualAmount }}</span>
+                    </div>
+                    <div v-else class="text-xl font-bold text-blue-600">￥{{ totalAmount }}</div>
                 </div>
             </div>
+            <button @click="submitPickup" :disabled="!canSubmit" :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'" class="w-full text-white py-3 rounded-lg font-bold text-base">确认提交</button>
+        </div>
             <button @click="submitPickup" :disabled="!canSubmit" :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'" class="w-full text-white py-3 rounded-lg font-bold text-base">确认提交</button>
         </div>
         
@@ -775,7 +813,7 @@
                     settlementDateFrom: '',
                     settlementDateTo: '',
                     settlementQuickDate: '',
-                    overdueStats: { count: 0, amount: 0 },
+                    // overdueStats removed - now defined in computed properties
                     expandedSettlementId: null,
                     showRechargeModal: false,
                     showRechargeListModal: false,
@@ -809,66 +847,33 @@
                     return this.offices.filter(o => this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1); 
                 },
                 totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
+                totalAmount() { return this.products.reduce((sum, p) => sum + (this.cart[p.id] || 0) * p.price, 0).toFixed(2); },
                 // 买 N 赠 M 优惠计算
                 totalGiftQty() {
+                    if (!this.products || this.products.length === 0) return 0;
                     return this.products.reduce((sum, p) => {
-                        if (!this.cart[p.id]) return sum;
-                        const qty = this.cart[p.id];
-                        if (p.promo_threshold && p.promo_gift && qty >= p.promo_threshold) {
-                            const cycle = p.promo_threshold + p.promo_gift;
-                            const cycles = Math.floor(qty / cycle);
-                            const remainder = qty % cycle;
-                            let gift = cycles * p.promo_gift;
-                            if (remainder > p.promo_threshold) {
-                                gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
-                            }
-                            sum += gift;
+                        const qty = this.cart[p.id] || 0;
+                        if (qty > 0 && p.promo_threshold && p.promo_gift) {
+                            sum += Math.floor(qty / p.promo_threshold) * p.promo_gift;
                         }
                         return sum;
                     }, 0);
                 },
-                totalAmount() {
-                    const original = this.products.reduce((sum, p) => {
-                        if (!this.cart[p.id]) return sum;
-                        return sum + this.cart[p.id] * p.price;
-                    }, 0);
-                    const discount = this.products.reduce((sum, p) => {
-                        if (!this.cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
-                        const qty = this.cart[p.id];
-                        if (qty < p.promo_threshold) return sum;
-                        const cycle = p.promo_threshold + p.promo_gift;
-                        const cycles = Math.floor(qty / cycle);
-                        const remainder = qty % cycle;
-                        let gift = cycles * p.promo_gift;
-                        if (remainder > p.promo_threshold) {
-                            gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                totalGiftAmount() {
+                    if (!this.products || this.products.length === 0) return '0.00';
+                    return this.products.reduce((sum, p) => {
+                        const qty = this.cart[p.id] || 0;
+                        if (qty > 0 && p.promo_threshold && p.promo_gift) {
+                            const giftQty = Math.floor(qty / p.promo_threshold) * p.promo_gift;
+                            sum += giftQty * (p.price || 0);
                         }
-                        return sum + gift * p.price;
-                    }, 0);
-                    return (original - discount).toFixed(2);
+                        return sum;
+                    }, 0).toFixed(2);
                 },
-                originalAmount() {
-                    const amount = this.products.reduce((sum, p) => {
-                        if (!this.cart[p.id]) return sum;
-                        return sum + this.cart[p.id] * p.price;
-                    }, 0);
-                    return amount.toFixed(2);
-                },
-                discountAmount() {
-                    const amount = this.products.reduce((sum, p) => {
-                        if (!this.cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
-                        const qty = this.cart[p.id];
-                        if (qty < p.promo_threshold) return sum;
-                        const cycle = p.promo_threshold + p.promo_gift;
-                        const cycles = Math.floor(qty / cycle);
-                        const remainder = qty % cycle;
-                        let gift = cycles * p.promo_gift;
-                        if (remainder > p.promo_threshold) {
-                            gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
-                        }
-                        return sum + gift * p.price;
-                    }, 0);
-                    return amount.toFixed(2);
+                actualAmount() {
+                    const total = parseFloat(this.totalAmount);
+                    const gift = parseFloat(this.totalGiftAmount);
+                    return (total - gift).toFixed(2);
                 },
                 canSubmit() { if (!this.form.officeId || this.totalQty === 0) return false; if (!this.form.personId && !this.form.personName) return false; return true; },
                 displayRecords() { 
@@ -962,47 +967,25 @@
                 }
             },
             async mounted() {
-                // ESC key to close modals
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        this.showOfficeSettings = false;
-                        this.showFirstTimeGuide = false;
-                    }
-                });
-                
-                // 先加载基础数据
-                await this.loadData();
-                
-                // 隐藏 loading
                 document.getElementById('loading').style.display = 'none';
-                
+                await this.loadData();
                 const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 this.form.pickupTime = now.toISOString().slice(0, 16);
-                
-                // 根据当前 tab 加载对应数据
-                if (this.activeTab === 'settlement') {
-                    await this.loadSettlementData();
-                } else if (this.activeTab === 'records') {
-                    await this.loadRecordList();
+                // 如果没有设置用户办公室，仍然加载结算数据（显示所有办公室的记录）
+                if (this.offices.length > 0) {
+                    this.loadSettlementData();
                 }
             },
             watch: {
                 activeTab(newVal) {
                     localStorage.setItem('userActiveTab', newVal);
-                    // 切换到结算 tab 时立即加载数据
-                    if (newVal === 'settlement') {
-                        if (this.form.officeId) {
-                            this.settlementOfficeId = this.form.officeId;
-                        }
-                        this.$nextTick(() => {
-                            this.loadSettlementData();
-                        });
+                    if (newVal === 'settlement' && this.form.officeId) {
+                        this.settlementOfficeId = this.form.officeId;
+                        this.loadSettlementData();
                     }
-                    // 切换到记录 tab 时立即加载数据
                     if (newVal === 'records') {
-                        this.$nextTick(() => {
-                            this.loadRecordList();
-                        });
+                        // 每次切换到记录tab时都重新加载，确保获取最新数据（包括被管理员删除的记录）
+                        this.loadRecordList();
                     }
                 },
                 'form.officeId': function(newVal) {
@@ -1043,18 +1026,18 @@
                     }
                     
                     try {
-                        // 并行加载办公室和产品数据
                         const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/offices?is_active=1'), fetch(API_BASE + '/products?is_active=1')]);
                         if (officesRes.ok) this.offices = await officesRes.json();
                         if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
                         
-                        // 设置默认办公室和领水人
                         if (this.userOffices.length > 0) {
                             const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
                             const defaultId = defaultOffice.id;
+                            // Always set default office if not already set, or force update personName
                             if (!this.form.officeId) {
                                 this.form.officeId = defaultId;
                             }
+                            // Always set pickup person to office leader if available
                             if (defaultOffice.leader_name) {
                                 this.form.personName = defaultOffice.leader_name;
                                 this.form.personId = '';
@@ -1063,11 +1046,11 @@
                             if (!this.settlementOfficeId) {
                                 this.settlementOfficeId = defaultId;
                             }
+                            this.loadSettlementData();
                         }
                     } catch (e) { console.error(e); }
-                    
-                    // 加载支付二维码
                     this.loadPaymentQr();
+                    this.loadRecordList();
                 },
                 async loadPaymentQr() { try { const res = await fetch(API_BASE + '/config/payment-qr'); if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; } } catch (e) { console.error(e); } },
                 async loadRecordList() {
@@ -1322,7 +1305,7 @@
                 decreaseQty(productId) { if (this.cart[productId] > 0) this.cart[productId]--; },
                 validateQty(productId) { let v = this.cart[productId] || 0; if (v < 0) v = 0; this.cart[productId] = v; },
                 calculatePromoGift(product, quantity) {
-                    if (!product.promo_threshold || !product.promo_gift || quantity < product.promo_threshold) return 0;
+                    if (!product || !product.promo_threshold || !product.promo_gift || quantity < product.promo_threshold) return 0;
                     const total = product.promo_threshold + product.promo_gift;
                     const cycles = Math.floor(quantity / total);
                     const remainder = quantity % total;
@@ -1387,7 +1370,7 @@
                                 office_id: this.settlementOfficeId, 
                                 product_id: this.rechargeForm.productId, 
                                 quantity: this.rechargeForm.quantity,
-                                unit_price: product.price,
+                                unit_price: product.price || 0,
                                 note: this.rechargeForm.note,
                                 recharge_person: '用户自助'
                             }) 
@@ -1403,7 +1386,7 @@
                 getRechargeTotal() {
                     const product = this.rechargeProducts.find(p => p.id === this.rechargeForm.productId);
                     if (!product) return '0.00';
-                    return (product.price * this.rechargeForm.quantity).toFixed(2);
+                    return ((product.price || 0) * this.rechargeForm.quantity).toFixed(2);
                 },
                 getStatusClass(s) { return { pending: 'status-pending', applied: 'status-applied', settled: 'status-settled' }[s] || 'status-pending'; },
                 getStatusText(s) { return { pending: '待付款', applied: '付款待确认', settled: '已结清' }[s] || s; },

@@ -895,3 +895,203 @@ def get_settlement_items(
         )
 
     return {"items": items, "total": len(items)}
+
+
+# ==================== 买 N 赠 M 优惠计算 API ====================
+class PromotionCalculateRequest(BaseModel):
+    """优惠计算请求"""
+
+    product_id: int
+    quantity: int
+
+
+class PromotionCalculateResponse(BaseModel):
+    """优惠计算响应"""
+
+    product_id: int
+    product_name: str
+    unit_price: float
+    quantity: int
+    gift_qty: int
+    paid_qty: int
+    total_amount: float
+    original_amount: float
+    savings: float
+    discount_rate: float
+    message: str
+    next_gift_progress: Optional[Dict[str, int]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.post("/promotion/calculate", response_model=PromotionCalculateResponse)
+def calculate_promotion_detail(
+    request: PromotionCalculateRequest, db: Session = Depends(get_db)
+):
+    """
+    计算优惠详情（前端实时展示用）
+
+    返回详细的优惠计算过程和结果，用于前端展示：
+    - 赠送数量
+    - 付费数量
+    - 总金额
+    - 节省金额
+    - 折扣率
+    - 距离下次优惠进度
+    """
+    product = get_product(db, request.product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
+
+    # 获取优惠配置
+    config = (
+        db.query(PromotionConfigV2)
+        .filter(
+            PromotionConfigV2.product_id == request.product_id,
+            PromotionConfigV2.mode == "prepaid",
+            PromotionConfigV2.is_active == 1,
+        )
+        .first()
+    )
+
+    # 无优惠配置或优惠未启用
+    if not config or config.trigger_qty <= 0:
+        return PromotionCalculateResponse(
+            product_id=request.product_id,
+            product_name=product.name,
+            unit_price=product.price,
+            quantity=request.quantity,
+            gift_qty=0,
+            paid_qty=request.quantity,
+            total_amount=product.price * request.quantity,
+            original_amount=product.price * request.quantity,
+            savings=0,
+            discount_rate=0,
+            message="当前无优惠",
+            next_gift_progress=None,
+        )
+
+    # 计算赠送数量：买 N 赠 M
+    cycles = request.quantity // config.trigger_qty
+    gift_qty = cycles * config.gift_qty
+
+    # 计算金额
+    paid_qty = request.quantity - gift_qty
+    total_amount = paid_qty * product.price
+    original_amount = request.quantity * product.price
+    savings = original_amount - total_amount
+    discount_rate = round(
+        (savings / original_amount * 100) if original_amount > 0 else 0, 2
+    )
+
+    # 计算距离下次优惠还差多少
+    remainder = request.quantity % config.trigger_qty
+    next_gift_need = config.trigger_qty - remainder if remainder > 0 else 0
+
+    message = f"已优惠{gift_qty}件" if gift_qty > 0 else f"再买{next_gift_need}件享优惠"
+
+    return PromotionCalculateResponse(
+        product_id=request.product_id,
+        product_name=product.name,
+        unit_price=product.price,
+        quantity=request.quantity,
+        gift_qty=gift_qty,
+        paid_qty=paid_qty,
+        total_amount=round(total_amount, 2),
+        original_amount=round(original_amount, 2),
+        savings=round(savings, 2),
+        discount_rate=discount_rate,
+        message=message,
+        next_gift_progress={
+            "current": remainder,
+            "need": next_gift_need,
+            "percent": round((remainder / config.trigger_qty) * 100)
+            if config.trigger_qty > 0
+            else 0,
+        },
+    )
+
+
+# ==================== 优惠效果统计 API ====================
+@router.get("/promotion/stats")
+def get_promotion_statistics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    product_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    获取优惠效果统计数据
+
+    用于管理后台 Dashboard 展示：
+    - 赠送总量
+    - 用户节省总金额
+    - 平均优惠率
+    - 按产品统计排行
+    """
+    from main import Product
+
+    # 构建基础查询
+    query = db.query(
+        TransactionV2.product_id,
+        Product.name,
+        Product.price,
+        func.count(TransactionV2.id).label("total_orders"),
+        func.sum(TransactionV2.quantity).label("total_qty"),
+        func.sum(TransactionV2.free_qty).label("total_gift_qty"),
+        func.sum(TransactionV2.total_price).label("total_amount"),
+    ).join(Product, TransactionV2.product_id == Product.id)
+
+    # 只统计预付模式（有优惠的模式）
+    query = query.filter(TransactionV2.mode == "prepaid")
+
+    # 时间筛选
+    if start_date:
+        query = query.filter(TransactionV2.created_at >= start_date)
+    if end_date:
+        query = query.filter(TransactionV2.created_at <= end_date)
+
+    # 产品筛选
+    if product_id:
+        query = query.filter(TransactionV2.product_id == product_id)
+
+    # 按产品分组统计
+    stats = query.group_by(TransactionV2.product_id, Product.name, Product.price).all()
+
+    # 计算总计
+    total_gift_qty = sum(s.total_gift_qty or 0 for s in stats)
+    total_savings = sum((s.total_gift_qty or 0) * s.price for s in stats)
+    total_qty = sum(s.total_qty or 0 for s in stats)
+    avg_gift_rate = round((total_gift_qty / total_qty * 100) if total_qty > 0 else 0, 2)
+
+    # 构建结果
+    result = {
+        "summary": {
+            "total_gift_qty": total_gift_qty,
+            "total_savings": round(total_savings, 2),
+            "avg_gift_rate": avg_gift_rate,
+            "total_orders": sum(s.total_orders for s in stats),
+            "total_amount": round(sum(s.total_amount or 0 for s in stats), 2),
+        },
+        "products": [
+            {
+                "product_id": s.product_id,
+                "product_name": s.name,
+                "unit_price": s.price,
+                "total_orders": s.total_orders,
+                "total_qty": s.total_qty or 0,
+                "total_gift_qty": s.total_gift_qty or 0,
+                "total_amount": round(s.total_amount or 0, 2),
+                "gift_rate": round(
+                    ((s.total_gift_qty or 0) / (s.total_qty or 1)) * 100, 2
+                ),
+                "total_savings": round((s.total_gift_qty or 0) * s.price, 2),
+            }
+            for s in stats
+        ],
+    }
+
+    # 按赠送量排序
+    result["products"].sort(key=lambda x: x["total_gift_qty"], reverse=True)
+
+    return result

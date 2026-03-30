@@ -340,6 +340,8 @@ class OfficePickup(Base):
     settlement_status = Column(String(20), default="pending")
     unit_price = Column(Float, default=0)
     total_amount = Column(Float, default=0)
+    free_qty = Column(Integer, default=0)  # 买 N 赠 M 免费数量
+    discount_desc = Column(String(500), nullable=True)  # 优惠描述
     note = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
@@ -1644,6 +1646,43 @@ def update_product_stock(
     return {"product_id": product_id, "stock": product.stock}
 
 
+@app.put("/api/products/{product_id}/promo-toggle")
+def toggle_product_promotion(
+    product_id: int, enable: bool, db: Session = Depends(get_db)
+):
+    """
+    快速启停产品优惠
+
+    启用时设置为默认买 10 赠 1
+    关闭时将 promo_threshold 和 promo_gift 设为 0
+    """
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if enable:
+        # 启用优惠：设置默认买 10 赠 1
+        db_product.promo_threshold = 10
+        db_product.promo_gift = 1
+        message = f"优惠已开启 (买 10 赠 1)"
+    else:
+        # 关闭优惠
+        db_product.promo_threshold = 0
+        db_product.promo_gift = 0
+        message = "优惠已关闭"
+
+    db.commit()
+    db.refresh(db_product)
+
+    return {
+        "product_id": product_id,
+        "product_name": db_product.name,
+        "promo_threshold": db_product.promo_threshold,
+        "promo_gift": db_product.promo_gift,
+        "message": message,
+    }
+
+
 # --- Product Category APIs ---
 class CategoryResponse(BaseModel):
     id: int
@@ -2518,9 +2557,19 @@ def create_office_pickup(
         except:
             pickup_time = datetime.now()
 
-    # Calculate amount
+    # Calculate amount with buy-N-get-M promotion
     unit_price = product.price or 0
-    total_amount = unit_price * pickup.quantity
+    from promo_calculator import calculate_promo_amount
+
+    promo_result = calculate_promo_amount(
+        quantity=pickup.quantity,
+        unit_price=unit_price,
+        promo_threshold=product.promo_threshold or 0,
+        promo_gift=product.promo_gift or 0,
+    )
+    total_amount = promo_result["total_amount"]
+    free_qty = promo_result["free_qty"]
+    discount_desc = promo_result["discount_desc"]
 
     # Determine pickup person - use provided name or current user
     pickup_person_name = pickup.pickup_person
@@ -2545,6 +2594,8 @@ def create_office_pickup(
         pickup_time=pickup_time,
         unit_price=unit_price,
         total_amount=total_amount,
+        free_qty=free_qty,
+        discount_desc=discount_desc if free_qty > 0 else None,
         settlement_status="pending",
     )
 
@@ -4318,6 +4369,84 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
+# ==================== 用户端缺失的 API 接口 ====================
+
+
+@app.get("/api/user/office-pickup-summary")
+def get_user_office_pickup_summary(
+    office_id: int = None,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    获取用户办公室领水汇总信息
+
+    返回待付款、已申请、已结算的金额统计
+    """
+    if not office_id:
+        return {
+            "pending": {"count": 0, "amount": 0},
+            "applied": {"count": 0, "amount": 0},
+            "settled": {"count": 0, "amount": 0},
+        }
+
+    # 查询该办公室的领水记录
+    query = db.query(OfficePickup).filter(OfficePickup.office_id == office_id)
+
+    # 如果用户不是管理员，只能查看自己的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(OfficePickup.pickup_person == current_user.name)
+
+    pickups = query.all()
+
+    pending_count = 0
+    pending_amount = 0.0
+    applied_count = 0
+    applied_amount = 0.0
+    settled_count = 0
+    settled_amount = 0.0
+
+    for p in pickups:
+        if p.settlement_status == "pending":
+            pending_count += 1
+            pending_amount += p.total_amount or 0
+        elif p.settlement_status == "applied":
+            applied_count += 1
+            applied_amount += p.total_amount or 0
+        elif p.settlement_status == "settled":
+            settled_count += 1
+            settled_amount += p.total_amount or 0
+
+    return {
+        "pending": {"count": pending_count, "amount": round(pending_amount, 2)},
+        "applied": {"count": applied_count, "amount": round(applied_amount, 2)},
+        "settled": {"count": settled_count, "amount": round(settled_amount, 2)},
+    }
+
+
+@app.get("/api/config/payment-qr")
+def get_payment_qr(db: Session = Depends(get_db)):
+    """
+    获取支付二维码
+
+    从系统配置中读取支付二维码 URL
+    """
+    # 从配置表中读取支付二维码
+    from models_unified import SystemConfig
+
+    config = (
+        db.query(SystemConfig)
+        .filter(SystemConfig.config_key == "payment_qr_code")
+        .first()
+    )
+
+    if config and config.config_value:
+        return {"qr_code": config.config_value}
+
+    # 如果没有配置，返回空
+    return {"qr_code": None}
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
@@ -4327,3 +4456,77 @@ if __name__ == "__main__":
 
     init_db()
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+def get_user_office_pickup_summary(
+    office_id: int = None,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    获取用户办公室领水汇总信息
+
+    返回待付款、已申请、已结算的金额统计
+    """
+    if not office_id:
+        return {
+            "pending": {"count": 0, "amount": 0},
+            "applied": {"count": 0, "amount": 0},
+            "settled": {"count": 0, "amount": 0},
+        }
+
+    # 查询该办公室的领水记录
+    query = db.query(OfficePickup).filter(OfficePickup.office_id == office_id)
+
+    # 如果用户不是管理员，只能查看自己的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(OfficePickup.pickup_person == current_user.name)
+
+    pickups = query.all()
+
+    pending_count = 0
+    pending_amount = 0.0
+    applied_count = 0
+    applied_amount = 0.0
+    settled_count = 0
+    settled_amount = 0.0
+
+    for p in pickups:
+        if p.settlement_status == "pending":
+            pending_count += 1
+            pending_amount += p.total_amount or 0
+        elif p.settlement_status == "applied":
+            applied_count += 1
+            applied_amount += p.total_amount or 0
+        elif p.settlement_status == "settled":
+            settled_count += 1
+            settled_amount += p.total_amount or 0
+
+    return {
+        "pending": {"count": pending_count, "amount": round(pending_amount, 2)},
+        "applied": {"count": applied_count, "amount": round(applied_amount, 2)},
+        "settled": {"count": settled_count, "amount": round(settled_amount, 2)},
+    }
+
+
+@app.get("/api/config/payment-qr")
+def get_payment_qr(db: Session = Depends(get_db)):
+    """
+    获取支付二维码
+
+    从系统配置中读取支付二维码 URL
+    """
+    # 从配置表中读取支付二维码
+    from models_unified import SystemConfig
+
+    config = (
+        db.query(SystemConfig)
+        .filter(SystemConfig.config_key == "payment_qr_code")
+        .first()
+    )
+
+    if config and config.config_value:
+        return {"qr_code": config.config_value}
+
+    # 如果没有配置，返回空
+    return {"qr_code": None}
