@@ -6207,7 +6207,7 @@
                                 alert(data.detail || '删除失败');
                             }
                         } else if (type === 'trash') {
-                            res = await fetch(`${API_BASE}/admin/transactions/${item}/permanent`, { method: 'DELETE', headers });
+                            res = await fetch(`${API_BASE}/admin/office-pickups/trash/${item}`, { method: 'DELETE', headers });
                             data = await res.json();
                             if (res.ok) {
                                 alert('记录已永久删除');
@@ -6216,7 +6216,11 @@
                                 alert(data.detail || '删除失败');
                             }
                         } else if (type === 'restore') {
-                            res = await fetch(`${API_BASE}/admin/transactions/${item}/restore`, { method: 'POST', headers });
+                            res = await fetch(`${API_BASE}/admin/office-pickups/trash/restore`, { 
+                                method: 'POST', 
+                                headers: { ...headers, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ transaction_ids: [item] })
+                            });
                             data = await res.json();
                             if (res.ok) {
                                 alert('记录已恢复');
@@ -6247,7 +6251,7 @@
                         const token = localStorage.getItem('token');
                         const headers = {};
                         if (token) headers['Authorization'] = `Bearer ${token}`;
-                        const res = await fetch(`${API_BASE}/admin/transactions?status=deleted`, { headers });
+                        const res = await fetch(`${API_BASE}/admin/office-pickups/trash`, { headers });
                         if (res.ok) {
                             trashList.value = await res.json();
                         }

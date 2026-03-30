@@ -3244,6 +3244,107 @@ def toggle_transaction_protection(
     }
 
 
+# ==================== Office Pickup Trash APIs ====================
+@app.get("/api/admin/office-pickups/trash")
+def get_trash_office_pickups(days: int = 30, db: Session = Depends(get_db)):
+    """获取回收站中的领水记录（保留最近 days 天）"""
+    from datetime import timedelta
+
+    cutoff_date = datetime.now() - timedelta(days=days)
+
+    pickups = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.is_deleted == 1, OfficePickup.deleted_at >= cutoff_date)
+        .order_by(OfficePickup.deleted_at.desc())
+        .all()
+    )
+
+    results = []
+    for p in pickups:
+        deleter = (
+            db.query(User).filter(User.id == p.deleted_by).first()
+            if p.deleted_by
+            else None
+        )
+
+        results.append(
+            {
+                "id": p.id,
+                "office_id": p.office_id,
+                "office_name": p.office_name,
+                "product_name": p.product_name,
+                "product_specification": p.product_specification,
+                "quantity": p.quantity,
+                "pickup_person": p.pickup_person,
+                "pickup_time": p.pickup_time.isoformat() if p.pickup_time else None,
+                "payment_mode": p.payment_mode,
+                "settlement_status": p.settlement_status,
+                "total_amount": p.total_amount,
+                "deleted_at": p.deleted_at.isoformat() if p.deleted_at else None,
+                "deleted_by": p.deleted_by,
+                "deleter_name": deleter.name if deleter else "Unknown",
+                "delete_reason": p.delete_reason,
+            }
+        )
+
+    return results
+
+
+@app.post("/api/admin/office-pickups/trash/restore")
+def restore_trash_office_pickups(
+    request: SettlementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """恢复回收站中的领水记录"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    restored = 0
+    for pid in request.transaction_ids:
+        pickup = (
+            db.query(OfficePickup)
+            .filter(OfficePickup.id == pid, OfficePickup.is_deleted == 1)
+            .first()
+        )
+        if pickup:
+            pickup.is_deleted = 0
+            pickup.deleted_at = None
+            pickup.deleted_by = None
+            pickup.delete_reason = None
+            restored += 1
+
+    db.commit()
+    return {"message": f"成功恢复 {restored} 条记录", "restored_count": restored}
+
+
+@app.delete("/api/admin/office-pickups/trash/{pickup_id}")
+def permanently_delete_office_pickup(
+    pickup_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """永久删除回收站中的领水记录（仅超级管理员）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能永久删除"
+        )
+
+    pickup = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.id == pickup_id, OfficePickup.is_deleted == 1)
+        .first()
+    )
+
+    if not pickup:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    db.delete(pickup)
+    db.commit()
+
+    return {"message": "记录已永久删除", "pickup_id": pickup_id}
+
+
 # --- Dashboard APIs ---
 @app.get("/api/admin/dashboard/summary")
 def get_dashboard_summary(db: Session = Depends(get_db)):

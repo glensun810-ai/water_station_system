@@ -2,6 +2,7 @@
 Unified Account Models - 双模式业务统一架构
 水站管理系统 - 统一账户数据模型
 """
+
 from __future__ import annotations
 from sqlalchemy import (
     create_engine,
@@ -348,6 +349,12 @@ class OfficePickup(Base):
 
     # 备注
     note = Column(String(500), nullable=True)
+
+    # 软删除字段
+    is_deleted = Column(Integer, default=0)  # 0: 未删除，1: 已删除
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, nullable=True)
+    delete_reason = Column(String(500), nullable=True)
 
     # 审计字段
     created_at = Column(DateTime, default=datetime.now)
