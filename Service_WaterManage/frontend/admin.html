@@ -2588,7 +2588,8 @@
                 </div>
 
                 <!-- 账户列表 -->
-                <div v-if="filteredOfficeAccounts && filteredOfficeAccounts.length > 0" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <!-- 桌面端：表格布局 -->
+                <div v-if="filteredOfficeAccounts && filteredOfficeAccounts.length > 0" class="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <table class="w-full">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -2629,22 +2630,74 @@
                                 <td class="py-3 px-4 text-slate-500 text-sm">{{ formatDate(acc.created_at) }}</td>
                                 <td class="py-3 px-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button @click="rechargeOfficeAccount(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="充值">
-                                            💰
-                                        </button>
-                                        <button @click="openOfficeAccountModal(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="编辑">
-                                            ✏️
-                                        </button>
-                                        <button @click="deleteOfficeAccount(acc)" class="text-red-600 hover:text-red-800 text-sm font-medium" title="删除">
-                                            🗑️
-                                        </button>
+                                        <button @click="rechargeOfficeAccount(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 whitespace-nowrap">充值</button>
+                                        <button @click="openOfficeAccountModal(acc)" class="text-blue-600 hover:text-blue-800 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 whitespace-nowrap">编辑</button>
+                                        <button @click="deleteOfficeAccount(acc)" class="text-red-600 hover:text-red-800 text-sm font-medium px-1.5 py-1 rounded hover:bg-red-50 whitespace-nowrap">删除</button>
                                     </div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div v-if="!filteredOfficeAccounts || filteredOfficeAccounts.length === 0" class="text-center py-12 text-slate-400 bg-white rounded-xl border">
+                
+                <!-- 手机端：卡片布局 -->
+                <div v-if="filteredOfficeAccounts && filteredOfficeAccounts.length > 0" class="sm:hidden space-y-3">
+                    <div v-for="acc in filteredOfficeAccounts" :key="acc.id" class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                        <div class="space-y-2">
+                            <!-- 办公室信息 -->
+                            <div>
+                                <div class="font-medium text-slate-800 text-sm">{{ acc.office_name }}</div>
+                                <div class="text-xs text-slate-500">{{ acc.office_room_number || '-' }}</div>
+                            </div>
+                            
+                            <!-- 产品信息 -->
+                            <div>
+                                <div class="text-slate-600 text-sm">{{ acc.product_name }}</div>
+                                <div class="text-xs text-slate-500">{{ acc.product_specification }}</div>
+                            </div>
+                            
+                            <!-- 数量信息 -->
+                            <div class="grid grid-cols-3 gap-2 text-xs">
+                                <div>
+                                    <div class="text-slate-500">预留</div>
+                                    <div class="font-medium">{{ acc.reserved_qty }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-slate-500">剩余</div>
+                                    <div class="font-bold" :class="acc.status === 'normal' ? 'text-green-600' : (acc.status === 'low' ? 'text-amber-600' : 'text-red-600')">
+                                        {{ acc.remaining_qty }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-slate-500">已用</div>
+                                    <div class="font-medium">{{ acc.used_qty }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 状态标签 -->
+                            <div>
+                                <span :class="acc.status === 'normal' ? 'bg-green-100 text-green-700' : (acc.status === 'low' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')" class="px-2 py-0.5 rounded-full text-xs font-medium">
+                                    {{ acc.status === 'normal' ? '正常' : (acc.status === 'low' ? '库存不足' : '已用完') }}
+                                </span>
+                            </div>
+                            
+                            <!-- 其他信息 -->
+                            <div class="text-xs text-slate-600">
+                                <div>负责人: {{ acc.reserved_person || '-' }}</div>
+                                <div>创建: {{ formatDate(acc.created_at) }}</div>
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="flex gap-1.5 pt-2">
+                                <button @click="rechargeOfficeAccount(acc)" class="flex-1 text-xs bg-blue-100 text-blue-700 font-medium px-1 py-1.5 rounded hover:bg-blue-200 whitespace-nowrap">充值</button>
+                                <button @click="openOfficeAccountModal(acc)" class="flex-1 text-xs bg-blue-100 text-blue-700 font-medium px-1 py-1.5 rounded hover:bg-blue-200 whitespace-nowrap">编辑</button>
+                                <button @click="deleteOfficeAccount(acc)" class="flex-1 text-xs bg-red-100 text-red-700 font-medium px-1 py-1.5 rounded hover:bg-red-200 whitespace-nowrap">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="!filteredOfficeAccounts || filteredOfficeAccounts.length === 0" class="text-center py-12 text-slate-400">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                     <p>暂无预付账户</p>
                 </div>
             </div>
@@ -2920,7 +2973,7 @@
                         </div>
                         <div class="flex items-center gap-1">
                             <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
-                            <span>预警 {{ (products?.filter(p => p && p.stock > 0 && p.stock <= 10).length || 0) }}</span>
+                            <span>预警 {{ (products?.filter(p => p && p.stock > 0 && p.stock <= 3).length || 0) }}</span>
                         </div>
                     </div>
                 </div>
@@ -3055,7 +3108,7 @@
                                         <button @click="openReconcileModal(p)" class="text-purple-600 hover:text-purple-800 text-xs font-medium btn-active px-1">核对</button>
                                         <button @click="updateStockOne(p)" class="text-blue-600 hover:text-blue-800 text-xs font-medium btn-active px-1">补货</button>
                                         <button @click="editProduct(p)" class="text-blue-600 hover:text-blue-800 text-xs font-medium btn-active px-1">编辑</button>
-                                        <button @click="deleteProduct(p)" class="text-red-600 hover:text-red-800 text-xs font-medium btn-active px-1">删</button>
+                                        <button @click="deleteProduct(p)" class="text-red-600 hover:text-red-800 text-xs font-medium btn-active px-1">删除</button>
                                     </div>
                                 </td>
                             </tr>
@@ -3174,44 +3227,6 @@
 
             <!-- Offices Tab -->
             <div v-if="activeTab === 'offices'" class="stat-card">
-                <!-- 删除确认弹窗 (通用) -->
-                <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" @click="showDeleteConfirmModal = false; deleteConfirmItem = null">
-                    <div class="bg-white rounded-2xl w-full max-w-sm mx-4 shadow-2xl" @click.stop>
-                        <div class="p-4 sm:p-6">
-                            <div class="flex items-center justify-center w-12 sm:w-16 mx-auto mb-4 rounded-full bg-red-100">
-                                <svg class="w-6 sm:w-8 h-6 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-lg sm:text-xl font-bold text-center text-slate-800 mb-2">确认删除</h3>
-                            <p class="text-sm sm:text-base text-slate-600 text-center mb-6">
-                                <template v-if="deleteConfirmType === 'office'">
-                                    确定要删除办公室"{{ deleteConfirmItem?.name }}"吗？
-                                </template>
-                                <template v-else-if="deleteConfirmType === 'product'">
-                                    确定要删除产品"{{ deleteConfirmItem?.name }}"吗？此操作不可恢复。
-                                </template>
-                                <template v-else-if="deleteConfirmType === 'officeAccount'">
-                                    确定要删除账户"{{ deleteConfirmItem?.office_name }} - {{ deleteConfirmItem?.product_name }}"吗？
-                                </template>
-                                <template v-else-if="deleteConfirmType === 'pickup'">
-                                    确定要删除该领水记录吗？此操作不可恢复。
-                                </template>
-                                <template v-else>
-                                    确定要删除这条记录吗？
-                                </template>
-                            </p>
-                            <div class="flex gap-3">
-                                <button @click="showDeleteConfirmModal = false; deleteConfirmItem = null" class="flex-1 px-4 py-2.5 sm:py-3 border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition">
-                                    取消
-                                </button>
-                                <button @click="executeDelete" class="flex-1 px-4 py-2.5 sm:py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition">
-                                    确认删除
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- 操作栏 -->
                 <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
@@ -3994,6 +4009,45 @@
                     <div class="flex gap-3">
                         <button @click="showUserDeleteModal = false" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">取消</button>
                         <button @click="deleteUserAction" class="flex-1 btn-danger text-white px-4 py-2 rounded-lg">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 删除确认弹窗 (通用) -->
+        <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" @click="showDeleteConfirmModal = false; deleteConfirmItem = null">
+            <div class="bg-white rounded-2xl w-full max-w-sm mx-4 shadow-2xl" @click.stop>
+                <div class="p-4 sm:p-6">
+                    <div class="flex items-center justify-center w-12 sm:w-16 mx-auto mb-4 rounded-full bg-red-100">
+                        <svg class="w-6 sm:w-8 h-6 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg sm:text-xl font-bold text-center text-slate-800 mb-2">确认删除</h3>
+                    <p class="text-sm sm:text-base text-slate-600 text-center mb-6">
+                        <template v-if="deleteConfirmType === 'office'">
+                            确定要删除办公室"{{ deleteConfirmItem?.name }}"吗？
+                        </template>
+                        <template v-else-if="deleteConfirmType === 'product'">
+                            确定要删除产品"{{ deleteConfirmItem?.name }}"吗？此操作不可恢复。
+                        </template>
+                        <template v-else-if="deleteConfirmType === 'officeAccount'">
+                            确定要删除账户"{{ deleteConfirmItem?.office_name }} - {{ deleteConfirmItem?.product_name }}"吗？
+                        </template>
+                        <template v-else-if="deleteConfirmType === 'pickup'">
+                            确定要删除该领水记录吗？此操作不可恢复。
+                        </template>
+                        <template v-else>
+                            确定要删除这条记录吗？
+                        </template>
+                    </p>
+                    <div class="flex gap-3">
+                        <button @click="showDeleteConfirmModal = false; deleteConfirmItem = null" class="flex-1 px-4 py-2.5 sm:py-3 border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition">
+                            取消
+                        </button>
+                        <button @click="executeDelete" class="flex-1 px-4 py-2.5 sm:py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition">
+                            确认删除
+                        </button>
                     </div>
                 </div>
             </div>
