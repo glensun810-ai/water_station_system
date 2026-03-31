@@ -1176,6 +1176,22 @@
         .animate-slide-in-right {
             animation: slideInRight 0.3s ease-out;
         }
+
+        /* 回收站移动端卡片视图 */
+        .trash-list-table {
+            display: none;
+        }
+        .trash-list-cards {
+            display: block;
+        }
+        @media (min-width: 641px) {
+            .trash-list-cards {
+                display: none !important;
+            }
+            .trash-list-table {
+                display: table !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2697,6 +2713,44 @@
                     </p>
                 </div>
                 
+                <!-- 筛选器 -->
+                <div class="bg-white rounded-xl p-4 mb-4 border border-slate-200">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">搜索用户</label>
+                            <input v-model="trashFilter.searchUser" type="text" placeholder="用户名/部门" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">搜索删除人</label>
+                            <input v-model="trashFilter.searchDeleter" type="text" placeholder="删除人姓名" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">搜索产品</label>
+                            <input v-model="trashFilter.searchProduct" type="text" placeholder="产品名称" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">记录类型</label>
+                            <select v-model="trashFilter.type" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="all">全部</option>
+                                <option value="transaction">交易记录</option>
+                                <option value="pickup">领水记录</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">删除时间从</label>
+                            <input v-model="trashFilter.dateFrom" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">到</label>
+                            <input v-model="trashFilter.dateTo" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-3">
+                        <button @click="trashFilter = { searchUser: '', searchDeleter: '', searchProduct: '', dateFrom: '', dateTo: '', type: 'all' }" class="text-sm text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition">重置</button>
+                        <button @click="loadTrashList" class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition">刷新</button>
+                    </div>
+                </div>
+                
                 <!-- 批量操作 -->
                 <div v-if="selectedTrash && selectedTrash.length > 0" class="mb-4 flex justify-between items-center bg-white rounded-xl p-4 shadow-sm">
                     <span class="text-slate-600">已选择 {{ selectedTrash.length }} 条记录</span>
@@ -2710,45 +2764,129 @@
                     </div>
                 </div>
                 
+                <!-- 统计信息 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                        <div class="text-xs text-slate-500">总记录数</div>
+                        <div class="text-xl font-bold text-slate-800">{{ trashList.length }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                        <div class="text-xs text-slate-500">交易记录</div>
+                        <div class="text-xl font-bold text-blue-600">{{ trashList.filter(t => t.type === 'transaction').length }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                        <div class="text-xs text-slate-500">领水记录</div>
+                        <div class="text-xl font-bold text-green-600">{{ trashList.filter(t => t.type === 'pickup').length }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                        <div class="text-xs text-slate-500">筛选结果</div>
+                        <div class="text-xl font-bold text-purple-600">{{ filteredTrashList.length }}</div>
+                    </div>
+                </div>
+                
                 <!-- 回收站列表 -->
-                <div v-if="!trashList || trashList.length === 0" class="text-center text-slate-400 py-12 bg-white rounded-xl">
+                <div v-if="!filteredTrashList || filteredTrashList.length === 0" class="text-center text-slate-400 py-12 bg-white rounded-xl">
                     <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <p>回收站为空</p>
                 </div>
                 
-                <div v-if="true" class="bg-white rounded-xl shadow overflow-hidden">
+                <!-- 回收站列表 - 桌面端表格 -->
+                <div v-if="filteredTrashList && filteredTrashList.length > 0" class="trash-list-table w-full bg-white rounded-xl shadow overflow-hidden">
                     <div class="table-responsive">
                         <table class="w-full">
                             <thead class="bg-slate-50">
                                 <tr>
                                     <th class="text-left py-3 px-4"><input type="checkbox" v-model="selectAllTrash" @change="toggleSelectAllTrash"></th>
+                                    <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">类型</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">删除时间</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">用户</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">产品</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">金额</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">删除人</th>
+                                    <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">删除原因</th>
                                     <th class="text-left py-3 px-4 text-xs font-medium text-slate-500">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="t in trashList" :key="t.id" class="border-t bg-red-50">
+                                <tr v-for="t in filteredTrashList" :key="t.id" class="border-t bg-red-50">
                                     <td class="py-3 px-4"><input type="checkbox" v-model="selectedTrash" :value="t.id" @change="updateSelectAll"></td>
+                                    <td class="py-3 px-4">
+                                        <span v-if="t.type === 'transaction'" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">交易</span>
+                                        <span v-else-if="t.type === 'pickup'" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">领水</span>
+                                    </td>
                                     <td class="py-3 px-4 text-sm">{{ formatDateTime(t.deleted_at) }}</td>
-                                    <td class="py-3 px-4 text-sm">{{ t.user_name }} ({{ t.department }})</td>
-                                    <td class="py-3 px-4 text-sm">{{ t.product_name }} × {{ t.quantity }}</td>
+                                    <td class="py-3 px-4 text-sm">
+                                        <div class="font-medium">{{ t.user_name }}</div>
+                                        <div class="text-xs text-slate-500">{{ t.department }}</div>
+                                    </td>
+                                    <td class="py-3 px-4 text-sm">
+                                        <div>{{ t.product_name }}</div>
+                                        <div class="text-xs text-slate-500">× {{ t.quantity }}</div>
+                                    </td>
                                     <td class="py-3 px-4 text-sm font-bold text-blue-600">¥{{ t.actual_price.toFixed(2) }}</td>
                                     <td class="py-3 px-4 text-sm text-slate-500">{{ t.deleter_name }}</td>
+                                    <td class="py-3 px-4 text-sm">
+                                        <span v-if="t.delete_reason" class="text-slate-600">{{ t.delete_reason }}</span>
+                                        <span v-else class="text-slate-400">-</span>
+                                    </td>
                                     <td class="py-3 px-4">
                                         <div class="flex gap-2">
                                             <button @click="restoreOneFromTrash(t.id)" class="text-green-600 hover:text-green-800 text-sm font-medium">恢复</button>
-                                            <button @click="permanentlyDeleteOne(t.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">永久删除</button>
+                                            <button @click="permanentlyDeleteOne(t.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">删除</button>
                                         </div>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                
+                <!-- 回收站列表 - 移动端卡片视图 -->
+                <div v-if="filteredTrashList && filteredTrashList.length > 0" class="trash-list-cards space-y-3 sm:hidden">
+                    <div v-for="t in filteredTrashList" :key="t.id" class="bg-white rounded-xl border border-red-200 p-4 shadow-sm">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" v-model="selectedTrash" :value="t.id" class="w-4 h-4 text-blue-600 rounded">
+                                <span :class="t.type === 'transaction' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'" class="text-xs px-2 py-1 rounded-full font-medium">
+                                    {{ t.type === 'transaction' ? '交易' : '领水' }}
+                                </span>
+                            </div>
+                            <span class="text-xs text-slate-500">{{ formatDateTime(t.deleted_at) }}</span>
+                        </div>
+                        
+                        <div class="space-y-2 mb-3">
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">用户</span>
+                                <span class="text-sm font-medium">{{ t.user_name }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">部门</span>
+                                <span class="text-sm text-slate-700">{{ t.department }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">产品</span>
+                                <span class="text-sm">{{ t.product_name }} × {{ t.quantity }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">金额</span>
+                                <span class="text-sm font-bold text-blue-600">¥{{ t.actual_price.toFixed(2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">删除人</span>
+                                <span class="text-sm text-slate-700">{{ t.deleter_name }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-500">原因</span>
+                                <span class="text-sm text-slate-700">{{ t.delete_reason || '-' }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2 pt-2 border-t border-slate-100">
+                            <button @click="restoreOneFromTrash(t.id)" class="flex-1 py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium hover:bg-green-100 transition">恢复</button>
+                            <button @click="permanentlyDeleteOne(t.id)" class="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition">删除</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4630,9 +4768,15 @@
                 // ========== 回收站相关状态 ==========
                 const trashList = ref([]); // 回收站列表
                 const selectedTrash = ref([]); // 已选择的回收站记录
-                const selectedOffices = ref([]); // 已选择的办公室
-                const allOfficesSelected = computed(() => filteredOffices.value.length > 0 && selectedOffices.value.length === filteredOffices.value.length);
                 const selectAllTrash = ref(false); // 全选状态
+                const trashFilter = ref({
+                    searchUser: '',
+                    searchDeleter: '',
+                    searchProduct: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    type: 'all' // all, transaction, pickup
+                }); // 回收站筛选条件
                 
                 // ========== 领水记录相关状态 ==========
                 const officePickups = ref([]); // 领水记录列表
@@ -4666,6 +4810,47 @@
                         const kw = f.searchPerson.toLowerCase();
                         result = result.filter(p => p && p.pickup_person && p.pickup_person.toLowerCase().includes(kw));
                     }
+                    return result;
+                });
+                
+                const filteredTrashList = computed(() => {
+                    let result = trashList.value || [];
+                    const f = trashFilter.value;
+                    
+                    // 按类型筛选
+                    if (f.type && f.type !== 'all') {
+                        result = result.filter(t => t && t.type === f.type);
+                    }
+                    
+                    // 按用户筛选
+                    if (f.searchUser) {
+                        const kw = f.searchUser.toLowerCase();
+                        result = result.filter(t => t && t.user_name && t.user_name.toLowerCase().includes(kw));
+                    }
+                    
+                    // 按删除人筛选
+                    if (f.searchDeleter) {
+                        const kw = f.searchDeleter.toLowerCase();
+                        result = result.filter(t => t && t.deleter_name && t.deleter_name.toLowerCase().includes(kw));
+                    }
+                    
+                    // 按产品筛选
+                    if (f.searchProduct) {
+                        const kw = f.searchProduct.toLowerCase();
+                        result = result.filter(t => t && t.product_name && t.product_name.toLowerCase().includes(kw));
+                    }
+                    
+                    // 按日期范围筛选
+                    if (f.dateFrom) {
+                        const from = new Date(f.dateFrom);
+                        result = result.filter(t => t && t.deleted_at && new Date(t.deleted_at) >= from);
+                    }
+                    if (f.dateTo) {
+                        const to = new Date(f.dateTo);
+                        to.setHours(23, 59, 59);
+                        result = result.filter(t => t && t.deleted_at && new Date(t.deleted_at) <= to);
+                    }
+                    
                     return result;
                 });
                 
@@ -5977,6 +6162,8 @@
                 const selectedTransactions = ref([]);
                 const selectedApplications = ref([]);
                 const selectedRemind = ref([]);
+                const selectedOffices = ref([]); // 已选择的办公室
+                const allOfficesSelected = ref(false); // 办公室全选状态
                 const transactionFilter = ref({
                     status: 'unsettled',
                     department: '',
@@ -6312,13 +6499,108 @@
                         const token = localStorage.getItem('token');
                         const headers = {};
                         if (token) headers['Authorization'] = `Bearer ${token}`;
-                        const res = await fetch(`${API_BASE}/admin/office-pickups/trash`, { headers });
-                        if (res.ok) {
-                            trashList.value = await res.json();
+                        // 同时加载交易记录和办公室领水记录的回收站
+                        const [res1, res2] = await Promise.all([
+                            fetch(`${API_BASE}/admin/trash`, { headers }),
+                            fetch(`${API_BASE}/admin/office-pickups/trash`, { headers })
+                        ]);
+                        
+                        let trashData = [];
+                        if (res1.ok) {
+                            const data1 = await res1.json();
+                            trashData = trashData.concat(data1.map(item => ({...item, type: 'transaction'})));
                         }
+                        if (res2.ok) {
+                            const data2 = await res2.json();
+                            trashData = trashData.concat(data2.map(item => ({...item, type: 'pickup'})));
+                        }
+                        
+                        // 按删除时间排序
+                        trashData.sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at));
+                        trashList.value = trashData;
                     } catch (e) {
                         console.error('Failed to load trash:', e);
                         trashList.value = [];
+                    }
+                };
+                
+                const toggleSelectAllTrash = () => {
+                    if (selectAllTrash.value) {
+                        selectedTrash.value = trashList.value.map(t => t.id);
+                    } else {
+                        selectedTrash.value = [];
+                    }
+                };
+                
+                const updateSelectAll = () => {
+                    selectAllTrash.value = selectedTrash.value.length === trashList.value.length && trashList.value.length > 0;
+                };
+                
+                const batchRestoreTrash = async () => {
+                    if (selectedTrash.value.length === 0) {
+                        alert('请先选择要恢复的记录');
+                        return;
+                    }
+                    if (!confirm(`确认恢复选中的 ${selectedTrash.value.length} 条记录吗？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/admin/trash/restore`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({ transaction_ids: selectedTrash.value })
+                        });
+                        
+                        const data = await res.json();
+                        if (res.ok) {
+                            showMessage(data.message || '批量恢复成功', 'success');
+                            selectedTrash.value = [];
+                            selectAllTrash.value = false;
+                            loadTrashList();
+                        } else {
+                            showMessage(`恢复失败：${data.detail}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('批量恢复失败:', e);
+                        showMessage('批量恢复失败', 'error');
+                    }
+                };
+                
+                const batchPermanentlyDelete = async () => {
+                    if (selectedTrash.value.length === 0) {
+                        alert('请先选择要永久删除的记录');
+                        return;
+                    }
+                    if (!confirm(`⚠️ 警告：确认永久删除选中的 ${selectedTrash.value.length} 条记录吗？此操作不可恢复！`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        let deletedCount = 0;
+                        for (const id of selectedTrash.value) {
+                            const res = await fetch(`${API_BASE}/admin/trash/${id}`, {
+                                method: 'DELETE',
+                                headers
+                            });
+                            if (res.ok) deletedCount++;
+                        }
+                        
+                        if (deletedCount > 0) {
+                            showMessage(`成功永久删除 ${deletedCount} 条记录`, 'success');
+                            selectedTrash.value = [];
+                            selectAllTrash.value = false;
+                            loadTrashList();
+                        } else {
+                            showMessage('删除失败', 'error');
+                        }
+                    } catch (e) {
+                        console.error('批量删除失败:', e);
+                        showMessage('批量删除失败', 'error');
                     }
                 };
                 
@@ -8494,6 +8776,8 @@
                     selectedApplications,
                     selectedRemind,
                     trashList,
+                    filteredTrashList,
+                    trashFilter,
                     selectedTrash,
                     selectAllTrash,
                     transactionFilter,
@@ -8518,6 +8802,10 @@
                     deleteForm,
                     executeDelete,
                     loadTrashList,
+                    toggleSelectAllTrash,
+                    updateSelectAll,
+                    batchRestoreTrash,
+                    batchPermanentlyDelete,
                     restoreOneFromTrash,
                     permanentlyDeleteOne,
                     // 办公室管理
