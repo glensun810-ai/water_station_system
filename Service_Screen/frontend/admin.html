@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前台大屏管理后台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app">
+        <nav class="bg-gradient-to-r from-indigo-600 to-blue-500 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">📺 前台大屏管理后台</h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="../../portal/index.html" class="hover:opacity-80">返回门户</a>
+                        <span v-if="user">{{ user.real_name || user.username }}</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex space-x-4 mb-6 border-b">
+                <button @click="currentTab = 'screens'" :class="currentTab === 'screens' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium">大屏管理</button>
+                <button @click="currentTab = 'content'" :class="currentTab === 'content' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium">内容审核</button>
+                <button @click="currentTab = 'schedule'" :class="currentTab === 'schedule' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium">播放计划</button>
+            </div>
+
+            <div v-if="currentTab === 'screens'" class="grid md:grid-cols-2 gap-6">
+                <div v-for="screen in screens" :key="screen.id" class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
+                            <span class="text-3xl">📺</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">{{ screen.name }}</h3>
+                            <p class="text-sm text-gray-500">{{ screen.location }}</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <p>尺寸：{{ screen.size }}</p>
+                        <p>分辨率：{{ screen.resolution }}</p>
+                        <p class="mt-2 text-gray-500">{{ screen.description || '无描述' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'content'" class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">内容审核</h2>
+                <div v-if="pendingReviews.length === 0" class="text-gray-500 text-center py-8">暂无待审核内容</div>
+                <div v-else class="space-y-4">
+                    <div v-for="item in pendingReviews" :key="item.id" class="border rounded-lg p-4">
+                        <div class="flex justify-between mb-2">
+                            <div>
+                                <p class="font-bold">{{ item.screen_name }}</p>
+                                <p class="text-sm text-gray-500">预约人：{{ item.user_name }}</p>
+                                <p class="text-sm text-gray-500">时间：{{ item.start_date }} 至 {{ item.end_date }}</p>
+                            </div>
+                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">待审核</span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded mb-3">
+                            <p class="text-sm font-medium mb-1">展示内容：</p>
+                            <p class="text-sm text-gray-700">{{ item.description }}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button @click="reviewContent(item.id, 'approved')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">通过</button>
+                            <button @click="reviewContent(item.id, 'rejected')" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">拒绝</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'schedule'" class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">播放计划</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-3 px-4">大屏</th>
+                                <th class="text-left py-3 px-4">日期</th>
+                                <th class="text-left py-3 px-4">内容</th>
+                                <th class="text-left py-3 px-4">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in schedule" :key="item.id" class="border-b">
+                                <td class="py-3 px-4">{{ item.screen_name }}</td>
+                                <td class="py-3 px-4">{{ item.start_date }}<br><span class="text-sm text-gray-500">至 {{ item.end_date }}</span></td>
+                                <td class="py-3 px-4 max-w-md truncate">{{ item.description }}</td>
+                                <td class="py-3 px-4"><span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-sm">{{ statusText(item.status) }}</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                const API_BASE = 'http://localhost:8001/api/screen';
+                const user = ref(null);
+                const currentTab = ref('screens');
+                const screens = ref([]);
+                const pendingReviews = ref([]);
+                const schedule = ref([]);
+
+                const loadScreens = async () => {
+                    const res = await fetch(`${API_BASE}/screens`);
+                    const data = await res.json();
+                    if (res.ok) screens.value = data.data?.items || [];
+                };
+
+                const loadReviews = async () => {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_BASE}/reservations?status=pending`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    if (res.ok) pendingReviews.value = data.data?.items || [];
+                };
+
+                const loadSchedule = async () => {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_BASE}/reservations`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    if (res.ok) schedule.value = data.data?.items || [];
+                };
+
+                const reviewContent = async (id, action) => {
+                    alert(`内容已${action === 'approved' ? '通过' : '拒绝'}`);
+                    loadReviews();
+                };
+
+                const statusClass = (s) => ({ pending:'bg-yellow-100 text-yellow-800', confirmed:'bg-green-100 text-green-800', approved:'bg-blue-100 text-blue-800', rejected:'bg-red-100 text-red-800', cancelled:'bg-gray-100 text-gray-800' }[s] || 'bg-gray-100');
+                const statusText = (s) => ({ pending:'待审核', confirmed:'已确认', approved:'已通过', rejected:'已拒绝', cancelled:'已取消' }[s] || s);
+
+                onMounted(() => {
+                    const u = localStorage.getItem('user');
+                    if (u) user.value = JSON.parse(u);
+                    loadScreens();
+                    loadReviews();
+                    loadSchedule();
+                });
+
+                return { user, currentTab, screens, pendingReviews, schedule, reviewContent, statusClass, statusText };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

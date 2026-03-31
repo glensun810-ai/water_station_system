@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>餐厅茶室管理后台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app">
+        <nav class="bg-gradient-to-r from-orange-600 to-red-500 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">🍽️ 餐厅茶室管理后台</h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="../../portal/index.html" class="hover:opacity-80">返回门户</a>
+                        <span v-if="user">{{ user.real_name || user.username }}</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex space-x-4 mb-6 border-b">
+                <button @click="currentTab = 'resources'" :class="currentTab === 'resources' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium">资源管理</button>
+                <button @click="currentTab = 'bookings'" :class="currentTab === 'bookings' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium">预约记录</button>
+            </div>
+
+            <div v-if="currentTab === 'resources'" class="grid md:grid-cols-2 gap-6">
+                <div v-for="item in resources" :key="item.id" class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center mr-4" :class="item.type === 'dining' ? 'bg-orange-100' : 'bg-green-100'">
+                            <span class="text-3xl">{{ item.type === 'dining' ? '🍱' : '🍵' }}</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">{{ item.name }}</h3>
+                            <p class="text-sm text-gray-500">{{ item.location }} | 容量：{{ item.capacity }}人</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <p>免费次数：{{ item.free_sessions_per_month }}次/月</p>
+                        <p>收费：¥{{ item.price_per_session }}/次</p>
+                        <p>时段：{{ item.sessions?.map(s => `${s.name}(${s.start}-${s.end})`).join(', ') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'bookings'" class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">预约记录</h2>
+                <div class="space-y-4">
+                    <div v-for="item in bookings" :key="item.id" class="border rounded-lg p-4">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="font-bold">{{ item.resource_name }}</p>
+                                <p class="text-sm text-gray-500">{{ item.start_time }} - {{ item.end_time }}</p>
+                                <p class="text-sm text-gray-500">人数：{{ item.attendee_count }}人</p>
+                            </div>
+                            <span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-sm">{{ statusText(item.status) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                const API_BASE = 'http://localhost:8001/api/dining';
+                const user = ref(null);
+                const currentTab = ref('resources');
+                const resources = ref([]);
+                const bookings = ref([]);
+
+                const loadResources = async () => {
+                    const res = await fetch(`${API_BASE}/resources`);
+                    const data = await res.json();
+                    if (res.ok) resources.value = data.data?.items || [];
+                };
+
+                const loadBookings = async () => {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_BASE}/reservations`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    if (res.ok) bookings.value = data.data?.items || [];
+                };
+
+                const statusClass = (s) => ({ pending:'bg-yellow-100 text-yellow-800', confirmed:'bg-green-100 text-green-800', cancelled:'bg-red-100 text-red-800', completed:'bg-gray-100 text-gray-800' }[s] || 'bg-gray-100');
+                const statusText = (s) => ({ pending:'待确认', confirmed:'已确认', cancelled:'已取消', completed:'已完成' }[s] || s);
+
+                onMounted(() => {
+                    const u = localStorage.getItem('user');
+                    if (u) user.value = JSON.parse(u);
+                    loadResources();
+                    loadBookings();
+                });
+
+                return { user, currentTab, resources, bookings, statusClass, statusText };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

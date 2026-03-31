@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议室管理后台 - AI 产业集群空间服务管理系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <nav class="bg-gradient-to-r from-green-600 to-teal-500 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">🏛️ 会议室管理后台</h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="../../portal/index.html" class="hover:opacity-80">返回门户</a>
+                        <span v-if="user">{{ user.real_name || user.username }}</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主体内容 -->
+        <div class="container mx-auto px-4 py-8">
+            <!-- 选项卡 -->
+            <div class="flex space-x-4 mb-6 border-b">
+                <button @click="currentTab = 'rooms'" :class="currentTab === 'rooms' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium hover:text-gray-700">会议室管理</button>
+                <button @click="currentTab = 'bookings'" :class="currentTab === 'bookings' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium hover:text-gray-700">预约记录</button>
+                <button @click="currentTab = 'stats'" :class="currentTab === 'stats' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500'" class="px-4 py-2 border-b-2 font-medium hover:text-gray-700">使用统计</button>
+            </div>
+
+            <!-- 会议室管理 -->
+            <div v-if="currentTab === 'rooms'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">会议室列表</h2>
+                    <button @click="showAddRoom = true" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">+ 新增会议室</button>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div v-for="room in rooms" :key="room.id" class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold">{{ room.name }}</h3>
+                                <p class="text-sm text-gray-500">{{ room.location }} | 容量：{{ room.capacity }}人</p>
+                            </div>
+                            <span :class="room.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" class="px-3 py-1 rounded-full text-sm">
+                                {{ room.is_active ? '可用' : '停用' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <div>
+                                <span class="text-gray-600">免费时长：{{ room.free_hours_per_month }}小时/月</span>
+                                <span class="ml-4 text-gray-600">收费：¥{{ room.price_per_hour }}/小时</span>
+                            </div>
+                            <button @click="editRoom(room)" class="text-green-500 hover:text-green-600">编辑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预约记录 -->
+            <div v-if="currentTab === 'bookings'" class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">预约记录</h2>
+                    <div class="flex space-x-2">
+                        <select v-model="filterStatus" class="border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="">全部状态</option>
+                            <option value="pending">待确认</option>
+                            <option value="confirmed">已确认</option>
+                            <option value="active">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="cancelled">已取消</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-3 px-4">预约编号</th>
+                                <th class="text-left py-3 px-4">会议室</th>
+                                <th class="text-left py-3 px-4">预约人</th>
+                                <th class="text-left py-3 px-4">时间</th>
+                                <th class="text-left py-3 px-4">状态</th>
+                                <th class="text-left py-3 px-4">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in filteredBookings" :key="item.id" class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-4">{{ item.reservation_no }}</td>
+                                <td class="py-3 px-4">{{ item.room_name }}</td>
+                                <td class="py-3 px-4">{{ item.user_name }}</td>
+                                <td class="py-3 px-4">{{ item.start_time }}<br><span class="text-sm text-gray-500">至 {{ item.end_time }}</span></td>
+                                <td class="py-3 px-4"><span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-sm">{{ statusText(item.status) }}</span></td>
+                                <td class="py-3 px-4">
+                                    <button v-if="item.status === 'pending'" @click="confirmBooking(item.id)" class="text-green-500 hover:text-green-600 mr-3">确认</button>
+                                    <button @click="cancelBooking(item.id)" class="text-red-500 hover:text-red-600">取消</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 使用统计 -->
+            <div v-if="currentTab === 'stats'" class="space-y-6">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">今日预约</div>
+                        <div class="text-3xl font-bold text-green-600">{{ stats.today_bookings }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">本周预约</div>
+                        <div class="text-3xl font-bold text-blue-600">{{ stats.week_bookings }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">本月预约</div>
+                        <div class="text-3xl font-bold text-purple-600">{{ stats.month_bookings }}</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold mb-4">会议室使用率</h3>
+                    <div v-for="room in rooms" :key="room.id" class="mb-4">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium">{{ room.name }}</span>
+                            <span class="text-sm text-gray-500">{{ room.usage_rate || 0 }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-500 h-2 rounded-full" :style="{ width: (room.usage_rate || 0) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = 'http://localhost:8001/api/meeting';
+                
+                const user = ref(null);
+                const currentTab = ref('rooms');
+                const rooms = ref([]);
+                const bookings = ref([]);
+                const filterStatus = ref('');
+                const stats = ref({ today_bookings: 0, week_bookings: 0, month_bookings: 0 });
+                const showAddRoom = ref(false);
+
+                const filteredBookings = computed(() => {
+                    if (!filterStatus.value) return bookings.value;
+                    return bookings.value.filter(b => b.status === filterStatus.value);
+                });
+
+                const loadRooms = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms`);
+                        const data = await res.json();
+                        if (res.ok) rooms.value = data.data?.rooms || [];
+                    } catch (e) { console.error(e); }
+                };
+
+                const loadBookings = async () => {
+                    const token = localStorage.getItem('token');
+                    try {
+                        const res = await fetch(`${API_BASE}/reservations`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (res.ok) bookings.value = data.data?.items || [];
+                    } catch (e) { console.error(e); }
+                };
+
+                const confirmBooking = async (id) => {
+                    if (!confirm('确认此预约？')) return;
+                    alert('预约已确认');
+                    loadBookings();
+                };
+
+                const cancelBooking = async (id) => {
+                    const token = localStorage.getItem('token');
+                    const reason = prompt('取消原因：');
+                    if (!reason) return;
+                    try {
+                        await fetch(`${API_BASE}/reservations/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        alert('已取消');
+                        loadBookings();
+                    } catch (e) { alert('取消失败'); }
+                };
+
+                const statusClass = (status) => {
+                    const c = { pending:'bg-yellow-100 text-yellow-800', confirmed:'bg-green-100 text-green-800', active:'bg-blue-100 text-blue-800', completed:'bg-gray-100 text-gray-800', cancelled:'bg-red-100 text-red-800' };
+                    return c[status] || 'bg-gray-100 text-gray-800';
+                };
+
+                const statusText = (status) => {
+                    const t = { pending:'待确认', confirmed:'已确认', active:'进行中', completed:'已完成', cancelled:'已取消' };
+                    return t[status] || status;
+                };
+
+                const editRoom = (room) => {
+                    alert(`编辑会议室：${room.name}\n（功能开发中）`);
+                };
+
+                onMounted(() => {
+                    const userStr = localStorage.getItem('user');
+                    if (userStr) user.value = JSON.parse(userStr);
+                    loadRooms();
+                    loadBookings();
+                });
+
+                return { user, currentTab, rooms, bookings, filterStatus, filteredBookings, stats, showAddRoom, confirmBooking, cancelBooking, statusClass, statusText, editRoom };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

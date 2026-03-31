@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>办公空间预约 - AI 产业集群空间服务管理系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <nav class="bg-gradient-to-r from-purple-600 to-indigo-500 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">🏢 办公空间预约</h1>
+                    <div class="flex items-center space-x-4">
+                        <a href="../../portal/index.html" class="hover:opacity-80">返回首页</a>
+                        <span v-if="user">{{ user.real_name || user.username }}</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主体内容 -->
+        <div class="container mx-auto px-4 py-8">
+            <!-- 统计概览 -->
+            <div v-if="stats" class="grid md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-xl shadow p-4">
+                    <div class="text-sm text-gray-500">总资源数</div>
+                    <div class="text-2xl font-bold text-purple-600">{{ stats.total_resources }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-4">
+                    <div class="text-sm text-gray-500">可用资源</div>
+                    <div class="text-2xl font-bold text-green-600">{{ stats.available_resources }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-4">
+                    <div class="text-sm text-gray-500">今日预约</div>
+                    <div class="text-2xl font-bold text-blue-600">{{ stats.today_reservations }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-4">
+                    <div class="text-sm text-gray-500">使用率</div>
+                    <div class="text-2xl font-bold text-orange-600">{{ stats.utilization_rate }}%</div>
+                </div>
+            </div>
+
+            <!-- 办公资源列表 -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div v-for="item in resources" :key="item.id" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition cursor-pointer" @click="openBooking(item)">
+                    <div class="flex items-center mb-4">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <span class="text-3xl">{{ getResourceIcon(item.code) }}</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">{{ item.name }}</h3>
+                            <p class="text-sm text-gray-500">{{ item.location }} | {{ item.floor }}</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-600">容量：{{ item.capacity }}人</span>
+                        <span class="text-purple-500">点击预约 →</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预约弹窗 -->
+            <div v-if="showBookingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                    <h3 class="text-2xl font-bold mb-6">办公空间预约</h3>
+                    
+                    <form @submit.prevent="submitBooking" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">空间</label>
+                            <input type="text" :value="selectedResource?.name" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                            <input type="date" v-model="bookingForm.start_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                            <input type="date" v-model="bookingForm.end_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">预约说明</label>
+                            <textarea v-model="bookingForm.description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-4 pt-4">
+                            <button type="button" @click="showBookingModal = false" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
+                            <button type="submit" :disabled="loading" class="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50">
+                                {{ loading ? '提交中...' : '确认预约' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 我的预约 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">我的预约</h3>
+                <div v-if="reservations.length === 0" class="text-gray-500 text-center py-8">
+                    暂无预约记录
+                </div>
+                <div v-else class="space-y-4">
+                    <div v-for="item in reservations" :key="item.id" class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold">{{ item.resource_name }}</p>
+                                <p class="text-sm text-gray-500">{{ formatDate(item.start_time) }} 至 {{ formatDate(item.end_time) }}</p>
+                            </div>
+                            <span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-sm">
+                                {{ statusText(item.status) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = 'http://localhost:8001/api/office';
+                
+                const user = ref(null);
+                const resources = ref([]);
+                const stats = ref(null);
+                const showBookingModal = ref(false);
+                const selectedResource = ref(null);
+                const loading = ref(false);
+                const reservations = ref([]);
+                
+                const bookingForm = ref({
+                    start_date: new Date().toISOString().split('T')[0],
+                    end_date: new Date().toISOString().split('T')[0],
+                    description: ''
+                });
+
+                const getResourceIcon = (code) => {
+                    const icons = {
+                        'office': '🏢',
+                        'desk': '🪑',
+                        'meeting_vip': '🛋️',
+                        'reception': '🎯'
+                    };
+                    return icons[code] || '🏢';
+                };
+
+                const openBooking = (resource) => {
+                    selectedResource.value = resource;
+                    showBookingModal.value = true;
+                };
+
+                const submitBooking = async () => {
+                    loading.value = true;
+                    const token = localStorage.getItem('token');
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/reservations`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                resource_id: selectedResource.value.id,
+                                start_date: `${bookingForm.value.start_date}T09:00:00`,
+                                end_date: `${bookingForm.value.end_date}T18:00:00`,
+                                description: bookingForm.value.description
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            alert('预约成功！');
+                            showBookingModal.value = false;
+                            loadReservations();
+                        } else {
+                            alert(data.detail?.message || '预约失败');
+                        }
+                    } catch (error) {
+                        console.error('Booking error:', error);
+                        alert('预约失败，请稍后重试');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const loadResources = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/resources`);
+                        const data = await response.json();
+                        if (response.ok) {
+                            resources.value = data.data?.items || [];
+                        }
+                    } catch (error) {
+                        console.error('Load resources error:', error);
+                    }
+                };
+
+                const loadStats = async () => {
+                    const token = localStorage.getItem('token');
+                    try {
+                        const response = await fetch(`${API_BASE}/overview`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            stats.value = data.data || {};
+                        }
+                    } catch (error) {
+                        console.error('Load stats error:', error);
+                    }
+                };
+
+                const loadReservations = async () => {
+                    const token = localStorage.getItem('token');
+                    try {
+                        const response = await fetch(`${API_BASE}/reservations`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            reservations.value = data.data?.items || [];
+                        }
+                    } catch (error) {
+                        console.error('Load reservations error:', error);
+                    }
+                };
+
+                const formatDate = (dateStr) => {
+                    return new Date(dateStr).toLocaleDateString('zh-CN');
+                };
+
+                const statusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'confirmed': 'bg-green-100 text-green-800',
+                        'cancelled': 'bg-red-100 text-red-800',
+                        'completed': 'bg-gray-100 text-gray-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+
+                const statusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'cancelled': '已取消',
+                        'completed': '已完成'
+                    };
+                    return texts[status] || status;
+                };
+
+                onMounted(() => {
+                    const userStr = localStorage.getItem('user');
+                    if (userStr) user.value = JSON.parse(userStr);
+                    loadResources();
+                    loadStats();
+                    loadReservations();
+                });
+
+                return {
+                    user, resources, stats, showBookingModal, selectedResource,
+                    loading, reservations, bookingForm,
+                    getResourceIcon, openBooking, submitBooking,
+                    formatDate, statusClass, statusText
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
