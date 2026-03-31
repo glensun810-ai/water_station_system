@@ -314,7 +314,9 @@ class OfficeRecharge(Base):
 
 class OfficePickup(Base):
     """
-    办公室领水记录表
+    办公室领水/服务记录表（扩展为通用服务记录）
+
+    支持从"领水记录"扩展到"通用服务使用记录"
     """
 
     __tablename__ = "office_pickup"
@@ -327,14 +329,14 @@ class OfficePickup(Base):
     product_name = Column(String(100), nullable=False)
     product_specification = Column(String(50), nullable=True)
 
-    # 领水数量
+    # 领水/服务数量
     quantity = Column(Integer, nullable=False)
 
     # 领水人信息
     pickup_person = Column(String(100), nullable=True)
     pickup_person_id = Column(Integer, nullable=True)
 
-    # 领水时间
+    # 领水/使用时间
     pickup_time = Column(DateTime, nullable=False)
 
     # 支付模式: prepaid(预付) / credit(信用/先用后付)
@@ -355,6 +357,16 @@ class OfficePickup(Base):
     deleted_at = Column(DateTime, nullable=True)
     deleted_by = Column(Integer, nullable=True)
     delete_reason = Column(String(500), nullable=True)
+
+    # === 服务扩展字段（Phase 1 新增）===
+    service_type = Column(String(50), default="water")
+    time_slot = Column(String(100), nullable=True)
+    actual_usage = Column(String(200), nullable=True)
+    booking_status = Column(String(20), default="confirmed")
+    service_name = Column(String(100), nullable=True)
+    participants_count = Column(Integer, default=0)
+    purpose = Column(String(200), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
 
     # 审计字段
     created_at = Column(DateTime, default=datetime.now)
@@ -501,20 +513,32 @@ class InventoryAlertConfig(Base):
 
 class Product(Base):
     """
-    产品信息表
+    产品信息表（扩展为通用服务）
 
-    存储产品基本信息，用于办公室账户管理
+    存储产品/服务基本信息，用于办公室账户管理
+    支持从"水站管理"扩展到"通用服务管理平台"
     """
 
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    specification = Column(String)  # e.g., "18L", "500ml"
+    specification = Column(String)  # e.g., "18L", "500ml", "4小时"
     unit = Column(String, default="unit")
     price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
     is_active = Column(Integer, default=1)  # 1: 启用/在售，0: 停用/归档
+
+    # === 服务扩展字段（Phase 1 新增）===
+    service_type = Column(String(50), default="water")
+    resource_config = Column(Text, nullable=True)
+    booking_required = Column(Integer, default=0)
+    advance_booking_days = Column(Integer, default=0)
+    category = Column(String(50), default="physical")
+    icon = Column(String(10), nullable=True)
+    color = Column(String(20), default="blue")
+    max_capacity = Column(Integer, default=0)
+    facilities = Column(Text, nullable=True)
 
 
 def init_unified_db():
