@@ -823,6 +823,11 @@ from api_office import router as office_router
 
 app.include_router(office_router)
 
+# Register service extension router (Phase 2)
+from api_services import router as services_router
+
+app.include_router(services_router)
+
 
 def get_db():
     db = SessionLocal()
