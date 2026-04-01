@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务预约 - 企业服务管理平台</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F1F5F9;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="app" v-cloak>
+        <!-- 顶部导航 -->
+        <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="admin.html" class="text-slate-500 hover:text-slate-700 mr-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                        </a>
+                        <h1 class="text-xl font-bold text-slate-800">服务预约</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="showBookingModal = true" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                            + 新建预约
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- 筛选栏 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">服务类型</label>
+                        <select v-model="filterServiceType" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                            <option value="">全部</option>
+                            <option v-for="type in bookingServiceTypes" :key="type.value" :value="type.value">
+                                {{ type.icon }} {{ type.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">预约状态</label>
+                        <select v-model="filterStatus" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                            <option value="">全部</option>
+                            <option value="confirmed">已确认</option>
+                            <option value="pending">待确认</option>
+                            <option value="cancelled">已取消</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">日期范围</label>
+                        <input v-model="filterDate" type="date" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <button @click="resetFilters" class="text-sm text-slate-600 hover:text-slate-800">重置</button>
+                </div>
+            </div>
+
+            <!-- 预约列表 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                <div class="p-4 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-slate-800">预约列表</h3>
+                        <span class="text-sm text-slate-500">共 {{ filteredBookings.length }} 条记录</span>
+                    </div>
+                </div>
+                
+                <!-- 预约卡片 -->
+                <div class="divide-y divide-slate-200">
+                    <div v-for="booking in filteredBookings" :key="booking.id" 
+                         class="p-4 hover:bg-slate-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xl">{{ getServiceTypeIcon(booking.service_type) }}</span>
+                                    <h4 class="font-medium text-slate-800">{{ booking.service_name || booking.product_name }}</h4>
+                                    <span :class="[
+                                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                                        booking.booking_status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                        booking.booking_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        booking.booking_status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                        'bg-slate-100 text-slate-800'
+                                    ]">
+                                        {{ getStatusLabel(booking.booking_status) }}
+                                    </span>
+                                </div>
+                                <div class="text-sm text-slate-600 space-y-1">
+                                    <div class="flex items-center gap-4">
+                                        <span>📅 {{ booking.pickup_time?.split('T')[0] || '-' }}</span>
+                                        <span v-if="booking.time_slot">⏰ {{ booking.time_slot }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span>🏢 {{ booking.office_name }}</span>
+                                        <span v-if="booking.participants_count">👥 {{ booking.participants_count }}人</span>
+                                    </div>
+                                    <div v-if="booking.purpose" class="text-slate-500">
+                                        用途: {{ booking.purpose }}
+                                    </div>
+                                    <div v-if="booking.contact_phone" class="text-slate-500">
+                                        联系电话: {{ booking.contact_phone }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-4">
+                                <button v-if="booking.booking_status === 'confirmed'" 
+                                        @click="completeBooking(booking)"
+                                        class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                    完成
+                                </button>
+                                <button v-if="booking.booking_status === 'confirmed' || booking.booking_status === 'pending'"
+                                        @click="cancelBooking(booking)"
+                                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                    取消
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="filteredBookings.length === 0" class="p-8 text-center text-slate-500">
+                        暂无预约记录
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 新建预约模态框 -->
+        <div v-if="showBookingModal" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800">新建预约</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">服务类型 *</label>
+                        <select v-model="bookingForm.service_type" @change="onServiceTypeChange"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="type in bookingServiceTypes" :key="type.value" :value="type.value">
+                                {{ type.icon }} {{ type.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">选择服务 *</label>
+                        <select v-model="bookingForm.product_id"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="service in availableServices" :key="service.id" :value="service.id">
+                                {{ service.name }} - ¥{{ service.price }}/{{ service.unit }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">预约日期 *</label>
+                        <input v-model="bookingForm.date" type="date" :min="minDate"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div v-if="currentTimeSlots.length > 0">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">时间段 *</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button v-for="slot in currentTimeSlots" :key="slot"
+                                    @click="bookingForm.time_slot = slot"
+                                    :class="[
+                                        'px-3 py-2 rounded-lg text-sm border-2 transition',
+                                        bookingForm.time_slot === slot 
+                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    ]">
+                                {{ slot }}
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">使用办公室 *</label>
+                        <select v-model="bookingForm.office_id"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="office in offices" :key="office.id" :value="office.id">
+                                {{ office.name }} {{ office.room_number ? `(${office.room_number})` : '' }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">参与人数</label>
+                            <input v-model.number="bookingForm.participants_count" type="number" min="1"
+                                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
+                            <input v-model="bookingForm.contact_phone" type="tel"
+                                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">使用目的</label>
+                        <textarea v-model="bookingForm.purpose" rows="2"
+                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="例如：部门会议、客户接待等"></textarea>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
+                    <button @click="showBookingModal = false" 
+                            class="px-4 py-2 text-slate-700 hover:text-slate-900 font-medium">取消</button>
+                    <button @click="createBooking" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+                        创建预约
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = localStorage.getItem('API_BASE') || 
+                    (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+                
+                const serviceTypes = ref(window.APP_CONFIG?.serviceTypes || []);
+                const bookingServiceTypes = computed(() => 
+                    serviceTypes.value.filter(t => t.bookingRequired)
+                );
+                
+                const bookings = ref([]);
+                const offices = ref([]);
+                const services = ref([]);
+                
+                const showBookingModal = ref(false);
+                const filterServiceType = ref('');
+                const filterStatus = ref('');
+                const filterDate = ref('');
+                
+                const bookingForm = ref({
+                    service_type: 'meeting_room',
+                    product_id: null,
+                    date: '',
+                    time_slot: '',
+                    office_id: null,
+                    participants_count: 1,
+                    contact_phone: '',
+                    purpose: ''
+                });
+
+                const minDate = computed(() => {
+                    const today = new Date();
+                    return today.toISOString().split('T')[0];
+                });
+
+                const currentTimeSlots = computed(() => {
+                    const type = serviceTypes.value.find(t => t.value === bookingForm.value.service_type);
+                    return type?.config?.timeSlots || [];
+                });
+
+                const availableServices = computed(() => {
+                    return services.value.filter(s => s.service_type === bookingForm.value.service_type);
+                });
+
+                const filteredBookings = computed(() => {
+                    let result = bookings.value.filter(b => b.service_type !== 'water');
+                    
+                    if (filterServiceType.value) {
+                        result = result.filter(b => b.service_type === filterServiceType.value);
+                    }
+                    if (filterStatus.value) {
+                        result = result.filter(b => b.booking_status === filterStatus.value);
+                    }
+                    if (filterDate.value) {
+                        result = result.filter(b => b.pickup_time?.startsWith(filterDate.value));
+                    }
+                    
+                    return result.sort((a, b) => new Date(b.pickup_time) - new Date(a.pickup_time));
+                });
+
+                const getServiceTypeIcon = (type) => {
+                    const found = serviceTypes.value.find(t => t.value === type);
+                    return found?.icon || '📦';
+                };
+
+                const getStatusLabel = (status) => {
+                    const map = {
+                        'confirmed': '已确认',
+                        'pending': '待确认',
+                        'cancelled': '已取消',
+                        'completed': '已完成'
+                    };
+                    return map[status] || status;
+                };
+
+                const loadBookings = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/pickups`);
+                        if (response.ok) {
+                            bookings.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载预约失败:', error);
+                    }
+                };
+
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices`);
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                    }
+                };
+
+                const loadServices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/products`);
+                        if (response.ok) {
+                            services.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载服务失败:', error);
+                    }
+                };
+
+                const onServiceTypeChange = () => {
+                    const available = availableServices.value;
+                    if (available.length > 0) {
+                        bookingForm.value.product_id = available[0].id;
+                    }
+                    bookingForm.value.time_slot = currentTimeSlots.value[0] || '';
+                };
+
+                const createBooking = async () => {
+                    try {
+                        const office = offices.value.find(o => o.id === bookingForm.value.office_id);
+                        const service = services.value.find(s => s.id === bookingForm.value.product_id);
+                        
+                        const response = await fetch(`${API_BASE}/offices/pickups`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                office_id: bookingForm.value.office_id,
+                                office_name: office?.name,
+                                product_id: bookingForm.value.product_id,
+                                product_name: service?.name,
+                                quantity: 1,
+                                pickup_time: bookingForm.value.date,
+                                service_type: bookingForm.value.service_type,
+                                time_slot: bookingForm.value.time_slot,
+                                participants_count: bookingForm.value.participants_count,
+                                contact_phone: bookingForm.value.contact_phone,
+                                purpose: bookingForm.value.purpose,
+                                booking_status: 'confirmed'
+                            })
+                        });
+
+                        if (response.ok) {
+                            showBookingModal.value = false;
+                            await loadBookings();
+                            // 重置表单
+                            bookingForm.value = {
+                                service_type: 'meeting_room',
+                                product_id: null,
+                                date: '',
+                                time_slot: '',
+                                office_id: null,
+                                participants_count: 1,
+                                contact_phone: '',
+                                purpose: ''
+                            };
+                        }
+                    } catch (error) {
+                        console.error('创建预约失败:', error);
+                    }
+                };
+
+                const completeBooking = async (booking) => {
+                    if (!confirm('确认完成此预约？')) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/pickups/${booking.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...booking, booking_status: 'completed' })
+                        });
+
+                        if (response.ok) {
+                            await loadBookings();
+                        }
+                    } catch (error) {
+                        console.error('更新失败:', error);
+                    }
+                };
+
+                const cancelBooking = async (booking) => {
+                    if (!confirm('确认取消此预约？')) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/pickups/${booking.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...booking, booking_status: 'cancelled' })
+                        });
+
+                        if (response.ok) {
+                            await loadBookings();
+                        }
+                    } catch (error) {
+                        console.error('取消失败:', error);
+                    }
+                };
+
+                const resetFilters = () => {
+                    filterServiceType.value = '';
+                    filterStatus.value = '';
+                    filterDate.value = '';
+                };
+
+                onMounted(() => {
+                    loadBookings();
+                    loadOffices();
+                    loadServices();
+                });
+
+                return {
+                    serviceTypes,
+                    bookingServiceTypes,
+                    bookings,
+                    offices,
+                    services,
+                    showBookingModal,
+                    filterServiceType,
+                    filterStatus,
+                    filterDate,
+                    bookingForm,
+                    minDate,
+                    currentTimeSlots,
+                    availableServices,
+                    filteredBookings,
+                    getServiceTypeIcon,
+                    getStatusLabel,
+                    loadBookings,
+                    onServiceTypeChange,
+                    createBooking,
+                    completeBooking,
+                    cancelBooking,
+                    resetFilters
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
