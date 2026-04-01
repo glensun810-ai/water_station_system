@@ -1483,7 +1483,7 @@ def get_products(
             "promo_gift": p.promo_gift,
             "is_active": p.is_active,
             "is_protected": p.is_protected,
-            "category_name": p.category.name if p.category else None,
+            "category_name": p.category_rel.name if p.category_rel else None,
         }
         result.append(product_dict)
     if active_only:
