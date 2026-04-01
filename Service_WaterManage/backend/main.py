@@ -828,6 +828,16 @@ from api_services import router as services_router
 
 app.include_router(services_router)
 
+# Register package management router (Phase 3)
+from api_packages import router as packages_router
+
+app.include_router(packages_router)
+
+# Register VIP dining service router (Week 1 Day 1)
+from api_dining import router as dining_router
+
+app.include_router(dining_router)
+
 
 def get_db():
     db = SessionLocal()
@@ -4667,3 +4677,7 @@ def get_payment_qr(db: Session = Depends(get_db)):
 
     # 如果没有配置，返回空
     return {"qr_code": None}
+
+# Register meeting room service router
+from api_meeting import router as meeting_router
+app.include_router(meeting_router)

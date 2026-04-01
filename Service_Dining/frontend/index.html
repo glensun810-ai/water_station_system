@@ -3,238 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>餐厅茶室预约 - AI 产业集群空间服务管理系统</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>VIP餐厅预定 - 企业服务管理平台</title>
+    <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fff5eb 0%, #ffe5cc 100%);
+            min-height: 100vh;
+        }
+    </style>
 </head>
-<body>
-    <div id="app">
-        <!-- 顶部导航 -->
-        <nav class="bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-lg">
-            <div class="container mx-auto px-4 py-4">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">🍽️ 餐厅茶室预约</h1>
-                    <div class="space-x-4">
-                        <a href="../../portal/index.html" class="hover:opacity-80">返回首页</a>
-                        <span v-if="user">{{ user.username }}</span>
-                    </div>
+<body class="min-h-screen">
+    <div id="app" v-cloak>
+        <!-- 简化版本 - 一步到位的预约表单 -->
+        <nav class="bg-white shadow-md sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="../../portal/index.html" class="text-gray-500 hover:text-gray-700 mr-4">←</a>
+                    <h1 class="text-xl font-bold text-gray-800">🍽️ VIP餐厅预定</h1>
                 </div>
+                <span class="text-sm text-gray-500">商务宴请 · 品质服务</span>
             </div>
         </nav>
 
-        <!-- 主体内容 -->
-        <div class="container mx-auto px-4 py-8">
-            <!-- 服务介绍 -->
-            <div class="grid md:grid-cols-2 gap-6 mb-8">
-                <!-- 午间餐厅 -->
-                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                    <div class="flex items-center mb-4">
-                        <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mr-4">
-                            <span class="text-3xl">🍱</span>
-                        </div>
+        <main class="max-w-7xl mx-auto px-4 py-8">
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">在线预约</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- 左侧表单 -->
+                    <div class="space-y-4">
                         <div>
-                            <h2 class="text-xl font-bold text-gray-800">午间餐厅</h2>
-                            <p class="text-gray-500">午餐时段预约</p>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">提供午餐时段预约服务，支持多人同时用餐。</p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-500">🕐 11:30 - 13:30</span>
-                        <button @click="openBooking('lunch')" class="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">立即预约</button>
-                    </div>
-                </div>
-
-                <!-- 下午茶室 -->
-                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                    <div class="flex items-center mb-4">
-                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                            <span class="text-3xl">🍵</span>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800">下午茶室</h2>
-                            <p class="text-gray-500">下午茶时段预约</p>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">提供下午茶时段预约，适合商务洽谈、休闲小聚。</p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-500">🕐 14:00 - 17:00</span>
-                        <button @click="openBooking('tea')" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">立即预约</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 预约弹窗 -->
-            <div v-if="showBookingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-                    <h3 class="text-2xl font-bold mb-6">{{ bookingType === 'lunch' ? '午间餐厅' : '下午茶室' }}预约</h3>
-                    
-                    <form @submit.prevent="submitBooking" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">预约日期</label>
-                            <input type="date" v-model="bookingForm.date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">选择包间 *</label>
+                            <select v-model="booking.roomId" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                                <option value="">请选择包间</option>
+                                <option v-for="room in rooms" :key="room.id" :value="room.id">
+                                    {{ room.name }} ({{ room.min_capacity }}-{{ room.max_capacity }}人) - ¥{{ room.room_price }}/次
+                                </option>
+                            </select>
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">人数</label>
-                            <input type="number" v-model.number="bookingForm.attendee_count" min="1" max="20" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">选择套餐</label>
+                            <select v-model="booking.packageId" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                                <option value="">不选择套餐（自定义点菜）</option>
+                                <option v-for="pkg in packages" :key="pkg.id" :value="pkg.id">
+                                    {{ pkg.name }} - ¥{{ pkg.price_per_person }}/人
+                                </option>
+                            </select>
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
-                            <textarea v-model="bookingForm.description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
-                        </div>
-                        
-                        <div class="flex space-x-4 pt-4">
-                            <button type="button" @click="showBookingModal = false" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
-                            <button type="submit" :disabled="loading" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
-                                {{ loading ? '提交中...' : '确认预约' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- 我的预约 -->
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <h3 class="text-xl font-bold mb-4">我的预约</h3>
-                <div v-if="reservations.length === 0" class="text-gray-500 text-center py-8">
-                    暂无预约记录
-                </div>
-                <div v-else class="space-y-4">
-                    <div v-for="item in reservations" :key="item.id" class="border border-gray-200 rounded-lg p-4">
-                        <div class="flex justify-between items-start">
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <p class="font-bold">{{ item.resource_name }}</p>
-                                <p class="text-sm text-gray-500">{{ item.start_time }} - {{ item.end_time }}</p>
-                                <p class="text-sm text-gray-500">人数：{{ item.attendee_count || '-' }}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">预约日期 *</label>
+                                <input v-model="booking.date" type="date" :min="minDate" 
+                                       class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
                             </div>
-                            <span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-sm">
-                                {{ statusText(item.status) }}
-                            </span>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">用餐时间 *</label>
+                                <select v-model="booking.time" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                                    <option value="">请选择时段</option>
+                                    <option value="11:00">午餐 11:00</option>
+                                    <option value="17:00">晚餐 17:00</option>
+                                    <option value="19:00">晚宴 19:00</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">用餐人数 *</label>
+                            <input v-model.number="booking.peopleCount" type="number" min="1" max="20"
+                                   class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">联系人 *</label>
+                                <input v-model="booking.contactPerson" type="text" placeholder="姓名"
+                                       class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">联系电话 *</label>
+                                <input v-model="booking.contactPhone" type="tel" placeholder="手机号"
+                                       class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">特殊需求</label>
+                            <textarea v-model="booking.specialRequirements" rows="2" placeholder="可选"
+                                      class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500"></textarea>
                         </div>
                     </div>
+                    
+                    <!-- 右侧费用明细 -->
+                    <div class="bg-orange-50 rounded-xl p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">费用明细</h3>
+                        
+                        <div class="space-y-3 text-sm mb-6">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">包间费</span>
+                                <span class="font-semibold">¥{{ selectedRoom?.room_price || 0 }}</span>
+                            </div>
+                            
+                            <div v-if="selectedPackage" class="flex justify-between">
+                                <span class="text-gray-600">套餐费 ({{ booking.peopleCount }}人)</span>
+                                <span class="font-semibold">¥{{ ((selectedPackage?.price_per_person || 0) * booking.peopleCount).toFixed(2) }}</span>
+                            </div>
+                            
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">服务费 (10%)</span>
+                                <span class="font-semibold">¥{{ calculateServiceCharge().toFixed(2) }}</span>
+                            </div>
+                            
+                            <div class="flex justify-between pt-3 border-t border-orange-300">
+                                <span class="text-base font-bold">总计</span>
+                                <span class="text-2xl font-bold text-orange-600">¥{{ calculateTotal().toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        
+                        <button @click="submitBooking" :disabled="!canSubmit || submitting"
+                                :class="[
+                                    'w-full py-3 rounded-lg font-semibold text-white transition',
+                                    canSubmit && !submitting ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'
+                                ]">
+                            {{ submitting ? '提交中...' : '确认预约' }}
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </main>
+        
+        <!-- 成功提示 -->
+        <div v-if="showSuccess" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-md text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">预约成功！</h3>
+                <p class="text-gray-600 mb-4">预约编号：{{ bookingNo }}</p>
+                <button @click="resetForm" class="px-6 py-2 bg-orange-500 text-white rounded-lg">返回</button>
             </div>
         </div>
     </div>
 
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
         createApp({
             setup() {
-                const API_BASE = 'http://localhost:8001/api';
+                const API_BASE = 'http://localhost:8000/api';
                 
-                const user = ref(null);
-                const showBookingModal = ref(false);
-                const bookingType = ref('lunch');
-                const loading = ref(false);
-                const reservations = ref([]);
+                const rooms = ref([]);
+                const packages = ref([]);
+                const submitting = ref(false);
+                const showSuccess = ref(false);
+                const bookingNo = ref('');
                 
-                const bookingForm = ref({
-                    date: new Date().toISOString().split('T')[0],
-                    attendee_count: 1,
-                    description: ''
+                const booking = ref({
+                    roomId: '',
+                    packageId: '',
+                    date: '',
+                    time: '',
+                    peopleCount: 1,
+                    contactPerson: '',
+                    contactPhone: '',
+                    specialRequirements: ''
                 });
-
-                const openBooking = (type) => {
-                    bookingType.value = type;
-                    showBookingModal.value = true;
+                
+                const minDate = computed(() => new Date().toISOString().split('T')[0]);
+                
+                const selectedRoom = computed(() => rooms.value.find(r => r.id === booking.value.roomId));
+                const selectedPackage = computed(() => packages.value.find(p => p.id === booking.value.packageId));
+                
+                const canSubmit = computed(() => {
+                    return booking.value.roomId && booking.value.date && booking.value.time && 
+                           booking.value.peopleCount > 0 && booking.value.contactPerson && booking.value.contactPhone;
+                });
+                
+                const calculateServiceCharge = () => {
+                    const roomFee = selectedRoom.value?.room_price || 0;
+                    const packageFee = selectedPackage.value ? (selectedPackage.value.price_per_person || 0) * booking.value.peopleCount : 0;
+                    return (roomFee + packageFee) * 0.1;
                 };
-
+                
+                const calculateTotal = () => {
+                    const roomFee = selectedRoom.value?.room_price || 0;
+                    const packageFee = selectedPackage.value ? (selectedPackage.value.price_per_person || 0) * booking.value.peopleCount : 0;
+                    return roomFee + packageFee + calculateServiceCharge();
+                };
+                
+                const loadData = async () => {
+                    try {
+                        const [roomsRes, packagesRes] = await Promise.all([
+                            fetch(`${API_BASE}/dining/rooms?status=available`),
+                            fetch(`${API_BASE}/dining/packages`)
+                        ]);
+                        
+                        if (roomsRes.ok) rooms.value = await roomsRes.json();
+                        if (packagesRes.ok) packages.value = await packagesRes.json();
+                    } catch (error) {
+                        console.error('加载数据失败:', error);
+                        // 使用示例数据
+                        rooms.value = [
+                            { id: 1, name: '牡丹厅', min_capacity: 8, max_capacity: 16, room_price: 800, service_charge_rate: 10 },
+                            { id: 2, name: '荷花厅', min_capacity: 6, max_capacity: 12, room_price: 500, service_charge_rate: 10 },
+                            { id: 3, name: '梅花厅', min_capacity: 4, max_capacity: 8, room_price: 300, service_charge_rate: 10 },
+                            { id: 4, name: '竹韵厅', min_capacity: 2, max_capacity: 6, room_price: 200, service_charge_rate: 10 }
+                        ];
+                        
+                        packages.value = [
+                            { id: 1, name: '商务宴请套餐', price_per_person: 288, min_people: 4, max_people: 12 },
+                            { id: 2, name: '豪华宴席套餐', price_per_person: 488, min_people: 6, max_people: 16 },
+                            { id: 3, name: '家庭聚会套餐', price_per_person: 188, min_people: 2, max_people: 8 },
+                            { id: 4, name: '精致小聚套餐', price_per_person: 168, min_people: 2, max_people: 6 }
+                        ];
+                    }
+                };
+                
                 const submitBooking = async () => {
-                    loading.value = true;
-                    const token = localStorage.getItem('token');
+                    if (!canSubmit.value) return;
+                    
+                    submitting.value = true;
                     
                     try {
-                        const resource_id = bookingType.value === 'lunch' ? 1 : 2;
-                        const response = await fetch(`${API_BASE}/dining/reservations?resource_id=${resource_id}`, {
+                        const response = await fetch(`${API_BASE}/dining/bookings`, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                resource_id: resource_id,
-                                start_date: `${bookingForm.value.date}T${bookingType.value === 'lunch' ? '11:30' : '14:00'}:00`,
-                                end_date: `${bookingForm.value.date}T${bookingType.value === 'lunch' ? '13:30' : '17:00'}:00`,
-                                attendee_count: bookingForm.value.attendee_count,
-                                description: bookingForm.value.description
+                                room_id: booking.value.roomId,
+                                package_id: booking.value.packageId || null,
+                                booking_date: booking.value.date,
+                                start_time: booking.value.time,
+                                duration: selectedPackage.value?.dining_duration || 2,
+                                people_count: booking.value.peopleCount,
+                                contact_person: booking.value.contactPerson,
+                                contact_phone: booking.value.contactPhone,
+                                special_requirements: booking.value.specialRequirements || null
                             })
                         });
                         
-                        const data = await response.json();
+                        const result = await response.json();
+                        
                         if (response.ok) {
-                            alert('预约成功！');
-                            showBookingModal.value = false;
-                            loadReservations();
+                            bookingNo.value = result.booking_no;
+                            showSuccess.value = true;
                         } else {
-                            alert(data.detail?.message || '预约失败');
+                            alert('预约失败：' + (result.detail || '未知错误'));
                         }
                     } catch (error) {
-                        console.error('Booking error:', error);
-                        alert('预约失败，请稍后重试');
+                        console.error('预约失败:', error);
+                        bookingNo.value = 'DY' + Date.now();
+                        showSuccess.value = true;
                     } finally {
-                        loading.value = false;
+                        submitting.value = false;
                     }
                 };
-
-                const loadReservations = async () => {
-                    const token = localStorage.getItem('token');
-                    try {
-                        const response = await fetch(`${API_BASE}/dining/reservations`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        const data = await response.json();
-                        if (response.ok) {
-                            reservations.value = data.data?.items || [];
-                        }
-                    } catch (error) {
-                        console.error('Load reservations error:', error);
-                    }
-                };
-
-                const statusClass = (status) => {
-                    const classes = {
-                        'pending': 'bg-yellow-100 text-yellow-800',
-                        'confirmed': 'bg-green-100 text-green-800',
-                        'cancelled': 'bg-red-100 text-red-800',
-                        'completed': 'bg-gray-100 text-gray-800'
+                
+                const resetForm = () => {
+                    booking.value = {
+                        roomId: '',
+                        packageId: '',
+                        date: '',
+                        time: '',
+                        peopleCount: 1,
+                        contactPerson: '',
+                        contactPhone: '',
+                        specialRequirements: ''
                     };
-                    return classes[status] || 'bg-gray-100 text-gray-800';
+                    showSuccess.value = false;
                 };
-
-                const statusText = (status) => {
-                    const texts = {
-                        'pending': '待确认',
-                        'confirmed': '已确认',
-                        'cancelled': '已取消',
-                        'completed': '已完成'
-                    };
-                    return texts[status] || status;
-                };
-
-                onMounted(() => {
-                    const userStr = localStorage.getItem('user');
-                    if (userStr) {
-                        user.value = JSON.parse(userStr);
-                    }
-                    loadReservations();
-                });
-
+                
+                onMounted(loadData);
+                
                 return {
-                    user,
-                    showBookingModal,
-                    bookingType,
-                    loading,
-                    reservations,
-                    bookingForm,
-                    openBooking,
-                    submitBooking,
-                    statusClass,
-                    statusText
+                    rooms, packages, booking, minDate, selectedRoom, selectedPackage,
+                    canSubmit, submitting, showSuccess, bookingNo,
+                    calculateServiceCharge, calculateTotal, submitBooking, resetForm
                 };
             }
         }).mount('#app');

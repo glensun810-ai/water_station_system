@@ -517,6 +517,69 @@ class Product(Base):
     is_active = Column(Integer, default=1)  # 1: 启用/在售，0: 停用/归档
 
 
+class Package(Base):
+    """套餐定义表"""
+
+    __tablename__ = "packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    original_price = Column(Float, nullable=False)
+    package_price = Column(Float, nullable=False)
+    discount_rate = Column(Float, default=100)
+    service_types = Column(Text)
+    valid_days = Column(Integer, default=30)
+    max_usage = Column(Integer, default=0)
+    status = Column(String(20), default="active")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class PackageItem(Base):
+    """套餐项目表（套餐包含的服务项目）"""
+
+    __tablename__ = "package_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    package_id = Column(Integer, ForeignKey("packages.id"), nullable=False)
+    service_type = Column(String(50), nullable=False)
+    product_id = Column(Integer)
+    product_name = Column(String(200))
+    quantity = Column(Float, nullable=False, default=1)
+    unit = Column(String(50))
+    unit_price = Column(Float)
+    subtotal = Column(Float)
+    note = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class PackageOrder(Base):
+    """套餐订单表（套餐预订记录）"""
+
+    __tablename__ = "package_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    package_id = Column(Integer, ForeignKey("packages.id"), nullable=False)
+    package_name = Column(String(200))
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(200))
+    order_user_id = Column(Integer)
+    order_user_name = Column(String(200))
+    original_price = Column(Float)
+    package_price = Column(Float)
+    saved_amount = Column(Float)
+    status = Column(String(20), default="pending")
+    used_count = Column(Integer, default=0)
+    total_count = Column(Integer, default=1)
+    valid_from = Column(String)
+    valid_until = Column(String)
+    note = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 def init_unified_db():
     """初始化统一账户数据库表"""
     Base.metadata.create_all(bind=engine)
