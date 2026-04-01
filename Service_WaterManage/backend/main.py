@@ -20,6 +20,7 @@ from sqlalchemy import (
     func,
     case,
     text,
+    Text,
 )
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from datetime import datetime, timedelta
@@ -156,7 +157,7 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    specification = Column(String)  # e.g., "18L", "500ml"
+    specification = Column(String)  # e.g., "18L", "500ml", "4小时"
     unit = Column(String, default="unit")
     price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
@@ -174,7 +175,20 @@ class Product(Base):
         Integer, default=0
     )  # 0: 可删除, 1: 受保护(发布后自动保护真实数据)
 
-    category = relationship("ProductCategory", backref="products")
+    # === Phase 1 服务扩展字段 ===
+    service_type = Column(
+        String(50), default="water"
+    )  # 服务类型：water/meeting_room/dining等
+    resource_config = Column(Text, nullable=True)  # 资源配置 (JSON)
+    booking_required = Column(Integer, default=0)  # 是否需要预约：0-不需要，1-需要
+    advance_booking_days = Column(Integer, default=0)  # 可提前预约天数
+    category = Column(String(50), default="physical")  # 产品分类：physical/service
+    icon = Column(String(10), nullable=True)  # 图标
+    color = Column(String(20), default="blue")  # 颜色
+    max_capacity = Column(Integer, default=0)  # 最大容量（人数等）
+    facilities = Column(Text, nullable=True)  # 设施配置 (JSON)
+
+    category_rel = relationship("ProductCategory", backref="products")
     transactions = relationship("Transaction", back_populates="product")
 
 
@@ -343,6 +357,23 @@ class OfficePickup(Base):
     free_qty = Column(Integer, default=0)  # 买 N 赠 M 免费数量
     discount_desc = Column(String(500), nullable=True)  # 优惠描述
     note = Column(String(500), nullable=True)
+
+    # 软删除字段
+    is_deleted = Column(Integer, default=0)  # 0: 未删除，1: 已删除
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, nullable=True)
+    delete_reason = Column(String(500), nullable=True)
+
+    # === Phase 1 服务扩展字段 ===
+    service_type = Column(String(50), default="water")  # 服务类型
+    time_slot = Column(String(100), nullable=True)  # 时间段
+    actual_usage = Column(String(200), nullable=True)  # 实际使用情况
+    booking_status = Column(String(20), default="confirmed")  # 预约状态
+    service_name = Column(String(100), nullable=True)  # 服务名称
+    participants_count = Column(Integer, default=0)  # 参与人数
+    purpose = Column(String(200), nullable=True)  # 使用目的
+    contact_phone = Column(String(20), nullable=True)  # 联系电话
+
     created_at = Column(DateTime, default=datetime.now)
 
 
