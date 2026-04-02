@@ -4678,6 +4678,63 @@ def get_payment_qr(db: Session = Depends(get_db)):
     # 如果没有配置，返回空
     return {"qr_code": None}
 
+
 # Register meeting room service router
 from api_meeting import router as meeting_router
+
 app.include_router(meeting_router)
+
+# Register flexible booking router
+from api_flexible_booking import router as flexible_router
+
+app.include_router(flexible_router)
+
+# Register admin auth router
+from api_admin_auth import router as admin_router
+
+app.include_router(admin_router)
+
+# ==================== 静态文件服务 ====================
+import os
+from pathlib import Path
+
+# 前端目录路径
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+
+# 挂载静态文件目录
+if FRONTEND_DIR.exists():
+    app.mount("/frontend", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    print(f"✓ 前端目录已挂载: {FRONTEND_DIR}")
+else:
+    print(f"⚠ 前端目录不存在: {FRONTEND_DIR}")
+
+# 根路径重定向到登录页面
+from fastapi.responses import RedirectResponse
+
+@app.get("/")
+async def root():
+    """根路径重定向到登录页面"""
+    return RedirectResponse(url="/frontend/login.html")
+
+# 健康检查端点
+@app.get("/health")
+async def health_check():
+    """健康检查"""
+    return {
+        "status": "healthy",
+        "service": "Enterprise Service Platform",
+        "version": "2.0.0"
+    }
+
+print("\n" + "="*50)
+print("企业服务管理平台启动成功！")
+print("="*50)
+print("\n访问地址:")
+print("  - 登录页面: http://localhost:8080/frontend/login.html")
+print("  - 管理后台: http://localhost:8080/frontend/admin.html")
+print("  - 预约页面: http://localhost:8080/frontend/index.html")
+print("  - API文档:  http://localhost:8080/docs")
+print("\n默认管理员:")
+print("  - 用户名: admin")
+print("  - 密码: 见 .env 文件")
+print("="*50 + "\n")

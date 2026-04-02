@@ -4763,6 +4763,12 @@
                 const activeTab = ref(localStorage.getItem('activeTab') || 'dashboard'); // 当前选中的标签页
                 watch(activeTab, (newVal) => {
                     localStorage.setItem('activeTab', newVal);
+                    
+                    // 当切换到数据看板时，重新加载统计数据
+                    if (newVal === 'dashboard') {
+                        console.log('Switched to dashboard, reloading stats...');
+                        loadDashboard();
+                    }
                 });
 
                 // ========== 回收站相关状态 ==========
@@ -6769,16 +6775,66 @@
 
                 const loadDashboard = async () => {
                     try {
+                        // 分别加载每个统计数据，即使部分失败也能显示其他数据
+                        const loadReport = async () => {
+                            try {
+                                const res = await fetch(`${API_BASE}/admin/report`);
+                                return res.ok ? await res.json() : [];
+                            } catch (e) {
+                                console.error('Failed to load report:', e);
+                                return [];
+                            }
+                        };
+
+                        const loadAlerts = async () => {
+                            try {
+                                const res = await fetch(`${API_BASE}/admin/inventory-alert?threshold=10`);
+                                return res.ok ? await res.json() : [];
+                            } catch (e) {
+                                console.error('Failed to load alerts:', e);
+                                return [];
+                            }
+                        };
+
+                        const loadSummary = async () => {
+                            try {
+                                const res = await fetch(`${API_BASE}/admin/dashboard/summary`);
+                                return res.ok ? await res.json() : {};
+                            } catch (e) {
+                                console.error('Failed to load summary:', e);
+                                return {};
+                            }
+                        };
+
+                        const loadQuickStats = async () => {
+                            try {
+                                const res = await fetch(`${API_BASE}/admin/dashboard/quick-stats`);
+                                return res.ok ? await res.json() : {};
+                            } catch (e) {
+                                console.error('Failed to load quick stats:', e);
+                                return {};
+                            }
+                        };
+
+                        // 并行加载所有数据
                         const [reportRes, alertsRes, summaryRes, quickStatsRes] = await Promise.all([
-                            fetch(`${API_BASE}/admin/report`).then(r => r.ok ? r.json() : Promise.resolve({})),
-                            fetch(`${API_BASE}/admin/inventory-alert?threshold=10`).then(r => r.ok ? r.json() : Promise.resolve([])),
-                            fetch(`${API_BASE}/admin/dashboard/summary`).then(r => r.ok ? r.json() : Promise.resolve({})),
-                            fetch(`${API_BASE}/admin/dashboard/quick-stats`).then(r => r.ok ? r.json() : Promise.resolve({}))
+                            loadReport(),
+                            loadAlerts(),
+                            loadSummary(),
+                            loadQuickStats()
                         ]);
+
                         departmentReport.value = reportRes || [];
                         inventoryAlerts.value = alertsRes || [];
                         dashboardSummary.value = summaryRes || {};
                         quickStats.value = quickStatsRes || {};
+                        
+                        console.log('Dashboard loaded:', {
+                            report: departmentReport.value.length,
+                            alerts: inventoryAlerts.value.length,
+                            summary: Object.keys(dashboardSummary.value).length,
+                            quickStats: Object.keys(quickStats.value).length
+                        });
                     } catch (e) {
                         console.error('Failed to load dashboard:', e);
                         departmentReport.value = [];
@@ -8628,6 +8684,11 @@
                     loadOffices();
 
                     // 根据当前标签页加载对应数据
+                    if (activeTab.value === 'dashboard') {
+                        // 首次加载dashboard时，确保数据已加载
+                        console.log('Initial load: dashboard tab active');
+                        loadDashboard();
+                    }
                     if (activeTab.value === 'offices') {
                         loadOffices();
                     }
@@ -8692,14 +8753,18 @@
                     }
 
                     // 认证通过后加载数据
-                    loadData();
-                    loadDashboard();
-                    loadTransactions();
-                    loadApplications();
-                    loadRemindList();
-                    loadSpecifications(); // 加载规格列表
+                    console.log('Loading initial data...');
+                    await loadData();
+                    await loadDashboard();
+                    await loadTransactions();
+                    await loadApplications();
+                    await loadRemindList();
+                    await loadSpecifications();
+                    
                     // 默认选中本月
                     setDateRange('month');
+                    
+                    console.log('All data loaded successfully');
 
                     isLoading.value = false;
                 };
