@@ -1356,10 +1356,11 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
         const { createApp, ref, computed, onMounted, watch } = Vue;
 
         createApp({
-            setup() {
-                const API_BASE = 'http://localhost:8000/api/meeting';
-                
-                const user = ref(null);
+setup() {
+const API_BASE = 'http://localhost:8000/api/meeting';
+const WATER_API_BASE = 'http://localhost:8000/api';
+
+const user = ref(null);
 const getInitialTab = () => {
 const hash = window.location.hash.slice(1);
 const savedTab = localStorage.getItem('admin_current_tab');
@@ -1378,6 +1379,7 @@ return 'dashboard';
 
 const currentTab = ref(getInitialTab());
 const rooms = ref([]);
+const offices = ref([]);
 const bookings = ref([]);
 const filterStatus = ref('');
 const timeFilter = ref('');
@@ -1511,15 +1513,11 @@ return result;
 });
 
 const uniqueOffices = computed(() => {
-const offices = bookings.value
-.filter(b => b.booking_type === 'internal' && b.office_name)
-.map(b => b.office_name);
-return [...new Set(offices)].sort();
+return offices.value.map(o => o.name).sort();
 });
 
 const uniqueRooms = computed(() => {
-const roomNames = bookings.value.map(b => b.room_name);
-return [...new Set(roomNames)].sort();
+return rooms.value.map(r => r.name).sort();
 });
 
 const hasActiveFilters = computed(() => {
@@ -1610,38 +1608,52 @@ const bookingStats = computed(() => {
     };
 });
 
-                const loadRooms = async () => {
-                    try {
-                        const res = await fetch(`${API_BASE}/rooms`);
-                        if (res.ok) {
-                            rooms.value = await res.json();
-                            // 模拟使用率
-                            rooms.value = rooms.value.map(r => ({
-                                ...r,
-                                usage_rate: Math.floor(Math.random() * 100)
-                            }));
-                        }
-                    } catch (e) {
-                        console.error('加载会议室失败:', e);
-                    }
-                };
+const loadRooms = async () => {
+try {
+const res = await fetch(`${API_BASE}/rooms`);
+if (res.ok) {
+rooms.value = await res.json();
+rooms.value = rooms.value.map(r => ({
+...r,
+usage_rate: Math.floor(Math.random() * 100)
+}));
+}
+} catch (e) {
+console.error('加载会议室失败:', e);
+}
+};
+
+const loadOffices = async () => {
+try {
+const res = await fetch(`${WATER_API_BASE}/offices?is_active=1`);
+if (res.ok) {
+offices.value = await res.json();
+console.log('加载办公室成功:', offices.value.length);
+}
+} catch (e) {
+console.error('加载办公室失败:', e);
+}
+};
 
 const loadBookings = async () => {
 try {
 const res = await fetch(`${API_BASE}/bookings`);
 if (res.ok) {
 const data = await res.json();
+const officeNames = offices.value.length > 0 
+? offices.value.map(o => o.name) 
+: ['技术创新中心', '产业孵化办公室', '企业管理部', '市场运营部', '财务审计部'];
+const externalCompanies = ['科技有限公司', '创业投资公司', '咨询服务公司', '电子商务公司'];
+
 bookings.value = data.map((b, index) => {
 const isInternal = Math.random() > 0.3;
-const offices = ['技术创新中心', '产业孵化办公室', '企业管理部', '市场运营部', '财务审计部'];
-const externalCompanies = ['科技有限公司', '创业投资公司', '咨询服务公司', '电子商务公司'];
 
 return {
 ...b,
 booking_type: isInternal ? 'internal' : 'external',
 duration_hours: b.duration_hours || Math.ceil(Math.random() * 4),
 free_hours_used: Math.floor(Math.random() * 2),
-office_name: isInternal ? offices[Math.floor(Math.random() * offices.length)] : null,
+office_name: isInternal ? officeNames[Math.floor(Math.random() * officeNames.length)] : null,
 external_contact_name: !isInternal ? `外部预约人${index}` : null,
 external_contact_phone: !isInternal ? `138${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}` : null,
 external_contact_email: !isInternal ? `external${index}@company.com` : null,
@@ -2286,7 +2298,7 @@ currentTab.value = hash;
 }
 });
 
-onMounted(() => {
+onMounted(async () => {
 const userStr = localStorage.getItem('user');
 if (userStr) user.value = JSON.parse(userStr);
 
@@ -2298,8 +2310,9 @@ currentTab.value = hash;
 }
 }
 
-loadRooms();
-loadBookings();
+await loadOffices();
+await loadRooms();
+await loadBookings();
 loadDashboardStats();
 loadApprovals();
 loadPayments();
@@ -2308,7 +2321,7 @@ loadSettings();
 });
 
 return {
-user, currentTab, rooms, bookings, filterStatus, timeFilter, searchKeyword, 
+user, currentTab, rooms, offices, bookings, filterStatus, timeFilter, searchKeyword, 
 bookingTypeFilter, officeFilter, roomFilter, dateRangeStart, dateRangeEnd,
 sortBy, sortOrder, filteredBookings, sortedAndFilteredBookings, stats, bookingStats,
 uniqueOffices, uniqueRooms, hasActiveFilters, sortFieldText,
@@ -2316,7 +2329,7 @@ showRoomModal, editingRoom, saving, availableFacilities, roomForm,
 parseFacilities, openAddRoom, openEditRoom, closeRoomModal, saveRoom,
 toggleRoomStatus, deleteRoom, confirmBooking, cancelBooking,
 statusClass, statusText, getFilterTitle, clearAllFilters, toggleSort, viewBookingDetail,
-menuItems, dashboardStats, loadDashboardStats,
+menuItems, dashboardStats, loadDashboardStats, loadOffices,
                     
                     // Approval module
                     approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
