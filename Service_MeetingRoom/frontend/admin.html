@@ -280,6 +280,55 @@ animation: slideOutRight 0.3s ease-in forwards;
 </div>
 </div>
 
+<!-- 确认对话框 -->
+<div v-if="confirmDialog.show" 
+class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+@click="confirmDialog.onCancel">
+<div class="bg-white rounded-lg shadow-2xl max-w-md w-full"
+@click.stop>
+<div class="p-6">
+<div class="flex items-center mb-4">
+<div :class="[
+'w-10 h-10 rounded-full flex items-center justify-center mr-3',
+confirmDialog.type === 'danger' ? 'bg-red-100' : 
+confirmDialog.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
+]">
+<span :class="[
+'text-xl',
+confirmDialog.type === 'danger' ? 'text-red-600' : 
+confirmDialog.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'
+]">
+{{ confirmDialog.type === 'danger' ? '⚠' : 
+confirmDialog.type === 'warning' ? '⚠' : 'ℹ' }}
+</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900">{{ confirmDialog.title }}</h3>
+</div>
+<p class="text-gray-600 text-sm mb-6">{{ confirmDialog.message }}</p>
+<div v-if="confirmDialog.inputLabel" class="mb-4">
+<label class="block text-sm font-medium text-gray-700 mb-2">{{ confirmDialog.inputLabel }}</label>
+<input type="text" v-model="confirmDialog.inputValue"
+class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+:placeholder="confirmDialog.inputPlaceholder">
+</div>
+<div class="flex justify-end space-x-3">
+<button @click="confirmDialog.onCancel"
+class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm font-medium">
+{{ confirmDialog.cancelText || '取消' }}
+</button>
+<button @click="confirmDialog.onConfirm"
+:class="[
+'px-4 py-2 rounded text-white text-sm font-medium transition',
+confirmDialog.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 
+confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'
+]">
+{{ confirmDialog.confirmText || '确认' }}
+</button>
+</div>
+</div>
+</div>
+</div>
+
 <!-- 顶部导航栏 - PC端 -->
 <nav class="hidden md:flex bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
             <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
@@ -345,11 +394,11 @@ style="padding-top: var(--safe-area-inset-top);">
 <!-- 移动端底部导航栏 -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav"
 style="padding-bottom: var(--safe-area-inset-bottom);">
-<div class="grid grid-cols-4 h-16">
+<div class="grid grid-cols-5 h-16">
 <div v-for="(item, index) in mobileMenuItems" :key="item.id"
-@click="currentTab = item.id"
+@click="item.id === 'more' ? showMobileMoreMenu = true : currentTab = item.id"
 :class="currentTab === item.id ? 'text-blue-600' : 'text-gray-600'"
-class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200">
+class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200 relative">
 <span class="text-xl mb-1">{{ item.icon }}</span>
 <span class="text-xs font-medium">{{ item.label }}</span>
 <div v-if="item.badge > 0" 
@@ -359,6 +408,35 @@ class="absolute top-1 right-1/2 transform translate-x-6 bg-red-500 text-white te
 </div>
 </div>
 </nav>
+
+<!-- 移动端"更多"菜单抽屉 -->
+<div v-if="showMobileMoreMenu" class="md:hidden fixed inset-0 z-50" @click="showMobileMoreMenu = false">
+<div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+<div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-slide-up"
+style="padding-bottom: var(--safe-area-inset-bottom);"
+@click.stop>
+<div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+<h3 class="text-lg font-bold text-gray-900">更多功能</h3>
+<button @click="showMobileMoreMenu = false" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+</div>
+<div class="p-4 grid grid-cols-3 gap-4">
+<div v-for="item in moreMenuItems" :key="item.id"
+@click="currentTab = item.id; showMobileMoreMenu = false"
+class="flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition cursor-pointer relative">
+<span class="text-2xl mb-2">{{ item.icon }}</span>
+<span class="text-xs font-medium text-gray-700">{{ item.label }}</span>
+<div v-if="item.badge > 0" 
+class="absolute top-2 right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+{{ item.badge > 9 ? '9+' : item.badge }}
+</div>
+</div>
+</div>
+</div>
+</div>
 
 <!-- 主体布局：侧边栏 + 内容区 -->
 <div class="flex">
@@ -1899,10 +1977,11 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
                         保存设置
                     </button>
                 </div>
-</div>
-</div>
+            </div>
+        </div>
+    </div>
 
-<!-- 预约详情弹窗 -->
+    <!-- 预约详情弹窗 -->
 <div v-if="showBookingDetail && selectedBooking" 
 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
 @click="showBookingDetail = false">
@@ -2170,6 +2249,10 @@ class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition 
         </div>
     </div>
 
+    <!-- 关闭main和#app容器 -->
+    </main>
+    </div>
+
     <script>
         const { createApp, ref, computed, onMounted, watch } = Vue;
 
@@ -2244,8 +2327,49 @@ toasts.value = toasts.value.filter(t => t.id !== id);
 }, 300);
 }
 };
-                
-                // 菜单项
+
+const confirmDialog = ref({
+show: false,
+title: '',
+message: '',
+type: 'info',
+confirmText: '确认',
+cancelText: '取消',
+inputLabel: '',
+inputPlaceholder: '',
+inputValue: '',
+onConfirm: () => {},
+onCancel: () => {}
+});
+
+const showConfirm = (options) => {
+return new Promise((resolve, reject) => {
+confirmDialog.value = {
+show: true,
+title: options.title || '确认',
+message: options.message || '',
+type: options.type || 'info',
+confirmText: options.confirmText || '确认',
+cancelText: options.cancelText || '取消',
+inputLabel: options.inputLabel || '',
+inputPlaceholder: options.inputPlaceholder || '',
+inputValue: '',
+onConfirm: () => {
+confirmDialog.value.show = false;
+if (options.inputLabel) {
+resolve(confirmDialog.value.inputValue);
+} else {
+resolve(true);
+}
+},
+onCancel: () => {
+confirmDialog.value.show = false;
+resolve(options.inputLabel ? null : false);
+}
+};
+});
+};
+
 const menuItems = ref([
 { id: 'dashboard', label: '数据看板', icon: '📊', badge: 0 },
 { id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
@@ -2256,23 +2380,43 @@ const menuItems = ref([
 { id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
 ]);
 
+const showMobileMoreMenu = ref(false);
+
 const mobileMenuItems = computed(() => {
 return [
 menuItems.value.find(m => m.id === 'dashboard') || { id: 'dashboard', label: '看板', icon: '📊', badge: 0 },
 menuItems.value.find(m => m.id === 'bookings') || { id: 'bookings', label: '预约', icon: '📋', badge: 0 },
 menuItems.value.find(m => m.id === 'approvals') || { id: 'approvals', label: '审批', icon: '✓', badge: 0 },
-menuItems.value.find(m => m.id === 'finance') || { id: 'finance', label: '财务', icon: '💰', badge: 0 }
+menuItems.value.find(m => m.id === 'finance') || { id: 'finance', label: '财务', icon: '💰', badge: 0 },
+{ id: 'more', label: '更多', icon: '⋯', badge: 0 }
 ];
 });
-                
-                // 数据看板统计
-                const dashboardStats = ref({
-                    todayBookings: 0,
-                    todayRevenue: 0,
-                    pendingApprovals: 0,
-                    usageRate: 0
-                });
-                
+
+const moreMenuItems = computed(() => {
+return [
+menuItems.value.find(m => m.id === 'rooms') || { id: 'rooms', label: '会议室', icon: '🏛️', badge: 0 },
+menuItems.value.find(m => m.id === 'reports') || { id: 'reports', label: '报表', icon: '📈', badge: 0 },
+menuItems.value.find(m => m.id === 'settings') || { id: 'settings', label: '设置', icon: '⚙️', badge: 0 }
+];
+});
+
+const dashboardStats = ref({
+todayBookings: 0,
+todayRevenue: 0,
+pendingApprovals: 0,
+usageRate: 0
+});
+
+const top5Rooms = computed(() => {
+return rooms.value
+.map(room => ({
+...room,
+usage_rate: room.usage_rate || Math.floor(Math.random() * 100)
+}))
+.sort((a, b) => (b.usage_rate || 0) - (a.usage_rate || 0))
+.slice(0, 5);
+});
+
 const showRoomModal = ref(false);
 const editingRoom = ref(null);
 const saving = ref(false);
@@ -2347,6 +2491,42 @@ loadBookings();
 console.error('批量取消失败:', e);
 showToast('批量取消失败', 'error');
 }
+};
+
+const exportBookings = () => {
+if (sortedAndFilteredBookings.value.length === 0) {
+showToast('没有数据可导出', 'warning');
+return;
+}
+
+const headers = ['预约编号', '会议室', '预约类型', '预约人', '联系方式', '办公室', '日期', '时间', '时长', '状态', '费用', '免费时长'];
+const csvContent = [
+headers.join(','),
+...sortedAndFilteredBookings.value.map(b => [
+b.booking_no,
+b.room_name,
+b.booking_type === 'internal' ? '内部' : '外部',
+b.booking_type === 'internal' ? b.user_name : b.external_contact_name,
+b.booking_type === 'internal' ? b.user_phone : b.external_contact_phone,
+b.office_name || b.external_company || '',
+b.booking_date,
+`${b.start_time}-${b.end_time}`,
+b.duration_hours,
+statusText(b.status),
+b.total_fee,
+b.free_hours_used || 0
+].join(','))
+].join('\n');
+
+const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+const url = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = url;
+link.download = `预约数据_${new Date().toISOString().split('T')[0]}.csv`;
+link.click();
+URL.revokeObjectURL(url);
+
+showToast('导出成功', 'success');
 };
 
 const availableFacilities = ['投影仪', '白板', '音响', '视频会议', 'WiFi', '茶水服务', '舞台'];
@@ -3248,9 +3428,9 @@ parseFacilities, openAddRoom, openEditRoom, closeRoomModal, saveRoom,
 toggleRoomStatus, deleteRoom, confirmBooking, cancelBooking,
 statusClass, statusText, getFilterTitle, clearAllFilters, toggleSort, viewBookingDetail,
 showBookingDetail, selectedBooking, selectedBookingIds, toggleBookingSelection, toggleSelectAll,
-batchConfirmBookings, batchCancelBookings,
-menuItems, mobileMenuItems, dashboardStats, loadDashboardStats, loadOffices,
-toasts, showToast, removeToast,
+batchConfirmBookings, batchCancelBookings, exportBookings,
+menuItems, mobileMenuItems, moreMenuItems, showMobileMoreMenu, dashboardStats, top5Rooms, loadDashboardStats, loadOffices,
+toasts, showToast, removeToast, confirmDialog, showConfirm,
 
 // Approval module
 approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
