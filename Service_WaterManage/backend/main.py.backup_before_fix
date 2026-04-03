@@ -838,31 +838,6 @@ from api_dining import router as dining_router
 
 app.include_router(dining_router)
 
-# Register meeting room service router
-from api_meeting import router as meeting_router
-
-app.include_router(meeting_router)
-
-# Register meeting payment settlement router
-from api_meeting_payment import router as meeting_payment_router
-
-app.include_router(meeting_payment_router)
-
-# Register meeting approval router
-from api_meeting_approval import router as meeting_approval_router
-
-app.include_router(meeting_approval_router)
-
-# Register flexible booking router
-from api_flexible_booking import router as flexible_router
-
-app.include_router(flexible_router)
-
-# Register admin auth router
-from api_admin_auth import router as admin_router
-
-app.include_router(admin_router)
-
 
 def get_db():
     db = SessionLocal()
@@ -4680,6 +4655,49 @@ def get_user_office_pickup_summary(
         "settled": {"count": settled_count, "amount": round(settled_amount, 2)},
     }
 
+
+@app.get("/api/config/payment-qr")
+def get_payment_qr(db: Session = Depends(get_db)):
+    """
+    获取支付二维码
+
+    从系统配置中读取支付二维码 URL
+    """
+    # 从配置表中读取支付二维码
+    from models_unified import SystemConfig
+
+    config = (
+        db.query(SystemConfig)
+        .filter(SystemConfig.config_key == "payment_qr_code")
+        .first()
+    )
+
+    if config and config.config_value:
+        return {"qr_code": config.config_value}
+
+    # 如果没有配置，返回空
+    return {"qr_code": None}
+
+
+# Register meeting room service router
+from api_meeting import router as meeting_router
+
+app.include_router(meeting_router)
+
+# Register meeting payment settlement router
+from api_meeting_payment import router as meeting_payment_router
+
+app.include_router(meeting_payment_router)
+
+# Register flexible booking router
+from api_flexible_booking import router as flexible_router
+
+app.include_router(flexible_router)
+
+# Register admin auth router
+from api_admin_auth import router as admin_router
+
+app.include_router(admin_router)
 
 # ==================== 静态文件服务 ====================
 import os

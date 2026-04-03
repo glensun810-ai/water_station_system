@@ -11,45 +11,166 @@
 </head>
 <body class="bg-gray-50">
     <div id="app" v-cloak>
-        <!-- 顶部导航 -->
-        <nav class="bg-gradient-to-r from-green-600 to-teal-500 text-white shadow-lg sticky top-0 z-40">
-            <div class="container mx-auto px-4 py-4">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center">
-                        <a href="../../portal/index.html" class="mr-4 hover:opacity-80">← 返回</a>
-                        <h1 class="text-2xl font-bold">🏛️ 会议室管理后台</h1>
+        <!-- 顶部导航栏 - 管理员专属 -->
+        <nav class="bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
+            <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
+                <div class="flex justify-between items-center h-full">
+                    <!-- 左侧：面包屑导航 -->
+                    <div class="flex items-center space-x-3">
+                        <a href="../../portal/index.html" 
+                           class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <span>首页</span>
+                        </a>
+                        
+                        <div class="h-6 w-px bg-slate-600"></div>
+                        
+                        <h1 class="text-lg font-bold flex items-center">
+                            <span class="text-xl mr-2">⚙️</span>
+                            <span>会议室管理后台</span>
+                        </h1>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="index.html" class="hover:opacity-80">列表视图</a>
-                        <a href="calendar.html" class="hover:opacity-80">日历视图</a>
-                        <span v-if="user" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
-                            {{ user.real_name || user.username || '管理员' }}
-                        </span>
+                    
+                    <!-- 右侧：快捷功能 + 用户信息 -->
+                    <div class="flex items-center space-x-3">
+                        <!-- 数据概览快捷入口 -->
+                        <button @click="currentTab = 'dashboard'" 
+                                class="hidden md:flex items-center space-x-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition text-sm">
+                            <span>📊</span>
+                            <span>数据概览</span>
+                        </button>
+                        
+                        <!-- 用户视角快捷切换 -->
+                        <div class="hidden md:flex bg-slate-700 rounded-lg px-2 py-1 space-x-1">
+                            <a href="index.html" class="px-2 py-1 text-sm hover:bg-slate-600 rounded transition">📋 用户端</a>
+                        </div>
+                        
+                        <!-- 管理员信息 -->
+                        <div v-if="user" class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+                                {{ (user.real_name || user.username || '管').charAt(0) }}
+                            </div>
+                            <span class="hidden md:block text-sm">{{ user.real_name || user.username || '管理员' }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </nav>
 
-        <!-- 主体内容 -->
-        <div class="container mx-auto px-4 py-8">
-            <!-- 选项卡 -->
-            <div class="flex space-x-4 mb-6 border-b bg-white rounded-t-lg px-4 pt-4">
-                <button @click="currentTab = 'rooms'" 
-                        :class="currentTab === 'rooms' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-2 border-b-2 font-medium transition">
-                    会议室管理
-                </button>
-                <button @click="currentTab = 'bookings'" 
-                        :class="currentTab === 'bookings' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-2 border-b-2 font-medium transition">
-                    预约记录
-                </button>
-                <button @click="currentTab = 'stats'" 
-                        :class="currentTab === 'stats' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-2 border-b-2 font-medium transition">
-                    使用统计
-                </button>
-            </div>
+        <!-- 主体布局：侧边栏 + 内容区 -->
+        <div class="flex">
+            <!-- 侧边栏导航 -->
+            <aside class="hidden lg:block w-60 bg-slate-900 min-h-screen sticky top-16 overflow-y-auto">
+                <nav class="py-4">
+                    <!-- 菜单项 -->
+                    <div v-for="item in menuItems" :key="item.id"
+                         @click="currentTab = item.id"
+                         :class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+                         class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xl">{{ item.icon }}</span>
+                            <span class="text-sm font-medium">{{ item.label }}</span>
+                        </div>
+                        <!-- 待办提醒徽章 -->
+                        <span v-if="item.badge > 0" 
+                              class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                            {{ item.badge }}
+                        </span>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- 内容区域 -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 min-h-screen">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    
+                    <!-- 数据看板 -->
+                    <div v-if="currentTab === 'dashboard'" class="space-y-6">
+                        <h2 class="text-2xl font-bold text-gray-800">📊 数据看板</h2>
+                        
+                        <!-- 今日数据卡片 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">今日预约</p>
+                                        <p class="text-3xl font-bold text-blue-600 mt-2">{{ dashboardStats.todayBookings }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">📋</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">今日收入</p>
+                                        <p class="text-3xl font-bold text-green-600 mt-2">¥{{ dashboardStats.todayRevenue }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">💰</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">待审批</p>
+                                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ dashboardStats.pendingApprovals }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">⏳</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">会议室使用率</p>
+                                        <p class="text-3xl font-bold text-purple-600 mt-2">{{ dashboardStats.usageRate }}%</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">📈</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 快捷操作 -->
+                        <div class="bg-white rounded-xl shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">快捷操作</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button @click="currentTab = 'rooms'; openAddRoom()" 
+                                        class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">🏛️</span>
+                                    <span class="text-sm font-medium text-gray-700">新增会议室</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'approvals'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">✓</span>
+                                    <span class="text-sm font-medium text-gray-700">审批预约</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'finance'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">💰</span>
+                                    <span class="text-sm font-medium text-gray-700">财务结算</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'reports'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">📊</span>
+                                    <span class="text-sm font-medium text-gray-700">查看报表</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
             <!-- 会议室管理 -->
             <div v-if="currentTab === 'rooms'" class="space-y-6">
@@ -232,6 +353,631 @@
                         </div>
                     </div>
                 </div>
+</div>
+            </div>
+
+            <!-- 审批中心 -->
+            <div v-if="currentTab === 'approvals'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800">审批中心</h2>
+                    <div class="flex gap-3">
+                        <select v-model="approvalFilter" 
+                                class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">全部状态</option>
+                            <option value="pending">待审批</option>
+                            <option value="approved">已批准</option>
+                            <option value="rejected">已拒绝</option>
+                        </select>
+                        <button v-if="selectedApprovals.length > 0"
+                                @click="batchApproveApprovals()"
+                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                            批量批准 ({{ selectedApprovals.length }})
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">待审批</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">{{ approvalStats.pending }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏳</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">今日已审批</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">{{ approvalStats.todayApproved }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">✓</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">本周审批总数</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ approvalStats.weekTotal }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📋</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 审批列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700 w-12">
+                                        <input type="checkbox" 
+                                               @change="toggleAllApprovals($event)"
+                                               class="w-4 h-4">
+                                    </th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">审批编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">类型</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请人</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">会议室</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请原因</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredApprovals" :key="item.id" 
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6">
+                                        <input type="checkbox" 
+                                               v-model="selectedApprovals"
+                                               :value="item.id"
+                                               :disabled="item.status !== 'pending'"
+                                               class="w-4 h-4">
+                                    </td>
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.approval_no }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="approvalTypeClass(item.approval_type)"
+                                              class="px-2 py-1 rounded text-xs font-medium">
+                                            {{ approvalTypeText(item.approval_type) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.requester_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ item.requester_phone }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 font-medium">{{ item.room_name }}</td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.booking_date }}</div>
+                                        <div class="text-sm text-gray-500">{{ item.start_time }}-{{ item.end_time }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm">{{ item.request_reason }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="approvalStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ approvalStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm text-gray-500">
+                                        {{ formatDateTime(item.request_time) }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button v-if="item.status === 'pending'"
+                                                @click="approveRequest(item.id, 'approved')"
+                                                class="text-green-600 hover:text-green-700 mr-3">
+                                            批准
+                                        </button>
+                                        <button v-if="item.status === 'pending'"
+                                                @click="approveRequest(item.id, 'rejected')"
+                                                class="text-red-600 hover:text-red-700">
+                                            拒绝
+                                        </button>
+                                        <button @click="viewApprovalDetail(item.id)"
+                                                class="text-blue-600 hover:text-blue-700 ml-3">
+                                            查看
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="filteredApprovals.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无审批记录</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 财务结算 -->
+            <div v-if="currentTab === 'finance'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800">财务结算</h2>
+                    <button @click="createSettlement()"
+                            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                        + 创建结算批次
+                    </button>
+                </div>
+                
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">本月收入</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">¥{{ financeStats.monthRevenue }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">待确认支付</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">{{ financeStats.pendingPayments }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏳</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">结算批次</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ financeStats.settlementBatches }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📊</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">免费时长节省</p>
+                                <p class="text-3xl font-bold text-purple-600 mt-2">{{ financeStats.freeHoursSaved }}h</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">🎁</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 支付记录列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="flex justify-between items-center p-6 border-b">
+                        <h3 class="text-lg font-bold text-gray-800">支付记录</h3>
+                        <select v-model="paymentFilter"
+                                class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">全部状态</option>
+                            <option value="pending">待确认</option>
+                            <option value="confirmed">已确认</option>
+                        </select>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">用户</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">会议室</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付方式</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredPayments" :key="item.id"
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.payment_no }}</td>
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.booking_no }}</td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.user_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ item.office_name }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 font-medium">{{ item.room_name }}</td>
+                                    <td class="py-4 px-6 font-semibold text-green-600">¥{{ item.amount }}</td>
+                                    <td class="py-4 px-6 text-sm">{{ paymentMethodText(item.payment_method) }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="paymentStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ paymentStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm text-gray-500">
+                                        {{ formatDateTime(item.paid_at) }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button v-if="item.status === 'pending'"
+                                                @click="confirmPayment(item.id)"
+                                                class="text-green-600 hover:text-green-700">
+                                            确认
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="filteredPayments.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无支付记录</p>
+                    </div>
+                </div>
+                
+                <!-- 结算批次列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-bold text-gray-800">结算批次</h3>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">批次编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">企业</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约数</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">总时长</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">总金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">实付金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">结算周期</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in settlements" :key="item.id"
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.batch_no }}</td>
+                                    <td class="py-4 px-6 font-medium">{{ item.office_name }}</td>
+                                    <td class="py-4 px-6">{{ item.total_bookings }}</td>
+                                    <td class="py-4 px-6">{{ item.total_hours }}h</td>
+                                    <td class="py-4 px-6 font-semibold">¥{{ item.total_amount }}</td>
+                                    <td class="py-4 px-6 font-semibold text-green-600">¥{{ item.paid_amount }}</td>
+                                    <td class="py-4 px-6 text-sm">
+                                        {{ item.settlement_period_start }} 至 {{ item.settlement_period_end }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <span :class="settlementStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ settlementStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button @click="viewSettlementDetail(item.id)"
+                                                class="text-blue-600 hover:text-blue-700">
+                                            查看详情
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="settlements.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无结算批次</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计报表（增强版） -->
+            <div v-if="currentTab === 'reports'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800">统计报表</h2>
+                    <div class="flex gap-3">
+                        <input type="date" v-model="reportStartDate"
+                               class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="date" v-model="reportEndDate"
+                               class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button @click="loadReportData()"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                            查询
+                        </button>
+                        <button @click="exportReport()"
+                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                            导出报表
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 总览统计 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总预约数</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ reportData.overview?.total_bookings || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📋</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总时长</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">{{ reportData.overview?.total_hours || 0 }}h</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏱️</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总收入</p>
+                                <p class="text-3xl font-bold text-purple-600 mt-2">¥{{ reportData.overview?.total_revenue || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">实收金额</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">¥{{ reportData.overview?.actual_revenue || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💵</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 详细统计 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 会议室使用统计 -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">会议室使用统计</h3>
+                        <div v-for="room in reportData.room_statistics" :key="room.room_id"
+                             class="mb-4 last:mb-0">
+                            <div class="flex justify-between mb-2">
+                                <span class="font-medium text-gray-800">{{ room.room_name }}</span>
+                                <span class="text-sm text-gray-600">
+                                    {{ room.booking_count }}次 / {{ room.total_hours }}h / ¥{{ room.total_revenue }}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full"
+                                     :style="{ width: (room.booking_count / (reportData.overview?.total_bookings || 1) * 100) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 企业使用统计 -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">企业使用统计</h3>
+                        <div v-for="office in reportData.office_statistics" :key="office.office_id"
+                             class="mb-4 last:mb-0">
+                            <div class="flex justify-between mb-2">
+                                <span class="font-medium text-gray-800">{{ office.office_name }}</span>
+                                <span class="text-sm text-gray-600">
+                                    {{ office.booking_count }}次 / ¥{{ office.actual_fee }}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full"
+                                     :style="{ width: (office.booking_count / (reportData.overview?.total_bookings || 1) * 100) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 每日统计 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">每日预约趋势</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">日期</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">预约数</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">总时长</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">当日收入</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="day in reportData.daily_statistics" :key="day.date"
+                                    class="border-b hover:bg-gray-50">
+                                    <td class="py-3 px-4">{{ day.date }}</td>
+                                    <td class="py-3 px-4">{{ day.booking_count }}</td>
+                                    <td class="py-3 px-4">{{ day.total_hours }}h</td>
+                                    <td class="py-3 px-4 font-semibold text-green-600">¥{{ day.daily_revenue }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统设置 -->
+            <div v-if="currentTab === 'settings'" class="space-y-6">
+                <h2 class="text-xl font-bold text-gray-800">系统设置</h2>
+                
+                <!-- 基础设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">⚙️</span>
+                        基础设置
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">营业开始时间</label>
+                                <input type="time" v-model="settings.businessStartTime"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">营业结束时间</label>
+                                <input type="time" v-model="settings.businessEndTime"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">最小预约时长（小时）</label>
+                            <input type="number" v-model.number="settings.minBookingHours" min="0.5" step="0.5"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">最大预约时长（小时）</label>
+                            <input type="number" v-model.number="settings.maxBookingHours" min="1" step="1"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 取消规则设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">⏰</span>
+                        取消规则设置
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="simple"
+                                       id="cancel_simple" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_simple" class="font-semibold text-gray-800">简单规则</label>
+                                    <p class="text-sm text-gray-600 mt-1">允许随时取消，无时间限制</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-green-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="time_based"
+                                       id="cancel_time_based" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_time_based" class="font-semibold text-gray-800">基于时间规则（推荐）</label>
+                                    <p class="text-sm text-gray-600 mt-1">根据距离会议开始时间设定不同取消策略</p>
+                                </div>
+                            </div>
+                            
+                            <div v-if="settings.cancelRuleMode === 'time_based'" class="mt-4 space-y-3 pl-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-700 mb-2">直接取消时限（小时）</label>
+                                        <input type="number" v-model.number="settings.cancelFreeHours" min="12"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                        <p class="text-xs text-gray-500 mt-1">超过此时间可直接取消</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-700 mb-2">需审批时限（小时）</label>
+                                        <input type="number" v-model.number="settings.cancelApprovalHours" min="2"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                        <p class="text-xs text-gray-500 mt-1">在此时间内需管理员审批</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-orange-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="strict"
+                                       id="cancel_strict" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_strict" class="font-semibold text-gray-800">严格规则</label>
+                                    <p class="text-sm text-gray-600 mt-1">确认后不可取消，仅管理员可操作</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 通知设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">🔔</span>
+                        通知设置
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">预约成功通知</p>
+                                <p class="text-sm text-gray-500">向用户发送预约成功短信/邮件通知</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnBooking"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">预约提醒通知</p>
+                                <p class="text-sm text-gray-500">会议开始前1小时发送提醒</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnReminder"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">取消通知</p>
+                                <p class="text-sm text-gray-500">预约取消后通知相关人员</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnCancel"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">审批通知</p>
+                                <p class="text-sm text-gray-500">新审批申请时通知管理员</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnApproval"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 保存按钮 -->
+                <div class="flex justify-end gap-3">
+                    <button @click="resetSettings()"
+                            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                        重置默认
+                    </button>
+                    <button @click="saveSettings()"
+                            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                        保存设置
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -334,11 +1080,30 @@
                 const API_BASE = 'http://localhost:8000/api/meeting';
                 
                 const user = ref(null);
-                const currentTab = ref('rooms');
+                const currentTab = ref('dashboard'); // 默认显示数据看板
                 const rooms = ref([]);
                 const bookings = ref([]);
                 const filterStatus = ref('');
                 const stats = ref({ today: 0, week: 0, month: 0 });
+                
+                // 菜单项
+                const menuItems = ref([
+                    { id: 'dashboard', label: '数据看板', icon: '📊', badge: 0 },
+                    { id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
+                    { id: 'bookings', label: '预约管理', icon: '📋', badge: 0 },
+                    { id: 'approvals', label: '审批中心', icon: '✓', badge: 0 },
+                    { id: 'finance', label: '财务结算', icon: '💰', badge: 0 },
+                    { id: 'reports', label: '统计报表', icon: '📈', badge: 0 },
+                    { id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
+                ]);
+                
+                // 数据看板统计
+                const dashboardStats = ref({
+                    todayBookings: 0,
+                    todayRevenue: 0,
+                    pendingApprovals: 0,
+                    usageRate: 0
+                });
                 
                 const showRoomModal = ref(false);
                 const editingRoom = ref(null);
@@ -518,6 +1283,33 @@
                         alert('删除失败');
                     }
                 };
+                
+                // 加载数据看板统计
+                const loadDashboardStats = async () => {
+                    try {
+                        // 获取今日预约数
+                        const today = new Date().toISOString().split('T')[0];
+                        const bookingsRes = await fetch(`${API_BASE}/bookings/enhanced?is_deleted=0`);
+                        const bookingsData = await bookingsRes.json();
+                        
+                        if (bookingsData.success) {
+                            const allBookings = bookingsData.data.bookings;
+                            const todayBookings = allBookings.filter(b => b.booking_date === today);
+                            
+                            dashboardStats.value.todayBookings = todayBookings.length;
+                            dashboardStats.value.todayRevenue = todayBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0);
+                            
+                            // 计算使用率
+                            const activeRooms = rooms.value.filter(r => r.is_active);
+                            if (activeRooms.length > 0) {
+                                const avgUsage = activeRooms.reduce((sum, r) => sum + (r.usage_rate || 0), 0) / activeRooms.length;
+                                dashboardStats.value.usageRate = Math.round(avgUsage);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载统计数据失败:', e);
+                    }
+                };
 
                 const confirmBooking = async (id) => {
                     if (!confirm('确认此预约？')) return;
@@ -573,11 +1365,386 @@
                     return texts[status] || status;
                 };
 
+                // Approval module
+                const approvals = ref([]);
+                const approvalFilter = ref('');
+                const selectedApprovals = ref([]);
+                const approvalStats = ref({
+                    pending: 0,
+                    todayApproved: 0,
+                    weekTotal: 0
+                });
+                
+                const loadApprovals = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/approvals`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                approvals.value = data.data.approvals;
+                                updateApprovalStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载审批失败:', e);
+                    }
+                };
+                
+                const updateApprovalStats = () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    approvalStats.value.pending = approvals.value.filter(a => a.status === 'pending').length;
+                    approvalStats.value.todayApproved = approvals.value.filter(a => 
+                        a.approval_result === 'approved' && a.approval_time?.startsWith(today)
+                    ).length;
+                    approvalStats.value.weekTotal = approvals.value.length;
+                    
+                    const approvalsItem = menuItems.value.find(m => m.id === 'approvals');
+                    if (approvalsItem) approvalsItem.badge = approvalStats.value.pending;
+                };
+                
+                const filteredApprovals = computed(() => {
+                    if (!approvalFilter.value) return approvals.value;
+                    return approvals.value.filter(a => a.status === approvalFilter.value);
+                });
+                
+                const approvalTypeClass = (type) => {
+                    const classes = {
+                        'cancel': 'bg-red-100 text-red-800',
+                        'special': 'bg-purple-100 text-purple-800'
+                    };
+                    return classes[type] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const approvalTypeText = (type) => {
+                    const texts = {
+                        'cancel': '取消申请',
+                        'special': '特殊预约'
+                    };
+                    return texts[type] || type;
+                };
+                
+                const approvalStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'approved': 'bg-green-100 text-green-800',
+                        'rejected': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const approvalStatusText = (status) => {
+                    const texts = {
+                        'pending': '待审批',
+                        'approved': '已批准',
+                        'rejected': '已拒绝'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const approveRequest = async (id, result) => {
+                    const reason = result === 'rejected' ? prompt('请输入拒绝原因：') : '';
+                    if (result === 'rejected' && !reason) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/approve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                approval_id: id,
+                                approval_result: result,
+                                approval_reason: reason
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            alert(result === 'approved' ? '已批准' : '已拒绝');
+                            loadApprovals();
+                            loadBookings();
+                        }
+                    } catch (e) {
+                        console.error('审批失败:', e);
+                        alert('审批失败');
+                    }
+                };
+                
+                const batchApproveApprovals = async () => {
+                    if (!confirm(`确认批量批准${selectedApprovals.value.length}条审批申请？`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/batch-approve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedApprovals.value)
+                        });
+                        
+                        if (res.ok) {
+                            alert('批量批准成功');
+                            selectedApprovals.value = [];
+                            loadApprovals();
+                            loadBookings();
+                        }
+                    } catch (e) {
+                        console.error('批量批准失败:', e);
+                        alert('批量批准失败');
+                    }
+                };
+                
+                const toggleAllApprovals = (event) => {
+                    if (event.target.checked) {
+                        selectedApprovals.value = approvals.value
+                            .filter(a => a.status === 'pending')
+                            .map(a => a.id);
+                    } else {
+                        selectedApprovals.value = [];
+                    }
+                };
+                
+                const viewApprovalDetail = async (id) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/${id}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`审批详情:\n${JSON.stringify(data.data, null, 2)}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('获取详情失败:', e);
+                    }
+                };
+                
+                const formatDateTime = (datetime) => {
+                    if (!datetime) return '-';
+                    return datetime.replace('T', ' ').substring(0, 19);
+                };
+                
+                // Finance module
+                const payments = ref([]);
+                const settlements = ref([]);
+                const paymentFilter = ref('');
+                const financeStats = ref({
+                    monthRevenue: 0,
+                    pendingPayments: 0,
+                    settlementBatches: 0,
+                    freeHoursSaved: 0
+                });
+                
+                const loadPayments = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/payments`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                payments.value = data.data.payments;
+                                updateFinanceStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载支付记录失败:', e);
+                    }
+                };
+                
+                const loadSettlements = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/settlements`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                settlements.value = data.data.settlements;
+                                updateFinanceStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载结算批次失败:', e);
+                    }
+                };
+                
+                const updateFinanceStats = () => {
+                    const thisMonth = new Date().toISOString().substring(0, 7);
+                    const thisMonthPayments = payments.value.filter(p => 
+                        p.paid_at?.startsWith(thisMonth) && p.status === 'confirmed'
+                    );
+                    financeStats.value.monthRevenue = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                    financeStats.value.pendingPayments = payments.value.filter(p => p.status === 'pending').length;
+                    financeStats.value.settlementBatches = settlements.value.length;
+                    financeStats.value.freeHoursSaved = bookings.value.reduce((sum, b) => sum + (b.free_hours_used || 0), 0);
+                };
+                
+                const filteredPayments = computed(() => {
+                    if (!paymentFilter.value) return payments.value;
+                    return payments.value.filter(p => p.status === paymentFilter.value);
+                });
+                
+                const paymentMethodText = (method) => {
+                    const texts = {
+                        'bank_transfer': '银行转账',
+                        'alipay': '支付宝',
+                        'wechat': '微信支付',
+                        'cash': '现金'
+                    };
+                    return texts[method] || method;
+                };
+                
+                const paymentStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'confirmed': 'bg-green-100 text-green-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const paymentStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const confirmPayment = async (id) => {
+                    if (!confirm('确认此支付？')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/payment/confirm`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ payment_id: id })
+                        });
+                        
+                        if (res.ok) {
+                            alert('支付已确认');
+                            loadPayments();
+                        }
+                    } catch (e) {
+                        console.error('确认支付失败:', e);
+                        alert('确认失败');
+                    }
+                };
+                
+                const settlementStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'confirmed': 'bg-green-100 text-green-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const settlementStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const createSettlement = () => {
+                    alert('创建结算批次功能开发中...');
+                };
+                
+                const viewSettlementDetail = async (id) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/settlement/${id}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`结算详情:\n${JSON.stringify(data.data, null, 2)}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('获取结算详情失败:', e);
+                    }
+                };
+                
+                // Reports module
+                const reportStartDate = ref('');
+                const reportEndDate = ref('');
+                const reportData = ref({
+                    overview: null,
+                    room_statistics: [],
+                    daily_statistics: [],
+                    office_statistics: []
+                });
+                
+                const loadReportData = async () => {
+                    try {
+                        const start = reportStartDate.value || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+                        const end = reportEndDate.value || new Date().toISOString().split('T')[0];
+                        
+                        const res = await fetch(`${API_BASE}/statistics/enhanced?start_date=${start}&end_date=${end}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                reportData.value = data.data;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载统计数据失败:', e);
+                    }
+                };
+                
+                const exportReport = () => {
+                    alert('导出报表功能开发中...');
+                };
+                
+                // Settings module
+                const settings = ref({
+                    businessStartTime: '08:00',
+                    businessEndTime: '20:00',
+                    minBookingHours: 0.5,
+                    maxBookingHours: 8,
+                    cancelRuleMode: 'time_based',
+                    cancelFreeHours: 24,
+                    cancelApprovalHours: 2,
+                    notifyOnBooking: true,
+                    notifyOnReminder: true,
+                    notifyOnCancel: true,
+                    notifyOnApproval: true
+                });
+                
+                const saveSettings = () => {
+                    localStorage.setItem('meeting_settings', JSON.stringify(settings.value));
+                    alert('设置已保存');
+                };
+                
+                const resetSettings = () => {
+                    if (!confirm('确认重置为默认设置？')) return;
+                    settings.value = {
+                        businessStartTime: '08:00',
+                        businessEndTime: '20:00',
+                        minBookingHours: 0.5,
+                        maxBookingHours: 8,
+                        cancelRuleMode: 'time_based',
+                        cancelFreeHours: 24,
+                        cancelApprovalHours: 2,
+                        notifyOnBooking: true,
+                        notifyOnReminder: true,
+                        notifyOnCancel: true,
+                        notifyOnApproval: true
+                    };
+                    alert('已重置为默认设置');
+                };
+                
+                const loadSettings = () => {
+                    const saved = localStorage.getItem('meeting_settings');
+                    if (saved) {
+                        try {
+                            settings.value = JSON.parse(saved);
+                        } catch (e) {
+                            console.error('加载设置失败:', e);
+                        }
+                    }
+                };
+                
                 onMounted(() => {
                     const userStr = localStorage.getItem('user');
                     if (userStr) user.value = JSON.parse(userStr);
                     loadRooms();
                     loadBookings();
+                    loadDashboardStats();
+                    loadApprovals();
+                    loadPayments();
+                    loadSettlements();
+                    loadSettings();
                 });
 
                 return {
@@ -585,7 +1752,25 @@
                     showRoomModal, editingRoom, saving, availableFacilities, roomForm,
                     parseFacilities, openAddRoom, openEditRoom, closeRoomModal, saveRoom,
                     toggleRoomStatus, deleteRoom, confirmBooking, cancelBooking,
-                    statusClass, statusText
+                    statusClass, statusText,
+                    menuItems, dashboardStats, loadDashboardStats,
+                    
+                    // Approval module
+                    approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
+                    approvalTypeClass, approvalTypeText, approvalStatusClass, approvalStatusText,
+                    approveRequest, batchApproveApprovals, toggleAllApprovals, viewApprovalDetail,
+                    formatDateTime,
+                    
+                    // Finance module
+                    payments, settlements, paymentFilter, filteredPayments, financeStats,
+                    paymentMethodText, paymentStatusClass, paymentStatusText, confirmPayment,
+                    settlementStatusClass, settlementStatusText, createSettlement, viewSettlementDetail,
+                    
+                    // Reports module
+                    reportStartDate, reportEndDate, reportData, loadReportData, exportReport,
+                    
+                    // Settings module
+                    settings, saveSettings, resetSettings
                 };
             }
         }).mount('#app');

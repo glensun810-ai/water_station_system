@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议室管理后台 - AI产业集群空间服务管理平台</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>[v-cloak]{display:none!important}</style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" v-cloak>
+        <!-- 顶部导航栏 - 管理员专属 -->
+        <nav class="bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
+            <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
+                <div class="flex justify-between items-center h-full">
+                    <!-- 左侧：面包屑导航 -->
+                    <div class="flex items-center space-x-3">
+                        <a href="../../portal/index.html" 
+                           class="text-slate-300 hover:text-white transition flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18m-2-7v14"/>
+                            </svg>
+                            返回门户
+                        </a>
+                        <span class="text-slate-500">/</span>
+                        <span class="font-medium">会议室管理后台</span>
+                    </div>
+                    
+                    <!-- 右侧：快捷入口 -->
+                    <div class="flex items-center space-x-4">
+                        <a href="index.html" 
+                           class="text-slate-300 hover:text-white transition text-sm">
+                            用户视角
+                        </a>
+                        <span class="text-slate-300">|</span>
+                        <span class="text-slate-300 text-sm">管理员</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主体布局：侧边栏 + 内容区 -->
+        <div class="flex">
+            <!-- 侧边栏导航 -->
+            <aside class="hidden lg:block w-60 bg-slate-900 min-h-screen sticky top-16 overflow-y-auto">
+                <nav class="py-4">
+                    <!-- 菜单项将在这里动态生成 -->
+                    <div v-for="item in menuItems" :key="item.id"
+                         @click="currentTab = item.id"
+                         :class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+                         class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xl">{{ item.icon }}</span>
+                            <span class="text-sm font-medium">{{ item.label }}</span>
+                        </div>
+                        <span v-if="item.badge > 0" 
+                              class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                            {{ item.badge }}
+                        </span>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- 内容区域 -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 min-h-screen">
+                <div class="px-4 sm:px-6 lg:px-8 py-6">
+                    
+                    <!-- 模块将在这里显示 -->
+                    <div v-if="currentTab === 'rooms'" class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-gray-800">会议室列表</h2>
+                            <button @click="openAddRoom()" 
+                                    class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition shadow">
+                                + 新增会议室
+                            </button>
+                        </div>
+                        
+                        <div class="text-center py-20 text-gray-500">
+                            <p>会议室管理内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentTab === 'bookings'" class="space-y-6">
+                        <h2 class="text-xl font-bold text-gray-800">预约记录</h2>
+                        <div class="text-center py-20 text-gray-500">
+                            <p>预约记录内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentTab === 'approvals'" class="space-y-6">
+                        <h2 class="text-xl font-bold text-gray-800">审批中心</h2>
+                        <div class="text-center py-20 text-gray-500">
+                            <p>审批中心内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentTab === 'finance'" class="space-y-6">
+                        <h2 class="text-xl font-bold text-gray-800">财务结算</h2>
+                        <div class="text-center py-20 text-gray-500">
+                            <p>财务结算内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentTab === 'reports'" class="space-y-6">
+                        <h2 class="text-xl font-bold text-gray-800">统计报表</h2>
+                        <div class="text-center py-20 text-gray-500">
+                            <p>统计报表内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentTab === 'settings'" class="space-y-6">
+                        <h2 class="text-xl font-bold text-gray-800">系统设置</h2>
+                        <div class="text-center py-20 text-gray-500">
+                            <p>系统设置内容...</p>
+                            <p class="text-sm mt-2">✅ 此模块有32px左右边距</p>
+                        </div>
+                    </div>
+                    
+                </div>  <!-- 内容容器结束 -->
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const currentTab = ref('rooms');
+                const menuItems = ref([
+                    { id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
+                    { id: 'bookings', label: '预约管理', icon: '📋', badge: 0 },
+                    { id: 'approvals', label: '审批中心', icon: '✓', badge: 0 },
+                    { id: 'finance', label: '财务结算', icon: '💰', badge: 0 },
+                    { id: 'reports', label: '统计报表', icon: '📈', badge: 0 },
+                    { id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
+                ]);
+                
+                return { currentTab, menuItems };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

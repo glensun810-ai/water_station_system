@@ -171,6 +171,93 @@
                 border-color: #2563EB;
             }
         }
+
+        /* 日期输入框格式提示样式 */
+        input[type="date"]:invalid {
+            color: #94a3b8;
+        }
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+        input[type="date"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+            padding: 0 2px;
+        }
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="date"]::-webkit-datetime-edit-year-field {
+            color: #94a3b8;
+        }
+        input[type="date"]:valid::-webkit-datetime-edit-month-field,
+        input[type="date"]:valid::-webkit-datetime-edit-day-field,
+        input[type="date"]:valid::-webkit-datetime-edit-year-field {
+            color: #1e293b;
+        }
+
+        /* 时间输入框格式提示样式 */
+        input[type="time"]:invalid {
+            color: #94a3b8;
+        }
+        input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+        input[type="time"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+            padding: 0 2px;
+        }
+        input[type="time"]::-webkit-datetime-edit-hour-field,
+        input[type="time"]::-webkit-datetime-edit-minute-field {
+            color: #94a3b8;
+        }
+        input[type="time"]:valid::-webkit-datetime-edit-hour-field,
+        input[type="time"]:valid::-webkit-datetime-edit-minute-field {
+            color: #1e293b;
+        }
+
+        /* 日期输入框容器 */
+        .date-input-wrapper {
+            position: relative;
+        }
+        .date-input-wrapper input[type="date"],
+        .date-input-wrapper input[type="time"] {
+            position: relative;
+            z-index: 2;
+        }
+        .date-input-wrapper .placeholder-overlay {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            z-index: 1;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .date-input-wrapper input:not([value]):not(:focus) + .placeholder-overlay,
+        .date-input-wrapper input[value=""]:not(:focus) + .placeholder-overlay {
+            display: block;
+        }
+        .date-input-wrapper input[value]:not([value=""]) + .placeholder-overlay,
+        .date-input-wrapper input:focus + .placeholder-overlay {
+            display: none;
+        }
+
+        /* 隐藏浏览器默认的格式提示 */
+        input[type="date"]:invalid::-webkit-datetime-edit-fields-wrapper {
+            opacity: 0;
+        }
+        input[type="time"]:invalid::-webkit-datetime-edit-fields-wrapper {
+            opacity: 0;
+        }
+        input[type="date"]:valid::-webkit-datetime-edit-fields-wrapper,
+        input[type="date"]:focus::-webkit-datetime-edit-fields-wrapper {
+            opacity: 1;
+        }
+        input[type="time"]:valid::-webkit-datetime-edit-fields-wrapper,
+        input[type="time"]:focus::-webkit-datetime-edit-fields-wrapper {
+            opacity: 1;
+        }
     </style>
     <script>
         if (window.location.protocol === 'file:') {
@@ -290,9 +377,15 @@
                         <button @click="setRecordDateFilter('lastMonth')" :class="recordQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">上月</button>
                     </div>
                     <div class="flex gap-2 mb-3">
-                        <input type="date" v-model="recordDateFrom" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                        <div class="date-input-wrapper">
+                            <input type="date" v-model="recordDateFrom" :value="recordDateFrom" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                            <span class="placeholder-overlay">yyyy-mm-dd</span>
+                        </div>
                         <span class="text-slate-400 self-center">至</span>
-                        <input type="date" v-model="recordDateTo" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                        <div class="date-input-wrapper">
+                            <input type="date" v-model="recordDateTo" :value="recordDateTo" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                            <span class="placeholder-overlay">yyyy-mm-dd</span>
+                        </div>
                         <button @click="resetRecordFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                     </div>
 
@@ -458,9 +551,15 @@
                     <button @click="setSettlementDateFilter('lastMonth')" :class="settlementQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">上月</button>
                 </div>
                 <div class="flex items-center gap-1 mb-3">
-                    <input type="date" v-model="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                    <div class="date-input-wrapper">
+                        <input type="date" v-model="settlementDateFrom" :value="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                        <span class="placeholder-overlay">yyyy-mm-dd</span>
+                    </div>
                     <span class="text-slate-400">至</span>
-                    <input type="date" v-model="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                    <div class="date-input-wrapper">
+                        <input type="date" v-model="settlementDateTo" :value="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                        <span class="placeholder-overlay">yyyy-mm-dd</span>
+                    </div>
                     <button @click="resetSettlementDateFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                 </div>
 

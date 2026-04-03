@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 from datetime import datetime, date
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 import random
 import string
 import os
@@ -61,7 +61,23 @@ class MeetingRoomBase(BaseModel):
 
 
 class MeetingRoomCreate(MeetingRoomBase):
-    pass
+    @validator("name")
+    def name_must_not_be_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("会议室名称不能为空")
+        return v
+
+    @validator("capacity")
+    def capacity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("容纳人数必须大于0")
+        return v
+
+    @validator("price_per_hour")
+    def price_must_be_non_negative(cls, v):
+        if v < 0:
+            raise ValueError("价格不能为负数")
+        return v
 
 
 class MeetingRoomUpdate(BaseModel):
@@ -535,40 +551,95 @@ def confirm_booking(booking_id: int, db: Session = Depends(get_db)):
 
 @router.put("/bookings/{booking_id}/cancel")
 def cancel_booking(
-    booking_id: int, reason: str = Query(None), db: Session = Depends(get_db)
+    booking_id: int,
+    cancel_reason: str = Query(None),
+    cancel_detail: str = Query(None),
+    db: Session = Depends(get_db),
 ):
+    """
+    取消预约
+
+    取消规则：
+    - 待确认状态：随时可取消
+    - 已确认状态 + 距开始≥24小时：可取消
+    - 已确认状态 + 距开始2-24小时：可申请取消
+    - 已确认状态 + 距开始<2小时：不可取消
+    - 已取消/已完成：不可操作
+    """
     try:
         from sqlalchemy import text
 
+        # 查询预约信息
         existing = db.execute(
-            text("SELECT id, status FROM meeting_bookings WHERE id = :booking_id"),
+            text("""
+                SELECT id, status, booking_date, start_time, end_time 
+                FROM meeting_bookings 
+                WHERE id = :booking_id
+            """),
             {"booking_id": booking_id},
         ).fetchone()
+
         if not existing:
             raise HTTPException(status_code=404, detail="预约不存在")
 
+        # 状态检查
         if existing.status in ["cancelled", "completed"]:
             raise HTTPException(
-                status_code=400, detail=f"当前状态为 {existing.status}，无法取消"
+                status_code=400, detail=f"当前状态为{existing.status}，无法取消"
             )
 
+        if existing.status == "active":
+            raise HTTPException(status_code=400, detail="会议进行中，无法取消")
+
+        # 时间检查（已确认状态）
+        if existing.status == "confirmed":
+            booking_datetime = datetime.strptime(
+                f"{existing.booking_date} {existing.start_time}", "%Y-%m-%d %H:%M"
+            )
+            now = datetime.now()
+            hours_before = (booking_datetime - now).total_seconds() / 3600
+
+            if hours_before < 0:
+                raise HTTPException(
+                    status_code=400, detail="会议已开始或已结束，无法取消"
+                )
+            elif hours_before < 2:
+                raise HTTPException(
+                    status_code=400,
+                    detail="距开始时间不足2小时，无法取消。如确需取消，请联系管理员协助处理。",
+                )
+
+        # 执行取消
         db.execute(
             text("""
-            UPDATE meeting_bookings 
-            SET status = 'cancelled', 
-                cancel_reason = :cancel_reason,
-                updated_at = :updated_at
-            WHERE id = :booking_id
-        """),
+                UPDATE meeting_bookings 
+                SET status = 'cancelled',
+                    cancel_reason = :cancel_reason,
+                    cancel_detail = :cancel_detail,
+                    cancelled_at = :cancelled_at,
+                    updated_at = :updated_at
+                WHERE id = :booking_id
+            """),
             {
-                "cancel_reason": reason or "",
+                "cancel_reason": cancel_reason or "",
+                "cancel_detail": cancel_detail or "",
+                "cancelled_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "booking_id": booking_id,
             },
         )
         db.commit()
 
-        return {"success": True, "message": "预约已取消"}
+        return {
+            "success": True,
+            "message": "预约已取消",
+            "data": {
+                "booking_id": booking_id,
+                "status": "cancelled",
+                "cancelled_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        }
+
     except HTTPException:
         raise
     except Exception as e:
