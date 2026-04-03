@@ -1,22 +1,194 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>水站管理后台</title>
-    <script src="vue.global.js"></script>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+ <meta name="mobile-web-app-capable" content="yes">
+ <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+ <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+ <meta http-equiv="Pragma" content="no-cache">
+ <meta http-equiv="Expires" content="0">
+ <title>水站管理后台</title>
+ <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+ <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        [v-cloak] {
-            display: none !important;
-        }
-        
-        /* 自定义复选框样式 - 简洁美观 */
+<style>
+ [v-cloak] {
+ display: none !important;
+ }
+ 
+ /* ==================== 设计系统变量 ==================== */
+ :root {
+ /* 颜色系统 */
+ --primary: #2563EB;
+ --primary-hover: #1D4ED8;
+ --primary-light: #DBEAFE;
+ --success: #10B981;
+ --success-light: #D1FAE5;
+ --warning: #F59E0B;
+ --warning-light: #FEF3C7;
+ --danger: #EF4444;
+ --danger-light: #FEE2E2;
+ --info: #3B82F6;
+ --info-light: #DBEAFE;
+ 
+ /* 背景色 */
+ --bg-primary: #F1F5F9;
+ --bg-card: #FFFFFF;
+ --bg-hover: #F8FAFC;
+ 
+ /* 文字颜色 */
+ --text-primary: #1E293B;
+ --text-secondary: #64748B;
+ --text-tertiary: #94A3B8;
+ --text-inverse: #FFFFFF;
+ 
+ /* 边框 */
+ --border: #E2E8F0;
+ --border-dark: #CBD5E1;
+ 
+ /* 间距 */
+ --spacing-xs: 4px;
+ --spacing-sm: 8px;
+ --spacing-md: 12px;
+ --spacing-lg: 16px;
+ --spacing-xl: 24px;
+ --spacing-2xl: 32px;
+ 
+ /* 圆角 */
+ --radius-sm: 6px;
+ --radius-md: 8px;
+ --radius-lg: 12px;
+ --radius-xl: 16px;
+ 
+ /* 阴影 */
+ --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+ --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+ --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+ --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+ 
+ /* 触摸区域 */
+ --touch-min: 44px;
+ }
+ 
+ /* ==================== 统一按钮样式 ==================== */
+ .btn {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ gap: var(--spacing-sm);
+ font-weight: 500;
+ border-radius: var(--radius-md);
+ transition: all 0.2s ease;
+ cursor: pointer;
+ }
+ 
+ .btn-sm {
+ padding: 6px 12px;
+ font-size: 14px;
+ min-height: 36px;
+ }
+ 
+ .btn-md {
+ padding: 8px 16px;
+ font-size: 14px;
+ min-height: 40px;
+ }
+ 
+ .btn-lg {
+ padding: 12px 24px;
+ font-size: 16px;
+ min-height: 48px;
+ }
+ 
+ /* 移动端按钮最小触摸区域 */
+ @media (max-width: 768px) {
+ .btn-sm, .btn-md, .btn-lg {
+ min-height: var(--touch-min);
+ }
+ }
+ 
+ .btn-primary {
+ background-color: var(--primary);
+ color: var(--text-inverse);
+ }
+ 
+ .btn-primary:hover {
+ background-color: var(--primary-hover);
+ }
+ 
+ .btn-success {
+ background-color: var(--success);
+ color: var(--text-inverse);
+ }
+ 
+ .btn-success:hover {
+ background-color: #059669;
+ }
+ 
+ .btn-danger {
+ background-color: var(--danger);
+ color: var(--text-inverse);
+ }
+ 
+ .btn-danger:hover {
+ background-color: #DC2626;
+ }
+ 
+ .btn-outline {
+ background-color: transparent;
+ border: 1px solid var(--border);
+ color: var(--text-secondary);
+ }
+ 
+ .btn-outline:hover {
+ background-color: var(--bg-hover);
+ border-color: var(--border-dark);
+ }
+ 
+ /* ==================== 统一卡片样式 ==================== */
+ .card {
+ background: var(--bg-card);
+ border-radius: var(--radius-lg);
+ padding: var(--spacing-lg);
+ box-shadow: var(--shadow-sm);
+ }
+ 
+ .card-grid {
+ display: grid;
+ gap: var(--spacing-lg);
+ }
+ 
+ @media (max-width: 768px) {
+ .card-grid {
+ gap: var(--spacing-md);
+ }
+ }
+ 
+ /* ==================== 统一输入框样式 ==================== */
+ .input {
+ width: 100%;
+ padding: 8px 12px;
+ border: 1px solid var(--border);
+ border-radius: var(--radius-md);
+ font-size: 14px;
+ transition: all 0.2s ease;
+ }
+ 
+ .input:focus {
+ outline: none;
+ border-color: var(--primary);
+ box-shadow: 0 0 0 3px var(--primary-light);
+ }
+ 
+ @media (max-width: 768px) {
+ .input {
+ padding: 10px 14px;
+ min-height: var(--touch-min);
+ }
+ }
+ 
+ /* ==================== 自定义复选框样式 - 简洁美观 ==================== */
         input[type="checkbox"] {
             -webkit-appearance: none;
             appearance: none;
@@ -68,14 +240,40 @@
             margin: 0 auto;
         }
         
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #F1F5F9;
-            /* 防止水平滚动 */
-            overflow-x: hidden;
-            /* 优化移动端滚动体验 */
-            -webkit-overflow-scrolling: touch;
-        }
+        /* 全局布局容器 - 采用Flexbox固定布局 */
+ html {
+ height: 100%;
+ overflow: hidden;
+ }
+ 
+ body {
+ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+ background-color: #F1F5F9;
+ height: 100%;
+ overflow: hidden;
+ padding-top: env(safe-area-inset-top, 0px);
+ padding-bottom: env(safe-area-inset-bottom, 0px);
+ }
+ 
+ #app {
+ height: 100%;
+ display: flex;
+ flex-direction: column;
+ overflow: hidden;
+ }
+ 
+ /* 主内容容器 - 独立滚动 */
+ .main-content-wrapper {
+ flex: 1;
+ display: flex;
+ overflow: hidden;
+ }
+ 
+ .content-scroll-area {
+ flex: 1;
+ overflow-y: auto;
+ -webkit-overflow-scrolling: touch;
+ }
         /* 禁用点击高亮 */
         * {
             -webkit-tap-highlight-color: transparent;
@@ -1282,122 +1480,132 @@
     </style>
 </head>
 <body>
-    <div id="app" class="min-h-screen overflow-x-hidden" v-cloak>
-        <!-- 移动端菜单遮罩 -->
-        <div class="sidebar-overlay" :class="{ 'sidebar-overlay-visible': sidebarMobileOpen }" @click="sidebarMobileOpen = false"></div>
-        
-        <!-- 侧边栏导航 (桌面端) -->
-        <aside class="sidebar" :class="{ 'sidebar-mobile-open': sidebarMobileOpen }">
-            <!-- Logo -->
-            <div class="sidebar-logo">
-                <div class="sidebar-logo-icon">💧</div>
-                <div class="sidebar-logo-text">
-                    <h1>水站管理系统</h1>
-                    <p>Water Management</p>
-                </div>
-            </div>
-            
-            <!-- 导航菜单 -->
-            <nav class="sidebar-nav">
-                <!-- 运营管理 -->
-                <div class="nav-section">
-                    <div class="nav-section-title">运营管理</div>
-                    <button @click="navigateTo('dashboard')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'dashboard' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        <span>首页</span>
-                        <span class="shortcut-hint">G D</span>
-                    </button>
-                    <button @click="navigateTo('officePickups')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officePickups' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                        </svg>
-                        <span>领水记录</span>
-                        <span class="shortcut-hint">G P</span>
-                    </button>
-                    <button @click="navigateTo('settlement')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'settlement' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <span>结算记录</span>
-                        <span v-if="appliedTabCount > 0" class="nav-item-badge">{{ appliedTabCount }}</span>
-                        <span class="shortcut-hint">G S</span>
-                    </button>
-                </div>
-                
-                <!-- 资源管理 -->
-                <div class="nav-section">
-                    <div class="nav-section-title">资源管理</div>
-                    <button @click="navigateTo('products')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'products' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                        </svg>
-                        <span>商品管理</span>
-                        <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="nav-item-badge">{{ inventoryAlerts.length }}</span>
-                        <span v-if="pendingConfirmCount > 0" class="nav-item-badge" style="background: #f59e0b;">{{ pendingConfirmCount }}</span>
-                        <span class="shortcut-hint">G P</span>
-                    </button>
-                    <button @click="navigateTo('officeAccounts')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officeAccounts' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                        </svg>
-                        <span>预付账户</span>
-                        <span class="shortcut-hint">G A</span>
-                    </button>
-                </div>
-                
-                <!-- 用户管理 -->
-                <div class="nav-section">
-                    <div class="nav-section-title">用户管理</div>
-                    <button @click="navigateTo('offices')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'offices' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                        </svg>
-                        <span>办公室管理</span>
-                        <span class="shortcut-hint">G O</span>
-                    </button>
-                    <button @click="navigateTo('users')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'users' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                        <span>用户管理</span>
-                        <span class="shortcut-hint">G U</span>
-                    </button>
-                </div>
-
-                <!-- 运维支持 -->
-                <div class="nav-section">
-                    <div class="nav-section-title">运维支持</div>
-                    <button @click="navigateTo('trash')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'trash' }">
-                        <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        <span>回收站</span>
-                        <span class="shortcut-hint">G T</span>
-                    </button>
-                </div>
-
-            </nav>
-            
-            <!-- 底部用户信息 -->
-            <div class="sidebar-footer">
-                <div class="sidebar-user">
-                    <div class="sidebar-user-avatar">{{ user?.name?.charAt(0) || '?' }}</div>
-                    <div class="sidebar-user-info">
-                        <div class="sidebar-user-name">{{ user?.name || '游客' }}</div>
-                        <div class="sidebar-user-role">{{ getRoleName(user?.role) }}</div>
-                    </div>
-                    <button @click="handleLogout" class="text-slate-400 hover:text-white transition" title="退出登录">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Loading Screen -->
+<div id="app" v-cloak>
+ <!-- 移动端菜单遮罩 -->
+ <div class="sidebar-overlay" :class="{ 'sidebar-overlay-visible': sidebarMobileOpen }" @click="sidebarMobileOpen = false"></div>
+ 
+ <!-- 移动端汉堡菜单按钮 -->
+ <button @click="sidebarMobileOpen = true" class="sm:hidden bg-white p-2.5 rounded-lg shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" style="position: fixed; top: 0.75rem; left: 0.75rem; z-index: 30;">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+ </svg>
+ </button>
+ 
+ <!-- 返回顶部按钮 -->
+ <button @click="scrollToTop" class="back-to-top" :class="{ 'back-to-top-visible': showBackToTop }" title="返回顶部">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+ </svg>
+ </button>
+ 
+ <!-- PC端侧边栏导航 -->
+ <aside class="sidebar hidden sm:flex" :class="{ 'sidebar-collapsed': false }">
+ <div class="sidebar-logo">
+ <div class="sidebar-logo-icon">💧</div>
+ <div class="sidebar-logo-text">
+ <h1>水站管理后台</h1>
+ <p>AI产业集群</p>
+ </div>
+ </div>
+ 
+ <nav class="sidebar-nav">
+ <!-- 数据管理 -->
+ <div class="nav-section">
+ <div class="nav-section-title">数据管理</div>
+ <button @click="navigateTo('dashboard')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'dashboard' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+ </svg>
+ <span>首页</span>
+ <span class="shortcut-hint">G D</span>
+ </button>
+ <button @click="navigateTo('officePickups')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officePickups' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+ </svg>
+ <span>领水记录</span>
+ <span class="shortcut-hint">G P</span>
+ </button>
+ <button @click="navigateTo('settlement')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'settlement' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+ </svg>
+ <span>结算记录</span>
+ <span v-if="appliedTabCount > 0" class="nav-item-badge">{{ appliedTabCount }}</span>
+ <span class="shortcut-hint">G S</span>
+ </button>
+ </div>
+ 
+ <!-- 资源管理 -->
+ <div class="nav-section">
+ <div class="nav-section-title">资源管理</div>
+ <button @click="navigateTo('products')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'products' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+ </svg>
+ <span>商品管理</span>
+ <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="nav-item-badge">{{ inventoryAlerts.length }}</span>
+ <span class="shortcut-hint">G P</span>
+ </button>
+ <button @click="navigateTo('officeAccounts')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'officeAccounts' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+ </svg>
+ <span>预付账户</span>
+ <span class="shortcut-hint">G A</span>
+ </button>
+ </div>
+ 
+ <!-- 用户管理 -->
+ <div class="nav-section">
+ <div class="nav-section-title">用户管理</div>
+ <button @click="navigateTo('offices')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'offices' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+ </svg>
+ <span>办公室管理</span>
+ <span class="shortcut-hint">G O</span>
+ </button>
+ <button @click="navigateTo('users')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'users' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+ </svg>
+ <span>用户管理</span>
+ <span class="shortcut-hint">G U</span>
+ </button>
+ </div>
+ 
+ <!-- 运维支持 -->
+ <div class="nav-section">
+ <div class="nav-section-title">运维支持</div>
+ <button @click="navigateTo('trash')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'trash' }">
+ <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+ </svg>
+ <span>回收站</span>
+ <span class="shortcut-hint">G T</span>
+ </button>
+ </div>
+ </nav>
+ 
+ <!-- 底部用户信息 -->
+ <div class="sidebar-footer">
+ <div class="sidebar-user">
+ <div class="sidebar-user-avatar">{{ user?.name?.charAt(0) || '?' }}</div>
+ <div class="sidebar-user-info">
+ <div class="sidebar-user-name">{{ user?.name || '游客' }}</div>
+ <div class="sidebar-user-role">{{ getRoleName(user?.role) }}</div>
+ </div>
+ <button @click="handleLogout" class="text-slate-400 hover:text-white transition" title="退出登录">
+ <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+ </svg>
+ </button>
+ </div>
+ </div>
+ </aside>
+ 
+ <!-- Loading Screen -->
         <div v-if="isLoading" class="fixed inset-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center z-50">
             <div class="text-center">
                 <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white mx-auto mb-4"></div>
@@ -1438,90 +1646,40 @@
         </div>
         
         <!-- Main Content (only show when authenticated and API available) -->
-        <div v-if="!isLoading && !authError && !apiError" class="main-with-sidebar">
-            <!-- 移动端菜单按钮 -->
-            <button @click="sidebarMobileOpen = true" class=" fixed top-3 left-3 z-30 bg-white p-2.5 rounded-lg shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center">
-                <svg class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            
-            <!-- 返回顶部按钮 -->
-            <button @click="scrollToTop" class="back-to-top" :class="{ 'back-to-top-visible': showBackToTop }" title="返回顶部">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
-                </svg>
-            </button>
-        
-            <!-- Top Navigation -->
-        <nav class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-3 sticky top-0 z-10 safe-top">
-            <div class="flex justify-between items-center gap-2 sm:gap-3">
-                <div class="min-w-0 flex-1">
-                    <h1 class="text-base sm:text-lg font-bold text-slate-800 truncate">{{ currentPageTitle }}</h1>
-                    <p v-if="currentPageDesc" class="text-xs text-slate-500 mt-0.5 truncate hidden sm:block">{{ currentPageDesc }}</p>
-                </div>
-                <!-- 快捷操作 -->
-                <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                    <!-- 密码修改 -->
-                    <a href="change-password.html" class="text-slate-500 hover:text-slate-700 p-1.5 sm:p-2 rounded-lg hover:bg-slate-50 transition" title="修改密码">
-                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </nav>
-
-        <!-- 移动端底部导航 - 使用 navigateTo 函数 -->
-        <nav class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-1 safe-bottom z-20">
-            <div class="flex justify-around items-center h-14">
-                <button @click="navigateTo('dashboard')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-0.5', activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                    <span class="text-[10px]">首页</span>
-                </button>
-                <button @click="navigateTo('officePickups')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-0.5', activeTab === 'officePickups' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                    </svg>
-                    <span class="text-[10px]">领水</span>
-                </button>
-                <button @click="navigateTo('settlement')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-0.5 relative', activeTab === 'settlement' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <span class="text-[10px]">结算</span>
-                    <span v-if="officeSettlementAppliedCount > 0" class="absolute top-0 right-2 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ officeSettlementAppliedCount }}</span>
-                </button>
-                <button @click="navigateTo('products')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-0.5 relative', activeTab === 'products' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
-                    </svg>
-                    <span class="text-[10px]">商品</span>
-                    <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="absolute top-0 right-2 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ inventoryAlerts.length }}</span>
-                </button>
-                <button @click="navigateTo('offices')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-0.5', activeTab === 'offices' ? 'text-blue-600' : 'text-slate-500']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                    <span class="text-[10px]">办公室</span>
-                </button>
-            </div>
-        </nav>
-
-        <main class="p-2 sm:p-6 pb-20 sm:pb-6">
+ <div v-if="!isLoading && !authError && !apiError" class="flex-1 flex flex-col overflow-hidden main-with-sidebar">
+ <!-- Top Navigation -->
+ <nav class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-3 z-10 safe-top flex-shrink-0">
+ <div class="flex justify-between items-center gap-2 sm:gap-3">
+ <div class="min-w-0 flex-1">
+ <h1 class="text-base sm:text-lg font-bold text-slate-800 truncate">{{ currentPageTitle }}</h1>
+ <p v-if="currentPageDesc" class="text-xs text-slate-500 mt-0.5 truncate hidden sm:block">{{ currentPageDesc }}</p>
+ </div>
+ <!-- 快捷操作 -->
+ <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+ <!-- 密码修改 -->
+ <a href="change-password.html" class="text-slate-500 hover:text-slate-700 p-1.5 sm:p-2 rounded-lg hover:bg-slate-50 transition" title="修改密码">
+ <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+ </svg>
+ </a>
+ </div>
+ </div>
+ </nav>
+ 
+ <!-- 内容区域容器 -->
+ <div class="flex-1 flex flex-col overflow-hidden relative">
+ <main class="flex-1 overflow-y-auto p-3 sm:p-6 pb-20 sm:pb-6" style="-webkit-overflow-scrolling: touch;">
             <!-- Dashboard Tab - 移动端优化 -->
             <div v-if="activeTab === 'dashboard'">
-                <!-- 待办事项卡片 - 移动端优化 -->
-                <div class="mb-4 sm:mb-6">
-                    <h2 class="text-base sm:text-lg font-bold text-slate-800 mb-3 sm:mb-4 flex items-center gap-2">
-                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                        </svg>
-                        待办事项
-                    </h2>
-                    <div class="grid grid-cols-2 gap-2 sm:gap-3">
+<!-- 待办事项卡片 - 移动端优化 -->
+ <div class="mb-4 sm:mb-6">
+ <h2 class="text-base sm:text-lg font-bold text-slate-800 mb-3 sm:mb-4 flex items-center gap-2">
+ <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+ </svg>
+ 待办事项
+ </h2>
+ <div class="grid grid-cols-2 gap-3 sm:gap-4">
                         <!-- 待确认结算申请 - 移动端优化 -->
                         <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-white shadow-lg card-shadow cursor-pointer active:opacity-90 transition" @click="activeTab = 'settlement'">
                             <div class="flex items-center justify-between mb-1 sm:mb-2">
@@ -4180,6 +4338,46 @@
 
 
         </main>
+ 
+ <!-- 移动端底部导航 -->
+ <nav class="sm:hidden bg-white border-t border-slate-200 px-1 safe-bottom z-20 flex-shrink-0">
+ <div class="flex justify-around items-center h-16">
+ <button @click="navigateTo('dashboard')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-1 min-h-[44px]', activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500']">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+ </svg>
+ <span class="text-xs">首页</span>
+ </button>
+ <button @click="navigateTo('officePickups')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-1 min-h-[44px]', activeTab === 'officePickups' ? 'text-blue-600' : 'text-slate-500']">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+ </svg>
+ <span class="text-xs">领水</span>
+ </button>
+ <button @click="navigateTo('settlement')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-1 relative min-h-[44px]', activeTab === 'settlement' ? 'text-blue-600' : 'text-slate-500']">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+ </svg>
+ <span class="text-xs">结算</span>
+ <span v-if="officeSettlementAppliedCount > 0" class="absolute top-0 right-2 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ officeSettlementAppliedCount }}</span>
+ </button>
+ <button @click="navigateTo('products')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-1 relative min-h-[44px]', activeTab === 'products' ? 'text-blue-600' : 'text-slate-500']">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 17m8 4v-10"></path>
+ </svg>
+ <span class="text-xs">商品</span>
+ <span v-if="inventoryAlerts && inventoryAlerts.length > 0" class="absolute top-0 right-2 bg-red-600 text-white text-[8px] px-1 rounded-full">{{ inventoryAlerts.length }}</span>
+ </button>
+ <button @click="navigateTo('offices')" :class="['flex flex-col items-center justify-center flex-1 h-full gap-1 min-h-[44px]', activeTab === 'offices' ? 'text-blue-600' : 'text-slate-500']">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+ </svg>
+ <span class="text-xs">办公室</span>
+ </button>
+ </div>
+ </nav>
+ </div>
+ <!-- 关闭内容区域容器 -->
 
         <!-- 新建/编辑用户模态框 -->
         <div v-if="showUserCreateModal || showUserEditModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="closeUserModal">
@@ -4477,11 +4675,13 @@
                         </div>
                     </div>
                     
-                    <!-- 统计卡片 - 手机端优化为紧凑横向滚动 -->
-                    <div class="overflow-x-auto mx-0 sm:mx-0 px-0 sm:px-0 -mx-2 sm:mx-0 px-2 sm:px-0 mb-3 scrollbar-thin">
-                        <div class="flex gap-2 min-w-max px-2 sm:px-0">
-                            <!-- 待付款卡片 -->
-                            <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+<!-- 统计卡片 - 手机端优化为紧凑横向滚动 -->
+ <div class="overflow-x-auto mx-0 sm:mx-0 px-0 sm:px-0 -mx-2 sm:mx-0 px-2 sm:px-0 mb-3 scrollbar-thin relative">
+ <!-- 滚动提示渐变 -->
+ <div class="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white via-white to-transparent pointer-events-none z-10 sm:hidden"></div>
+ <div class="flex gap-3 min-w-max px-1 sm:px-0">
+ <!-- 待付款卡片 -->
+ <div @click="settlementRecordFilter = 'pending'" :class="settlementRecordFilter === 'pending' ? 'ring-2 ring-amber-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-3 border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-100/30 hover:shadow-md transition-all min-w-[100px] sm:w-32 flex-shrink-0">
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="text-[8px] sm:text-xs font-medium text-amber-600">待付款</span>
                                 </div>
@@ -4489,8 +4689,8 @@
                                 <div class="text-[8px] sm:text-xs font-semibold text-amber-600">¥{{ (settlementStats.pendingAmount || 0).toFixed(0) }}</div>
                             </div>
                             
-                            <!-- 待确认卡片 -->
-                            <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+<!-- 待确认卡片 -->
+ <div @click="settlementRecordFilter = 'applied'" :class="settlementRecordFilter === 'applied' ? 'ring-2 ring-blue-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-3 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/30 hover:shadow-md transition-all min-w-[100px] sm:w-32 flex-shrink-0">
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="text-[8px] sm:text-xs font-medium text-blue-600">待确认</span>
                                 </div>
@@ -4498,8 +4698,8 @@
                                 <div class="text-[8px] sm:text-xs font-semibold text-blue-600">¥{{ (settlementStats.appliedAmount || 0).toFixed(0) }}</div>
                             </div>
                             
-                            <!-- 逾期卡片 -->
-                            <div @click="settlementRecordFilter = 'overdue'" :class="settlementRecordFilter === 'overdue' ? 'ring-2 ring-red-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-red-100 bg-gradient-to-br from-red-50 to-red-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+<!-- 逾期卡片 -->
+ <div @click="settlementRecordFilter = 'overdue'" :class="settlementRecordFilter === 'overdue' ? 'ring-2 ring-red-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-3 border border-red-100 bg-gradient-to-br from-red-50 to-red-100/30 hover:shadow-md transition-all min-w-[100px] sm:w-32 flex-shrink-0">
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="text-[8px] sm:text-xs font-medium text-red-600">逾期</span>
                                 </div>
@@ -4507,8 +4707,8 @@
                                 <div class="text-[8px] sm:text-xs font-semibold text-red-600">¥{{ (settlementStats.overdueAmount || 0).toFixed(0) }}</div>
                             </div>
                             
-                            <!-- 已结清卡片 -->
-                            <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-100/30 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+<!-- 已结清卡片 -->
+ <div @click="settlementRecordFilter = 'confirmed'" :class="settlementRecordFilter === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-3 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-100/30 hover:shadow-md transition-all min-w-[100px] sm:w-32 flex-shrink-0">
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="text-[8px] sm:text-xs font-medium text-emerald-600">已结清</span>
                                 </div>
@@ -4516,8 +4716,8 @@
                                 <div class="text-[8px] sm:text-xs font-semibold text-emerald-600">¥{{ (settlementStats.confirmedAmount || 0).toFixed(0) }}</div>
                             </div>
                             
-                            <!-- 汇总卡片 -->
-                            <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-slate-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-2 border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:shadow-md transition-all w-20 sm:w-28 flex-shrink-0">
+<!-- 汇总卡片 -->
+ <div @click="settlementRecordFilter = 'all'" :class="settlementRecordFilter === 'all' ? 'ring-2 ring-slate-500' : ''" class="group cursor-pointer rounded-lg sm:rounded-xl p-3 border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:shadow-md transition-all min-w-[100px] sm:w-32 flex-shrink-0">
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="text-[8px] sm:text-xs font-medium text-slate-500">总待收</span>
                                 </div>
@@ -8780,110 +8980,101 @@
                     }
                 };
 
-                onMounted(() => {
-                    console.log('=== Vue onMounted Called ===');
-                    console.log('Current state:', { isLoading: isLoading.value, authError: authError.value, activeTab: activeTab.value });
-                    // 检查登录状态（会在检查后设置 isLoading）
-                    checkAuth();
-
-                    // 添加滚动监听
-                    window.addEventListener('scroll', handleScroll);
-                    // 添加快捷键监听
-                    window.addEventListener('keydown', handleKeydown);
-
-                    // 加载用户数据（用于用户管理 Tab）
-                    loadUsersData();
-                    
-                    // 加载办公室数据（用户管理和预付账户需要）
-                    loadOffices();
-
-                    // 根据当前标签页加载对应数据
-                    if (activeTab.value === 'dashboard') {
-                        // 首次加载dashboard时，确保数据已加载
-                        console.log('Initial load: dashboard tab active');
-                        loadDashboard();
-                    }
-                    if (activeTab.value === 'offices') {
-                        loadOffices();
-                    }
-                    if (activeTab.value === 'officePickups') {
-                        loadOfficePickups();
-                    }
-                    if (activeTab.value === 'settlement') {
-                        selectedSettlementApps.value = [];
-                        loadSettlementStats();
-                        loadOfficeSettlements();
-                    }
-                    if (activeTab.value === 'officeAccounts') {
-                        loadOfficeAccounts();
-                    }
-                    if (activeTab.value === 'officeSettlement') {
-                        loadOfficeSettlement();
-                    }
-                    // 库存相关功能暂时禁用，避免加载失败
-                    // if (activeTab.value === 'inventory') {
-                    //     loadInventoryRecords();
-                    //     loadInventoryAlertConfigs();
-                    // }
-                });
+onMounted(async () => {
+ console.log('=== Vue onMounted Called ===');
+ console.log('Current state:', { isLoading: isLoading.value, authError: authError.value, activeTab: activeTab.value });
+ 
+ // 添加滚动监听
+ window.addEventListener('scroll', handleScroll);
+ // 添加快捷键监听
+ window.addEventListener('keydown', handleKeydown);
+ 
+ // 先检查登录状态（等待完成）
+ await checkAuth();
+ 
+ // 认证通过后才加载数据
+ if (!authError.value && user.value) {
+ console.log('Auth passed, loading data...');
+ 
+ // 加载基础数据
+ await Promise.all([
+ loadOffices(),
+ loadUsersData()
+ ]);
+ 
+ // 根据当前标签页加载对应数据
+ if (activeTab.value === 'dashboard') {
+ console.log('Initial load: dashboard tab active');
+ await loadDashboard();
+ }
+ if (activeTab.value === 'offices') {
+ await loadOffices();
+ }
+ if (activeTab.value === 'officePickups') {
+ await loadOfficePickups();
+ }
+ if (activeTab.value === 'settlement') {
+ selectedSettlementApps.value = [];
+ await loadSettlementStats();
+ await loadOfficeSettlements();
+ }
+ if (activeTab.value === 'officeAccounts') {
+ await loadOfficeAccounts();
+ }
+ if (activeTab.value === 'officeSettlement') {
+ await loadOfficeSettlement();
+ }
+ 
+ console.log('All initial data loaded');
+ }
+ });
 
                 // ==================== 认证相关函数 ====================
                 
-                // 检查登录状态
-                const checkAuth = async () => {
-                    console.log('=== checkAuth Called ===');
-                    const storedToken = localStorage.getItem('token');
-                    const userData = localStorage.getItem('user');
-                    console.log('Token:', storedToken);
-                    console.log('User:', userData);
+// 检查登录状态
+ const checkAuth = async () => {
+ console.log('=== checkAuth Called ===');
+ const storedToken = localStorage.getItem('token');
+ const userData = localStorage.getItem('user');
+ console.log('Token:', storedToken);
+ console.log('User:', userData);
 
-                    if (!storedToken || !userData) {
-                        console.log('No auth, setting authError');
-                        isLoading.value = false;
-                        authError.value = '请先登录';
-                        console.log('State after update:', { isLoading: isLoading.value, authError: authError.value });
-                        // 3 秒后跳转到登录页
-                        setTimeout(() => {
-                            window.location.href = 'https://jhw-ai.com/water-admin/login.html';
-                        }, 3000);
-                        return;
-                    }
+ if (!storedToken || !userData) {
+ console.log('No auth, setting authError');
+ isLoading.value = false;
+ authError.value = '请先登录';
+ console.log('State after update:', { isLoading: isLoading.value, authError: authError.value });
+ // 3 秒后跳转到登录页
+ setTimeout(() => {
+ window.location.href = 'https://jhw-ai.com/water-admin/login.html';
+ }, 3000);
+ return false;
+ }
 
-                    token.value = storedToken;
-                    user.value = JSON.parse(userData);
-                    currentUserId.value = user.value.id;
+ token.value = storedToken;
+ user.value = JSON.parse(userData);
+ currentUserId.value = user.value.id;
 
-                    // 检查用户角色权限
-                    const userRole = user.value.role;
-                    if (userRole !== 'admin' && userRole !== 'super_admin') {
-                        console.log('Not admin, redirecting to index.html');
-                        isLoading.value = false;
-                        authError.value = '您没有权限访问管理后台';
-                        // 3 秒后跳转到用户首页
-                        setTimeout(() => {
-                            window.location.href = '/water/index.html';
-                        }, 3000);
-                        return;
-                    }
+ // 检查用户角色权限
+ const userRole = user.value.role;
+ if (userRole !== 'admin' && userRole !== 'super_admin') {
+ console.log('Not admin, redirecting to index.html');
+ isLoading.value = false;
+ authError.value = '您没有权限访问管理后台';
+ // 3 秒后跳转到用户首页
+ setTimeout(() => {
+ window.location.href = '/water/index.html';
+ }, 3000);
+ return false;
+ }
 
-                    // 认证通过后加载数据
-                    console.log('Loading initial data...');
-                    await loadData();
-                    await loadDashboard();
-                    await loadTransactions();
-                    await loadApplications();
-                    await loadRemindList();
-                    await loadSpecifications();
-                    
-                    // 默认选中本月
-                    setDateRange('month');
-                    
-                    console.log('All data loaded successfully');
+ // 认证通过
+ isLoading.value = false;
+ console.log('Auth check passed');
+ return true;
+ };
 
-                    isLoading.value = false;
-                };
-
-                // 获取角色名称
+ // 获取角色名称
                 const getRoleName = (role) => {
                     const roleMap = {
                         'super_admin': '超级管理员',

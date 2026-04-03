@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1e293b">
@@ -22,22 +22,27 @@
 --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
-/* 防止横向溢出，允许垂直滚动 */
-html, body {
-overflow-x: hidden;
-overflow-y: auto;
-width: 100%;
-max-width: 100vw;
-}
-
-body {
-padding-top: var(--safe-area-inset-top);
-padding-bottom: var(--safe-area-inset-bottom);
--webkit-overflow-scrolling: touch;
-overscroll-behavior-y: contain;
-position: relative;
-min-height: 100vh;
-}
+/* 防止横向溢出，优化滚动容器 */
+ html {
+ height: 100%;
+ overflow: hidden;
+ }
+ 
+ body {
+ height: 100%;
+ overflow: hidden;
+ padding-top: var(--safe-area-inset-top);
+ padding-bottom: var(--safe-area-inset-bottom);
+ position: relative;
+ }
+ 
+ /* 主容器 - 独立滚动 */
+ #app {
+ height: 100%;
+ display: flex;
+ flex-direction: column;
+ overflow: hidden;
+ }
 
 /* 所有容器防止溢出 */
 * {
@@ -119,25 +124,25 @@ animation: rotate 1s linear infinite;
 }
 
 /* 移动端优化 */
-@media (max-width: 768px) {
-button:active {
-transform: scale(0.98);
-}
-
-select, input {
-font-size: 16px; /* 防止iOS缩放 */
-}
-
-/* 优化触摸高亮 */
-* {
--webkit-tap-highlight-color: transparent;
-}
-
-/* 平滑滚动 */
-body {
--webkit-overflow-scrolling: touch;
-}
-}
+ @media (max-width: 768px) {
+ button:active {
+ transform: scale(0.98);
+ }
+ 
+ select, input {
+ font-size: 16px;
+ }
+ 
+ * {
+ -webkit-tap-highlight-color: transparent;
+ }
+ 
+ /* 确保 sticky 元素正常工作 */
+ .sticky-title {
+ position: sticky;
+ z-index: 40;
+ }
+ }
 
 /* iPhone X及以上适配 */
 @supports (padding: max(0px)) {
@@ -154,7 +159,6 @@ padding-bottom: max(8px, env(safe-area-inset-bottom));
 /* 华为手机优化 */
 @media screen and (device-aspect-ratio: 9/16) {
 body {
-overscroll-behavior-y: none;
 }
 }
 
@@ -332,84 +336,82 @@ confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blu
 </div>
 
 <!-- 顶部导航栏 - PC端 -->
-<nav class="hidden md:flex bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
-            <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
-                <div class="flex justify-between items-center h-full">
-                    <!-- 左侧：面包屑导航 -->
-                    <div class="flex items-center space-x-3">
-                        <a href="../../portal/index.html" 
-                           class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                            </svg>
-                            <span>首页</span>
-                        </a>
-                        
-                        <div class="h-6 w-px bg-slate-600"></div>
-                        
-                        <h1 class="text-lg font-bold flex items-center">
-                            <span class="text-xl mr-2">⚙️</span>
-                            <span>会议室管理后台</span>
-                        </h1>
-                    </div>
-                    
-                    <!-- 右侧：快捷功能 + 用户信息 -->
-                    <div class="flex items-center space-x-3">
-                        <!-- 数据概览快捷入口 -->
-                        <button @click="currentTab = 'dashboard'" 
-                                class="hidden md:flex items-center space-x-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition text-sm">
-                            <span>📊</span>
-                            <span>数据概览</span>
-                        </button>
-                        
-                        <!-- 用户视角快捷切换 -->
-                        <div class="hidden md:flex bg-slate-700 rounded-lg px-2 py-1 space-x-1">
-                            <a href="index.html" class="px-2 py-1 text-sm hover:bg-slate-600 rounded transition">📋 用户端</a>
-                        </div>
-                        
-                        <!-- 管理员信息 -->
-                        <div v-if="user" class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
-                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
-                                {{ (user.real_name || user.username || '管').charAt(0) }}
-                            </div>
-                            <span class="hidden md:block text-sm">{{ user.real_name || user.username || '管理员' }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-</nav>
-
-<!-- 移动端顶部导航栏 -->
-<nav class="md:hidden fixed top-0 left-0 right-0 bg-slate-800 text-white shadow-lg z-50 nav-bar" 
-style="padding-top: var(--safe-area-inset-top);">
-<div class="flex items-center justify-between h-14 px-4">
-<h1 class="text-base font-bold flex items-center">
-<span class="mr-2">⚙️</span>
-<span>会议室管理</span>
-</h1>
-<div v-if="user" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
-{{ (user.real_name || user.username || '管').charAt(0) }}
-</div>
-</div>
-</nav>
+ <nav class="hidden md:flex bg-slate-800 text-white shadow-lg z-50 h-16 flex-shrink-0">
+ <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+ <!-- 左侧：面包屑导航 -->
+ <div class="flex items-center space-x-3">
+ <a href="../../portal/index.html" 
+ class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
+ <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+ </svg>
+ <span>首页</span>
+ </a>
+ 
+ <div class="h-6 w-px bg-slate-600"></div>
+ 
+ <h1 class="text-lg font-bold flex items-center">
+ <span class="text-xl mr-2">⚙️</span>
+ <span>会议室管理后台</span>
+ </h1>
+ </div>
+ 
+ <!-- 右侧：快捷功能 + 用户信息 -->
+ <div class="flex items-center space-x-3">
+ <!-- 数据概览快捷入口 -->
+ <button @click="currentTab = 'dashboard'" 
+ class="hidden md:flex items-center space-x-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition text-sm">
+ <span>📊</span>
+ <span>数据概览</span>
+ </button>
+ 
+ <!-- 用户视角快捷切换 -->
+ <div class="hidden md:flex bg-slate-700 rounded-lg px-2 py-1 space-x-1">
+ <a href="index.html" class="px-2 py-1 text-sm hover:bg-slate-600 rounded transition">📋 用户端</a>
+ </div>
+ 
+ <!-- 管理员信息 -->
+ <div v-if="user" class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
+ <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+ {{ (user.real_name || user.username || '管').charAt(0) }}
+ </div>
+ <span class="hidden md:block text-sm">{{ user.real_name || user.username || '管理员' }}</span>
+ </div>
+ </div>
+ </div>
+ </nav>
+ 
+ <!-- 移动端顶部导航栏 -->
+ <nav class="md:hidden bg-slate-800 text-white shadow-lg z-50 nav-bar flex-shrink-0" 
+ style="padding-top: var(--safe-area-inset-top);">
+ <div class="flex items-center justify-between h-14 px-4">
+ <h1 class="text-base font-bold flex items-center">
+ <span class="mr-2">⚙️</span>
+ <span>会议室管理</span>
+ </h1>
+ <div v-if="user" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+ {{ (user.real_name || user.username || '管').charAt(0) }}
+ </div>
+ </div>
+ </nav>
 
 <!-- 移动端底部导航栏 -->
-<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav"
-style="padding-bottom: var(--safe-area-inset-bottom);">
-<div class="grid grid-cols-5 h-16">
-<div v-for="(item, index) in mobileMenuItems" :key="item.id"
-@click="item.id === 'more' ? showMobileMoreMenu = true : currentTab = item.id"
-:class="currentTab === item.id ? 'text-blue-600' : 'text-gray-600'"
-class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200 relative">
-<span class="text-xl mb-1">{{ item.icon }}</span>
-<span class="text-xs font-medium">{{ item.label }}</span>
-<div v-if="item.badge > 0" 
-class="absolute top-1 right-1/2 transform translate-x-6 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-{{ item.badge > 9 ? '9+' : item.badge }}
-</div>
-</div>
-</div>
-</nav>
+ <nav class="md:hidden bg-white border-t border-gray-200 z-50 bottom-nav flex-shrink-0"
+ style="padding-bottom: var(--safe-area-inset-bottom);">
+ <div class="grid grid-cols-5 h-16">
+ <div v-for="(item, index) in mobileMenuItems" :key="item.id"
+ @click="item.id === 'more' ? showMobileMoreMenu = true : currentTab = item.id"
+ :class="currentTab === item.id ? 'text-blue-600' : 'text-gray-600'"
+ class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200 relative">
+ <span class="text-xl mb-1">{{ item.icon }}</span>
+ <span class="text-xs font-medium">{{ item.label }}</span>
+ <div v-if="item.badge > 0" 
+ class="absolute top-1 right-1/2 transform translate-x-6 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+ {{ item.badge > 9 ? '9+' : item.badge }}
+ </div>
+ </div>
+ </div>
+ </nav>
 
 <!-- 移动端"更多"菜单抽屉 -->
 <div v-if="showMobileMoreMenu" class="md:hidden fixed inset-0 z-50" @click="showMobileMoreMenu = false">
@@ -441,37 +443,48 @@ class="absolute top-2 right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full
 </div>
 
 <!-- 主体布局：侧边栏 + 内容区 -->
-<div class="flex min-h-screen">
-<!-- PC端侧边栏导航 -->
-<aside class="hidden lg:block w-60 bg-slate-900 h-[calc(100vh-4rem)] fixed top-16 left-0 overflow-y-auto">
-<nav class="py-4">
-<!-- 菜单项 -->
-<div v-for="item in menuItems" :key="item.id"
-@click="currentTab = item.id"
-:class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
-class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
-<div class="flex items-center space-x-3">
-<span class="text-xl">{{ item.icon }}</span>
-<span class="text-sm font-medium">{{ item.label }}</span>
-</div>
-<!-- 待办提醒徽章 -->
-<span v-if="item.badge > 0" 
-class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-{{ item.badge }}
-</span>
-</div>
-</nav>
-            </aside>
-
-<!-- 内容区域 -->
-<main class="flex-1 bg-gray-50 lg:ml-60 pt-14 md:pt-0 pb-20 md:pb-0"
-style="padding-top: calc(56px + var(--safe-area-inset-top)); padding-bottom: calc(64px + var(--safe-area-inset-bottom));">
-<div class="md:pt-6 pb-6 md:pb-6">
-<div class="max-w-7xl mx-auto py-4 md:py-6">
+ <div class="flex flex-1 overflow-hidden">
+ <!-- PC端侧边栏导航 -->
+ <aside class="hidden lg:block w-60 bg-slate-900 overflow-y-auto flex-shrink-0">
+ <nav class="py-4">
+ <!-- 菜单项 -->
+ <div v-for="item in menuItems" :key="item.id"
+ @click="currentTab = item.id"
+ :class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+ class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
+ <div class="flex items-center space-x-3">
+ <span class="text-xl">{{ item.icon }}</span>
+ <span class="text-sm font-medium">{{ item.label }}</span>
+ </div>
+ <!-- 待办提醒徽章 -->
+ <span v-if="item.badge > 0" 
+ class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+ {{ item.badge }}
+ </span>
+ </div>
+ </nav>
+ </aside>
+ 
+ <!-- 内容区域 - 独立滚动容器 -->
+ <main class="flex-1 bg-gray-50 overflow-y-auto"
+ style="-webkit-overflow-scrolling: touch;">
+ <div class="pt-4 md:pt-6 pb-20 md:pb-8">
+ <div class="max-w-7xl mx-auto">
                     
 <!-- 数据看板 -->
-<div v-if="currentTab === 'dashboard'" class="space-y-6 px-4 md:px-6 lg:px-8">
-<h2 class="text-xl md:text-2xl font-bold text-gray-800">📊 数据看板</h2>
+ <div v-if="currentTab === 'dashboard'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <h2 class="text-lg font-bold text-gray-800">📊 数据看板</h2>
+ </div>
+ 
+ <!-- PC端顶部标题 -->
+ <div class="hidden md:block px-4 md:px-6 lg:px-8">
+ <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">📊 数据看板</h2>
+ </div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
                         
                         <!-- 今日数据卡片 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -554,16 +567,30 @@ style="padding-top: calc(56px + var(--safe-area-inset-top)); padding-bottom: cal
                             </div>
                         </div>
                     </div>
+</div>
 
 <!-- 会议室管理 -->
-<div v-if="currentTab === 'rooms'" class="space-y-6 px-4 md:px-6 lg:px-8">
-<div class="flex justify-between items-center">
+ <div v-if="currentTab === 'rooms'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4 flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">会议室列表</h2>
+ <button @click="openAddRoom()" 
+ class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-600 transition shadow">
+ + 新增
+ </button>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
 <h2 class="text-xl md:text-2xl font-bold text-gray-800">会议室列表</h2>
 <button @click="openAddRoom()" 
 class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition shadow">
 + 新增
 </button>
 </div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
 
                 <!-- 会议室卡片 -->
                 <div class="grid md:grid-cols-2 gap-6">
@@ -632,24 +659,24 @@ class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transitio
                     </button>
                 </div>
             </div>
+</div>
 
 <!-- 预约记录 -->
-<div v-if="currentTab === 'bookings'" class="space-y-4 md:space-y-6">
-<!-- 移动端顶部标题 - 固定不滚动 -->
-<div class="md:hidden sticky top-14 bg-gray-50 z-40 px-4 py-3 border-b border-gray-200 shadow-sm"
-style="top: calc(56px + var(--safe-area-inset-top));">
-<div class="flex items-center justify-between">
-<h2 class="text-lg font-bold text-gray-800">预约管理</h2>
-<button @click="showMobileFilter = !showMobileFilter"
-class="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md">
-<span>🔍</span>
-<span>筛选</span>
-</button>
-</div>
-</div>
+ <div v-if="currentTab === 'bookings'" class="space-y-4 md:space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <div class="flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">预约管理</h2>
+ <button @click="showMobileFilter = !showMobileFilter"
+ class="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md">
+ <span>🔍</span>
+ <span>筛选</span>
+ </button>
+ </div>
+ </div>
 
 <!-- PC端顶部标题 -->
-<div class="hidden md:flex items-center justify-between mb-4 px-4">
+<div class="hidden md:flex items-center justify-between mb-4 px-4 md:px-6 lg:px-8">
 <h2 class="text-2xl font-bold text-gray-800">预约管理</h2>
 </div>
 
@@ -733,6 +760,7 @@ class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-sh
 </div>
 
 <!-- PC端统计卡片区域 -->
+<div class="px-4 md:px-6 lg:px-8">
 <div class="hidden md:block mb-6">
 <!-- 状态统计 -->
 <div class="grid grid-cols-6 gap-3 mb-4">
@@ -822,6 +850,7 @@ class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translat
 <div class="text-right">
 <div class="text-xs font-medium" :class="timeFilter === 'month' ? 'text-teal-200' : 'text-teal-500'">收入</div>
 <div class="text-xl font-bold mt-1" :class="timeFilter === 'month' ? '' : 'text-teal-700'">¥{{ bookingStats.monthRevenue }}</div>
+</div>
 </div>
 </div>
 </div>
@@ -943,6 +972,7 @@ class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
 </div>
 
 <!-- 筛选状态Tag -->
+<div class="px-4 md:px-6 lg:px-8">
 <div v-if="hasActiveFilters" class="flex items-center space-x-2 mb-3 flex-wrap">
 <span class="text-xs text-gray-500">当前筛选：</span>
 <div v-if="filterStatus" @click="filterStatus = ''"
@@ -1331,9 +1361,10 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
 </div>
 </div>
 </div>
+</div>
 
 <!-- 使用统计 -->
-            <div v-if="currentTab === 'stats'" class="space-y-6">
+<div v-if="currentTab === 'stats'" class="space-y-6">
                 <div class="grid md:grid-cols-3 gap-6">
                     <div class="bg-white rounded-xl shadow p-6">
                         <div class="text-sm text-gray-500 mb-2">今日预约</div>
@@ -1366,24 +1397,33 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
 </div>
 
 <!-- 审批中心 -->
-<div v-if="currentTab === 'approvals'" class="space-y-6 px-4 md:px-6 lg:px-8">
-<div class="flex justify-between items-center">
+ <div v-if="currentTab === 'approvals'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <h2 class="text-lg font-bold text-gray-800">审批中心</h2>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
 <h2 class="text-xl md:text-2xl font-bold text-gray-800">审批中心</h2>
-                    <div class="flex gap-3">
-                        <select v-model="approvalFilter" 
-                                class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">全部状态</option>
-                            <option value="pending">待审批</option>
-                            <option value="approved">已批准</option>
-                            <option value="rejected">已拒绝</option>
-                        </select>
-                        <button v-if="selectedApprovals.length > 0"
-                                @click="batchApproveApprovals()"
-                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                            批量批准 ({{ selectedApprovals.length }})
-                        </button>
-                    </div>
-                </div>
+<div class="flex gap-3">
+<select v-model="approvalFilter" 
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<option value="">全部状态</option>
+<option value="pending">待审批</option>
+<option value="approved">已批准</option>
+<option value="rejected">已拒绝</option>
+</select>
+<button v-if="selectedApprovals.length > 0"
+@click="batchApproveApprovals()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+批量批准 ({{ selectedApprovals.length }})
+</button>
+</div>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
                 
                 <!-- 统计卡片 -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1507,18 +1547,32 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
                     <div v-if="filteredApprovals.length === 0" class="text-center py-16 text-gray-500">
                         <p>暂无审批记录</p>
                     </div>
-                </div>
-            </div>
+</div>
+</div>
+</div>
 
 <!-- 财务结算 -->
-<div v-if="currentTab === 'finance'" class="space-y-6 px-4 md:px-6 lg:px-8">
-<div class="flex justify-between items-center">
+ <div v-if="currentTab === 'finance'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4 flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">财务结算</h2>
+ <button @click="createSettlement()"
+ class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-600 transition shadow">
+ + 创建结算
+ </button>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
 <h2 class="text-xl md:text-2xl font-bold text-gray-800">财务结算</h2>
-                    <button @click="createSettlement()"
-                            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                        + 创建结算批次
-                    </button>
-                </div>
+<button @click="createSettlement()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
++ 创建结算批次
+</button>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
                 
                 <!-- 统计卡片 -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1693,26 +1747,36 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
                     </div>
                 </div>
             </div>
+</div>
 
 <!-- 统计报表（增强版） -->
-<div v-if="currentTab === 'reports'" class="space-y-6 px-4 md:px-6 lg:px-8">
-<div class="flex justify-between items-center">
+<div v-if="currentTab === 'reports'" class="space-y-6">
+<!-- 移动端顶部标题 - 固定不滚动 -->
+<div class="md:hidden sticky top-16 bg-gray-50/95 backdrop-blur-sm z-40 px-4 py-3 border-b border-gray-200 shadow-sm">
+<h2 class="text-lg font-bold text-gray-800">统计报表</h2>
+</div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
 <h2 class="text-xl md:text-2xl font-bold text-gray-800">统计报表</h2>
-                    <div class="flex gap-3">
-                        <input type="date" v-model="reportStartDate"
-                               class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <input type="date" v-model="reportEndDate"
-                               class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button @click="loadReportData()"
-                                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-                            查询
-                        </button>
-                        <button @click="exportReport()"
-                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                            导出报表
-                        </button>
-                    </div>
-                </div>
+<div class="flex gap-3">
+<input type="date" v-model="reportStartDate"
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<input type="date" v-model="reportEndDate"
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<button @click="loadReportData()"
+class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+查询
+</button>
+<button @click="exportReport()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+导出报表
+</button>
+</div>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
                 
                 <!-- 总览统计 -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1830,10 +1894,22 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
                     </div>
                 </div>
             </div>
+</div>
 
 <!-- 系统设置 -->
-<div v-if="currentTab === 'settings'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<div v-if="currentTab === 'settings'" class="space-y-6">
+<!-- 移动端顶部标题 - 固定不滚动 -->
+<div class="md:hidden sticky top-16 bg-gray-50/95 backdrop-blur-sm z-40 px-4 py-3 border-b border-gray-200 shadow-sm">
+<h2 class="text-lg font-bold text-gray-800">系统设置</h2>
+</div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:block px-4 md:px-6 lg:px-8 mb-4">
 <h2 class="text-xl md:text-2xl font-bold text-gray-800">系统设置</h2>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
                 
                 <!-- 基础设置 -->
                 <div class="bg-white rounded-xl shadow p-6">
@@ -1987,11 +2063,12 @@ class="px-3 py-1 border border-gray-300 rounded text-sm">
                         保存设置
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
+</div>
+</div>
+</div>
+</div>
 
-    <!-- 预约详情弹窗 -->
+<!-- 预约详情弹窗 -->
 <div v-if="showBookingDetail && selectedBooking" 
 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
 @click="showBookingDetail = false">
@@ -2258,9 +2335,6 @@ class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition 
             </div>
         </div>
 </div>
-
-<!-- 关闭flex容器和main -->
-</main>
 
 <script>
         const { createApp, ref, computed, onMounted, watch } = Vue;

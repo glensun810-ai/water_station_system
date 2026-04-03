@@ -4695,7 +4695,14 @@ if FRONTEND_DIR.exists():
         StaticFiles(directory=str(FRONTEND_DIR), html=True),
         name="frontend",
     )
+    app.mount(
+        "/water-admin",
+        StaticFiles(directory=str(FRONTEND_DIR), html=True),
+        name="water-admin",
+    )
     print(f"✓ 前端目录已挂载: {FRONTEND_DIR}")
+    print(f"  - /frontend → 登录/管理后台")
+    print(f"  - /water-admin → 水站管理后台")
 else:
     print(f"⚠ 前端目录不存在: {FRONTEND_DIR}")
 
@@ -4726,6 +4733,7 @@ print("=" * 50)
 print("\n访问地址:")
 print("  - 登录页面: http://localhost:8080/frontend/login.html")
 print("  - 管理后台: http://localhost:8080/frontend/admin.html")
+print("  - 水站管理后台: http://localhost:8080/water-admin/login.html")
 print("  - 预约页面: http://localhost:8080/frontend/index.html")
 print("  - API文档:  http://localhost:8080/docs")
 print("\n默认管理员:")
