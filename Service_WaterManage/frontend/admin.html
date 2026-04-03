@@ -6586,29 +6586,56 @@
                     };
                 });
 
-                const loadData = async () => {
-                    try {
-                        const [usersRes, productsRes, categoriesRes] = await Promise.all([
-                            fetch(`${API_BASE}/users`),
-                            fetch(`${API_BASE}/products`),
-                            fetch(`${API_BASE}/admin/product-categories`).then(r => r.ok ? r : Promise.resolve({ok: false}))
-                        ]);
-                        // 即使部分API失败也继续
-                        if (usersRes.ok) users.value = await usersRes.json();
-                        if (productsRes.ok) products.value = await productsRes.json();
-                        if (categoriesRes.ok) productCategories.value = await categoriesRes.json();
-                        
-                        API_AVAILABLE.value = true;
-                        apiError.value = null;
-                    } catch (e) {
-                        console.error('Failed to load data:', e);
-                        // 不强制显示错误，让页面继续运行
-                        if ((users.value || []).length === 0 && (products.value || []).length === 0) {
-                            API_AVAILABLE.value = false;
-                            apiError.value = '部分数据加载失败，请刷新页面重试';
-                        }
-                    }
-                };
+const loadData = async () => {
+ try {
+ const [usersRes, productsRes, categoriesRes] = await Promise.all([
+ fetch(`${API_BASE}/users`),
+ fetch(`${API_BASE}/products`),
+ fetch(`${API_BASE}/admin/product-categories`).then(r => r.ok ? r : Promise.resolve({ok: false}))
+ ]);
+ // 即使部分API失败也继续
+ if (usersRes.ok) users.value = await usersRes.json();
+ if (productsRes.ok) products.value = await productsRes.json();
+ if (categoriesRes.ok) productCategories.value = await categoriesRes.json();
+ 
+ API_AVAILABLE.value = true;
+ apiError.value = null;
+ } catch (e) {
+ console.error('Failed to load data:', e);
+ // 不强制显示错误，让页面继续运行
+ if ((users.value || []).length === 0 && (products.value || []).length === 0) {
+ API_AVAILABLE.value = false;
+ apiError.value = '部分数据加载失败，请刷新页面重试';
+ }
+ }
+ };
+ 
+ // 单独加载商品数据
+ const loadProducts = async () => {
+ console.log('[loadProducts] 开始加载商品数据...');
+ try {
+ const token = localStorage.getItem('token');
+ const headers = {};
+ if (token) {
+ headers['Authorization'] = `Bearer ${token}`;
+ }
+ 
+ const res = await fetch(`${API_BASE}/products`, { headers });
+ if (!res.ok) {
+ console.error('[loadProducts] 加载失败:', res.status);
+ products.value = [];
+ return;
+ }
+ 
+ const data = await res.json();
+ products.value = data;
+ console.log('[loadProducts] 加载成功:', data.length, '个商品 ✓');
+ 
+ } catch (e) {
+ console.error('[loadProducts] 加载失败:', e);
+ products.value = [];
+ }
+ };
 
                 // 办公室管理函数
                 const loadOffices = async () => {
@@ -7087,76 +7114,107 @@
                     return result;
                 });
 
-                const loadDashboard = async () => {
-                    try {
-                        // 分别加载每个统计数据，即使部分失败也能显示其他数据
-                        const loadReport = async () => {
-                            try {
-                                const res = await fetch(`${API_BASE}/admin/report`);
-                                return res.ok ? await res.json() : [];
-                            } catch (e) {
-                                console.error('Failed to load report:', e);
-                                return [];
-                            }
-                        };
+const loadDashboard = async () => {
+ console.log('[loadDashboard] 开始加载首页数据...');
+ 
+ try {
+ // 定义各个加载函数（保持原有结构）
+ const loadReport = async () => {
+ try {
+ const res = await fetch(`${API_BASE}/admin/report`);
+ if (!res.ok) {
+ console.error('[loadDashboard] 加载report失败:', res.status);
+ return [];
+ }
+ const data = await res.json();
+ console.log('[loadDashboard] report加载成功:', data.length, '条');
+ return data;
+ } catch (e) {
+ console.error('[loadDashboard] 加载report异常:', e);
+ return [];
+ }
+ };
 
-                        const loadAlerts = async () => {
-                            try {
-                                const res = await fetch(`${API_BASE}/admin/inventory-alert?threshold=10`);
-                                return res.ok ? await res.json() : [];
-                            } catch (e) {
-                                console.error('Failed to load alerts:', e);
-                                return [];
-                            }
-                        };
+ const loadAlerts = async () => {
+ try {
+ const res = await fetch(`${API_BASE}/admin/inventory-alert?threshold=10`);
+ if (!res.ok) {
+ console.error('[loadDashboard] 加载alerts失败:', res.status);
+ return [];
+ }
+ const data = await res.json();
+ console.log('[loadDashboard] alerts加载成功:', data.length, '条');
+ return data;
+ } catch (e) {
+ console.error('[loadDashboard] 加载alerts异常:', e);
+ return [];
+ }
+ };
 
-                        const loadSummary = async () => {
-                            try {
-                                const res = await fetch(`${API_BASE}/admin/dashboard/summary`);
-                                return res.ok ? await res.json() : {};
-                            } catch (e) {
-                                console.error('Failed to load summary:', e);
-                                return {};
-                            }
-                        };
+ const loadSummary = async () => {
+ try {
+ const res = await fetch(`${API_BASE}/admin/dashboard/summary`);
+ if (!res.ok) {
+ console.error('[loadDashboard] 加载summary失败:', res.status);
+ return {};
+ }
+ const data = await res.json();
+ console.log('[loadDashboard] summary加载成功:', Object.keys(data).length, '个指标');
+ return data;
+ } catch (e) {
+ console.error('[loadDashboard] 加载summary异常:', e);
+ return {};
+ }
+ };
 
-                        const loadQuickStats = async () => {
-                            try {
-                                const res = await fetch(`${API_BASE}/admin/dashboard/quick-stats`);
-                                return res.ok ? await res.json() : {};
-                            } catch (e) {
-                                console.error('Failed to load quick stats:', e);
-                                return {};
-                            }
-                        };
+ const loadQuickStats = async () => {
+ try {
+ const res = await fetch(`${API_BASE}/admin/dashboard/quick-stats`);
+ if (!res.ok) {
+ console.error('[loadDashboard] 加载quick-stats失败:', res.status);
+ return {};
+ }
+ const data = await res.json();
+ console.log('[loadDashboard] quick-stats加载成功:', Object.keys(data).length, '个指标');
+ return data;
+ } catch (e) {
+ console.error('[loadDashboard] 加载quick-stats异常:', e);
+ return {};
+ }
+ };
 
-                        // 并行加载所有数据
-                        const [reportRes, alertsRes, summaryRes, quickStatsRes] = await Promise.all([
-                            loadReport(),
-                            loadAlerts(),
-                            loadSummary(),
-                            loadQuickStats()
-                        ]);
+ // 并行加载所有数据
+ console.log('[loadDashboard] 并行加载4个数据源...');
+ const [reportRes, alertsRes, summaryRes, quickStatsRes] = await Promise.all([
+ loadReport(),
+ loadAlerts(),
+ loadSummary(),
+ loadQuickStats()
+ ]);
 
-                        departmentReport.value = reportRes || [];
-                        inventoryAlerts.value = alertsRes || [];
-                        dashboardSummary.value = summaryRes || {};
-                        quickStats.value = quickStatsRes || {};
-                        
-                        console.log('Dashboard loaded:', {
-                            report: departmentReport.value.length,
-                            alerts: inventoryAlerts.value.length,
-                            summary: Object.keys(dashboardSummary.value).length,
-                            quickStats: Object.keys(quickStats.value).length
-                        });
-                    } catch (e) {
-                        console.error('Failed to load dashboard:', e);
-                        departmentReport.value = [];
-                        inventoryAlerts.value = [];
-                        dashboardSummary.value = {};
-                        quickStats.value = {};
-                    }
-                };
+ // 使用 ?? 运算符，确保null也被处理
+ departmentReport.value = reportRes ?? [];
+ inventoryAlerts.value = alertsRes ?? [];
+ dashboardSummary.value = summaryRes ?? {};
+ quickStats.value = quickStatsRes ?? {};
+ 
+ console.log('[loadDashboard] 首页数据加载完成 ✓');
+ console.log('[loadDashboard] 数据统计:', {
+ report: departmentReport.value.length,
+ alerts: inventoryAlerts.value.length,
+ summaryKeys: Object.keys(dashboardSummary.value).length,
+ quickStatsKeys: Object.keys(quickStats.value).length
+ });
+ 
+ } catch (e) {
+ console.error('[loadDashboard] 加载首页数据失败:', e);
+ // 失败时保留现有数据，不强制清空
+ if (departmentReport.value.length === 0) departmentReport.value = [];
+ if (inventoryAlerts.value.length === 0) inventoryAlerts.value = [];
+ if (Object.keys(dashboardSummary.value).length === 0) dashboardSummary.value = {};
+ if (Object.keys(quickStats.value).length === 0) quickStats.value = {};
+ }
+ };
 
                 const loadApplications = async () => {
                     try {
@@ -8601,26 +8659,68 @@
                 // ========== 新增：导航增强功能 ==========
                 
                 // 导航到指定页面
-                const navigateTo = (tab) => {
-                    activeTab.value = tab;
-                    sidebarMobileOpen.value = false; // 关闭移动端侧边栏
-                    // 滚动到顶部
-                    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    // 加载对应数据
-                    if (tab === 'offices') loadOffices();
-                    if (tab === 'users') loadOffices(); // 用户管理需要办公室列表
-                    if (tab === 'officeAccounts') { loadOffices(); loadOfficeAccounts(); }
-                    if (tab === 'officePickups') loadOfficePickups();
-                    if (tab === 'settlement') { 
-                        selectedSettlementApps.value = []; 
-                        expandedSettlementAppId.value = null; 
-                        settlementTab.value = 'applied'; // 默认显示付款待确认
-                        loadSettlementStats(); 
-                        loadOfficeSettlements(); 
-                    }
-                    if (tab === 'officeSettlement') loadOfficeSettlements();
-                    if (tab === 'remind') { loadReminderSettings(); loadRemindData(); }
-                };
+const navigateTo = async (tab) => {
+ console.log(`[navigateTo] 切换到 ${tab} 页面`);
+ 
+ // 1. 切换tab状态
+ activeTab.value = tab;
+ sidebarMobileOpen.value = false;
+ 
+ // 2. 滚动到顶部
+ setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+ 
+ // 3. 等待数据加载完成
+ try {
+ // 并行加载基础数据（如果有依赖）
+ if (tab === 'users' || tab === 'officeAccounts' || tab === 'officePickups') {
+ await loadOffices(); // 先加载办公室列表，作为基础数据
+ }
+ 
+ // 根据tab加载对应数据
+ if (tab === 'dashboard') {
+ console.log('[navigateTo] 加载首页数据');
+ await loadDashboard();
+ }
+ else if (tab === 'offices') {
+ console.log('[navigateTo] 加载办公室数据');
+ await loadOffices();
+ }
+ else if (tab === 'officePickups') {
+ console.log('[navigateTo] 加载领水记录');
+ await loadOfficePickups();
+ }
+ else if (tab === 'settlement') {
+ console.log('[navigateTo] 加载结算记录');
+ selectedSettlementApps.value = []; 
+ expandedSettlementAppId.value = null; 
+ settlementTab.value = 'applied';
+ 
+ // 并行加载结算相关数据
+ await Promise.all([
+ loadSettlementStats(),
+ loadOfficeSettlements()
+ ]);
+ }
+ else if (tab === 'officeAccounts') {
+ console.log('[navigateTo] 加载预付账户');
+ await loadOfficeAccounts();
+ }
+ else if (tab === 'products') {
+ console.log('[navigateTo] 加载商品数据');
+ await loadProducts();
+ }
+ else if (tab === 'trash') {
+ console.log('[navigateTo] 加载回收站');
+ await loadTrashList();
+ }
+ 
+ console.log(`[navigateTo] ${tab} 页面数据加载完成`);
+ 
+ } catch (error) {
+ console.error(`[navigateTo] 加载 ${tab} 数据失败:`, error);
+ // 不阻塞页面切换，允许用户看到空页面并手动刷新
+ }
+ };
 
                 // 导航到用户管理页面（独立页面）
                 const navigateToUsersPage = () => {
@@ -8982,50 +9082,85 @@
 
 onMounted(async () => {
  console.log('=== Vue onMounted Called ===');
- console.log('Current state:', { isLoading: isLoading.value, authError: authError.value, activeTab: activeTab.value });
+ console.log('Initial activeTab:', activeTab.value);
  
- // 添加滚动监听
+ // 1. 添加事件监听
  window.addEventListener('scroll', handleScroll);
- // 添加快捷键监听
  window.addEventListener('keydown', handleKeydown);
  
- // 先检查登录状态（等待完成）
- await checkAuth();
+ // 2. 检查认证状态（必须等待完成）
+ const authPassed = await checkAuth();
  
- // 认证通过后才加载数据
- if (!authError.value && user.value) {
- console.log('Auth passed, loading data...');
+ // 3. 认证通过后才加载数据
+ if (!authPassed) {
+ console.log('[onMounted] 认证失败，跳过数据加载');
+ return; // 明确退出，不执行后续代码
+ }
  
- // 加载基础数据
+ // 4. 双重检查（确保状态正确）
+ if (!user.value || authError.value) {
+ console.log('[onMounted] 认证状态异常，跳过数据加载');
+ return;
+ }
+ 
+ console.log('[onMounted] 认证通过，开始加载数据...');
+ 
+ try {
+ // 4.1 加载基础数据（所有页面都需要）
+ console.log('[onMounted] 加载基础数据...');
  await Promise.all([
- loadOffices(),
- loadUsersData()
+ loadProducts(),      // 添加：商品列表（多处依赖）
+ loadOffices(),       // 办公室列表
+ loadUsersData()      // 用户列表
  ]);
+ console.log('[onMounted] 基础数据加载完成');
  
- // 根据当前标签页加载对应数据
- if (activeTab.value === 'dashboard') {
- console.log('Initial load: dashboard tab active');
+ // 4.2 总是加载首页数据（确保首页有数据）
+ console.log('[onMounted] 加载首页数据...');
  await loadDashboard();
- }
- if (activeTab.value === 'offices') {
- await loadOffices();
- }
+ console.log('[onMounted] 首页数据加载完成');
+ 
+ // 4.3 根据当前tab加载额外数据
+ console.log(`[onMounted] 当前tab: ${activeTab.value}`);
+ 
  if (activeTab.value === 'officePickups') {
+ console.log('[onMounted] 加载领水记录...');
  await loadOfficePickups();
  }
- if (activeTab.value === 'settlement') {
+ else if (activeTab.value === 'settlement') {
+ console.log('[onMounted] 加载结算数据...');
  selectedSettlementApps.value = [];
- await loadSettlementStats();
- await loadOfficeSettlements();
+ expandedSettlementAppId.value = null;
+ settlementTab.value = 'applied';
+ 
+ await Promise.all([
+ loadSettlementStats(),
+ loadOfficeSettlements()
+ ]);
  }
- if (activeTab.value === 'officeAccounts') {
+ else if (activeTab.value === 'officeAccounts') {
+ console.log('[onMounted] 加载预付账户...');
  await loadOfficeAccounts();
  }
- if (activeTab.value === 'officeSettlement') {
- await loadOfficeSettlement();
+ else if (activeTab.value === 'products') {
+ console.log('[onMounted] 加载商品详情...');
+ // 已经在基础数据中加载，这里可以加载额外信息
+ if (typeof loadInventoryAlertConfigs === 'function') {
+ await loadInventoryAlertConfigs();
+ }
+ }
+ else if (activeTab.value === 'trash') {
+ console.log('[onMounted] 加载回收站...');
+ if (typeof loadTrashList === 'function') {
+ await loadTrashList();
+ }
  }
  
- console.log('All initial data loaded');
+ console.log('[onMounted] 所有数据加载完成 ✓');
+ 
+ } catch (error) {
+ console.error('[onMounted] 数据加载失败:', error);
+ // 不阻塞页面显示，允许用户手动刷新
  }
  });
 
