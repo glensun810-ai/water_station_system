@@ -1,18 +1,181 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>会议室管理后台 - AI产业集群空间服务管理平台</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <script src="vue.global.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>[v-cloak]{display:none!important}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1e293b">
+<meta name="format-detection" content="telephone=no">
+<title>会议室管理后台 - AI产业集群空间服务管理平台</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script src="vue.global.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+[v-cloak]{display:none!important}
+
+/* CSS变量 - 安全区域 */
+:root {
+--safe-area-inset-top: env(safe-area-inset-top, 0px);
+--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+--safe-area-inset-left: env(safe-area-inset-left, 0px);
+--safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* 防止横向溢出 */
+html, body {
+overflow-x: hidden;
+width: 100%;
+max-width: 100vw;
+}
+
+body {
+padding-top: var(--safe-area-inset-top);
+padding-bottom: var(--safe-area-inset-bottom);
+-webkit-overflow-scrolling: touch;
+overscroll-behavior-y: contain;
+position: relative;
+}
+
+/* 所有容器防止溢出 */
+* {
+max-width: 100%;
+box-sizing: border-box;
+}
+
+/* 文本自动换行 */
+p, span, div {
+word-wrap: break-word;
+word-break: break-word;
+}
+
+/* 移动端优化样式 */
+.scrollbar-hide::-webkit-scrollbar {
+display: none;
+}
+
+.scrollbar-hide {
+-ms-overflow-style: none;
+scrollbar-width: none;
+}
+
+/* 抽屉动画 */
+@keyframes slideUp {
+from {
+transform: translateY(100%);
+}
+to {
+transform: translateY(0);
+}
+}
+
+.animate-slide-up {
+animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 淡入动画 */
+@keyframes fadeIn {
+from {
+opacity: 0;
+transform: translateY(10px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+/* 触摸反馈 */
+@keyframes tapFeedback {
+0% {
+transform: scale(1);
+}
+50% {
+transform: scale(0.95);
+}
+100% {
+transform: scale(1);
+}
+}
+
+.tap-feedback:active {
+animation: tapFeedback 0.15s ease-in-out;
+}
+
+/* 下拉刷新动画 */
+@keyframes rotate {
+0% {
+transform: rotate(0deg);
+}
+100% {
+transform: rotate(360deg);
+}
+}
+
+.rotate {
+animation: rotate 1s linear infinite;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+button:active {
+transform: scale(0.98);
+}
+
+select, input {
+font-size: 16px; /* 防止iOS缩放 */
+}
+
+/* 优化触摸高亮 */
+* {
+-webkit-tap-highlight-color: transparent;
+}
+
+/* 平滑滚动 */
+body {
+-webkit-overflow-scrolling: touch;
+}
+}
+
+/* iPhone X及以上适配 */
+@supports (padding: max(0px)) {
+.nav-bar {
+padding-left: max(16px, env(safe-area-inset-left));
+padding-right: max(16px, env(safe-area-inset-right));
+}
+
+.bottom-nav {
+padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+}
+
+/* 华为手机优化 */
+@media screen and (device-aspect-ratio: 9/16) {
+body {
+overscroll-behavior-y: none;
+}
+}
+
+/* 小屏幕优化 (420px及以下) */
+@media (max-width: 420px) {
+.text-lg, .text-xl, .text-2xl {
+font-size: 1rem;
+}
+
+.p-4, .p-6 {
+padding: 0.875rem;
+}
+
+.space-y-6 > * + * {
+margin-top: 1rem;
+}
+}
+</style>
 </head>
 <body class="bg-gray-50">
-    <div id="app" v-cloak>
-        <!-- 顶部导航栏 - 管理员专属 -->
-        <nav class="bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
+<div id="app" v-cloak>
+<!-- 顶部导航栏 - PC端 -->
+<nav class="hidden md:flex bg-slate-800 text-white shadow-lg sticky top-0 z-50 h-16">
             <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
                 <div class="flex justify-between items-center h-full">
                     <!-- 左侧：面包屑导航 -->
@@ -57,38 +220,72 @@
                     </div>
                 </div>
             </div>
-        </nav>
+</nav>
+
+<!-- 移动端顶部导航栏 -->
+<nav class="md:hidden fixed top-0 left-0 right-0 bg-slate-800 text-white shadow-lg z-50 nav-bar" 
+style="padding-top: var(--safe-area-inset-top);">
+<div class="flex items-center justify-between h-14 px-4">
+<h1 class="text-base font-bold flex items-center">
+<span class="mr-2">⚙️</span>
+<span>会议室管理</span>
+</h1>
+<div v-if="user" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+{{ (user.real_name || user.username || '管').charAt(0) }}
+</div>
+</div>
+</nav>
+
+<!-- 移动端底部导航栏 -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav"
+style="padding-bottom: var(--safe-area-inset-bottom);">
+<div class="grid grid-cols-4 h-16">
+<div v-for="(item, index) in mobileMenuItems" :key="item.id"
+@click="currentTab = item.id"
+:class="currentTab === item.id ? 'text-blue-600' : 'text-gray-600'"
+class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200">
+<span class="text-xl mb-1">{{ item.icon }}</span>
+<span class="text-xs font-medium">{{ item.label }}</span>
+<div v-if="item.badge > 0" 
+class="absolute top-1 right-1/2 transform translate-x-6 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+{{ item.badge > 9 ? '9+' : item.badge }}
+</div>
+</div>
+</div>
+</nav>
 
 <!-- 主体布局：侧边栏 + 内容区 -->
 <div class="flex">
-<!-- 侧边栏导航 -->
+<!-- PC端侧边栏导航 -->
 <aside class="hidden lg:block w-60 bg-slate-900 h-[calc(100vh-4rem)] fixed top-16 left-0 overflow-y-auto">
 <nav class="py-4">
-                    <!-- 菜单项 -->
-                    <div v-for="item in menuItems" :key="item.id"
-                         @click="currentTab = item.id"
-                         :class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
-                         class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-xl">{{ item.icon }}</span>
-                            <span class="text-sm font-medium">{{ item.label }}</span>
-                        </div>
-                        <!-- 待办提醒徽章 -->
-                        <span v-if="item.badge > 0" 
-                              class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                            {{ item.badge }}
-                        </span>
-                    </div>
-                </nav>
+<!-- 菜单项 -->
+<div v-for="item in menuItems" :key="item.id"
+@click="currentTab = item.id"
+:class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
+<div class="flex items-center space-x-3">
+<span class="text-xl">{{ item.icon }}</span>
+<span class="text-sm font-medium">{{ item.label }}</span>
+</div>
+<!-- 待办提醒徽章 -->
+<span v-if="item.badge > 0" 
+class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+{{ item.badge }}
+</span>
+</div>
+</nav>
             </aside>
 
 <!-- 内容区域 -->
-<main class="flex-1 bg-gray-50 lg:ml-60">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<main class="flex-1 bg-gray-50 lg:ml-60 pt-14 md:pt-0 pb-20 md:pb-0"
+style="padding-top: calc(56px + var(--safe-area-inset-top)); padding-bottom: calc(64px + var(--safe-area-inset-bottom));">
+<div class="md:pt-6 pb-6 md:pb-6">
+<div class="max-w-7xl mx-auto py-4 md:py-6">
                     
-                    <!-- 数据看板 -->
-                    <div v-if="currentTab === 'dashboard'" class="space-y-6">
-                        <h2 class="text-2xl font-bold text-gray-800">📊 数据看板</h2>
+<!-- 数据看板 -->
+<div v-if="currentTab === 'dashboard'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">📊 数据看板</h2>
                         
                         <!-- 今日数据卡片 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -172,15 +369,15 @@
                         </div>
                     </div>
 
-            <!-- 会议室管理 -->
-            <div v-if="currentTab === 'rooms'" class="space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800">会议室列表</h2>
-                    <button @click="openAddRoom()" 
-                            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition shadow">
-                        + 新增会议室
-                    </button>
-                </div>
+<!-- 会议室管理 -->
+<div v-if="currentTab === 'rooms'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<div class="flex justify-between items-center">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">会议室列表</h2>
+<button @click="openAddRoom()" 
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition shadow">
++ 新增
+</button>
+</div>
 
                 <!-- 会议室卡片 -->
                 <div class="grid md:grid-cols-2 gap-6">
@@ -250,342 +447,586 @@
                 </div>
             </div>
 
-            <!-- 预约记录 -->
-            <div v-if="currentTab === 'bookings'" class="space-y-6">
-                <h2 class="text-2xl font-bold text-gray-800">预约记录管理</h2>
-                
-                <!-- 统计卡片区域 -->
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-<!-- 全部预约 -->
+<!-- 预约记录 -->
+<div v-if="currentTab === 'bookings'" class="space-y-4 md:space-y-6">
+<!-- 移动端顶部标题 -->
+<div class="flex items-center justify-between px-4">
+<h2 class="text-lg md:text-2xl font-bold text-gray-800">预约管理</h2>
+<button @click="showMobileFilter = !showMobileFilter"
+class="md:hidden bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md">
+<span>🔍</span>
+<span>筛选</span>
+</button>
+</div>
+
+<!-- 移动端横向滚动统计卡片 -->
+<div class="md:hidden">
+<div class="overflow-x-auto pb-4 scrollbar-hide" style="margin: 0 -1rem; padding: 0 1rem;">
+<div class="flex space-x-2 min-w-max">
 <div @click="filterStatus = ''; timeFilter = ''" 
-:class="filterStatus === '' && timeFilter === '' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
-<p class="text-xs opacity-80">全部预约</p>
-<p class="text-2xl font-bold mt-1">{{ bookings.length }}</p>
-</div>
-<div :class="filterStatus === '' && timeFilter === '' ? 'bg-white/20' : 'bg-blue-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">📋</span>
-</div>
-</div>
+:class="filterStatus === '' && timeFilter === '' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
+<p class="text-xs opacity-80">全部</p>
+<p class="text-lg font-bold mt-1">{{ bookings.length }}</p>
 </div>
 
-<!-- 待确认 -->
 <div @click="filterStatus = 'pending'; timeFilter = ''" 
-:class="filterStatus === 'pending' ? 'bg-gradient-to-br from-yellow-500 to-orange-500 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
+:class="filterStatus === 'pending' ? 'bg-gradient-to-br from-yellow-500 to-orange-500 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
 <p class="text-xs opacity-80">待确认</p>
-<p class="text-2xl font-bold mt-1">{{ bookingStats.pending }}</p>
-</div>
-<div :class="filterStatus === 'pending' ? 'bg-white/20' : 'bg-yellow-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">⏳</span>
-</div>
-</div>
+<p class="text-lg font-bold mt-1">{{ bookingStats.pending }}</p>
 </div>
 
-<!-- 已确认 -->
 <div @click="filterStatus = 'confirmed'; timeFilter = ''" 
-:class="filterStatus === 'confirmed' ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
+:class="filterStatus === 'confirmed' ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
 <p class="text-xs opacity-80">已确认</p>
-<p class="text-2xl font-bold mt-1">{{ bookingStats.confirmed }}</p>
-</div>
-<div :class="filterStatus === 'confirmed' ? 'bg-white/20' : 'bg-green-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">✓</span>
-</div>
-</div>
+<p class="text-lg font-bold mt-1">{{ bookingStats.confirmed }}</p>
 </div>
 
-<!-- 进行中 -->
 <div @click="filterStatus = 'active'; timeFilter = ''" 
-:class="filterStatus === 'active' ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
+:class="filterStatus === 'active' ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
 <p class="text-xs opacity-80">进行中</p>
-<p class="text-2xl font-bold mt-1">{{ bookingStats.active }}</p>
-</div>
-<div :class="filterStatus === 'active' ? 'bg-white/20' : 'bg-blue-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">🎬</span>
-</div>
-</div>
+<p class="text-lg font-bold mt-1">{{ bookingStats.active }}</p>
 </div>
 
-<!-- 已完成 -->
 <div @click="filterStatus = 'completed'; timeFilter = ''" 
-:class="filterStatus === 'completed' ? 'bg-gradient-to-br from-gray-600 to-gray-700 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
+:class="filterStatus === 'completed' ? 'bg-gradient-to-br from-gray-600 to-gray-700 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
 <p class="text-xs opacity-80">已完成</p>
-<p class="text-2xl font-bold mt-1">{{ bookingStats.completed }}</p>
+<p class="text-lg font-bold mt-1">{{ bookingStats.completed }}</p>
 </div>
-<div :class="filterStatus === 'completed' ? 'bg-white/20' : 'bg-gray-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">✅</span>
+
+<div @click="filterStatus = 'cancelled'; timeFilter = ''" 
+:class="filterStatus === 'cancelled' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' : 'bg-white'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md flex-shrink-0" style="min-width: 100px;">
+<p class="text-xs opacity-80">已取消</p>
+<p class="text-lg font-bold mt-1">{{ bookingStats.cancelled }}</p>
 </div>
 </div>
 </div>
 
-<!-- 已取消 -->
-<div @click="filterStatus = 'cancelled'; timeFilter = ''" 
-:class="filterStatus === 'cancelled' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg scale-105' : 'bg-white hover:shadow-md'"
-class="rounded-xl p-4 cursor-pointer transition-all duration-300 border-2 border-transparent">
-<div class="flex items-center justify-between">
-<div>
-<p class="text-xs opacity-80">已取消</p>
-<p class="text-2xl font-bold mt-1">{{ bookingStats.cancelled }}</p>
-</div>
-<div :class="filterStatus === 'cancelled' ? 'bg-white/20' : 'bg-red-100'"
-class="w-10 h-10 rounded-full flex items-center justify-center">
-<span class="text-xl">❌</span>
-</div>
-</div>
-</div>
-                </div>
-                
-<!-- 时间维度统计 -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- 移动端时间维度卡片 -->
+<div class="overflow-x-auto pb-4 scrollbar-hide" style="margin: 0 -1rem; padding: 0 1rem;">
+<div class="flex space-x-2 min-w-max">
 <div @click="timeFilter = 'today'; filterStatus = ''" 
-:class="timeFilter === 'today' ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105 border-purple-400' : 'bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-md border-purple-200'"
-class="rounded-xl p-5 border-2 cursor-pointer transition-all duration-300">
-<div class="flex items-center justify-between">
-<div>
-<p class="text-sm font-medium">今日预约</p>
-<p class="text-3xl font-bold mt-2">{{ bookingStats.today }}</p>
-<p class="text-xs mt-1 opacity-80">收入: ¥{{ bookingStats.todayRevenue }}</p>
+:class="timeFilter === 'today' ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white' : 'bg-purple-50'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md border-2 border-purple-200 flex-shrink-0" style="min-width: 120px;">
+<p class="text-xs font-medium">今日预约</p>
+<p class="text-xl font-bold mt-1">{{ bookingStats.today }}</p>
+<p class="text-xs opacity-80 mt-1">¥{{ bookingStats.todayRevenue }}</p>
 </div>
-<div :class="timeFilter === 'today' ? 'bg-white/20' : 'bg-purple-200'"
-class="w-12 h-12 rounded-full flex items-center justify-center">
-<span class="text-2xl">📅</span>
+
+<div @click="timeFilter = 'week'; filterStatus = ''" 
+:class="timeFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' : 'bg-indigo-50'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md border-2 border-indigo-200 flex-shrink-0" style="min-width: 120px;">
+<p class="text-xs font-medium">本周预约</p>
+<p class="text-xl font-bold mt-1">{{ bookingStats.week }}</p>
+<p class="text-xs opacity-80 mt-1">¥{{ bookingStats.weekRevenue }}</p>
+</div>
+
+<div @click="timeFilter = 'month'; filterStatus = ''" 
+:class="timeFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white' : 'bg-teal-50'"
+class="rounded-xl p-3 cursor-pointer transition-all duration-300 shadow-md border-2 border-teal-200 flex-shrink-0" style="min-width: 120px;">
+<p class="text-xs font-medium">本月预约</p>
+<p class="text-xl font-bold mt-1">{{ bookingStats.month }}</p>
+<p class="text-xs opacity-80 mt-1">¥{{ bookingStats.monthRevenue }}</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PC端统计卡片区域 -->
+<div class="hidden md:block mb-6">
+<!-- 状态统计 -->
+<div class="grid grid-cols-6 gap-3 mb-4">
+<div @click="filterStatus = ''; timeFilter = ''" 
+:class="filterStatus === '' && timeFilter === '' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:border-blue-300'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === '' && timeFilter === '' ? 'text-blue-100' : 'text-gray-600'">全部预约</div>
+<div class="text-3xl font-bold mt-2">{{ bookings.length }}</div>
+</div>
+
+<div @click="filterStatus = 'pending'; timeFilter = ''" 
+:class="filterStatus === 'pending' ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:border-amber-300'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === 'pending' ? 'text-amber-100' : 'text-gray-600'">待确认</div>
+<div class="text-3xl font-bold mt-2">{{ bookingStats.pending }}</div>
+</div>
+
+<div @click="filterStatus = 'confirmed'; timeFilter = ''" 
+:class="filterStatus === 'confirmed' ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 hover:border-green-300'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === 'confirmed' ? 'text-green-100' : 'text-gray-600'">已确认</div>
+<div class="text-3xl font-bold mt-2">{{ bookingStats.confirmed }}</div>
+</div>
+
+<div @click="filterStatus = 'active'; timeFilter = ''" 
+:class="filterStatus === 'active' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:border-blue-300'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === 'active' ? 'text-blue-100' : 'text-gray-600'">进行中</div>
+<div class="text-3xl font-bold mt-2">{{ bookingStats.active }}</div>
+</div>
+
+<div @click="filterStatus = 'completed'; timeFilter = ''" 
+:class="filterStatus === 'completed' ? 'bg-gray-700 text-white' : 'bg-white border border-gray-200 hover:border-gray-400'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === 'completed' ? 'text-gray-300' : 'text-gray-600'">已完成</div>
+<div class="text-3xl font-bold mt-2">{{ bookingStats.completed }}</div>
+</div>
+
+<div @click="filterStatus = 'cancelled'; timeFilter = ''" 
+:class="filterStatus === 'cancelled' ? 'bg-red-600 text-white' : 'bg-white border border-gray-200 hover:border-red-300'"
+class="rounded-lg p-4 cursor-pointer transition-all duration-200">
+<div class="text-sm font-medium" :class="filterStatus === 'cancelled' ? 'text-red-100' : 'text-gray-600'">已取消</div>
+<div class="text-3xl font-bold mt-2">{{ bookingStats.cancelled }}</div>
+</div>
+</div>
+
+<!-- 时间维度统计 -->
+<div class="grid grid-cols-3 gap-4">
+<div @click="timeFilter = 'today'; filterStatus = ''" 
+:class="timeFilter === 'today' ? 'bg-purple-600 text-white' : 'bg-white border border-gray-200 hover:border-purple-300'"
+class="rounded-lg p-5 cursor-pointer transition-all duration-200">
+<div class="flex items-baseline justify-between">
+<div>
+<div class="text-sm font-medium" :class="timeFilter === 'today' ? 'text-purple-100' : 'text-gray-600'">今日预约</div>
+<div class="text-4xl font-bold mt-2">{{ bookingStats.today }}</div>
+</div>
+<div class="text-right">
+<div class="text-xs" :class="timeFilter === 'today' ? 'text-purple-200' : 'text-gray-500'">收入</div>
+<div class="text-lg font-semibold mt-1">¥{{ bookingStats.todayRevenue }}</div>
 </div>
 </div>
 </div>
 
 <div @click="timeFilter = 'week'; filterStatus = ''" 
-:class="timeFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg scale-105 border-indigo-400' : 'bg-gradient-to-br from-indigo-50 to-indigo-100 hover:shadow-md border-indigo-200'"
-class="rounded-xl p-5 border-2 cursor-pointer transition-all duration-300">
-<div class="flex items-center justify-between">
+:class="timeFilter === 'week' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 hover:border-indigo-300'"
+class="rounded-lg p-5 cursor-pointer transition-all duration-200">
+<div class="flex items-baseline justify-between">
 <div>
-<p class="text-sm font-medium">本周预约</p>
-<p class="text-3xl font-bold mt-2">{{ bookingStats.week }}</p>
-<p class="text-xs mt-1 opacity-80">收入: ¥{{ bookingStats.weekRevenue }}</p>
+<div class="text-sm font-medium" :class="timeFilter === 'week' ? 'text-indigo-100' : 'text-gray-600'">本周预约</div>
+<div class="text-4xl font-bold mt-2">{{ bookingStats.week }}</div>
 </div>
-<div :class="timeFilter === 'week' ? 'bg-white/20' : 'bg-indigo-200'"
-class="w-12 h-12 rounded-full flex items-center justify-center">
-<span class="text-2xl">📆</span>
+<div class="text-right">
+<div class="text-xs" :class="timeFilter === 'week' ? 'text-indigo-200' : 'text-gray-500'">收入</div>
+<div class="text-lg font-semibold mt-1">¥{{ bookingStats.weekRevenue }}</div>
 </div>
 </div>
 </div>
 
 <div @click="timeFilter = 'month'; filterStatus = ''" 
-:class="timeFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg scale-105 border-teal-400' : 'bg-gradient-to-br from-teal-50 to-teal-100 hover:shadow-md border-teal-200'"
-class="rounded-xl p-5 border-2 cursor-pointer transition-all duration-300">
-<div class="flex items-center justify-between">
+:class="timeFilter === 'month' ? 'bg-teal-600 text-white' : 'bg-white border border-gray-200 hover:border-teal-300'"
+class="rounded-lg p-5 cursor-pointer transition-all duration-200">
+<div class="flex items-baseline justify-between">
 <div>
-<p class="text-sm font-medium">本月预约</p>
-<p class="text-3xl font-bold mt-2">{{ bookingStats.month }}</p>
-<p class="text-xs mt-1 opacity-80">收入: ¥{{ bookingStats.monthRevenue }}</p>
+<div class="text-sm font-medium" :class="timeFilter === 'month' ? 'text-teal-100' : 'text-gray-600'">本月预约</div>
+<div class="text-4xl font-bold mt-2">{{ bookingStats.month }}</div>
 </div>
-<div :class="timeFilter === 'month' ? 'bg-white/20' : 'bg-teal-200'"
-class="w-12 h-12 rounded-full flex items-center justify-center">
-<span class="text-2xl">📊</span>
+<div class="text-right">
+<div class="text-xs" :class="timeFilter === 'month' ? 'text-teal-200' : 'text-gray-500'">收入</div>
+<div class="text-lg font-semibold mt-1">¥{{ bookingStats.monthRevenue }}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 移动端筛选抽屉 -->
+<div v-if="showMobileFilter" class="md:hidden fixed inset-0 z-50" @click="showMobileFilter = false">
+<div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+<div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-y-auto animate-slide-up"
+style="padding-bottom: var(--safe-area-inset-bottom);"
+@click.stop>
+<!-- 抽屉头部 -->
+<div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
+<h3 class="text-lg font-bold text-gray-900">筛选条件</h3>
+<button @click="showMobileFilter = false" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+</div>
+
+<div class="p-6 space-y-5">
+<!-- 搜索框 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">关键词搜索</label>
+<input type="text" v-model="searchKeyword" placeholder="搜索预约编号/会议室/预约人..."
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition">
+</div>
+
+<!-- 预约类型 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">预约类型</label>
+<div class="grid grid-cols-2 gap-3">
+<button @click="bookingTypeFilter = ''"
+:class="bookingTypeFilter === '' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition">
+全部
+</button>
+<button @click="bookingTypeFilter = 'internal'"
+:class="bookingTypeFilter === 'internal' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition">
+🏢 内部
+</button>
+<button @click="bookingTypeFilter = 'external'"
+:class="bookingTypeFilter === 'external' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition col-span-2">
+👥 外部
+</button>
+</div>
+</div>
+
+<!-- 办公室 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">办公室</label>
+<select v-model="officeFilter" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+<option value="">全部办公室</option>
+<option v-for="office in uniqueOffices" :key="office" :value="office">{{ office }}</option>
+</select>
+</div>
+
+<!-- 会议室 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">会议室</label>
+<select v-model="roomFilter" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+<option value="">全部会议室</option>
+<option v-for="room in uniqueRooms" :key="room" :value="room">{{ room }}</option>
+</select>
+</div>
+
+<!-- 日期范围 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">日期范围</label>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<input type="date" v-model="dateRangeStart" placeholder="开始"
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+</div>
+<div>
+<input type="date" v-model="dateRangeEnd" placeholder="结束"
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+</div>
+</div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="grid grid-cols-2 gap-3 pt-4">
+<button @click="clearAllFilters(); showMobileFilter = false"
+class="bg-gray-100 text-gray-700 px-4 py-3.5 rounded-xl font-semibold">
+清除筛选
+</button>
+<button @click="showMobileFilter = false"
+class="bg-blue-500 text-white px-4 py-3.5 rounded-xl font-semibold shadow-lg">
+应用筛选
+</button>
 </div>
 </div>
 </div>
 </div>
                 
 <!-- 详情列表 -->
-<div class="bg-white rounded-xl shadow-lg overflow-hidden">
-<!-- 高级筛选工具栏 -->
-<div class="p-6 border-b bg-gray-50 space-y-4">
-<div class="flex justify-between items-center">
+<div class="bg-white rounded-lg shadow overflow-hidden">
+<!-- PC端工具栏 -->
+<div class="hidden md:block px-6 py-4 border-b border-gray-200">
+<!-- 标题行 -->
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-base font-semibold text-gray-900">{{ getFilterTitle }}</h3>
 <div class="flex items-center space-x-3">
-<h3 class="text-lg font-bold text-gray-800">{{ getFilterTitle }}</h3>
-<span class="text-sm text-gray-500">共 {{ filteredBookings.length }} 条</span>
-</div>
-<div class="flex items-center space-x-3">
-<input type="text" v-model="searchKeyword" placeholder="搜索预约编号/会议室/预约人..."
-class="border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<input type="text" v-model="searchKeyword" placeholder="搜索..."
+class="border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:border-blue-500 text-sm">
 <button v-if="hasActiveFilters" @click="clearAllFilters"
-class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition text-sm flex items-center">
+class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
 </svg>
-清除筛选
+清除
 </button>
 </div>
 </div>
 
-<!-- 多维度筛选器 -->
-<div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-<!-- 预约类型筛选 -->
-<select v-model="bookingTypeFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<!-- 筛选器 -->
+<div class="flex items-center space-x-3">
+<select v-model="bookingTypeFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
 <option value="">全部类型</option>
 <option value="internal">内部预约</option>
 <option value="external">外部预约</option>
 </select>
 
-<!-- 办公室筛选 -->
-<select v-model="officeFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<select v-model="officeFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
 <option value="">全部办公室</option>
 <option v-for="office in uniqueOffices" :key="office" :value="office">{{ office }}</option>
 </select>
 
-<!-- 会议室筛选 -->
-<select v-model="roomFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<select v-model="roomFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
 <option value="">全部会议室</option>
 <option v-for="room in uniqueRooms" :key="room" :value="room">{{ room }}</option>
 </select>
 
-<!-- 日期范围 -->
-<input type="date" v-model="dateRangeStart" placeholder="开始日期"
-class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<div class="flex items-center space-x-2">
+<span class="text-sm text-gray-600">日期</span>
+<input type="date" v-model="dateRangeStart"
+class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm w-32">
+<span class="text-gray-400">—</span>
+<input type="date" v-model="dateRangeEnd"
+class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm w-32">
+</div>
 
-<input type="date" v-model="dateRangeEnd" placeholder="结束日期"
-class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+<div class="text-sm text-gray-500">
+共 <span class="font-medium text-gray-900">{{ sortedAndFilteredBookings.length }}</span> 条
+</div>
+</div>
+</div>
+
+<!-- 移动端卡片列表 -->
+<div class="md:hidden">
+<!-- 移动端筛选状态提示 -->
+<div v-if="hasActiveFilters" class="mx-4 mb-3 bg-blue-50 rounded-lg px-4 py-2 flex items-center justify-between">
+<div class="text-sm text-blue-600 truncate">
+<span>已筛选 {{ sortedAndFilteredBookings.length }} 条</span>
+</div>
+<button @click="clearAllFilters" class="text-xs text-blue-700 font-medium whitespace-nowrap ml-2">清除</button>
+</div>
+
+<!-- 移动端可滚动容器 -->
+<div class="overflow-y-auto" style="max-height: calc(100vh - 380px); -webkit-overflow-scrolling: touch;">
+<div class="space-y-3 px-4 pb-4">
+<div v-for="(item, index) in sortedAndFilteredBookings" :key="item.id"
+:style="{ animationDelay: `${index * 0.05}s` }"
+:class="item.booking_type === 'internal' ? 'bg-gradient-to-br from-blue-50 to-blue-100' : 'bg-gradient-to-br from-purple-50 to-purple-100'"
+class="rounded-2xl shadow-sm overflow-hidden tap-feedback"
+style="animation: fadeIn 0.3s ease-out both;">
+<!-- 卡片头部 -->
+<div class="bg-white/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-gray-100">
+<div class="flex items-center space-x-2 min-w-0 flex-1">
+<span :class="item.booking_type === 'internal' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'"
+class="px-2 py-1 rounded-lg text-xs font-medium shadow-sm whitespace-nowrap">
+{{ item.booking_type === 'internal' ? '🏢 内部' : '👥 外部' }}
+</span>
+<span class="text-xs text-gray-400 font-mono truncate">{{ item.booking_no }}</span>
+</div>
+<span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-xs font-medium shadow-sm whitespace-nowrap ml-2">
+{{ statusText(item.status) }}
+</span>
+</div>
+
+<!-- 卡片内容 -->
+<div class="bg-white p-4 space-y-3">
+<!-- 基本信息 -->
+<div class="flex items-start justify-between">
+<div class="flex-1 min-w-0 mr-3">
+<div class="font-bold text-gray-900 text-base truncate">{{ item.room_name }}</div>
+<div v-if="item.meeting_title" class="text-sm text-gray-600 mt-1 truncate">{{ item.meeting_title }}</div>
+</div>
+<div class="text-right flex-shrink-0">
+<div class="text-lg font-bold text-green-600">¥{{ item.total_fee }}</div>
+<div v-if="item.free_hours_used > 0" class="text-xs text-gray-400 mt-0.5">免费{{ item.free_hours_used }}h</div>
 </div>
 </div>
 
-<!-- 排序提示 -->
-<div class="px-6 py-2 bg-blue-50 border-b flex items-center text-xs text-blue-600">
-<span>💡 提示：点击表头可进行排序</span>
-<span v-if="sortBy" class="ml-3">当前排序：{{ sortFieldText }} {{ sortOrder === 'asc' ? '↑ 升序' : '↓ 降序' }}</span>
+<!-- 预约人信息 -->
+<div class="bg-gray-50 rounded-xl p-3">
+<div v-if="item.booking_type === 'internal'" class="space-y-2">
+<div class="flex items-center text-sm">
+<div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0">
+{{ (item.user_name || '未').charAt(0) }}
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-semibold text-gray-900 truncate">{{ item.user_name }}</div>
+<div class="text-xs text-gray-500">{{ item.user_phone }}</div>
+</div>
+</div>
+<div class="flex items-center text-xs text-blue-600 bg-blue-50 rounded-lg px-2 py-1.5">
+<span class="mr-1.5 flex-shrink-0">📍</span>
+<span class="font-medium truncate">{{ item.office_name || '未分配办公室' }}</span>
+</div>
+</div>
+<div v-else class="space-y-2">
+<div class="flex items-center text-sm">
+<div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0">
+{{ (item.external_contact_name || '外').charAt(0) }}
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-semibold text-gray-900 truncate">{{ item.external_contact_name }}</div>
+<div class="text-xs text-gray-500">{{ item.external_contact_phone }}</div>
+</div>
+</div>
+<div v-if="item.external_company" class="flex items-center text-xs text-purple-600 bg-purple-50 rounded-lg px-2 py-1.5">
+<span class="mr-1.5 flex-shrink-0">🏢</span>
+<span class="font-medium truncate">{{ item.external_company }}</span>
+</div>
+</div>
 </div>
 
-<div class="overflow-x-auto">
+<!-- 时间信息 -->
+<div class="grid grid-cols-2 gap-3 bg-gray-50 rounded-xl p-3">
+<div class="flex items-center text-gray-700">
+<div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-2 flex-shrink-0">
+<span class="text-base">📅</span>
+</div>
+<div class="min-w-0">
+<div class="text-xs text-gray-500">日期</div>
+<div class="text-sm font-semibold">{{ item.booking_date }}</div>
+</div>
+</div>
+<div class="flex items-center text-gray-700">
+<div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center mr-2 flex-shrink-0">
+<span class="text-base">⏰</span>
+</div>
+<div class="min-w-0">
+<div class="text-xs text-gray-500">时间</div>
+<div class="text-sm font-semibold">{{ item.start_time }}-{{ item.end_time }}</div>
+</div>
+</div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="grid grid-cols-2 gap-2 pt-2">
+<button v-if="item.status === 'pending'" 
+@click="confirmBooking(item.id)"
+class="bg-green-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm">
+✓ 确认
+</button>
+<button v-if="item.status !== 'cancelled' && item.status !== 'completed'"
+@click="cancelBooking(item.id)"
+class="bg-red-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm">
+✗ 取消
+</button>
+<button @click="viewBookingDetail(item)"
+class="bg-blue-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm col-span-2">
+详情 →
+</button>
+</div>
+</div>
+</div>
+
+<!-- 移动端空状态 -->
+<div v-if="sortedAndFilteredBookings.length === 0" class="text-center py-16 text-gray-500">
+<div class="text-4xl mb-3">📋</div>
+<p class="text-base">暂无预约记录</p>
+<p class="text-sm mt-2">请调整筛选条件</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PC端表格 -->
+<div class="hidden md:block overflow-x-auto">
 <table class="w-full">
-<thead class="bg-gray-50">
+<thead class="bg-gray-50 border-b border-gray-200">
 <tr>
 <th @click="toggleSort('booking_no')" 
-:class="sortBy === 'booking_no' ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'"
-class="text-left py-3 px-6 font-semibold cursor-pointer transition select-none">
+:class="sortBy === 'booking_no' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-32">
 <div class="flex items-center">
 <span>预约编号</span>
-<span v-if="sortBy === 'booking_no'" class="ml-2">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+<span v-if="sortBy === 'booking_no'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
 </div>
 </th>
 <th @click="toggleSort('booking_type')"
-:class="sortBy === 'booking_type' ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'"
-class="text-left py-3 px-6 font-semibold cursor-pointer transition select-none">
+:class="sortBy === 'booking_type' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-24">
 <div class="flex items-center">
-<span>预约类型</span>
-<span v-if="sortBy === 'booking_type'" class="ml-2">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+<span>类型</span>
+<span v-if="sortBy === 'booking_type'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
 </div>
 </th>
-<th class="text-left py-3 px-6 font-semibold text-gray-700">预约人信息</th>
-<th class="text-left py-3 px-6 font-semibold text-gray-700">会议室</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-44">预约人</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-36">会议室</th>
 <th @click="toggleSort('meeting_title')"
-:class="sortBy === 'meeting_title' ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'"
-class="text-left py-3 px-6 font-semibold cursor-pointer transition select-none">
+:class="sortBy === 'meeting_title' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none">
 <div class="flex items-center">
 <span>会议主题</span>
-<span v-if="sortBy === 'meeting_title'" class="ml-2">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+<span v-if="sortBy === 'meeting_title'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
 </div>
 </th>
 <th @click="toggleSort('booking_date')"
-:class="sortBy === 'booking_date' ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'"
-class="text-left py-3 px-6 font-semibold cursor-pointer transition select-none">
+:class="sortBy === 'booking_date' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-36">
 <div class="flex items-center">
 <span>预约时间</span>
-<span v-if="sortBy === 'booking_date'" class="ml-2">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+<span v-if="sortBy === 'booking_date'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
 </div>
 </th>
 <th @click="toggleSort('total_fee')"
-:class="sortBy === 'total_fee' ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'"
-class="text-left py-3 px-6 font-semibold cursor-pointer transition select-none">
-<div class="flex items-center">
+:class="sortBy === 'total_fee' ? 'text-blue-600' : 'text-gray-600'"
+class="text-right py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-28">
+<div class="flex items-center justify-end">
 <span>费用</span>
-<span v-if="sortBy === 'total_fee'" class="ml-2">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+<span v-if="sortBy === 'total_fee'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
 </div>
 </th>
-<th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
-<th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-20">状态</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-28">操作</th>
 </tr>
 </thead>
 <tbody>
+<tr v-if="sortedAndFilteredBookings.length === 0">
+<td colspan="9" class="text-center py-12 text-gray-500">
+<div class="text-sm">暂无预约记录</div>
+</td>
+</tr>
 <tr v-for="item in sortedAndFilteredBookings" :key="item.id" 
 :class="[
-'border-b hover:bg-gray-50 transition',
-item.booking_type === 'internal' ? 'bg-blue-50/30' : 'bg-purple-50/30'
+'border-b border-gray-100 hover:bg-gray-50 transition',
+item.booking_type === 'internal' ? '' : ''
 ]">
-<td class="py-4 px-6 font-mono text-sm">{{ item.booking_no }}</td>
-<td class="py-4 px-6">
-<span :class="item.booking_type === 'internal' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-purple-100 text-purple-800 border-purple-200'"
-class="px-3 py-1 rounded-full text-xs font-medium border inline-flex items-center">
-<span class="mr-1">{{ item.booking_type === 'internal' ? '🏢' : '👥' }}</span>
+<td class="py-3 px-4 font-mono text-xs text-gray-600">{{ item.booking_no }}</td>
+<td class="py-3 px-4">
+<span :class="item.booking_type === 'internal' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'"
+class="px-2 py-0.5 rounded text-xs font-medium">
 {{ item.booking_type === 'internal' ? '内部' : '外部' }}
 </span>
 </td>
-<td class="py-4 px-6">
-<div v-if="item.booking_type === 'internal'" class="space-y-1">
-<div class="font-medium text-gray-900">{{ item.user_name }}</div>
+<td class="py-3 px-4">
+<div v-if="item.booking_type === 'internal'" class="space-y-0.5">
+<div class="text-sm font-medium text-gray-900">{{ item.user_name }}</div>
 <div class="text-xs text-gray-500">{{ item.user_phone }}</div>
-<div class="flex items-center text-xs text-blue-600">
-<span class="mr-1">📍</span>
-<span>{{ item.office_name || '未分配办公室' }}</span>
+<div class="text-xs text-gray-400">{{ item.office_name || '未分配' }}</div>
 </div>
-</div>
-<div v-else class="space-y-1">
-<div class="font-medium text-gray-900">{{ item.external_contact_name }}</div>
-<div class="flex items-center text-xs text-gray-500">
-<span class="mr-1">📱</span>
-<span>{{ item.external_contact_phone }}</span>
-</div>
-<div v-if="item.external_contact_email" class="flex items-center text-xs text-gray-500">
-<span class="mr-1">📧</span>
-<span>{{ item.external_contact_email }}</span>
-</div>
-<div v-if="item.external_company" class="flex items-center text-xs text-purple-600">
-<span class="mr-1">🏢</span>
-<span>{{ item.external_company }}</span>
-</div>
+<div v-else class="space-y-0.5">
+<div class="text-sm font-medium text-gray-900">{{ item.external_contact_name }}</div>
+<div class="text-xs text-gray-500">{{ item.external_contact_phone }}</div>
+<div v-if="item.external_company" class="text-xs text-purple-600">{{ item.external_company }}</div>
 </div>
 </td>
-<td class="py-4 px-6 font-medium">{{ item.room_name }}</td>
-<td class="py-4 px-6">
-<div class="max-w-xs truncate" :title="item.meeting_title">{{ item.meeting_title || '-' }}</div>
+<td class="py-3 px-4 text-sm text-gray-900">{{ item.room_name }}</td>
+<td class="py-3 px-4">
+<div class="text-sm text-gray-700 max-w-xs truncate" :title="item.meeting_title">{{ item.meeting_title || '-' }}</div>
 </td>
-<td class="py-4 px-6">
-<div class="font-medium">{{ item.booking_date }}</div>
-<div class="text-sm text-gray-500">{{ item.start_time }}-{{ item.end_time }}</div>
-<div class="text-xs text-gray-400">{{ item.duration_hours }}h</div>
+<td class="py-3 px-4">
+<div class="text-sm text-gray-900">{{ item.booking_date }}</div>
+<div class="text-xs text-gray-500">{{ item.start_time }} - {{ item.end_time }}</div>
 </td>
-<td class="py-4 px-6">
-<div class="font-semibold text-green-600">¥{{ item.total_fee }}</div>
-<div v-if="item.free_hours_used > 0" class="text-xs text-gray-500">
-免费: {{ item.free_hours_used }}h
+<td class="py-3 px-4 text-right">
+<div class="text-sm font-medium text-gray-900">¥{{ item.total_fee }}</div>
+<div v-if="item.free_hours_used > 0" class="text-xs text-gray-400">
+免费 {{ item.free_hours_used }}h
 </div>
 </td>
-<td class="py-4 px-6">
+<td class="py-3 px-4">
 <span :class="statusClass(item.status)" 
-class="px-3 py-1 rounded-full text-sm font-medium">
+class="px-2 py-0.5 rounded text-xs font-medium">
 {{ statusText(item.status) }}
 </span>
 </td>
-<td class="py-4 px-6">
-<div class="flex items-center space-x-2">
+<td class="py-3 px-4">
+<div class="flex items-center space-x-3">
 <button v-if="item.status === 'pending'" 
 @click="confirmBooking(item.id)"
-class="text-green-600 hover:text-green-700 text-sm font-medium">
+class="text-xs text-green-600 hover:text-green-700 font-medium">
 确认
 </button>
 <button v-if="item.status !== 'cancelled' && item.status !== 'completed'"
 @click="cancelBooking(item.id)"
-class="text-red-600 hover:text-red-700 text-sm font-medium">
+class="text-xs text-red-600 hover:text-red-700 font-medium">
 取消
 </button>
 <button @click="viewBookingDetail(item)"
-class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+class="text-xs text-blue-600 hover:text-blue-700 font-medium">
 详情
 </button>
 </div>
@@ -593,13 +1034,6 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
 </tr>
 </tbody>
 </table>
-</div>
-
-<!-- 空状态 -->
-<div v-if="sortedAndFilteredBookings.length === 0" class="text-center py-16 text-gray-500">
-<div class="text-4xl mb-3">📋</div>
-<p class="text-lg">暂无预约记录</p>
-<p class="text-sm mt-2">请调整筛选条件或添加新的预约</p>
 </div>
 </div>
 
@@ -636,10 +1070,10 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
 </div>
             </div>
 
-            <!-- 审批中心 -->
-            <div v-if="currentTab === 'approvals'" class="space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800">审批中心</h2>
+<!-- 审批中心 -->
+<div v-if="currentTab === 'approvals'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<div class="flex justify-between items-center">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">审批中心</h2>
                     <div class="flex gap-3">
                         <select v-model="approvalFilter" 
                                 class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -781,10 +1215,10 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
                 </div>
             </div>
 
-            <!-- 财务结算 -->
-            <div v-if="currentTab === 'finance'" class="space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800">财务结算</h2>
+<!-- 财务结算 -->
+<div v-if="currentTab === 'finance'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<div class="flex justify-between items-center">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">财务结算</h2>
                     <button @click="createSettlement()"
                             class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
                         + 创建结算批次
@@ -965,10 +1399,10 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
                 </div>
             </div>
 
-            <!-- 统计报表（增强版） -->
-            <div v-if="currentTab === 'reports'" class="space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800">统计报表</h2>
+<!-- 统计报表（增强版） -->
+<div v-if="currentTab === 'reports'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<div class="flex justify-between items-center">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">统计报表</h2>
                     <div class="flex gap-3">
                         <input type="date" v-model="reportStartDate"
                                class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -1102,9 +1536,9 @@ class="text-blue-600 hover:text-blue-700 text-sm font-medium">
                 </div>
             </div>
 
-            <!-- 系统设置 -->
-            <div v-if="currentTab === 'settings'" class="space-y-6">
-                <h2 class="text-xl font-bold text-gray-800">系统设置</h2>
+<!-- 系统设置 -->
+<div v-if="currentTab === 'settings'" class="space-y-6 px-4 md:px-6 lg:px-8">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">系统设置</h2>
                 
                 <!-- 基础设置 -->
                 <div class="bg-white rounded-xl shadow p-6">
@@ -1391,18 +1825,28 @@ const dateRangeStart = ref('');
 const dateRangeEnd = ref('');
 const sortBy = ref('');
 const sortOrder = ref('asc');
+const showMobileFilter = ref(false);
 const stats = ref({ today: 0, week: 0, month: 0 });
                 
                 // 菜单项
-                const menuItems = ref([
-                    { id: 'dashboard', label: '数据看板', icon: '📊', badge: 0 },
-                    { id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
-                    { id: 'bookings', label: '预约管理', icon: '📋', badge: 0 },
-                    { id: 'approvals', label: '审批中心', icon: '✓', badge: 0 },
-                    { id: 'finance', label: '财务结算', icon: '💰', badge: 0 },
-                    { id: 'reports', label: '统计报表', icon: '📈', badge: 0 },
-                    { id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
-                ]);
+const menuItems = ref([
+{ id: 'dashboard', label: '数据看板', icon: '📊', badge: 0 },
+{ id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
+{ id: 'bookings', label: '预约管理', icon: '📋', badge: 0 },
+{ id: 'approvals', label: '审批中心', icon: '✓', badge: 0 },
+{ id: 'finance', label: '财务结算', icon: '💰', badge: 0 },
+{ id: 'reports', label: '统计报表', icon: '📈', badge: 0 },
+{ id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
+]);
+
+const mobileMenuItems = computed(() => {
+return [
+menuItems.value.find(m => m.id === 'dashboard') || { id: 'dashboard', label: '看板', icon: '📊', badge: 0 },
+menuItems.value.find(m => m.id === 'bookings') || { id: 'bookings', label: '预约', icon: '📋', badge: 0 },
+menuItems.value.find(m => m.id === 'approvals') || { id: 'approvals', label: '审批', icon: '✓', badge: 0 },
+menuItems.value.find(m => m.id === 'finance') || { id: 'finance', label: '财务', icon: '💰', badge: 0 }
+];
+});
                 
                 // 数据看板统计
                 const dashboardStats = ref({
@@ -2323,13 +2767,13 @@ loadSettings();
 return {
 user, currentTab, rooms, offices, bookings, filterStatus, timeFilter, searchKeyword, 
 bookingTypeFilter, officeFilter, roomFilter, dateRangeStart, dateRangeEnd,
-sortBy, sortOrder, filteredBookings, sortedAndFilteredBookings, stats, bookingStats,
+sortBy, sortOrder, showMobileFilter, filteredBookings, sortedAndFilteredBookings, stats, bookingStats,
 uniqueOffices, uniqueRooms, hasActiveFilters, sortFieldText,
 showRoomModal, editingRoom, saving, availableFacilities, roomForm,
 parseFacilities, openAddRoom, openEditRoom, closeRoomModal, saveRoom,
 toggleRoomStatus, deleteRoom, confirmBooking, cancelBooking,
 statusClass, statusText, getFilterTitle, clearAllFilters, toggleSort, viewBookingDetail,
-menuItems, dashboardStats, loadDashboardStats, loadOffices,
+menuItems, mobileMenuItems, dashboardStats, loadDashboardStats, loadOffices,
                     
                     // Approval module
                     approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
