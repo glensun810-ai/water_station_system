@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>我的预约 - 会议室管理系统</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+<style>
+[v-cloak] { display: none !important; }
+
+/* Flexbox固定布局架构 */
+html {
+height: 100%;
+overflow: hidden;
+}
+
+body {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+background-color: #F1F5F9;
+height: 100%;
+overflow: hidden;
+padding-bottom: env(safe-area-inset-bottom);
+}
+
+#app {
+height: 100%;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+/* 移动端底部导航栏样式 */
+.bottom-nav {
+padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+/* 触摸反馈 */
+.tap-feedback:active {
+transform: scale(0.95);
+}
+
+/* 隐藏滚动条 */
+.scrollbar-hide::-webkit-scrollbar {
+display: none;
+}
+
+.scrollbar-hide {
+-ms-overflow-style: none;
+scrollbar-width: none;
+}
+
+/* iPhone X及以上适配 */
+@supports (padding: max(0px)) {
+.nav-bar {
+padding-left: max(16px, env(safe-area-inset-left));
+padding-right: max(16px, env(safe-area-inset-right));
+}
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+button:active {
+transform: scale(0.98);
+}
+
+select, input {
+font-size: 16px;
+}
+
+* {
+-webkit-tap-highlight-color: transparent;
+}
+}
+</style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- PC端顶部导航 -->
+        <nav class="hidden md:flex bg-white shadow-sm border-b border-slate-200 z-50 h-16 flex-shrink-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full w-full">
+                <div class="flex justify-between items-center h-full">
+                    <!-- 左侧导航 -->
+                    <div class="flex items-center space-x-3 flex-shrink-0">
+                        <a href="/service/home.html" 
+                           class="flex items-center space-x-1 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <span>首页</span>
+                        </a>
+                        
+                        <div class="h-6 w-px bg-slate-300"></div>
+                        
+                        <h1 class="text-lg font-bold text-slate-800 whitespace-nowrap">我的预约</h1>
+                    </div>
+                    
+                    <!-- 右侧导航 -->
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <a href="index.html" 
+                           class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition whitespace-nowrap">
+                            📋 预约
+                        </a>
+                        
+                        <a href="calendar.html" 
+                           class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition whitespace-nowrap">
+                            📅 日历
+                        </a>
+                        
+                        <span class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+                            📝 我的预约
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 移动端顶部导航栏 -->
+        <nav class="md:hidden bg-white shadow-sm border-b border-slate-200 z-50 h-14 flex-shrink-0 nav-bar"
+             style="padding-top: env(safe-area-inset-top);">
+            <div class="flex items-center justify-between h-14 px-4">
+                <a href="/service/home.html" 
+                   class="flex items-center space-x-1 text-slate-600 hover:text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                </a>
+                <h1 class="text-base font-bold text-slate-800">📝 我的预约</h1>
+                <div class="w-8"></div>
+            </div>
+        </nav>
+
+        <!-- 移动端底部导航栏 -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav shadow-lg">
+            <div class="grid grid-cols-3 h-16">
+                <a href="index.html" 
+                   class="flex flex-col items-center justify-center text-gray-600 tap-feedback">
+                    <span class="text-xl mb-1">📋</span>
+                    <span class="text-xs font-medium">预约</span>
+                </a>
+                
+                <a href="calendar.html" 
+                   class="flex flex-col items-center justify-center text-gray-600 tap-feedback">
+                    <span class="text-xl mb-1">📅</span>
+                    <span class="text-xs font-medium">日历</span>
+                </a>
+                
+                <a href="my_bookings.html" 
+                   class="flex flex-col items-center justify-center text-blue-600 bg-blue-50 tap-feedback">
+                    <span class="text-xl mb-1">📝</span>
+                    <span class="text-xs font-medium">我的</span>
+                </a>
+            </div>
+        </nav>
+
+        <main class="flex-1 overflow-y-auto max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-6 py-4 sm:py-6 pb-20 md:pb-6" style="-webkit-overflow-scrolling: touch;">
+            <!-- 快速统计 -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-2">总预约数</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-blue-600">{{ stats.total }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-2">待付款</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-red-600">{{ stats.unpaid }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-2">待确认收款</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-orange-600">{{ stats.applied }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-2">已付款</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.paid }}</div>
+                </div>
+            </div>
+
+            <!-- 筛选器 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-4 sm:mb-6">
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+                    <select v-model="filterStatus" class="border border-gray-300 rounded-lg px-4 py-2 text-sm sm:text-base">
+                        <option value="">全部状态</option>
+                        <option value="pending">待确认</option>
+                        <option value="confirmed">已确认</option>
+                        <option value="active">进行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="cancelled">已取消</option>
+                    </select>
+                    
+                    <select v-model="filterPaymentStatus" class="border border-gray-300 rounded-lg px-4 py-2 text-sm sm:text-base">
+                        <option value="">全部支付状态</option>
+                        <option value="unpaid">待付款</option>
+                        <option value="applied">待确认收款</option>
+                        <option value="paid">已付款</option>
+                    </select>
+                    
+                    <button @click="loadMyBookings" 
+                            class="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm sm:text-base font-medium">
+                        查询
+                    </button>
+                    
+                    <div class="text-xs sm:text-sm text-gray-500">
+                        共 <span class="font-semibold text-gray-700">{{ filteredBookings.length }}</span> 条记录
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC端表格列表 -->
+            <div class="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[800px]">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">预约编号</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">会议室</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">会议主题</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">时间</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">费用</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">预约状态</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">支付状态</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="booking in filteredBookings" :key="booking.id" class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-4 font-mono text-sm">{{ booking.booking_no }}</td>
+                                <td class="py-3 px-4 font-medium text-sm">{{ booking.room_name }}</td>
+                                <td class="py-3 px-4 text-sm">{{ booking.meeting_title || '-' }}</td>
+                                <td class="py-3 px-4 text-sm">
+                                    <div>{{ booking.booking_date }}</div>
+                                    <div class="text-xs text-gray-500">{{ booking.start_time }}-{{ booking.end_time }}</div>
+                                </td>
+                                <td class="py-3 px-4 text-sm">
+                                    <div class="font-semibold text-blue-600">¥{{ (booking.actual_fee || booking.total_fee || 0).toFixed(2) }}</div>
+                                    <div v-if="booking.discount_amount > 0" class="text-xs text-green-600">
+                                        已优惠¥{{ booking.discount_amount }}
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span :class="getBookingStatusClass(booking.status)" 
+                                          class="px-3 py-1 rounded-full text-xs font-medium">
+                                        {{ getBookingStatusText(booking.status) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span :class="getPaymentStatusClass(booking.payment_status)" 
+                                          class="px-3 py-1 rounded-full text-xs font-medium">
+                                        {{ getPaymentStatusText(booking.payment_status) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-2">
+                                        <!-- 提交支付按钮 -->
+                                        <button v-if="booking.payment_status === 'unpaid' && booking.status === 'confirmed'"
+                                                @click="showPaymentModal(booking)"
+                                                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs">
+                                            提交支付
+                                        </button>
+                                        
+                                        <!-- 取消按钮 -->
+                                        <button v-if="canCancelBooking(booking).allowed"
+                                                @click="showCancelBookingModal(booking)"
+                                                :class="canCancelBooking(booking).type === 'request' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600'"
+                                                class="px-3 py-1 text-white rounded text-xs">
+                                            {{ getCancelButtonText(booking) }}
+                                        </button>
+                                        
+                                        <!-- 查看详情 -->
+                                        <button @click="viewDetail(booking)"
+                                                class="px-3 py-1 text-blue-600 hover:text-blue-700 text-xs">
+                                            详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-if="filteredBookings.length === 0" class="text-center py-16 text-gray-500">
+                    <div class="text-6xl mb-4">📋</div>
+                    <p class="text-lg mb-2">暂无预约记录</p>
+                    <p class="text-sm text-gray-400 mb-4">您还没有预约过会议室</p>
+                    <a href="index.html" class="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        去预约会议室
+                    </a>
+                </div>
+            </div>
+
+            <!-- 移动端卡片列表 -->
+            <div class="md:hidden space-y-3">
+                <div v-for="booking in filteredBookings" :key="booking.id"
+                     class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <!-- 卡片头部 -->
+                    <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-gray-500 font-mono">{{ booking.booking_no }}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span :class="getBookingStatusClass(booking.status)" 
+                                  class="px-2 py-0.5 rounded-full text-xs font-medium">
+                                {{ getBookingStatusText(booking.status) }}
+                            </span>
+                            <span :class="getPaymentStatusClass(booking.payment_status)" 
+                                  class="px-2 py-0.5 rounded-full text-xs font-medium">
+                                {{ getPaymentStatusText(booking.payment_status) }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- 卡片内容 -->
+                    <div class="p-4 space-y-3">
+                        <!-- 会议室信息 -->
+                        <div>
+                            <div class="font-bold text-gray-900 text-base">{{ booking.room_name }}</div>
+                            <div v-if="booking.meeting_title" class="text-sm text-gray-600 mt-1">{{ booking.meeting_title }}</div>
+                        </div>
+                        
+                        <!-- 时间信息 -->
+                        <div class="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                            <div class="mr-3">📅</div>
+                            <div>
+                                <div class="font-medium">{{ booking.booking_date }}</div>
+                                <div class="text-xs text-gray-500">{{ booking.start_time }} - {{ booking.end_time }}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 费用信息 -->
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div class="text-sm text-gray-600">费用</div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-blue-600">¥{{ (booking.actual_fee || booking.total_fee || 0).toFixed(2) }}</div>
+                                <div v-if="booking.discount_amount > 0" class="text-xs text-green-600">
+                                    已优惠¥{{ booking.discount_amount }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div class="flex gap-2 pt-2">
+                            <!-- 提交支付按钮 -->
+                            <button v-if="booking.payment_status === 'unpaid' && booking.status === 'confirmed'"
+                                    @click="showPaymentModal(booking)"
+                                    class="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600">
+                                提交支付
+                            </button>
+                            
+                            <!-- 取消按钮 -->
+                            <button v-if="canCancelBooking(booking).allowed"
+                                    @click="showCancelBookingModal(booking)"
+                                    :class="canCancelBooking(booking).type === 'request' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600'"
+                                    class="flex-1 py-2 text-white rounded-lg text-sm font-medium">
+                                {{ getCancelButtonText(booking) }}
+                            </button>
+                            
+                            <!-- 查看详情 -->
+                            <button @click="viewDetail(booking)"
+                                    class="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">
+                                查看详情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 移动端空状态 -->
+                <div v-if="filteredBookings.length === 0" class="text-center py-16 text-gray-500 bg-white rounded-xl shadow-sm">
+                    <div class="text-6xl mb-4">📋</div>
+                    <p class="text-lg mb-2">暂无预约记录</p>
+                    <p class="text-sm text-gray-400 mb-4">您还没有预约过会议室</p>
+                    <a href="index.html" class="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        去预约会议室
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <!-- 支付申请弹窗 -->
+        <div v-if="showPaymentModalFlag" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+             @click.self="closePaymentModal">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <!-- 头部 -->
+                <div class="p-4 sm:p-6 border-b sticky top-0 bg-white z-10">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg sm:text-xl font-bold text-slate-800">提交支付申请</h3>
+                        <button @click="closePaymentModal" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 预约信息 -->
+                <div class="p-4 sm:p-6 bg-slate-50">
+                    <div class="space-y-2 text-xs sm:text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">预约编号：</span>
+                            <span class="font-semibold">{{ currentBooking.booking_no }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">会议室：</span>
+                            <span class="font-semibold">{{ currentBooking.room_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">预约时间：</span>
+                            <span class="font-semibold text-xs sm:text-sm">{{ currentBooking.booking_date }} {{ currentBooking.start_time }}-{{ currentBooking.end_time }}</span>
+                        </div>
+                        <div class="flex justify-between pt-2 border-t border-slate-200">
+                            <span class="text-slate-800 font-medium">应付金额：</span>
+                            <span class="text-lg sm:text-xl font-bold text-blue-600">¥{{ (currentBooking.actual_fee || currentBooking.total_fee || 0).toFixed(2) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 支付表单 -->
+                <div class="p-4 sm:p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">支付方式 *</label>
+                        <select v-model="paymentForm.payment_method" 
+                                class="w-full px-3 py-2.5 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
+                            <option value="">请选择支付方式</option>
+                            <option value="微信支付">微信支付</option>
+                            <option value="支付宝">支付宝</option>
+                            <option value="银行转账">银行转账</option>
+                            <option value="现金">现金支付</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">支付备注</label>
+                        <textarea v-model="paymentForm.payment_remark"
+                                  rows="3"
+                                  placeholder="请输入支付备注，例如：转账时间、转账金额等"
+                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
+                        </textarea>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="p-4 sm:p-6 border-t bg-slate-50 flex flex-col sm:flex-row gap-3">
+                    <button @click="submitPayment"
+                            :disabled="!paymentForm.payment_method || submittingPayment"
+                            :class="[
+                                'flex-1 px-6 py-2.5 sm:py-3 rounded-lg font-medium transition text-sm sm:text-base',
+                                paymentForm.payment_method && !submittingPayment
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            ]">
+                        {{ submittingPayment ? '提交中...' : '提交支付申请' }}
+                    </button>
+                    <button @click="closePaymentModal"
+                            class="w-full sm:w-auto px-6 py-2.5 sm:py-3 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 text-sm sm:text-base">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 取消确认弹窗 -->
+        <div v-if="showCancelModalFlag" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <!-- 头部 -->
+                <div class="p-4 sm:p-6 border-b sticky top-0 bg-white z-10">
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800">取消预约确认</h3>
+                </div>
+                
+                <!-- 预约信息 -->
+                <div class="p-4 sm:p-6 bg-slate-50 space-y-2 text-xs sm:text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-600">预约编号：</span>
+                        <span class="font-semibold">{{ cancelBookingData.booking_no }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-600">会议室：</span>
+                        <span class="font-semibold">{{ cancelBookingData.room_name }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-600">预约时间：</span>
+                        <span class="font-semibold text-xs sm:text-sm">{{ cancelBookingData.booking_date }} {{ cancelBookingData.start_time }}-{{ cancelBookingData.end_time }}</span>
+                    </div>
+                    <div class="flex justify-between pt-2 border-t">
+                        <span class="text-slate-800 font-medium">费用：</span>
+                        <span class="font-bold text-blue-600">¥{{ (cancelBookingData.total_fee || 0).toFixed(2) }}</span>
+                    </div>
+                </div>
+                
+                <!-- 取消规则说明 -->
+                <div class="p-4 sm:p-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
+                        <div class="flex items-start">
+                            <span class="text-blue-600 mr-2">ℹ️</span>
+                            <div class="text-xs sm:text-sm text-blue-800">
+                                <p class="font-medium mb-1">取消规则</p>
+                                <p>{{ cancelInfo.reason }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 取消原因 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            取消原因 <span class="text-red-500">*</span>
+                        </label>
+                        <select v-model="cancelReason" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-3 text-sm sm:text-base">
+                            <option value="">请选择取消原因</option>
+                            <option value="临时有事无法参加">临时有事无法参加</option>
+                            <option value="会议时间冲突">会议时间冲突</option>
+                            <option value="会议取消">会议取消</option>
+                            <option value="其他">其他原因</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 详细说明 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">详细说明（选填）</label>
+                        <textarea v-model="cancelDetail" 
+                                  class="w-full border border-slate-300 rounded-lg px-3 py-2 h-20 resize-none text-sm sm:text-base"
+                                  placeholder="请补充说明"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 按钮 -->
+                <div class="p-4 sm:p-6 border-t flex flex-col sm:flex-row gap-3">
+                    <button @click="confirmCancel" 
+                            :disabled="!cancelReason"
+                            :class="cancelReason ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'"
+                            class="flex-1 px-6 py-2.5 sm:py-3 text-white rounded-lg font-medium text-sm sm:text-base">
+                        确认取消
+                    </button>
+                    <button @click="closeCancelModal" 
+                            class="w-full sm:w-auto px-6 py-2.5 sm:py-3 text-slate-700 hover:text-slate-900 font-medium border border-slate-300 rounded-lg text-sm sm:text-base">
+                        返回
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详情弹窗 -->
+        <div v-if="showDetailModal" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+             @click.self="closeDetailModal">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-4 sm:p-6 border-b sticky top-0 bg-white z-10">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg sm:text-xl font-bold text-slate-800">预约详情</h3>
+                        <button @click="closeDetailModal" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-4 sm:p-6" v-if="detailBooking">
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">预约编号</div>
+                            <div class="font-semibold text-xs sm:text-sm">{{ detailBooking.booking_no }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">会议室</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.room_name }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">会议主题</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.meeting_title || '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">参会人数</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.attendees_count || 0 }}人</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">预约日期</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.booking_date }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">时间段</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.start_time }}-{{ detailBooking.end_time }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">时长</div>
+                            <div class="font-semibold text-sm sm:text-base">{{ detailBooking.duration || 0 }}小时</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">原价费用</div>
+                            <div class="font-semibold text-sm sm:text-base">¥{{ (detailBooking.total_fee || 0).toFixed(2) }}</div>
+                        </div>
+                        <div v-if="detailBooking.discount_amount > 0">
+                            <div class="text-xs sm:text-sm text-gray-500">折扣金额</div>
+                            <div class="font-semibold text-green-600 text-sm sm:text-base">-¥{{ detailBooking.discount_amount }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">实际费用</div>
+                            <div class="font-semibold text-blue-600 text-base sm:text-xl">¥{{ (detailBooking.actual_fee || detailBooking.total_fee || 0).toFixed(2) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">预约状态</div>
+                            <span :class="getBookingStatusClass(detailBooking.status)" 
+                                  class="px-3 py-1 rounded-full text-xs font-medium">
+                                {{ getBookingStatusText(detailBooking.status) }}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm text-gray-500">支付状态</div>
+                            <span :class="getPaymentStatusClass(detailBooking.payment_status)" 
+                                  class="px-3 py-1 rounded-full text-xs font-medium">
+                                {{ getPaymentStatusText(detailBooking.payment_status) }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div v-if="detailBooking.payment_status === 'applied' || detailBooking.payment_status === 'paid'" 
+                         class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
+                        <h4 class="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">支付信息</h4>
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                            <div>
+                                <div class="text-xs sm:text-sm text-gray-500">支付方式</div>
+                                <div class="font-semibold text-sm sm:text-base">{{ detailBooking.payment_method || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm text-gray-500">支付时间</div>
+                                <div class="font-semibold text-xs sm:text-sm">{{ detailBooking.payment_time || '-' }}</div>
+                            </div>
+                            <div v-if="detailBooking.payment_remark" class="col-span-2">
+                                <div class="text-xs sm:text-sm text-gray-500">支付备注</div>
+                                <div class="font-semibold text-sm sm:text-base">{{ detailBooking.payment_remark }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-4 sm:p-6 border-t bg-slate-50 flex justify-end">
+                    <button @click="closeDetailModal"
+                            class="px-6 py-2.5 sm:py-3 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 text-sm sm:text-base">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置 - 使用完整的URL
+        const API_BASE = localStorage.getItem('API_BASE') || 
+            (window.location.hostname === 'localhost' ? 'http://localhost:8000/api/meeting' : '/api/meeting');
+        
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const bookings = ref([]);
+                const filterStatus = ref('');
+                const filterPaymentStatus = ref('');
+                const showPaymentModalFlag = ref(false);
+                const showDetailModal = ref(false);
+                const currentBooking = ref({});
+                const detailBooking = ref({});
+                const submittingPayment = ref(false);
+                const paymentForm = ref({
+                    payment_method: '',
+                    payment_remark: ''
+                });
+                const stats = ref({
+                    total: 0,
+                    unpaid: 0,
+                    applied: 0,
+                    paid: 0
+                });
+                
+                const showCancelModalFlag = ref(false);
+                const cancelBookingData = ref({});
+                const cancelReason = ref('');
+                const cancelDetail = ref('');
+                const cancelInfo = ref({});
+                
+                const filteredBookings = computed(() => {
+                    let filtered = bookings.value;
+                    
+                    if (filterStatus.value) {
+                        filtered = filtered.filter(b => b.status === filterStatus.value);
+                    }
+                    
+                    if (filterPaymentStatus.value) {
+                        filtered = filtered.filter(b => b.payment_status === filterPaymentStatus.value);
+                    }
+                    
+                    return filtered;
+                });
+                
+                const loadMyBookings = async () => {
+                    try {
+                        console.log('开始加载预约数据，API_BASE:', API_BASE);
+                        
+                        // 使用bookings接口获取数据
+                        const response = await fetch(`${API_BASE}/bookings?is_deleted=0`);
+                        console.log('响应状态:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('获取到的数据:', data);
+                        
+                        if (data.success) {
+                            bookings.value = data.data.bookings || [];
+                            
+                            // 计算统计数据
+                            stats.value.total = bookings.value.length;
+                            stats.value.unpaid = bookings.value.filter(b => b.payment_status === 'unpaid').length;
+                            stats.value.applied = bookings.value.filter(b => b.payment_status === 'applied').length;
+                            stats.value.paid = bookings.value.filter(b => b.payment_status === 'paid').length;
+                            
+                            console.log('统计数据:', stats.value);
+                        } else {
+                            console.error('API返回失败:', data);
+                            bookings.value = [];
+                        }
+                    } catch (error) {
+                        console.error('加载预约列表失败:', error);
+                        bookings.value = [];
+                        // 显示错误提示
+                        alert('加载数据失败：' + error.message + '\n\n请检查：\n1. 后端服务是否启动\n2. API地址是否正确\n3. 网络连接是否正常');
+                    }
+                };
+                
+                const showPaymentModal = (booking) => {
+                    currentBooking.value = booking;
+                    paymentForm.value = {
+                        payment_method: '',
+                        payment_remark: ''
+                    };
+                    showPaymentModalFlag.value = true;
+                };
+                
+                const closePaymentModal = () => {
+                    showPaymentModalFlag.value = false;
+                    currentBooking.value = {};
+                };
+                
+                const submitPayment = async () => {
+                    if (!paymentForm.value.payment_method) {
+                        alert('请选择支付方式');
+                        return;
+                    }
+                    
+                    submittingPayment.value = true;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/payment/submit`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                booking_id: currentBooking.value.id,
+                                payment_method: paymentForm.value.payment_method,
+                                payment_remark: paymentForm.value.payment_remark
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert(`支付申请已提交！\n\n支付单号：${result.data.payment_no}\n\n管理员将在收到您的支付后确认收款。`);
+                            closePaymentModal();
+                            loadMyBookings();
+                        } else {
+                            alert('提交失败：' + (result.message || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('提交支付失败:', error);
+                        alert('提交失败，请检查网络连接后重试');
+                    } finally {
+                        submittingPayment.value = false;
+                    }
+                };
+                
+                const cancelBooking = async (bookingId) => {
+                    if (!confirm('确定要取消这个预约吗？')) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+                            method: 'PUT'
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert('预约已取消');
+                            loadMyBookings();
+                        } else {
+                            alert('取消失败：' + (result.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('取消预约失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const canCancelBooking = (booking) => {
+                    if (['cancelled', 'completed'].includes(booking.status)) {
+                        return { allowed: false, reason: '该预约已结束', type: 'none' };
+                    }
+                    
+                    if (booking.status === 'active') {
+                        return { allowed: false, reason: '会议进行中，不可取消', type: 'none' };
+                    }
+                    
+                    if (booking.status === 'pending') {
+                        return { allowed: true, reason: '预约待确认，可随时取消', type: 'direct' };
+                    }
+                    
+                    if (booking.status === 'confirmed') {
+                        const now = new Date();
+                        const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+                        const hoursBefore = (bookingDateTime - now) / (1000 * 60 * 60);
+                        
+                        if (hoursBefore < 0) {
+                            return { allowed: false, reason: '会议已开始或已结束，不可取消', type: 'none' };
+                        } else if (hoursBefore < 2) {
+                            return { allowed: false, reason: '距开始时间不足2小时，不可取消', type: 'none' };
+                        } else if (hoursBefore < 24) {
+                            return { allowed: true, reason: '需申请取消，请填写取消原因', type: 'request' };
+                        } else {
+                            return { allowed: true, reason: '提前24小时以上，可免费取消', type: 'direct' };
+                        }
+                    }
+                    
+                    return { allowed: false, reason: '未知状态', type: 'none' };
+                };
+                
+                const getCancelButtonText = (booking) => {
+                    const info = canCancelBooking(booking);
+                    if (!info.allowed) return '不可取消';
+                    if (info.type === 'request') return '申请取消';
+                    return '取消预约';
+                };
+                
+                const showCancelBookingModal = (booking) => {
+                    const info = canCancelBooking(booking);
+                    if (!info.allowed) {
+                        alert(info.reason);
+                        return;
+                    }
+                    
+                    cancelBookingData.value = booking;
+                    cancelInfo.value = info;
+                    cancelReason.value = '';
+                    cancelDetail.value = '';
+                    showCancelModalFlag.value = true;
+                };
+                
+                const closeCancelModal = () => {
+                    showCancelModalFlag.value = false;
+                    cancelBookingData.value = {};
+                    cancelReason.value = '';
+                    cancelDetail.value = '';
+                };
+                
+                const confirmCancel = async () => {
+                    if (!cancelReason.value) {
+                        alert('请选择取消原因');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/bookings/${cancelBookingData.value.id}/cancel`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                cancel_reason: cancelReason.value,
+                                cancel_detail: cancelDetail.value
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert('预约已成功取消');
+                            closeCancelModal();
+                            loadMyBookings();
+                        } else {
+                            alert('取消失败：' + (result.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('取消预约失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const viewDetail = (booking) => {
+                    detailBooking.value = booking;
+                    showDetailModal.value = true;
+                };
+                
+                const closeDetailModal = () => {
+                    showDetailModal.value = false;
+                    detailBooking.value = {};
+                };
+                
+                const getBookingStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'confirmed': 'bg-green-100 text-green-800',
+                        'active': 'bg-blue-100 text-blue-800',
+                        'completed': 'bg-slate-100 text-slate-800',
+                        'cancelled': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const getBookingStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'active': '进行中',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const getPaymentStatusClass = (paymentStatus) => {
+                    const classes = {
+                        'unpaid': 'bg-red-100 text-red-800',
+                        'applied': 'bg-blue-100 text-blue-800',
+                        'paid': 'bg-green-100 text-green-800'
+                    };
+                    return classes[paymentStatus] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const getPaymentStatusText = (paymentStatus) => {
+                    const texts = {
+                        'unpaid': '待付款',
+                        'applied': '待确认收款',
+                        'paid': '已付款'
+                    };
+                    return texts[paymentStatus] || paymentStatus;
+                };
+                
+                onMounted(() => {
+                    console.log('组件挂载，准备加载数据');
+                    loadMyBookings();
+                });
+                
+                return {
+                    bookings,
+                    filterStatus,
+                    filterPaymentStatus,
+                    filteredBookings,
+                    showPaymentModalFlag,
+                    showDetailModal,
+                    currentBooking,
+                    detailBooking,
+                    submittingPayment,
+                    paymentForm,
+                    stats,
+                    showCancelModalFlag,
+                    cancelBookingData,
+                    cancelReason,
+                    cancelDetail,
+                    cancelInfo,
+                    loadMyBookings,
+                    showPaymentModal,
+                    closePaymentModal,
+                    submitPayment,
+                    cancelBooking,
+                    viewDetail,
+                    closeDetailModal,
+                    canCancelBooking,
+                    getCancelButtonText,
+                    showCancelBookingModal,
+                    closeCancelModal,
+                    confirmCancel,
+                    getBookingStatusClass,
+                    getBookingStatusText,
+                    getPaymentStatusClass,
+                    getPaymentStatusText
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
