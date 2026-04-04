@@ -35,6 +35,8 @@ class Settings:
         self.DATABASE_MAX_OVERFLOW: int = int(os.getenv("DATABASE_MAX_OVERFLOW", "20"))
         self.DATABASE_POOL_PRE_PING: bool = True
 
+        self._is_sqlite: bool = self.DATABASE_URL.startswith("sqlite")
+
         # 数据库配置 - 会议室数据库
         self.MEETING_DATABASE_URL: Optional[str] = self._get_meeting_db_url()
 
@@ -62,7 +64,18 @@ class Settings:
         self.DEFAULT_ADMIN_PASSWORD: str = "admin123"
 
         # CORS配置
-        self.CORS_ALLOW_ORIGINS: list = ["*"]
+        self.CORS_ALLOW_ORIGINS: list = [
+            "http://jhw-ai.com",
+            "https://jhw-ai.com",
+            "http://www.jhw-ai.com",
+            "https://www.jhw-ai.com",
+            "http://localhost",
+            "http://localhost:8080",
+            "http://localhost:8000",
+            "http://127.0.0.1",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8000",
+        ]
         self.CORS_ALLOW_CREDENTIALS: bool = True
         self.CORS_ALLOW_METHODS: list = ["*"]
         self.CORS_ALLOW_HEADERS: list = ["*"]
