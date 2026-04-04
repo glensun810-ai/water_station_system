@@ -1563,7 +1563,7 @@
  <span>办公室管理</span>
  <span class="shortcut-hint">G O</span>
  </button>
- <button @click="navigateTo('users')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'users' }">
+ <button v-if="user?.role === 'super_admin'" @click="navigateTo('users')" class="nav-item" :class="{ 'nav-item-active': activeTab === 'users' }">
  <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
  </svg>
@@ -3798,7 +3798,7 @@
                 <!-- 操作栏 -->
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex items-center gap-3">
-                        <button @click="showUserCreateModal = true" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
+                        <button v-if="user?.role === 'super_admin'" @click="showUserCreateModal = true" class="btn-primary text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
@@ -4595,125 +4595,183 @@
         </div>
 
         <!-- 删除用户确认模态框 -->
-        <div v-if="showUserDeleteModal || deleteUserRecords" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showUserDeleteModal = false; deleteUserRecords = null">
-            <div class="bg-white rounded-2xl p-6 max-w-2xl mx-4 shadow-2xl max-h-[80vh] overflow-y-auto" @click.stop>
+        <div v-if="showUserDeleteModal || deleteUserRecords" 
+             class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+             @click="showUserDeleteModal = false; deleteUserRecords = null">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden transform transition-all"
+                 @click.stop>
+                
                 <!-- 有关联记录时显示详情 -->
                 <div v-if="deleteUserRecords">
-                    <div class="text-center mb-4">
-                        <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800 mb-2">用户有关联记录</h3>
-                        <p class="text-slate-500 mb-4">用户 "{{ deleteUser?.name }}" 存在以下记录，已禁用而非删除</p>
-                    </div>
-                    
-                    <!-- 交易记录 -->
-                        <div class="bg-slate-50 rounded-lg overflow-hidden">
-                            <table class="w-full text-sm">
-                                <thead class="bg-slate-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left">ID</th>
-                                        <th class="px-3 py-2 text-left">金额</th>
-                                        <th class="px-3 py-2 text-left">状态</th>
-                                        <th class="px-3 py-2 text-left">时间</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                        <td class="px-3 py-2">{{ t.id }}</td>
-                                        <td class="px-3 py-2">¥{{ t.amount.toFixed(2) }}</td>
-                                        <td class="px-3 py-2">
-                                            <span :class="t.status === 'settled' ? 'text-green-600' : 'text-orange-600'">{{ t.status }}</span>
-                                        </td>
-                                        <td class="px-3 py-2">{{ t.pickup_time ? new Date(t.pickup_time).toLocaleString() : '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- 头部 -->
+                    <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-xl font-bold text-white mb-1">用户有关联记录</h3>
+                                <p class="text-white/90 text-sm">用户 "{{ deleteUser?.name }}" 已被禁用</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- 领水记录 -->
-                    <div v-if="deleteUserRecords.office_pickups && deleteUserRecords.office_pickups.length > 0" class="mb-4">
-                        <h4 class="font-semibold text-slate-700 mb-2">领水记录 ({{ deleteUserRecords.office_pickups.length }})</h4>
-                        <div class="bg-slate-50 rounded-lg overflow-hidden">
-                            <table class="w-full text-sm">
-                                <thead class="bg-slate-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left">ID</th>
-                                        <th class="px-3 py-2 text-left">办公室</th>
-                                        <th class="px-3 py-2 text-left">水量</th>
-                                        <th class="px-3 py-2 text-left">状态</th>
-                                        <th class="px-3 py-2 text-left">时间</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="p in deleteUserRecords.office_pickups" :key="p.id" class="border-t border-slate-200">
-                                        <td class="px-3 py-2">{{ p.id }}</td>
-                                        <td class="px-3 py-2">{{ p.office_name }}</td>
-                                        <td class="px-3 py-2">{{ p.water_quantity }}</td>
-                                        <td class="px-3 py-2">
-                                            <span :class="p.status === 'completed' ? 'text-green-600' : 'text-orange-600'">{{ p.status }}</span>
-                                        </td>
-                                        <td class="px-3 py-2">{{ p.pickup_time ? new Date(p.pickup_time).toLocaleString() : '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- 内容区域 -->
+                    <div class="p-6 overflow-y-auto" style="max-height: calc(85vh - 200px);">
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
+                            <p class="text-sm text-amber-800">
+                                <span class="font-semibold">操作说明：</span>该用户存在关联的业务记录，为保证数据完整性，系统已自动将其禁用而非删除。您可以稍后在用户管理中重新启用该用户。
+                            </p>
+                        </div>
+                        
+                        <!-- 领水记录 -->
+                        <div v-if="deleteUserRecords && deleteUserRecords.office_pickups && deleteUserRecords.office_pickups.length > 0" class="mb-6">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold text-slate-800">领水记录</h4>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">{{ deleteUserRecords.office_pickups.length }} 条</span>
+                            </div>
+                            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">ID</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">办公室</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">水量</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">状态</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">时间</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="p in deleteUserRecords.office_pickups" :key="p.id" class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 text-slate-600">#{{ p.id }}</td>
+                                            <td class="px-4 py-3 font-medium text-slate-800">{{ p.office_name || '-' }}</td>
+                                            <td class="px-4 py-3 text-slate-600">{{ p.water_quantity }}</td>
+                                            <td class="px-4 py-3">
+                                                <span :class="['px-2 py-1 rounded-full text-xs font-medium', p.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700']">
+                                                    {{ p.status === 'completed' ? '已完成' : '进行中' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-slate-500 text-xs">{{ p.pickup_time ? new Date(p.pickup_time).toLocaleString('zh-CN') : '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- 办公室结算 -->
+                        <div v-if="deleteUserRecords && deleteUserRecords.office_settlements && deleteUserRecords.office_settlements.length > 0">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold text-slate-800">办公室结算</h4>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">{{ deleteUserRecords.office_settlements.length }} 条</span>
+                            </div>
+                            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">ID</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">办公室</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">产品</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">数量</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">金额</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">创建时间</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="s in deleteUserRecords.office_settlements" :key="s.id" class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 text-slate-600">#{{ s.id }}</td>
+                                            <td class="px-4 py-3 font-medium text-slate-800">{{ s.office_name || '-' }}</td>
+                                            <td class="px-4 py-3 text-slate-600">{{ s.product_name || '-' }}</td>
+                                            <td class="px-4 py-3 text-slate-600">{{ s.quantity }}</td>
+                                            <td class="px-4 py-3 font-semibold text-slate-800">¥{{ s.amount.toFixed(2) }}</td>
+                                            <td class="px-4 py-3 text-slate-500 text-xs">{{ s.created_at ? new Date(s.created_at).toLocaleString('zh-CN') : '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- 办公室结算 -->
-                    <div v-if="deleteUserRecords.office_settlements && deleteUserRecords.office_settlements.length > 0" class="mb-4">
-                        <h4 class="font-semibold text-slate-700 mb-2">办公室结算 ({{ deleteUserRecords.office_settlements.length }})</h4>
-                        <div class="bg-slate-50 rounded-lg overflow-hidden">
-                            <table class="w-full text-sm">
-                                <thead class="bg-slate-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left">ID</th>
-                                        <th class="px-3 py-2 text-left">办公室</th>
-                                        <th class="px-3 py-2 text-left">产品</th>
-                                        <th class="px-3 py-2 text-left">数量</th>
-                                        <th class="px-3 py-2 text-left">金额</th>
-                                        <th class="px-3 py-2 text-left">创建时间</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="s in deleteUserRecords.office_settlements" :key="s.id" class="border-t border-slate-200">
-                                        <td class="px-3 py-2">{{ s.id }}</td>
-                                        <td class="px-3 py-2">{{ s.office_name }}</td>
-                                        <td class="px-3 py-2">{{ s.product_name }}</td>
-                                        <td class="px-3 py-2">{{ s.quantity }}</td>
-                                        <td class="px-3 py-2">¥{{ s.amount.toFixed(2) }}</td>
-                                        <td class="px-3 py-2">{{ s.created_at ? new Date(s.created_at).toLocaleString() : '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3 mt-6">
-                        <button @click="deleteUserRecords = null; showUserDeleteModal = false; loadUsersData()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">关闭</button>
+                    <!-- 底部按钮 -->
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                        <button @click="deleteUserRecords = null; showUserDeleteModal = false; loadUsersData()" 
+                                class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/30">
+                            我知道了
+                        </button>
                     </div>
                 </div>
                 
                 <!-- 无关联记录时显示删除确认 -->
-                <div v-if="true" class="text-center">
-                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                        </svg>
+                <div v-if="!deleteUserRecords">
+                    <!-- 头部 -->
+                    <div class="bg-gradient-to-r from-red-500 to-rose-500 px-6 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-xl font-bold text-white mb-1">确认删除用户</h3>
+                                <p class="text-white/90 text-sm">此操作不可撤销</p>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-bold text-slate-800 mb-2">确认删除</h3>
-                    <p class="text-slate-500 mb-6">确定要删除用户 "{{ deleteUser?.name }}" 吗？此操作不可恢复。</p>
-                    <div class="flex gap-3">
-                        <button @click="showUserDeleteModal = false" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">取消</button>
-                        <button @click="deleteUserAction" class="flex-1 btn-danger text-white px-4 py-2 rounded-lg">删除</button>
+                    
+                    <!-- 内容区域 -->
+                    <div class="p-6">
+                        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-red-800 mb-1">危险操作警告</p>
+                                    <p class="text-sm text-red-700">确定要删除用户 <span class="font-bold">"{{ deleteUser?.name }}"</span> 吗？删除后将无法恢复该用户的所有数据。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-50 rounded-xl p-4">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                                    <span class="text-lg font-semibold text-slate-600">{{ deleteUser?.name?.charAt(0) || '?' }}</span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-800">{{ deleteUser?.name }}</p>
+                                    <p class="text-sm text-slate-500">{{ deleteUser?.department || '未分配部门' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 底部按钮 -->
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                        <button @click="showUserDeleteModal = false" 
+                                class="flex-1 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-400 transition-all">
+                            取消
+                        </button>
+                        <button @click="deleteUserAction" 
+                                class="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-medium hover:from-red-700 hover:to-rose-700 transition-all shadow-lg shadow-red-500/30">
+                            确认删除
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 删除确认弹窗 (通用) -->
+        <!-- 删除确认弹窗 (通用) --><!-- 删除确认弹窗 (通用) -->
         <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" @click="showDeleteConfirmModal = false; deleteConfirmItem = null">
             <div class="bg-white rounded-2xl w-full max-w-sm mx-4 shadow-2xl" @click.stop>
                 <div class="p-4 sm:p-6">
@@ -7403,7 +7461,7 @@ const loadDashboard = async () => {
                     
                     if (!token) {
                         alert('登录已失效，请重新登录');
-                        window.location.href = 'https://jhw-ai.com/water-admin/login.html';
+                        window.location.href = '/service/water-admin/login.html';
                         return;
                     }
                     
@@ -8353,7 +8411,7 @@ const navigateTo = async (tab) => {
                                 } catch(e) {}
                             }
                             alert('登录已失效，请重新登录');
-                            window.location.href = 'https://jhw-ai.com/water-admin/login.html';
+                            window.location.href = '/service/water-admin/login.html';
                             return;
                         }
                         
@@ -8375,7 +8433,7 @@ const navigateTo = async (tab) => {
                         if (!res.ok) {
                             if (data.detail === '未登录' || data.detail === 'Token verification failed') {
                                 alert('登录已失效，请重新登录');
-                                window.location.href = 'https://jhw-ai.com/water-admin/login.html';
+                                window.location.href = '/service/water-admin/login.html';
                                 return;
                             }
                             throw new Error(data.detail || '删除失败');
@@ -8444,7 +8502,10 @@ const navigateTo = async (tab) => {
                     try {
                         const res = await fetch(`${API_BASE}/admin/users/batch-status`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                ...getAuthHeaders()
+                            },
                             body: JSON.stringify({ user_ids: selectedUsers.value, is_active: 1 })
                         });
                         if (res.ok) {
@@ -8468,7 +8529,10 @@ const navigateTo = async (tab) => {
                     try {
                         const res = await fetch(`${API_BASE}/admin/users/batch-status`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                ...getAuthHeaders()
+                            },
                             body: JSON.stringify({ user_ids: selectedUsers.value, is_active: 0 })
                         });
                         if (res.ok) {
@@ -8492,7 +8556,10 @@ const navigateTo = async (tab) => {
                     try {
                         const res = await fetch(`${API_BASE}/admin/users/batch-delete`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                ...getAuthHeaders()
+                            },
                             body: JSON.stringify(selectedUsers.value)
                         });
                         if (res.ok) {
@@ -8699,7 +8766,7 @@ onMounted(async () => {
                     if (confirm('确定要退出登录吗？')) {
                         localStorage.removeItem('token');
                         localStorage.removeItem('user');
-                        window.location.href = 'https://jhw-ai.com/water-admin/login.html';
+                        window.location.href = '/service/water-admin/login.html';
                     }
                 };
 
