@@ -18,9 +18,7 @@ router = APIRouter(prefix="/api/meeting", tags=["meeting"])
 
 # ==================== 数据库配置（模块级别，避免重复创建）====================
 # 动态获取数据库路径（避免硬编码）
-MEETING_DB_PATH = os.path.join(
-    os.path.dirname(__file__), "../../Service_MeetingRoom/backend/meeting.db"
-)
+MEETING_DB_PATH = os.path.join(os.path.dirname(__file__), "meeting.db")
 MEETING_DB_PATH = os.path.abspath(MEETING_DB_PATH)
 
 # 检查数据库文件是否存在
@@ -334,6 +332,7 @@ def generate_booking_no():
 def get_bookings(
     status: Optional[str] = Query(None),
     room_id: Optional[int] = Query(None),
+    is_deleted: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -348,6 +347,9 @@ def get_bookings(
         if room_id:
             query += " AND room_id = :room_id"
             params["room_id"] = room_id
+        if is_deleted is not None:
+            query += " AND is_deleted = :is_deleted"
+            params["is_deleted"] = is_deleted
 
         query += " ORDER BY booking_date DESC, start_time"
 
@@ -658,7 +660,7 @@ def get_offices():
         from sqlalchemy.orm import sessionmaker
 
         # 连接到水站管理数据库（office表所在）
-        db_path = os.path.join(os.path.dirname(__file__), "../waterms.db")
+        db_path = os.path.join(os.path.dirname(__file__), "waterms.db")
         db_path = os.path.abspath(db_path)
 
         # 检查数据库文件是否存在

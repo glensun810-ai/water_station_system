@@ -671,6 +671,21 @@ class PrepaidPickupCreate(BaseModel):
     note: Optional[str] = None
 
 
+class InventoryUpdate(BaseModel):
+    product_id: Optional[int] = None
+    stock: Optional[int] = None
+    quantity: Optional[int] = None
+
+
+class DeleteTransactionRequest(BaseModel):
+    transaction_ids: List[int]
+    delete_reason: Optional[str] = None
+
+
+class SettlementRequest(BaseModel):
+    transaction_ids: List[int]
+
+
 class PrepaidPickupResponse(BaseModel):
     id: int
     order_id: int
