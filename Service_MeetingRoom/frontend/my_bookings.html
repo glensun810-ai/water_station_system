@@ -997,6 +997,10 @@
                     // 移动端筛选面板
                     showMobileFilters: false,
                     
+                    // 当前用户手机号（用于识别"我的预约"）
+                    currentUserPhone: localStorage.getItem('meetingUserPhone') || '',
+                    showPhoneInput: false,
+                    
                     // 状态映射
                     statusMap: {
                         'pending': '待确认',
@@ -1033,14 +1037,12 @@
             
             computed: {
                 myBookingsStats() {
-                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                    if (!currentUser.name) {
+                    if (!this.currentUserPhone) {
                         return { total: 0, pending: 0, confirmed: 0, cancelled: 0, unpaid: 0 };
                     }
                     
                     const myBookings = this.bookings.filter(b => 
-                        b.user_name === currentUser.name || 
-                        b.external_contact_name === currentUser.name
+                        b.user_phone === this.currentUserPhone
                     );
                     
                     return {
@@ -1055,14 +1057,11 @@
                 viewStats() {
                     let baseBookings = this.bookings;
                     
-                    if (this.viewMode === 'my') {
-                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                        if (currentUser.name) {
-                            baseBookings = baseBookings.filter(b => 
-                                b.user_name === currentUser.name || 
-                                b.external_contact_name === currentUser.name
-                            );
-                        }
+                    // "我的预约"筛选：基于手机号识别
+                    if (this.viewMode === 'my' && this.currentUserPhone) {
+                        baseBookings = baseBookings.filter(b => 
+                            b.user_phone === this.currentUserPhone
+                        );
                     }
                     
                     const today = new Date();
@@ -1127,14 +1126,11 @@
                 sortedBookings() {
                     let filtered = this.bookings;
                     
-                    if (this.viewMode === 'my') {
-                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                        if (currentUser.name) {
-                            filtered = filtered.filter(b => 
-                                b.user_name === currentUser.name || 
-                                b.external_contact_name === currentUser.name
-                            );
-                        }
+                    // "我的预约"筛选：基于手机号识别
+                    if (this.viewMode === 'my' && this.currentUserPhone) {
+                        filtered = filtered.filter(b => 
+                            b.user_phone === this.currentUserPhone
+                        );
                     }
                     
                     const today = new Date();
@@ -1515,6 +1511,18 @@
                 this.loadMyBookings();
             }
         }).mount('#app');
+    </script>
+    <script>
+        // 环境检测：更新返回首页链接
+        (function() {
+            const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
+            const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('a[href="/service/home.html"]').forEach(link => {
+                    link.href = homeHref;
+                });
+            });
+        })();
     </script>
 </body>
 </html>

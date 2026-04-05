@@ -353,10 +353,10 @@
             <div class="flex items-center justify-between">
                 <h1 class="text-base sm:text-lg font-bold truncate">水站管理系统</h1>
                 <div class="flex items-center gap-2">
-                    <a href="/service/home.html" class="home-btn rounded-xl text-xs sm:text-sm font-medium" title="返回首页">
+                    <a href="/service/home.html" class="home-btn rounded-xl text-xs sm:text-sm font-medium" title="首页">
                         <div class="home-btn-content">
                             <i class="fas fa-home home-btn-icon"></i>
-                            <span class="hidden sm:inline ml-1">返回首页</span>
+
                         </div>
                     </a>
                     <button @click="showOfficeSettings = true" class="bg-white/20 hover:bg-white/30 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md">
@@ -939,9 +939,33 @@
     
     <script>
         const { createApp } = Vue;
-        // 根据当前主机名自动选择API服务器
-        // API配置：自动适配IP/域名访问
-        const API_BASE = `${window.location.protocol}//${window.location.hostname}/api`;
+        // API配置：根据环境自动选择正确的端口
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const currentPort = window.location.port;
+        
+        // 判断是否是本地开发环境
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        
+        // API基础地址配置
+        let API_BASE;
+        if (isLocalhost) {
+            // 本地开发：如果访问的是8080端口（静态服务器），API应该在8000端口
+            if (currentPort === '8080' || currentPort === '3000') {
+                API_BASE = 'http://localhost:8000/api';
+            } else if (currentPort === '8000') {
+                // 如果已经在8000端口，使用当前端口
+                API_BASE = `${protocol}//${hostname}:${currentPort}/api`;
+            } else {
+                // 其他情况，默认使用8000端口
+                API_BASE = 'http://localhost:8000/api';
+            }
+        } else {
+            // 生产环境：使用当前域名和协议
+            API_BASE = `${protocol}//${hostname}/api`;
+        }
+        
+        console.log('API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
         
         createApp({
             data() {
@@ -1148,6 +1172,14 @@
                 }
             },
             async mounted() {
+                // 环境检测：更新返回首页链接
+                const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
+                const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+                const homeBtn = document.querySelector('.home-btn');
+                if (homeBtn) {
+                    homeBtn.href = homeHref;
+                }
+                
                 // ESC key to close modals
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {

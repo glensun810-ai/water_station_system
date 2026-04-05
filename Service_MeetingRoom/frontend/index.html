@@ -530,7 +530,33 @@ font-size: 16px;
             setup() {
                 // API配置
                 // API配置：自动适配IP/域名访问
-                const API_BASE = `${window.location.protocol}//${window.location.hostname}/api/meeting`;
+                // API配置：根据环境自动选择正确的端口
+                const hostname = window.location.hostname;
+                const protocol = window.location.protocol;
+                const currentPort = window.location.port;
+                
+                // 判断是否是本地开发环境
+                const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+                
+                // API基础地址配置
+                let API_BASE;
+                if (isLocalhost) {
+                    // 本地开发：如果访问的是8080端口（静态服务器），API应该在8000端口
+                    if (currentPort === '8080' || currentPort === '3000') {
+                        API_BASE = 'http://localhost:8000/api/meeting';
+                    } else if (currentPort === '8000') {
+                        // 如果已经在8000端口，使用当前端口
+                        API_BASE = `${protocol}//${hostname}:${currentPort}/api/meeting`;
+                    } else {
+                        // 其他情况，默认使用8000端口
+                        API_BASE = 'http://localhost:8000/api/meeting';
+                    }
+                } else {
+                    // 生产环境：使用当前域名和协议
+                    API_BASE = `${protocol}//${hostname}/api/meeting`;
+                }
+                
+                console.log('会议室API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
                 
                 // 用户类型
                 const userType = ref('');
@@ -901,6 +927,18 @@ font-size: 16px;
                 };
             }
         }).mount('#app');
+    </script>
+    <script>
+        // 环境检测：更新返回首页链接
+        (function() {
+            const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
+            const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('a[href="/service/home.html"]').forEach(link => {
+                    link.href = homeHref;
+                });
+            });
+        })();
     </script>
 </body>
 </html>

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>领水 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+        }
+        
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            font-size: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .page-title {
+            flex: 1;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .user-balance-card {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .balance-label {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .balance-info {
+            font-size: var(--font-size-sm);
+            opacity: 0.85;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+        }
+        
+        .product-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
+        .product-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .product-name {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .product-price {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .product-spec {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .product-stock {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .product-stock.low {
+            color: var(--danger);
+        }
+        
+        .quantity-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .quantity-label {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            justify-content: center;
+        }
+        
+        .qty-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qty-btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: scale(1.05);
+        }
+        
+        .qty-btn:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+        
+        .qty-display {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .summary-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .summary-row:last-child {
+            border-bottom: none;
+            padding-top: var(--spacing-md);
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+        }
+        
+        .summary-label {
+            color: var(--text-secondary);
+        }
+        
+        .summary-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: var(--spacing-lg);
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .error-message {
+            background: var(--danger-light);
+            color: var(--danger);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .success-message {
+            background: var(--success-light);
+            color: var(--success);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Loading -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div class="page-container">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="back-btn" @click="goBack">←</div>
+                <h1 class="page-title">领水</h1>
+            </div>
+            
+            <!-- User Balance -->
+            <div class="user-balance-card">
+                <div class="balance-label">当前余额</div>
+                <div class="balance-amount">¥{{ userInfo.balance_credit?.toFixed(2) || '0.00' }}</div>
+                <div class="balance-info">{{ userInfo.department || '未知部门' }}</div>
+            </div>
+            
+            <!-- Error/Success Message -->
+            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+            <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
+            
+            <!-- Office Selection -->
+            <div class="form-group">
+                <label class="form-label">选择办公室 *</label>
+                <select v-model="selectedOfficeId" class="form-input" @change="onOfficeChange">
+                    <option value="">请选择办公室</option>
+                    <option v-for="office in offices" :key="office.office_id" :value="office.office_id">
+                        {{ office.office_name }} {{ office.office_room_number ? `(${office.office_room_number})` : '' }}
+                    </option>
+                </select>
+            </div>
+            
+            <!-- Product Selection -->
+            <div v-if="selectedOfficeId">
+                <div class="font-semibold mb-md">选择产品</div>
+                
+                <div v-if="products.length === 0" class="empty-state">
+                    暂无可领产品
+                </div>
+                
+                <div v-else>
+                    <div 
+                        v-for="product in products" 
+                        :key="product.id"
+                        @click="selectProduct(product)"
+                        :class="['product-card', { 'selected': selectedProduct?.id === product.id }]"
+                    >
+                        <div class="product-header">
+                            <div>
+                                <div class="product-name">{{ product.name }}</div>
+                                <div class="product-spec">{{ product.specification || '标准规格' }}</div>
+                                <div :class="['product-stock', { 'low': product.stock <= 10 }]">
+                                    库存: {{ product.stock }} {{ product.unit || '件' }}
+                                </div>
+                            </div>
+                            <div class="product-price">¥{{ product.price?.toFixed(2) || '0.00' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quantity Selection -->
+            <div v-if="selectedProduct" class="quantity-section">
+                <div class="quantity-label">选择数量</div>
+                <div class="quantity-controls">
+                    <button class="qty-btn" @click="decreaseQty" :disabled="quantity <= 1">−</button>
+                    <div class="qty-display">{{ quantity }}</div>
+                    <button class="qty-btn" @click="increaseQty" :disabled="quantity >= maxQuantity">+</button>
+                </div>
+                <div v-if="quantity >= maxQuantity && maxQuantity <= 10" class="text-center text-sm text-secondary mt-md">
+                    库存有限，最多可领 {{ maxQuantity }} 件
+                </div>
+            </div>
+            
+            <!-- Pickup Person -->
+            <div v-if="selectedProduct" class="form-group">
+                <label class="form-label">领用人姓名 *</label>
+                <input 
+                    v-model="pickupPerson" 
+                    type="text" 
+                    class="form-input" 
+                    placeholder="请输入领用人姓名"
+                >
+            </div>
+            
+            <!-- Summary -->
+            <div v-if="selectedProduct" class="summary-section">
+                <div class="summary-row">
+                    <span class="summary-label">产品</span>
+                    <span class="summary-value">{{ selectedProduct.name }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">单价</span>
+                    <span class="summary-value">¥{{ selectedProduct.price?.toFixed(2) }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">数量</span>
+                    <span class="summary-value">{{ quantity }} 件</span>
+                </div>
+                <div v-if="discountDesc" class="summary-row">
+                    <span class="summary-label">优惠</span>
+                    <span class="summary-value text-success">{{ discountDesc }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">合计</span>
+                    <span class="summary-value text-primary">¥{{ totalAmount.toFixed(2) }}</span>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button 
+                v-if="selectedProduct" 
+                class="submit-btn" 
+                @click="submitOrder"
+                :disabled="submitting || !canSubmit"
+            >
+                {{ submitting ? '提交中...' : '确认领水' }}
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        const API_BASE = window.location.origin;
+        
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const submitting = ref(false);
+                const errorMessage = ref('');
+                const successMessage = ref('');
+                
+                const userInfo = ref({});
+                const offices = ref([]);
+                const products = ref([]);
+                
+                const selectedOfficeId = ref('');
+                const selectedProduct = ref(null);
+                const quantity = ref(1);
+                const pickupPerson = ref('');
+                const maxQuantity = ref(999);
+                
+                const discountDesc = ref('');
+                const freeQty = ref(0);
+                
+                const token = ref(localStorage.getItem('token'));
+                
+                const totalAmount = computed(() => {
+                    if (!selectedProduct.value) return 0;
+                    return selectedProduct.value.price * quantity.value;
+                });
+                
+                const canSubmit = computed(() => {
+                    return selectedOfficeId.value && 
+                           selectedProduct.value && 
+                           quantity.value > 0 && 
+                           pickupPerson.value.trim();
+                });
+                
+                const checkAuth = async () => {
+                    if (!token.value) {
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/portal/index.html';
+                            return false;
+                        }
+                        
+                        userInfo.value = await res.json();
+                        pickupPerson.value = userInfo.value.name || '';
+                        return true;
+                    } catch (err) {
+                        console.error('Auth check failed:', err);
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/user/offices`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (res.ok) {
+                            offices.value = await res.json();
+                        }
+                    } catch (err) {
+                        console.error('Load offices failed:', err);
+                    }
+                };
+                
+                const loadProducts = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/products`);
+                        if (res.ok) {
+                            products.value = await res.json();
+                        }
+                    } catch (err) {
+                        console.error('Load products failed:', err);
+                    }
+                };
+                
+                const onOfficeChange = () => {
+                    // 重置产品选择
+                    selectedProduct.value = null;
+                    quantity.value = 1;
+                };
+                
+                const selectProduct = (product) => {
+                    if (product.stock <= 0) {
+                        errorMessage.value = '该产品库存不足';
+                        setTimeout(() => errorMessage.value = '', 3000);
+                        return;
+                    }
+                    
+                    selectedProduct.value = product;
+                    quantity.value = 1;
+                    maxQuantity.value = Math.min(product.stock, 999);
+                    errorMessage.value = '';
+                };
+                
+                const increaseQty = () => {
+                    if (quantity.value < maxQuantity.value) {
+                        quantity.value++;
+                    }
+                };
+                
+                const decreaseQty = () => {
+                    if (quantity.value > 1) {
+                        quantity.value--;
+                    }
+                };
+                
+                const submitOrder = async () => {
+                    if (!canSubmit.value) {
+                        errorMessage.value = '请完善所有必填信息';
+                        return;
+                    }
+                    
+                    submitting.value = true;
+                    errorMessage.value = '';
+                    successMessage.value = '';
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/user/office-pickup`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token.value}`
+                            },
+                            body: JSON.stringify({
+                                office_id: parseInt(selectedOfficeId.value),
+                                product_id: selectedProduct.value.id,
+                                quantity: quantity.value,
+                                pickup_person: pickupPerson.value.trim()
+                            })
+                        });
+                        
+                        if (!res.ok) {
+                            const errorData = await res.json();
+                            errorMessage.value = errorData.detail || '领水失败，请重试';
+                            return;
+                        }
+                        
+                        const result = await res.json();
+                        successMessage.value = '领水成功！';
+                        
+                        // 更新用户余额
+                        await checkAuth();
+                        
+                        // 重置表单
+                        setTimeout(() => {
+                            selectedProduct.value = null;
+                            quantity.value = 1;
+                            successMessage.value = '';
+                        }, 2000);
+                        
+                    } catch (err) {
+                        console.error('Submit order failed:', err);
+                        errorMessage.value = '网络错误，请重试';
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/portal/index.html';
+                };
+                
+                onMounted(async () => {
+                    const authOk = await checkAuth();
+                    if (authOk) {
+                        await Promise.all([
+                            loadOffices(),
+                            loadProducts()
+                        ]);
+                    }
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    submitting,
+                    errorMessage,
+                    successMessage,
+                    userInfo,
+                    offices,
+                    products,
+                    selectedOfficeId,
+                    selectedProduct,
+                    quantity,
+                    pickupPerson,
+                    maxQuantity,
+                    totalAmount,
+                    discountDesc,
+                    canSubmit,
+                    onOfficeChange,
+                    selectProduct,
+                    increaseQty,
+                    decreaseQty,
+                    submitOrder,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -2,294 +2,719 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI产业集群空间服务管理平台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        [v-cloak] { display: none !important; }
+        
+        .portal-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
         }
         
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        .header-nav {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .header-logo-icon {
+            font-size: 28px;
+        }
+        
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            font-size: 20px;
         }
         
-        .container {
-            max-width: 1200px;
-            width: 100%;
+        .user-info {
+            text-align: right;
         }
         
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
+        .user-name {
+            font-weight: 600;
+            font-size: var(--font-size-base);
         }
         
-        .header h1 {
+        .user-dept {
+            font-size: var(--font-size-xs);
+            opacity: 0.8;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
             color: white;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
         }
         
-        .header p {
-            color: rgba(255,255,255,0.9);
-            font-size: 1.1rem;
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: max(var(--spacing-xl), env(safe-area-inset-bottom));
+        }
+        
+        .user-stats-section {
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .services-section {
+            margin-bottom: var(--spacing-2xl);
         }
         
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+            gap: var(--spacing-xl);
         }
         
         .service-card {
             background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-base);
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         
         .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .service-card:active {
+            transform: scale(0.98);
         }
         
         .service-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
         }
         
-        .service-title {
-            font-size: 1.5rem;
-            color: #333;
-            margin-bottom: 10px;
-            font-weight: 600;
+        .service-name {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
         }
         
         .service-desc {
-            color: #666;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin-bottom: 20px;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
         }
         
-        .service-links {
+        .service-actions {
             display: flex;
-            gap: 10px;
+            gap: var(--spacing-sm);
             flex-wrap: wrap;
         }
         
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.85rem;
+        .service-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
             font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #5568d3;
-        }
-        
-        .btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        
-        .footer {
+            cursor: pointer;
+            transition: all var(--transition-fast);
             text-align: center;
-            margin-top: 40px;
-            color: rgba(255,255,255,0.8);
-            font-size: 0.9rem;
+            text-decoration: none;
+        }
+        
+        .service-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .service-btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .service-badge {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            background: var(--warning);
+            color: white;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .quick-actions-section {
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+        
+        .quick-action-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .quick-action-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) 0;
+            padding-bottom: max(var(--spacing-sm), env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        
+        .bottom-nav-items {
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .bottom-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+        
+        .bottom-nav-item.active {
+            color: var(--primary);
+        }
+        
+        .bottom-nav-icon {
+            font-size: 24px;
+        }
+        
+        .bottom-nav-label {
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: var(--spacing-sm);
         }
         
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
+            .header-nav {
+                padding: var(--spacing-md);
+            }
+            
+            .header-logo {
+                font-size: var(--font-size-lg);
+            }
+            
+            .header-user {
+                display: none;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .main-content {
+                padding: var(--spacing-md);
+            }
+            
+            .section-title {
+                font-size: var(--font-size-lg);
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
             
             .services-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bottom-nav {
+                display: block;
+            }
+            
+            .main-content {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+        }
+        
+        .loading-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 AI产业集群空间服务管理平台</h1>
-            <p>一站式企业综合服务管理解决方案</p>
-        </div>
+    <div id="app" v-cloak class="portal-container">
+        <header class="header-nav">
+            <div class="header-content">
+                <div class="header-logo">
+                    <span class="header-logo-icon">🏢</span>
+                    <span>AI产业集群空间服务</span>
+                </div>
+                
+                <div class="header-user">
+                    <div class="user-info">
+                        <div class="user-name">
+                        {{ userInfo.name || '用户' }}
+                        <span v-if="userInfo.is_admin" class="badge badge-primary" style="margin-left: 8px; font-size: 12px; padding: 2px 8px; border-radius: 12px; background: #FCD34D; color: #78350F;">
+                            {{ userInfo.role === 'super_admin' ? '超级管理员' : '管理员' }}
+                        </span>
+                    </div>
+                        <div class="user-dept">{{ userInfo.department || '部门' }}</div>
+                    </div>
+                    <div class="user-avatar">👤</div>
+                    <a v-if="userInfo.is_admin" href="/frontend/admin.html" class="logout-btn" style="background: #FCD34D; color: #78350F; border-color: #F59E0B; text-decoration: none;">
+                        进入管理后台
+                    </a>
+                    <button @click="handleLogout" class="logout-btn">退出</button>
+                </div>
+                
+                <button class="mobile-menu-btn" @click="showMobileMenu = true">☰</button>
+            </div>
+        </header>
         
-        <div class="services-grid">
-            <!-- 水站管理 -->
-            <div class="service-card" onclick="window.location.href='/service/water/index.html'">
-                <span class="service-icon">💧</span>
-                <h2 class="service-title">水站管理</h2>
-                <p class="service-desc">饮用水领用登记、库存管理、结算统计</p>
-                <div class="service-links">
-                    <a href="/service/water/index.html" class="btn btn-primary">用户端</a>
-                    <a href="/service/water/admin.html" class="btn btn-secondary">管理后台</a>
-                </div>
+        <main class="main-content">
+            <div v-if="loading" class="loading-container">
+                <div class="spinner"></div>
             </div>
             
-            <!-- 会议室预定 -->
-            <div class="service-card" onclick="window.location.href='/service/meeting/index.html'">
-                <span class="service-icon">🏛️</span>
-                <h2 class="service-title">会议室预定</h2>
-                <p class="service-desc">会议室在线预约、时段管理、冲突检测</p>
-                <div class="service-links">
-                    <a href="/service/meeting/index.html" class="btn btn-primary">用户端</a>
-                    <a href="/service/meeting/admin.html" class="btn btn-secondary">管理后台</a>
-                </div>
+            <div v-else>
+                <section class="user-stats-section">
+                    <h2 class="section-title">
+                        <span>📊</span>
+                        <span>我的信息</span>
+                    </h2>
+                    <div class="stats-grid">
+                        <div class="card">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">水站余额</span>
+                                <span class="text-2xl">💧</span>
+                            </div>
+                            <div class="text-3xl font-bold text-primary mb-xs">¥{{ userBalance.toFixed(2) }}</div>
+                            <div class="text-xs text-tertiary">预付余额</div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">待结算金额</span>
+                                <span class="text-2xl">💰</span>
+                            </div>
+                            <div class="text-3xl font-bold text-warning mb-xs">¥{{ unsettledAmount.toFixed(2) }}</div>
+                            <div class="text-xs text-tertiary">信用模式未结算</div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">会议室免费时长</span>
+                                <span class="text-2xl">🕐</span>
+                            </div>
+                            <div class="text-3xl font-bold text-success mb-xs">{{ freeHours }}小时</div>
+                            <div class="text-xs text-tertiary">本月剩余</div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">优惠券</span>
+                                <span class="text-2xl">🎫</span>
+                            </div>
+                            <div class="text-3xl font-bold text-info mb-xs">{{ couponCount }}张</div>
+                            <div class="text-xs text-tertiary">可用优惠券</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="services-section">
+                    <h2 class="section-title">
+                        <span>🎯</span>
+                        <span>服务导航</span>
+                    </h2>
+                    <div class="services-grid">
+                        <div class="service-card" @click="navigateTo('/frontend/index.html')">
+                            <div class="service-icon">💧</div>
+                            <div class="service-name">水站服务</div>
+                            <div class="service-desc">饮用水订购与管理</div>
+                            <div class="service-actions">
+                                <a href="/frontend/index.html" class="service-btn service-btn-primary" @click.stop>领水</a>
+                                <a href="/frontend/index.html?tab=records" class="service-btn service-btn-secondary" @click.stop>查看记录</a>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" @click="navigateTo('/meeting-frontend/index.html')">
+                            <div class="service-icon">📅</div>
+                            <div class="service-name">会议室服务</div>
+                            <div class="service-desc">会议室预约、审批、支付服务</div>
+                            <div class="service-actions">
+                                <a href="/meeting-frontend/index.html" class="service-btn service-btn-primary" @click.stop>预约</a>
+                                <a href="/meeting-frontend/my_bookings.html" class="service-btn" @click.stop>我的预约</a>
+                                <a href="/meeting-frontend/calendar.html" class="service-btn" @click.stop>日历</a>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" style="opacity: 0.7;">
+                            <div class="service-badge">即将上线</div>
+                            <div class="service-icon">🍽️</div>
+                            <div class="service-name">用餐服务</div>
+                            <div class="service-desc">VIP餐厅预订、用餐服务</div>
+                            <div class="service-actions">
+                                <button class="service-btn" disabled>敬请期待</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 管理中心（仅管理员可见） -->
+                <section v-if="userInfo.is_admin" class="admin-section" style="margin-bottom: var(--spacing-2xl);">
+                    <h2 class="section-title">
+                        <span>⚙️</span>
+                        <span>管理中心</span>
+                    </h2>
+                    <div class="stats-grid">
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-users.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">用户管理</span>
+                                <span class="text-2xl">👥</span>
+                            </div>
+                            <div class="text-sm text-tertiary">管理用户账户和权限</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-settlements.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">结算管理</span>
+                                <span class="text-2xl">💰</span>
+                            </div>
+                            <div class="text-sm text-tertiary">办公室费用结算</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-prepaid.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">预付管理</span>
+                                <span class="text-2xl">💳</span>
+                            </div>
+                            <div class="text-sm text-tertiary">预付订单和套餐</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-meeting.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">会议室管理</span>
+                                <span class="text-2xl">📅</span>
+                            </div>
+                            <div class="text-sm text-tertiary">会议室预约管理</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-dining.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">餐厅管理</span>
+                                <span class="text-2xl">🍽️</span>
+                            </div>
+                            <div class="text-sm text-tertiary">VIP餐厅管理</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">数据概览</span>
+                                <span class="text-2xl">📊</span>
+                            </div>
+                            <div class="text-sm text-tertiary">查看完整数据报表</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="quick-actions-section">
+                    <h2 class="section-title">
+                        <span>⚡</span>
+                        <span>快捷操作</span>
+                    </h2>
+                    <div class="quick-actions-grid">
+                        <div class="quick-action-card">
+                            <div class="quick-action-title">
+                                <span>💧</span>
+                                <span>快速领水</span>
+                            </div>
+                            <div class="text-sm text-secondary mb-md">选择办公室后即可快速领水</div>
+                            <div style="display: flex; gap: var(--spacing-sm);">
+                                <a href="/frontend/index.html" class="btn btn-primary btn-lg" style="flex: 1;">立即领水</a>
+                                <a href="/frontend/index.html?tab=records" class="btn btn-outline btn-lg" style="flex: 1;">领水记录</a>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-action-card">
+                            <div class="quick-action-title">
+                                <span>📅</span>
+                                <span>快速预约会议室</span>
+                            </div>
+                            <div class="text-sm text-secondary mb-md">一键预约会议室，方便快捷</div>
+                            <div style="display: flex; gap: var(--spacing-sm);">
+                                <a href="/meeting-frontend/index.html" class="btn btn-primary btn-lg" style="flex: 1;">立即预约</a>
+                                <a href="/meeting-frontend/my_bookings.html" class="btn btn-outline btn-lg" style="flex: 1;">预约记录</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-            
-            <!-- ========== 以下服务暂未开放，隐藏显示 ========== -->
-            <!--
-            <div class="service-card">
-                <span class="service-icon">🍽️</span>
-                <h2 class="service-title">VIP餐厅</h2>
-                <p class="service-desc">商务宴请预定、包间管理、用餐服务</p>
-                <div class="service-links">
-                    <a href="/service/water/index.html" class="btn btn-primary">预定入口</a>
-                    <a href="/service/water/admin.html" class="btn btn-secondary">管理后台</a>
-                </div>
-            </div>
-            
-            <div class="service-card">
-                <span class="service-icon">☕</span>
-                <h2 class="service-title">茶歇服务</h2>
-                <p class="service-desc">会议茶歇、咖啡服务、商务接待</p>
-                <div class="service-links">
-                    <a href="/service/water/index.html" class="btn btn-primary">服务列表</a>
-                    <a href="/service/water/admin.html" class="btn btn-secondary">套餐管理</a>
-                </div>
-            </div>
-            
-            <div class="service-card">
-                <span class="service-icon">🧹</span>
-                <h2 class="service-title">保洁服务</h2>
-                <p class="service-desc">办公室清洁、环境维护、保洁预约</p>
-                <div class="service-links">
-                    <a href="/service/water/index.html" class="btn btn-primary">服务列表</a>
-                    <a href="/service/water/admin.html" class="btn btn-secondary">管理后台</a>
-                </div>
-            </div>
-            
-            <div class="service-card">
-                <span class="service-icon">🚗</span>
-                <h2 class="service-title">接送服务</h2>
-                <p class="service-desc">商务用车、接送预约、行程管理</p>
-                <div class="service-links">
-                    <a href="/service/water/index.html" class="btn btn-primary">服务列表</a>
-                    <a href="/service/water/admin.html" class="btn btn-secondary">管理后台</a>
-                </div>
-            </div>
-            -->
-        </div>
+        </main>
         
-        <div class="footer">
-            <p>© 2026 AI产业集群空间服务管理平台 | 技术支持：首席架构师团队</p>
-            <p style="margin-top: 10px;">
-                <a href="/service/water/admin.html" style="color: white; text-decoration: underline;">系统管理入口</a>
-            </p>
+        <nav class="bottom-nav">
+            <div class="bottom-nav-items">
+                <a href="/portal/index.html" class="bottom-nav-item active">
+                    <span class="bottom-nav-icon">🏠</span>
+                    <span class="bottom-nav-label">首页</span>
+                </a>
+                <a href="/frontend/index.html" class="bottom-nav-item">
+                    <span class="bottom-nav-icon">💧</span>
+                    <span class="bottom-nav-label">水站</span>
+                </a>
+                <a href="/meeting-frontend/index.html" class="bottom-nav-item">
+                    <span class="bottom-nav-icon">📅</span>
+                    <span class="bottom-nav-label">会议室</span>
+                </a>
+                <a href="#" class="bottom-nav-item" @click.prevent="showMobileMenu = true">
+                    <span class="bottom-nav-icon">👤</span>
+                    <span class="bottom-nav-label">我的</span>
+                </a>
+            </div>
+        </nav>
+        
+<div v-if="showMobileMenu" class="modal-overlay" @click="showMobileMenu = false">
+            <div class="modal-content" style="max-width: 300px; padding: 0;" @click.stop>
+                <div style="background: var(--primary); color: white; padding: var(--spacing-xl); text-align: center;">
+                    <div class="user-avatar" style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto var(--spacing-md);">👤</div>
+                    <div class="font-bold" style="font-size: var(--font-size-lg);">
+                        {{ userInfo.name || '用户' }}
+                        <span v-if="userInfo.is_admin" style="margin-left: 4px; font-size: 12px; padding: 2px 6px; border-radius: 8px; background: #FCD34D; color: #78350F;">
+                            {{ userInfo.role === 'super_admin' ? '超管' : '管理员' }}
+                        </span>
+                    </div>
+                    <div style="font-size: var(--font-size-sm); opacity: 0.8;">{{ userInfo.department || '部门' }}</div>
+                </div>
+                <div style="padding: var(--spacing-md);">
+                    <a href="/frontend/index.html?tab=records" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">领水记录</a>
+                    <a href="/meeting-frontend/my_bookings.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">预约记录</a>
+                    <a href="/frontend/user-balance.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">我的余额</a>
+                    <a v-if="userInfo.is_admin" href="/frontend/admin.html" class="btn btn-warning btn-md" style="width: 100%; margin-bottom: var(--spacing-sm); background: #FCD34D; color: #78350F; border-color: #F59E0B;">进入管理后台</a>
+                    <button @click="handleLogout" class="btn btn-danger btn-md" style="width: 100%;">退出登录</button>
+                </div>
+            </div>
         </div>
     </div>
     
     <script>
-        // 环境检测：自动适配本地开发和服务器部署路径
-        const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
+        const { createApp, ref, onMounted } = Vue;
         
-        // 定义路径映射
-        const paths = {
-            water: {
-                user: isLocalDev ? '/Service_WaterManage/frontend/index.html' : '/service/water/',
-                admin: isLocalDev ? '/Service_WaterManage/frontend/admin.html' : '/service/water-admin/admin.html'
-            },
-            meeting: {
-                user: isLocalDev ? '/Service_MeetingRoom/frontend/index.html' : '/service/meeting/',
-                admin: isLocalDev ? '/Service_MeetingRoom/frontend/admin.html' : '/service/meeting-admin/admin.html'
-            }
-        };
-        
-        // 更新页面中的链接
-        function updateLinks() {
-            // 水站管理卡片
-            const waterCard = document.querySelector('.service-card:nth-child(1)');
-            if (waterCard) {
-                waterCard.onclick = () => window.location.href = paths.water.user;
-            }
-            
-            // 会议室预定卡片
-            const meetingCard = document.querySelector('.service-card:nth-child(2)');
-            if (meetingCard) {
-                meetingCard.onclick = () => window.location.href = paths.meeting.user;
-            }
-            
-            // 更新所有链接
-            document.querySelectorAll('.service-links a').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href.includes('/service/water/')) {
-                    link.href = paths.water.user;
-                } else if (href.includes('/service/water-admin/')) {
-                    link.href = paths.water.admin;
-                } else if (href.includes('/service/meeting/')) {
-                    link.href = paths.meeting.user;
-                } else if (href.includes('/service/meeting-admin/')) {
-                    link.href = paths.meeting.admin;
-                }
-            });
-            
-            // 更新系统管理入口
-            const systemLink = document.querySelector('.footer a');
-            if (systemLink && systemLink.getAttribute('href').includes('/service/water-admin/')) {
-                systemLink.href = paths.water.admin;
-            }
-        }
-        
-        // 页面加载后更新链接
-        updateLinks();
-        
-        console.log('✅ AI产业集群空间服务管理平台已加载');
-        console.log('📍 运行环境:', isLocalDev ? '本地开发 (localhost:8080)' : '服务器部署');
-        console.log('📍 当前时间:', new Date().toLocaleString('zh-CN'));
-        console.log('📍 链接路径:', paths);
-        
-        // 检查API服务状态
-        const API_BASE = window.location.origin + '/api';
-        
-        setTimeout(() => {
-            fetch(`${API_BASE}/health`)
-                .then(res => res.json())
-                .then(data => {
-                    console.log('✅ 服务状态:', data);
-                })
-                .catch(err => {
-                    console.warn('⚠️ API服务未响应');
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const showMobileMenu = ref(false);
+                
+                const userInfo = ref({
+                    id: 1,
+                    name: '张三',
+                    department: '技术部',
+                    role: 'staff',
+                    is_admin: false
                 });
-        }, 1000);
+                
+                const userBalance = ref(0);
+                const unsettledAmount = ref(0);
+                const freeHours = ref(0);
+                const couponCount = ref(0);
+                
+                const loadUserData = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        // 从localStorage获取用户信息
+                        const storedUserInfo = localStorage.getItem('userInfo');
+                        if (storedUserInfo) {
+                            const parsed = JSON.parse(storedUserInfo);
+                            userInfo.value = {
+                                ...parsed,
+                                is_admin: parsed.role === 'admin' || parsed.role === 'super_admin'
+                            };
+                        }
+                        
+                        // 如果没有用户信息，尝试从token获取
+                        if (!userInfo.value.id) {
+                            const token = localStorage.getItem('token');
+                            if (token) {
+                                // TODO: 调用API获取用户信息
+                                // 暂时使用默认值
+                                userInfo.value = {
+                                    id: 1,
+                                    name: '测试用户',
+                                    department: '技术部',
+                                    role: 'staff',
+                                    is_admin: false
+                                };
+                            }
+                        }
+                        
+                        const [balanceRes, settlementRes, freeHoursRes] = await Promise.all([
+                            fetch('/api/unified/user/' + userInfo.value.id + '/balance').catch(() => ({ ok: false })),
+                            fetch('/api/unified/settlement/summary?user_id=' + userInfo.value.id).catch(() => ({ ok: false })),
+                            fetch('/api/meeting/user/' + userInfo.value.id + '/free-hours').catch(() => ({ ok: false }))
+                        ]);
+                        
+                        if (balanceRes.ok) {
+                            const balanceData = await balanceRes.json();
+                            userBalance.value = balanceData.balance_prepaid || 0;
+                        }
+                        
+                        if (settlementRes.ok) {
+                            const settlementData = await settlementRes.json();
+                            unsettledAmount.value = settlementData.total_unsettled || 0;
+                        }
+                        
+                        if (freeHoursRes.ok) {
+                            const freeHoursData = await freeHoursRes.json();
+                            freeHours.value = freeHoursData.free_hours || 5;
+                        }
+                        
+                        couponCount.value = 3;
+                        
+                    } catch (error) {
+                        console.error('加载用户数据失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const navigateTo = (url) => {
+                    window.location.href = url;
+                };
+                
+                const handleLogout = () => {
+                    if (confirm('确定要退出登录吗？')) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('userInfo');
+                        window.location.href = '/frontend/login.html';
+                    }
+                };
+                
+                onMounted(() => {
+                    loadUserData();
+                });
+                
+                return {
+                    loading,
+                    showMobileMenu,
+                    userInfo,
+                    userBalance,
+                    unsettledAmount,
+                    freeHours,
+                    couponCount,
+                    navigateTo,
+                    handleLogout
+                };
+            }
+        }).mount('#app');
     </script>
 </body>
 </html>

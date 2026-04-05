@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>预约记录 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+        }
+        
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            font-size: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .page-title {
+            flex: 1;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .new-booking-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .new-booking-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+        }
+        
+        .booking-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .booking-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .booking-no {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
+        .status-confirmed {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .status-cancelled {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .booking-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .booking-field {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .field-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .field-value {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .field-value.highlight {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .booking-footer {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .booking-info {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .cancel-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+        }
+        
+        .cancel-btn:hover {
+            background: #DC2626;
+        }
+        
+        .detail-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .detail-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .detail-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .detail-section {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .detail-section-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .booking-body {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Loading -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <!-- Detail Modal -->
+        <div v-if="selectedBooking" class="detail-modal" @click.self="selectedBooking = null">
+            <div class="detail-content">
+                <div class="detail-header">
+                    <div class="detail-title">预约详情 {{ selectedBooking.booking_no }}</div>
+                    <div class="close-btn" @click="selectedBooking = null">×</div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">会议室信息</div>
+                    <div class="detail-row">
+                        <span>会议室</span>
+                        <span>{{ selectedBooking.room_name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>预约日期</span>
+                        <span>{{ selectedBooking.booking_date }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>时间段</span>
+                        <span>{{ selectedBooking.start_time }} - {{ selectedBooking.end_time }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>时长</span>
+                        <span>{{ selectedBooking.duration }} 小时</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">预约信息</div>
+                    <div class="detail-row">
+                        <span>用户类型</span>
+                        <span>{{ selectedBooking.user_type === 'internal' ? '内部用户' : '外部用户' }}</span>
+                    </div>
+                    <div v-if="selectedBooking.department" class="detail-row">
+                        <span>部门</span>
+                        <span>{{ selectedBooking.department }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>预约人</span>
+                        <span>{{ selectedBooking.user_name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>联系电话</span>
+                        <span>{{ selectedBooking.user_phone }}</span>
+                    </div>
+                    <div v-if="selectedBooking.meeting_title" class="detail-row">
+                        <span>会议主题</span>
+                        <span>{{ selectedBooking.meeting_title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>参会人数</span>
+                        <span>{{ selectedBooking.attendees_count }} 人</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">费用信息</div>
+                    <div class="detail-row">
+                        <span>总费用</span>
+                        <span class="text-primary font-bold">¥{{ selectedBooking.total_fee?.toFixed(2) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>状态</span>
+                        <span :class="getStatusClass(selectedBooking.status)">
+                            {{ getStatusText(selectedBooking.status) }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div v-if="selectedBooking.status === 'pending'" class="mt-lg">
+                    <button @click="cancelBooking(selectedBooking.id)" class="cancel-btn" style="width: 100%; padding: var(--spacing-md);">
+                        取消预约
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-container">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="back-btn" @click="goBack">←</div>
+                <h1 class="page-title">预约记录</h1>
+                <button class="new-booking-btn" @click="newBooking">新预约</button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-card">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">总预约</div>
+                        <div class="stat-value">{{ bookings.length }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">待确认</div>
+                        <div class="stat-value">{{ pendingCount }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">已确认</div>
+                        <div class="stat-value">{{ confirmedCount }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总费用</div>
+                        <div class="stat-value">¥{{ totalFee.toFixed(2) }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filter -->
+            <div class="filter-section">
+                <select v-model="statusFilter" class="filter-select" @change="loadBookings">
+                    <option value="">全部状态</option>
+                    <option value="pending">待确认</option>
+                    <option value="confirmed">已确认</option>
+                    <option value="cancelled">已取消</option>
+                </select>
+            </div>
+            
+            <!-- Bookings List -->
+            <div v-if="bookings.length === 0 && !loading" class="empty-state">
+                <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📅</div>
+                <div>暂无预约记录</div>
+                <button class="new-booking-btn mt-lg" @click="newBooking">立即预约</button>
+            </div>
+            
+            <div v-else>
+                <div 
+                    v-for="booking in bookings" 
+                    :key="booking.id"
+                    class="booking-card"
+                    @click="showDetail(booking)"
+                >
+                    <div class="booking-header">
+                        <div class="booking-no">{{ booking.booking_no }}</div>
+                        <div :class="['status-badge', getStatusClass(booking.status)]">
+                            {{ getStatusText(booking.status) }}
+                        </div>
+                    </div>
+                    
+                    <div class="booking-body">
+                        <div class="booking-field">
+                            <div class="field-label">会议室</div>
+                            <div class="field-value">{{ booking.room_name }}</div>
+                        </div>
+                        <div class="booking-field">
+                            <div class="field-label">日期</div>
+                            <div class="field-value">{{ booking.booking_date }}</div>
+                        </div>
+                        <div class="booking-field">
+                            <div class="field-label">时间</div>
+                            <div class="field-value">{{ booking.start_time }}-{{ booking.end_time }}</div>
+                        </div>
+                        <div class="booking-field">
+                            <div class="field-label">时长</div>
+                            <div class="field-value">{{ booking.duration }}小时</div>
+                        </div>
+                        <div class="booking-field">
+                            <div class="field-label">人数</div>
+                            <div class="field-value">{{ booking.attendees_count }}人</div>
+                        </div>
+                        <div class="booking-field">
+                            <div class="field-label">费用</div>
+                            <div class="field-value highlight">¥{{ booking.total_fee?.toFixed(2) }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="booking-footer">
+                        <div class="booking-info">
+                            预约人: {{ booking.user_name }} | {{ booking.user_type === 'internal' ? '内部用户' : '外部用户' }}
+                        </div>
+                        <button 
+                            v-if="booking.status === 'pending'" 
+                            @click.stop="cancelBooking(booking.id)"
+                            class="cancel-btn"
+                        >
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        const API_BASE = window.location.origin;
+        
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const bookings = ref([]);
+                const selectedBooking = ref(null);
+                const statusFilter = ref('');
+                const userInfo = ref({});
+                
+                const token = ref(localStorage.getItem('token'));
+                
+                const pendingCount = computed(() => {
+                    return bookings.value.filter(b => b.status === 'pending').length;
+                });
+                
+                const confirmedCount = computed(() => {
+                    return bookings.value.filter(b => b.status === 'confirmed').length;
+                });
+                
+                const totalFee = computed(() => {
+                    return bookings.value
+                        .filter(b => b.status !== 'cancelled')
+                        .reduce((sum, b) => sum + (b.total_fee || 0), 0);
+                });
+                
+                const checkAuth = async () => {
+                    if (!token.value) {
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/portal/index.html';
+                            return false;
+                        }
+                        
+                        userInfo.value = await res.json();
+                        return true;
+                    } catch (err) {
+                        console.error('Auth check failed:', err);
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                };
+                
+                const loadBookings = async () => {
+                    try {
+                        const params = new URLSearchParams();
+                        if (statusFilter.value) {
+                            params.append('status', statusFilter.value);
+                        }
+                        
+                        const res = await fetch(`${API_BASE}/api/meeting/bookings?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            throw new Error('Failed to load bookings');
+                        }
+                        
+                        const allBookings = await res.json();
+                        
+                        // Filter by user name or department (for non-admin users)
+                        if (userInfo.value.role === 'admin' || userInfo.value.role === 'super_admin') {
+                            bookings.value = allBookings;
+                        } else {
+                            bookings.value = allBookings.filter(b => 
+                                b.user_name === userInfo.value.name ||
+                                b.department === userInfo.value.department
+                            );
+                        }
+                    } catch (err) {
+                        console.error('Load bookings failed:', err);
+                        bookings.value = [];
+                    }
+                };
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const getStatusClass = (status) => {
+                    const classMap = {
+                        'pending': 'status-pending',
+                        'confirmed': 'status-confirmed',
+                        'cancelled': 'status-cancelled'
+                    };
+                    return classMap[status] || '';
+                };
+                
+                const showDetail = (booking) => {
+                    selectedBooking.value = booking;
+                };
+                
+                const cancelBooking = async (bookingId) => {
+                    if (!confirm('确定要取消这个预约吗？')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/meeting/bookings/${bookingId}/cancel`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            const error = await res.json();
+                            alert(error.detail || '取消失败');
+                            return;
+                        }
+                        
+                        selectedBooking.value = null;
+                        await loadBookings();
+                        alert('预约已取消');
+                    } catch (err) {
+                        console.error('Cancel booking failed:', err);
+                        alert('网络错误，请重试');
+                    }
+                };
+                
+                const newBooking = () => {
+                    window.location.href = '/portal/meeting-booking.html';
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/portal/index.html';
+                };
+                
+                onMounted(async () => {
+                    const authOk = await checkAuth();
+                    if (authOk) {
+                        await loadBookings();
+                    }
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    bookings,
+                    selectedBooking,
+                    statusFilter,
+                    userInfo,
+                    pendingCount,
+                    confirmedCount,
+                    totalFee,
+                    getStatusText,
+                    getStatusClass,
+                    showDetail,
+                    cancelBooking,
+                    newBooking,
+                    goBack,
+                    loadBookings
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

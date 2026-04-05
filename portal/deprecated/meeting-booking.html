@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>预约会议室 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+        }
+        
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            font-size: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .page-title {
+            flex: 1;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .form-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .room-card {
+            background: var(--bg-hover);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+        }
+        
+        .room-card:hover {
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .room-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .room-name {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .room-price {
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .room-info {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .time-slot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: var(--spacing-sm);
+        }
+        
+        .time-slot {
+            padding: var(--spacing-sm);
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 1px solid var(--border);
+        }
+        
+        .time-slot:hover {
+            background: white;
+        }
+        
+        .time-slot.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .time-slot.disabled {
+            background: var(--border);
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+        }
+        
+        .summary-section {
+            background: var(--primary-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .summary-row:last-child {
+            border-bottom: none;
+            padding-top: var(--spacing-md);
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: var(--spacing-lg);
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error-message {
+            background: var(--danger-light);
+            color: var(--danger);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .success-message {
+            background: var(--success-light);
+            color: var(--success);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-slot-grid {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Loading -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div class="page-container">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="back-btn" @click="goBack">←</div>
+                <h1 class="page-title">预约会议室</h1>
+            </div>
+            
+            <!-- Error/Success Message -->
+            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+            <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
+            
+            <!-- Room Selection -->
+            <div class="form-section">
+                <div class="section-title">
+                    <span>🏛️</span>
+                    <span>选择会议室</span>
+                </div>
+                
+                <div v-if="rooms.length === 0" class="text-center text-secondary py-lg">
+                    暂无可用会议室
+                </div>
+                
+                <div v-else>
+                    <div 
+                        v-for="room in rooms" 
+                        :key="room.id"
+                        @click="selectRoom(room)"
+                        :class="['room-card', { 'selected': selectedRoom?.id === room.id }]"
+                    >
+                        <div class="room-header">
+                            <div class="room-name">{{ room.name }}</div>
+                            <div class="room-price">¥{{ room.price_per_hour }}/小时</div>
+                        </div>
+                        <div class="room-info">
+                            {{ room.location }} | 容纳{{ room.capacity }}人
+                            <span v-if="room.member_price_per_hour"> | 会员价¥{{ room.member_price_per_hour }}/小时</span>
+                        </div>
+                        <div v-if="room.facilities" class="room-info">
+                            设施: {{ room.facilities }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Time Selection -->
+            <div v-if="selectedRoom" class="form-section">
+                <div class="section-title">
+                    <span>📅</span>
+                    <span>选择时间</span>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">预约日期 *</label>
+                        <input 
+                            v-model="bookingDate" 
+                            type="date" 
+                            class="form-input"
+                            :min="minDate"
+                            @change="checkAvailability"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">参会人数 *</label>
+                        <input 
+                            v-model.number="attendeesCount" 
+                            type="number" 
+                            class="form-input"
+                            min="1"
+                            :max="selectedRoom?.capacity"
+                        >
+                    </div>
+                </div>
+                
+                <div v-if="bookingDate" class="mt-md">
+                    <div class="form-label mb-sm">选择时间段</div>
+                    
+                    <div class="mb-md">
+                        <div class="text-sm text-secondary mb-sm">开始时间</div>
+                        <div class="time-slot-grid">
+                            <div 
+                                v-for="hour in availableStartHours" 
+                                :key="hour"
+                                @click="selectStartHour(hour)"
+                                :class="['time-slot', { 
+                                    'selected': startHour === hour,
+                                    'disabled': disabledHours.includes(hour)
+                                }]"
+                            >
+                                {{ hour }}:00
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="startHour">
+                        <div class="text-sm text-secondary mb-sm">结束时间</div>
+                        <div class="time-slot-grid">
+                            <div 
+                                v-for="hour in availableEndHours" 
+                                :key="hour"
+                                @click="selectEndHour(hour)"
+                                :class="['time-slot', { 'selected': endHour === hour }]"
+                            >
+                                {{ hour }}:00
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="startHour && endHour" class="text-center text-sm text-secondary mt-md">
+                        预约时长: {{ endHour - startHour }} 小时
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Information -->
+            <div v-if="selectedRoom && bookingDate && startHour && endHour" class="form-section">
+                <div class="section-title">
+                    <span>👤</span>
+                    <span>预约信息</span>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">用户类型</label>
+                        <select v-model="userType" class="form-select" @change="onUserTypeChange">
+                            <option value="internal">内部用户（会员价）</option>
+                            <option value="external">外部用户</option>
+                        </select>
+                    </div>
+                    <div v-if="userType === 'internal'" class="form-group">
+                        <label class="form-label">所属办公室 *</label>
+                        <select v-model="officeId" class="form-select">
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :key="office.office_id" :value="office.office_id">
+                                {{ office.office_name }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">预约人姓名 *</label>
+                        <input 
+                            v-model="userName" 
+                            type="text" 
+                            class="form-input"
+                            placeholder="请输入姓名"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">联系电话 *</label>
+                        <input 
+                            v-model="userPhone" 
+                            type="tel" 
+                            class="form-input"
+                            placeholder="请输入电话"
+                        >
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">部门/单位</label>
+                    <input 
+                        v-model="department" 
+                        type="text" 
+                        class="form-input"
+                        placeholder="请输入部门或单位名称"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">会议主题</label>
+                    <input 
+                        v-model="meetingTitle" 
+                        type="text" 
+                        class="form-input"
+                        placeholder="请输入会议主题"
+                    >
+                </div>
+            </div>
+            
+            <!-- Summary -->
+            <div v-if="selectedRoom && startHour && endHour" class="summary-section">
+                <div class="summary-row">
+                    <span>会议室</span>
+                    <span>{{ selectedRoom.name }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>预约日期</span>
+                    <span>{{ bookingDate }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>时间段</span>
+                    <span>{{ startHour }}:00 - {{ endHour }}:00</span>
+                </div>
+                <div class="summary-row">
+                    <span>时长</span>
+                    <span>{{ duration }} 小时</span>
+                </div>
+                <div class="summary-row">
+                    <span>单价</span>
+                    <span>¥{{ pricePerHour }}/小时</span>
+                </div>
+                <div class="summary-row">
+                    <span>预估费用</span>
+                    <span class="font-bold text-lg">¥{{ totalFee.toFixed(2) }}</span>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button 
+                v-if="selectedRoom && startHour && endHour" 
+                class="submit-btn" 
+                @click="submitBooking"
+                :disabled="submitting || !canSubmit"
+            >
+                {{ submitting ? '提交中...' : '确认预约' }}
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        const API_BASE = window.location.origin;
+        
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const submitting = ref(false);
+                const errorMessage = ref('');
+                const successMessage = ref('');
+                
+                const rooms = ref([]);
+                const offices = ref([]);
+                const userInfo = ref({});
+                
+                const selectedRoom = ref(null);
+                const bookingDate = ref('');
+                const startHour = ref(null);
+                const endHour = ref(null);
+                const disabledHours = ref([]);
+                
+                const userType = ref('internal');
+                const officeId = ref('');
+                const userName = ref('');
+                const userPhone = ref('');
+                const department = ref('');
+                const meetingTitle = ref('');
+                const attendeesCount = ref(1);
+                
+                const token = ref(localStorage.getItem('token'));
+                
+                const minDate = computed(() => {
+                    const today = new Date();
+                    return today.toISOString().split('T')[0];
+                });
+                
+                const availableStartHours = computed(() => {
+                    return [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+                });
+                
+                const availableEndHours = computed(() => {
+                    if (!startHour.value) return [];
+                    const maxHour = Math.min(startHour.value + 4, 21);
+                    return Array.from({length: maxHour - startHour.value}, (_, i) => startHour.value + i + 1);
+                });
+                
+                const duration = computed(() => {
+                    if (!startHour.value || !endHour.value) return 0;
+                    return endHour.value - startHour.value;
+                });
+                
+                const pricePerHour = computed(() => {
+                    if (!selectedRoom.value) return 0;
+                    if (userType.value === 'internal' && selectedRoom.value.member_price_per_hour) {
+                        return selectedRoom.value.member_price_per_hour;
+                    }
+                    return selectedRoom.value.price_per_hour;
+                });
+                
+                const totalFee = computed(() => {
+                    return duration.value * pricePerHour.value;
+                });
+                
+                const canSubmit = computed(() => {
+                    return selectedRoom.value &&
+                           bookingDate.value &&
+                           startHour.value &&
+                           endHour.value &&
+                           userName.value.trim() &&
+                           userPhone.value.trim() &&
+                           attendeesCount.value > 0 &&
+                           attendeesCount.value <= selectedRoom.value.capacity &&
+                           (userType.value !== 'internal' || officeId.value);
+                });
+                
+                const checkAuth = async () => {
+                    if (!token.value) {
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/portal/index.html';
+                            return false;
+                        }
+                        
+                        userInfo.value = await res.json();
+                        userName.value = userInfo.value.name || '';
+                        department.value = userInfo.value.department || '';
+                        return true;
+                    } catch (err) {
+                        console.error('Auth check failed:', err);
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                };
+                
+                const loadRooms = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/meeting/rooms?is_active=true`);
+                        if (res.ok) {
+                            rooms.value = await res.json();
+                        }
+                    } catch (err) {
+                        console.error('Load rooms failed:', err);
+                    }
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/user/offices`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (res.ok) {
+                            offices.value = await res.json();
+                            if (offices.value.length > 0) {
+                                officeId.value = offices.value[0].office_id;
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Load offices failed:', err);
+                    }
+                };
+                
+                const selectRoom = (room) => {
+                    selectedRoom.value = room;
+                    startHour.value = null;
+                    endHour.value = null;
+                    errorMessage.value = '';
+                };
+                
+                const checkAvailability = async () => {
+                    if (!selectedRoom.value || !bookingDate.value) return;
+                    
+                    try {
+                        const res = await fetch(
+                            `${API_BASE}/api/meeting/bookings?room_id=${selectedRoom.value.id}&booking_date=${bookingDate.value}`,
+                            {
+                                headers: { 'Authorization': `Bearer ${token.value}` }
+                            }
+                        );
+                        
+                        if (res.ok) {
+                            const bookings = await res.json();
+                            disabledHours.value = [];
+                            
+                            bookings.forEach(booking => {
+                                if (booking.status === 'pending' || booking.status === 'confirmed') {
+                                    const start = parseInt(booking.start_time.split(':')[0]);
+                                    const end = parseInt(booking.end_time.split(':')[0]);
+                                    for (let h = start; h < end; h++) {
+                                        disabledHours.value.push(h);
+                                    }
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Check availability failed:', err);
+                    }
+                };
+                
+                const selectStartHour = (hour) => {
+                    if (disabledHours.value.includes(hour)) return;
+                    startHour.value = hour;
+                    endHour.value = null;
+                };
+                
+                const selectEndHour = (hour) => {
+                    endHour.value = hour;
+                };
+                
+                const onUserTypeChange = () => {
+                    if (userType.value === 'external') {
+                        officeId.value = '';
+                    }
+                };
+                
+                const submitBooking = async () => {
+                    if (!canSubmit.value) {
+                        errorMessage.value = '请完善所有必填信息';
+                        return;
+                    }
+                    
+                    submitting.value = true;
+                    errorMessage.value = '';
+                    successMessage.value = '';
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/meeting/bookings`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token.value}`
+                            },
+                            body: JSON.stringify({
+                                room_id: selectedRoom.value.id,
+                                user_type: userType.value,
+                                office_id: userType.value === 'internal' ? parseInt(officeId.value) : null,
+                                user_name: userName.value.trim(),
+                                user_phone: userPhone.value.trim(),
+                                department: department.value.trim() || null,
+                                booking_date: bookingDate.value,
+                                start_time: `${startHour.value}:00`,
+                                end_time: `${endHour.value}:00`,
+                                meeting_title: meetingTitle.value.trim() || null,
+                                attendees_count: attendeesCount.value
+                            })
+                        });
+                        
+                        if (!res.ok) {
+                            const errorData = await res.json();
+                            errorMessage.value = errorData.detail || '预约失败，请重试';
+                            return;
+                        }
+                        
+                        const result = await res.json();
+                        successMessage.value = `预约成功！预约编号: ${result.booking_no}`;
+                        
+                        setTimeout(() => {
+                            window.location.href = '/portal/meeting-records.html';
+                        }, 2000);
+                        
+                    } catch (err) {
+                        console.error('Submit booking failed:', err);
+                        errorMessage.value = '网络错误，请重试';
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/portal/index.html';
+                };
+                
+                onMounted(async () => {
+                    const authOk = await checkAuth();
+                    if (authOk) {
+                        await Promise.all([
+                            loadRooms(),
+                            loadOffices()
+                        ]);
+                    }
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    submitting,
+                    errorMessage,
+                    successMessage,
+                    rooms,
+                    offices,
+                    userInfo,
+                    selectedRoom,
+                    bookingDate,
+                    startHour,
+                    endHour,
+                    disabledHours,
+                    userType,
+                    officeId,
+                    userName,
+                    userPhone,
+                    department,
+                    meetingTitle,
+                    attendeesCount,
+                    minDate,
+                    availableStartHours,
+                    availableEndHours,
+                    duration,
+                    pricePerHour,
+                    totalFee,
+                    canSubmit,
+                    selectRoom,
+                    checkAvailability,
+                    selectStartHour,
+                    selectEndHour,
+                    onUserTypeChange,
+                    submitBooking,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

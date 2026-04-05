@@ -4,29 +4,18 @@ Office Management API Routes - 办公室管理 API 路由
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine, func
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
-from models_unified import Office, OfficeAccount, OfficeRecharge, OfficePickup, Product
-
-# 数据库配置
-SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def get_db():
-    """获取数据库会话"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from config.database import get_db
+from models.office import Office
+from models.account import OfficeAccount
+from models.recharge import OfficeRecharge
+from models.pickup import OfficePickup
+from models.product import Product
 
 
 router = APIRouter(prefix="/api", tags=["office-management"])

@@ -13,10 +13,37 @@ import json
 
 router = APIRouter()
 
-DATABASE_URL = os.path.join(
-    os.path.dirname(__file__), "../../Service_MeetingRoom/backend/meeting.db"
-)
-DATABASE_URL = os.path.abspath(DATABASE_URL)
+# 使用环境变量或相对路径，支持本地和云服务器环境
+current_dir = os.path.dirname(__file__)
+
+# 尝试多个可能的数据库路径（优先级从高到低）
+possible_paths = [
+    # 1. 环境变量指定的路径（适用于云服务器）
+    os.environ.get("MEETING_DB_PATH"),
+    # 2. Service_MeetingRoom模块的标准路径
+    os.path.join(current_dir, "../../Service_MeetingRoom/backend/meeting.db"),
+    # 3. 当前模块目录下（备选）
+    os.path.join(current_dir, "meeting.db"),
+]
+
+DATABASE_URL = None
+for path in possible_paths:
+    if path and os.path.exists(os.path.abspath(path)):
+        DATABASE_URL = os.path.abspath(path)
+        break
+
+if not DATABASE_URL:
+    # 如果都找不到，使用第一个存在的路径
+    for path in possible_paths:
+        if path:
+            DATABASE_URL = os.path.abspath(path)
+            print(f"⚠️ 会议数据库未找到，使用配置路径: {DATABASE_URL}")
+            break
+
+    if not DATABASE_URL:
+        raise RuntimeError("会议室数据库路径未配置，请设置 MEETING_DB_PATH 环境变量")
+
+print(f"✅ 会议审批数据库路径: {DATABASE_URL}")
 
 
 def get_db():

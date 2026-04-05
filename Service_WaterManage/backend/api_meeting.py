@@ -17,9 +17,37 @@ import os
 router = APIRouter(prefix="/api/meeting", tags=["meeting"])
 
 # ==================== 数据库配置（模块级别，避免重复创建）====================
-# 动态获取数据库路径（避免硬编码）
-MEETING_DB_PATH = os.path.join(os.path.dirname(__file__), "meeting.db")
-MEETING_DB_PATH = os.path.abspath(MEETING_DB_PATH)
+# 使用环境变量或相对路径，支持本地和云服务器环境
+current_dir = os.path.dirname(__file__)
+
+# 尝试多个可能的数据库路径（优先级从高到低）
+possible_paths = [
+    # 1. 环境变量指定的路径（适用于云服务器）
+    os.environ.get("MEETING_DB_PATH"),
+    # 2. Service_MeetingRoom模块的标准路径
+    os.path.join(current_dir, "../../Service_MeetingRoom/backend/meeting.db"),
+    # 3. 当前模块目录下（备选）
+    os.path.join(current_dir, "meeting.db"),
+]
+
+MEETING_DB_PATH = None
+for path in possible_paths:
+    if path and os.path.exists(os.path.abspath(path)):
+        MEETING_DB_PATH = os.path.abspath(path)
+        break
+
+if not MEETING_DB_PATH:
+    # 如果都找不到，使用第一个存在的路径（或者使用默认路径并让程序继续运行）
+    for path in possible_paths:
+        if path:
+            MEETING_DB_PATH = os.path.abspath(path)
+            print(f"⚠️ 会议数据库未找到，使用配置路径: {MEETING_DB_PATH}")
+            break
+
+    if not MEETING_DB_PATH:
+        raise RuntimeError("会议室数据库路径未配置，请设置 MEETING_DB_PATH 环境变量")
+
+print(f"✅ 会议数据库路径: {MEETING_DB_PATH}")
 
 # 检查数据库文件是否存在
 if not os.path.exists(MEETING_DB_PATH):

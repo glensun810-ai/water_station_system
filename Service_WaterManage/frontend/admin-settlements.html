@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563EB">
+    <title>结算管理 - 水站管理后台</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="shared/css/design-tokens.css">
+    <link rel="stylesheet" href="shared/css/components.css">
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-gray-50);
+            min-height: 100vh;
+        }
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-6);
+        }
+        @media (max-width: 768px) {
+            .page-container { padding: var(--spacing-4); }
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-6);
+            flex-wrap: wrap;
+            gap: var(--spacing-4);
+        }
+        .page-title {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--color-gray-900);
+        }
+        .page-subtitle {
+            font-size: var(--text-sm);
+            color: var(--color-gray-500);
+            margin-top: var(--spacing-1);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-6);
+            margin-bottom: var(--spacing-6);
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+            flex-wrap: wrap;
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            flex: 1;
+            flex-wrap: wrap;
+        }
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+        }
+        .trend-up { color: var(--color-success-500); }
+        .trend-down { color: var(--color-error-500); }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <!-- 页面头部 -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <i class="fas fa-calculator" style="color: var(--color-primary-500);"></i>
+                        结算管理
+                    </h1>
+                    <p class="page-subtitle">管理领水结算、财务对账</p>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-primary" @click="openSettlementModal">
+                        <i class="fas fa-plus"></i> 申请结算
+                    </button>
+                    <button class="btn btn-outline" @click="autoGenerateSettlement">
+                        <i class="fas fa-magic"></i> 自动生成
+                    </button>
+                    <a href="admin.html" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> 返回后台
+                    </a>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.pending }}</div>
+                    <div class="stat-card-label">待确认结算</div>
+                    <div v-if="stats.pendingTrend !== null" :class="stats.pendingTrend > 0 ? 'trend-up' : 'trend-down'" style="font-size: 12px; margin-top: 8px;">
+                        <i :class="stats.pendingTrend > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                        {{ Math.abs(stats.pendingTrend) }}%
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.confirmed }}</div>
+                    <div class="stat-card-label">已确认结算</div>
+                    <div style="font-size: 12px; margin-top: 8px; color: var(--color-gray-500);">
+                        金额: {{ formatMoney(stats.confirmedAmount) }}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-icon error">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.rejected }}</div>
+                    <div class="stat-card-label">已拒绝结算</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-icon primary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-card-value">{{ formatMoney(stats.totalAmount) }}</div>
+                    <div class="stat-card-label">总结算金额</div>
+                </div>
+            </div>
+
+            <!-- 批量操作栏 -->
+            <div v-if="selectedSettlements.length > 0" class="action-bar">
+                <span class="action-bar-count">已选择 {{ selectedSettlements.length }} 项</span>
+                <div class="action-bar-actions">
+                    <button class="btn btn-sm btn-success" @click="batchConfirm">
+                        <i class="fas fa-check"></i> 批量确认
+                    </button>
+                    <button class="btn btn-sm btn-ghost" @click="clearSelection">
+                        <i class="fas fa-times"></i> 取消选择
+                    </button>
+                </div>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="search-bar">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="search" class="form-input" v-model="searchKeyword" 
+                            @keyup.enter="loadSettlements" placeholder="搜索办公室...">
+                    </div>
+                    
+                    <select class="form-select" v-model="filterStatus" @change="loadSettlements">
+                        <option value="">全部状态</option>
+                        <option value="applied">待确认</option>
+                        <option value="confirmed">已确认</option>
+                        <option value="rejected">已拒绝</option>
+                    </select>
+
+                    <select class="form-select" v-model="filterOffice" @change="loadSettlements">
+                        <option value="">全部办公室</option>
+                        <option v-for="office in offices" :key="office.id" :value="office.id">
+                            {{ office.name }}
+                        </option>
+                    </select>
+
+                    <input type="date" class="form-input" v-model="filterDateStart" 
+                        @change="loadSettlements" style="width: auto;">
+                    <span style="color: var(--color-gray-500);">至</span>
+                    <input type="date" class="form-input" v-model="filterDateEnd" 
+                        @change="loadSettlements" style="width: auto;">
+                </div>
+
+                <div class="toolbar-right">
+                    <button class="btn btn-outline btn-sm" @click="resetFilters">
+                        <i class="fas fa-redo"></i> 重置
+                    </button>
+                    <button class="btn btn-outline btn-sm" @click="exportData">
+                        <i class="fas fa-download"></i> 导出
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数据表格 -->
+            <div v-if="loading" class="loading-spinner"></div>
+
+            <div v-else class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 2.5rem;">
+                                <input type="checkbox" v-model="selectAll" @change="toggleSelectAll">
+                            </th>
+                            <th>结算单号</th>
+                            <th>办公室</th>
+                            <th>领水记录数</th>
+                            <th>结算金额</th>
+                            <th>状态</th>
+                            <th>申请时间</th>
+                            <th>确认时间</th>
+                            <th style="width: 150px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody v-if="settlements.length > 0">
+                        <tr v-for="item in settlements" :key="item.id">
+                            <td>
+                                <input type="checkbox" :checked="isSelected(item.id)" 
+                                    @change="toggleSelect(item.id)">
+                            </td>
+                            <td><span style="font-weight: 500;">{{ item.settlement_no || 'ST' + item.id }}</span></td>
+                            <td>{{ item.office_name || '-' }}</td>
+                            <td>{{ item.pickup_count || '-' }}</td>
+                            <td style="font-weight: 500; color: var(--color-primary-600);">
+                                {{ formatMoney(item.total_amount) }}
+                            </td>
+                            <td>
+                                <span :class="getStatusBadgeClass(item.status)">
+                                    {{ getStatusText(item.status) }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(item.created_at) }}</td>
+                            <td>{{ item.confirmed_at ? formatDate(item.confirmed_at) : '-' }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button v-if="item.status === 'applied'" 
+                                        class="btn btn-ghost btn-sm"
+                                        @click="confirmSettlement(item)"
+                                        title="确认">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button v-if="item.status === 'applied'" 
+                                        class="btn btn-ghost btn-sm"
+                                        @click="rejectSettlement(item)"
+                                        title="拒绝">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm"
+                                        @click="viewDetail(item)"
+                                        title="详情">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody v-else>
+                        <tr>
+                            <td colspan="9">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">
+                                        <i class="fas fa-receipt"></i>
+                                    </div>
+                                    <div class="empty-state-title">暂无结算记录</div>
+                                    <div class="empty-state-description">点击"申请结算"创建第一条结算记录</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            <div v-if="!loading && pagination.total > 0" class="pagination">
+                <button class="pagination-btn" @click="changePage(pagination.page - 1)"
+                    :disabled="pagination.page === 1">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button v-for="p in displayPages" :key="p"
+                    class="pagination-btn"
+                    :class="{ active: p === pagination.page }"
+                    @click="changePage(p)">
+                    {{ p }}
+                </button>
+                <button class="pagination-btn" @click="changePage(pagination.page + 1)"
+                    :disabled="pagination.page >= totalPages">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <span class="pagination-info">共 {{ pagination.total }} 条</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 共享组件库 -->
+    <script src="shared/js/api-client.js"></script>
+    <script src="shared/js/auth.js"></script>
+    <script src="shared/js/utils.js"></script>
+    <script src="shared/components/toast.js"></script>
+    <script src="shared/components/modal.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    settlements: [],
+                    selectedSettlements: [],
+                    selectAll: false,
+                    searchKeyword: '',
+                    filterStatus: '',
+                    filterOffice: '',
+                    filterDateStart: '',
+                    filterDateEnd: '',
+                    offices: [],
+                    stats: {
+                        pending: 0,
+                        confirmed: 0,
+                        rejected: 0,
+                        pendingTrend: null,
+                        confirmedAmount: 0,
+                        totalAmount: 0
+                    },
+                    pagination: {
+                        page: 1,
+                        limit: 20,
+                        total: 0
+                    }
+                };
+            },
+
+            computed: {
+                totalPages() {
+                    return Math.ceil(this.pagination.total / this.pagination.limit);
+                },
+                displayPages() {
+                    const pages = [];
+                    const total = this.totalPages;
+                    const current = this.pagination.page;
+                    const maxDisplay = 5;
+                    let start = Math.max(1, current - Math.floor(maxDisplay / 2));
+                    let end = Math.min(total, start + maxDisplay - 1);
+                    if (end - start < maxDisplay - 1) {
+                        start = Math.max(1, end - maxDisplay + 1);
+                    }
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                }
+            },
+
+            mounted() {
+                if (!Auth.requireAdmin()) return;
+                this.loadOffices();
+                this.loadSettlements();
+                this.loadStats();
+            },
+
+            methods: {
+                async loadOffices() {
+                    try {
+                        const response = await api.get('/offices');
+                        this.offices = response || [];
+                    } catch (error) {
+                        console.error('加载办公室列表失败:', error);
+                    }
+                },
+
+                async loadSettlements() {
+                    this.loading = true;
+                    try {
+                        const params = {
+                            skip: (this.pagination.page - 1) * this.pagination.limit,
+                            limit: this.pagination.limit
+                        };
+
+                        if (this.searchKeyword) params.keyword = this.searchKeyword;
+                        if (this.filterStatus) params.status = this.filterStatus;
+                        if (this.filterOffice) params.office_id = this.filterOffice;
+                        if (this.filterDateStart) params.date_start = this.filterDateStart;
+                        if (this.filterDateEnd) params.date_end = this.filterDateEnd;
+
+                        const response = await api.get('/admin/office-settlements', params);
+                        this.settlements = response || [];
+                        this.pagination.total = response.total || this.settlements.length;
+                    } catch (error) {
+                        console.error('加载结算列表失败:', error);
+                        Toast.error('加载结算列表失败');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadStats() {
+                    try {
+                        const response = await api.get('/v2/settlements/statistics');
+                        if (response) {
+                            this.stats = {
+                                pending: response.pending_count || 0,
+                                confirmed: response.confirmed_count || 0,
+                                rejected: response.rejected_count || 0,
+                                pendingTrend: response.pending_trend || null,
+                                confirmedAmount: response.confirmed_amount || 0,
+                                totalAmount: response.total_amount || 0
+                            };
+                        }
+                    } catch (error) {
+                        console.error('加载统计数据失败:', error);
+                    }
+                },
+
+                async confirmSettlement(item) {
+                    Modal.confirm({
+                        title: '确认结算',
+                        message: `确定要确认结算单 "${item.settlement_no || item.id}" 吗？金额: ${this.formatMoney(item.total_amount)}`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            try {
+                                await api.post(`/v2/settlements/${item.id}/confirm`);
+                                Toast.success('结算已确认');
+                                this.loadSettlements();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('确认失败: ' + error.message);
+                            }
+                        }
+                    });
+                },
+
+                rejectSettlement(item) {
+                    Modal.form({
+                        id: 'reject-settlement',
+                        title: '拒绝结算',
+                        fields: [
+                            {
+                                name: 'reason',
+                                label: '拒绝原因',
+                                type: 'textarea',
+                                required: true,
+                                placeholder: '请输入拒绝原因'
+                            }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post(`/v2/settlements/${item.id}/reject`, formData);
+                            Toast.success('结算已拒绝');
+                            this.loadSettlements();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                batchConfirm() {
+                    if (this.selectedSettlements.length === 0) return;
+
+                    Modal.confirm({
+                        title: '批量确认结算',
+                        message: `确定要确认选中的 ${this.selectedSettlements.length} 条结算吗？`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            try {
+                                await api.post('/v2/settlements/batch-confirm', {
+                                    settlement_ids: this.selectedSettlements
+                                });
+                                Toast.success('批量确认成功');
+                                this.selectedSettlements = [];
+                                this.selectAll = false;
+                                this.loadSettlements();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('批量确认失败: ' + error.message);
+                            }
+                        }
+                    });
+                },
+
+                autoGenerateSettlement() {
+                    Modal.confirm({
+                        title: '自动生成结算',
+                        message: '系统将自动为所有未结算的领水记录生成结算单，确定要继续吗？',
+                        type: 'warning',
+                        onConfirm: async () => {
+                            try {
+                                const response = await api.post('/office-settlements/auto-generate');
+                                Toast.success(`成功生成 ${response.created_count || 0} 条结算单`);
+                                this.loadSettlements();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('自动生成失败: ' + error.message);
+                            }
+                        }
+                    });
+                },
+
+                openSettlementModal() {
+                    Modal.form({
+                        id: 'apply-settlement',
+                        title: '申请结算',
+                        fields: [
+                            {
+                                name: 'office_id',
+                                label: '办公室',
+                                type: 'select',
+                                required: true,
+                                options: this.offices.map(o => ({ value: o.id, label: o.name }))
+                            },
+                            {
+                                name: 'remark',
+                                label: '备注',
+                                type: 'textarea',
+                                placeholder: '选填'
+                            }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post('/settlement/apply', formData);
+                            Toast.success('结算申请已提交');
+                            this.loadSettlements();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                viewDetail(item) {
+                    Toast.info('结算详情功能开发中...');
+                },
+
+                isSelected(id) {
+                    return this.selectedSettlements.includes(id);
+                },
+
+                toggleSelect(id) {
+                    const index = this.selectedSettlements.indexOf(id);
+                    if (index > -1) {
+                        this.selectedSettlements.splice(index, 1);
+                    } else {
+                        this.selectedSettlements.push(id);
+                    }
+                    this.selectAll = this.selectedSettlements.length === this.settlements.length;
+                },
+
+                toggleSelectAll() {
+                    if (this.selectAll) {
+                        this.selectedSettlements = this.settlements.map(s => s.id);
+                    } else {
+                        this.selectedSettlements = [];
+                    }
+                },
+
+                clearSelection() {
+                    this.selectedSettlements = [];
+                    this.selectAll = false;
+                },
+
+                resetFilters() {
+                    this.searchKeyword = '';
+                    this.filterStatus = '';
+                    this.filterOffice = '';
+                    this.filterDateStart = '';
+                    this.filterDateEnd = '';
+                    this.pagination.page = 1;
+                    this.loadSettlements();
+                },
+
+                exportData() {
+                    Toast.info('导出功能开发中...');
+                },
+
+                changePage(page) {
+                    if (page < 1 || page > this.totalPages) return;
+                    this.pagination.page = page;
+                    this.loadSettlements();
+                },
+
+                getStatusBadgeClass(status) {
+                    const classes = {
+                        'applied': 'status-badge pending',
+                        'confirmed': 'status-badge confirmed',
+                        'settled': 'status-badge settled',
+                        'rejected': 'status-badge rejected'
+                    };
+                    return classes[status] || 'status-badge neutral';
+                },
+
+                getStatusText(status) {
+                    const texts = {
+                        'applied': '待确认',
+                        'confirmed': '已确认',
+                        'settled': '已结算',
+                        'rejected': '已拒绝'
+                    };
+                    return texts[status] || status;
+                },
+
+                formatMoney(value) {
+                    return Utils.formatMoney(value);
+                },
+
+                formatDate(date) {
+                    return Utils.formatDateTime(date);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

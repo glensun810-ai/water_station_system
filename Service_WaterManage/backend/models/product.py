@@ -5,6 +5,7 @@
 
 from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from models.base import Base
 
@@ -15,8 +16,10 @@ class ProductCategory(Base):
     __tablename__ = "product_categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True)
-    description = Column(String, nullable=True)
+    name = Column(String(100), nullable=False, unique=True)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(String, default=datetime.now)
 
     # 关系
     products = relationship("Product", back_populates="category")
@@ -58,3 +61,5 @@ class Product(Base):
     # 关系
     category = relationship("ProductCategory", back_populates="products")
     transactions = relationship("Transaction", back_populates="product")
+    inventory_records = relationship("InventoryRecord", back_populates="product")
+    alert_configs = relationship("InventoryAlertConfig", back_populates="product")

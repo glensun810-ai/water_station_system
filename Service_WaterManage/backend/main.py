@@ -4139,8 +4139,24 @@ from pathlib import Path
 
 # 前端目录路径
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+PORTAL_DIR = Path(__file__).parent.parent.parent / "portal"
+MEETING_FRONTEND_DIR = Path(__file__).parent.parent.parent / "Service_MeetingRoom" / "frontend"
 
 # 挂载静态文件目录
+print(f"\n正在挂载静态文件目录...")
+print(f"  FRONTEND_DIR: {FRONTEND_DIR} (exists: {FRONTEND_DIR.exists()})")
+print(f"  PORTAL_DIR: {PORTAL_DIR} (exists: {PORTAL_DIR.exists()})")
+print(f"  MEETING_FRONTEND_DIR: {MEETING_FRONTEND_DIR} (exists: {MEETING_FRONTEND_DIR.exists()})")
+
+if PORTAL_DIR.exists():
+    app.mount(
+        "/portal",
+        StaticFiles(directory=str(PORTAL_DIR), html=True),
+        name="portal",
+    )
+    print(f"✓ Portal目录已挂载")
+    print(f"  - /portal → AI产业集群空间服务首页")
+
 if FRONTEND_DIR.exists():
     app.mount(
         "/frontend",
@@ -4152,20 +4168,28 @@ if FRONTEND_DIR.exists():
         StaticFiles(directory=str(FRONTEND_DIR), html=True),
         name="water-admin",
     )
-    print(f"✓ 前端目录已挂载: {FRONTEND_DIR}")
-    print(f"  - /frontend → 登录/管理后台")
-    print(f"  - /water-admin → 水站管理后台")
-else:
-    print(f"⚠ 前端目录不存在: {FRONTEND_DIR}")
+    print(f"✓ 水站前端目录已挂载")
+    print(f"  - /frontend → 水站管理后台")
 
-# 根路径重定向到登录页面
+if MEETING_FRONTEND_DIR.exists():
+    app.mount(
+        "/meeting-frontend",
+        StaticFiles(directory=str(MEETING_FRONTEND_DIR), html=True),
+        name="meeting-frontend",
+    )
+    print(f"✓ 会议室前端目录已挂载")
+    print(f"  - /meeting-frontend → 会议室管理后台")
+
+
+# 根路径重定向到Portal首页
 from fastapi.responses import RedirectResponse
 
 
 @app.get("/")
 async def root():
-    """根路径重定向到登录页面"""
-    return RedirectResponse(url="/frontend/login.html")
+    """根路径重定向到Portal首页"""
+    return RedirectResponse(url="/portal/index.html")
+
 
 
 # 健康检查端点
@@ -4192,3 +4216,231 @@ print("\n默认管理员:")
 print("  - 用户名: admin")
 print("  - 密码: 见 .env 文件")
 print("=" * 50 + "\n")
+
+
+# ==================== Portal APIs ====================
+
+@app.get("/api/unified/user/{user_id}/balance")
+def get_unified_user_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户统一余额信息（Portal首页使用）"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 计算预付余额
+    prepaid_orders = db.query(PrepaidOrder).filter(
+        PrepaidOrder.user_id == user_id,
+        PrepaidOrder.payment_status == "paid",
+        PrepaidOrder.is_active == 1
+    ).all()
+    
+    balance_prepaid = sum(
+        (order.total_qty - order.used_qty) * order.unit_price 
+        for order in prepaid_orders
+    )
+    
+    return {
+        "user_id": user_id,
+        "balance_credit": user.balance_credit or 0,
+        "balance_prepaid": balance_prepaid,
+        "total_balance": (user.balance_credit or 0) + balance_prepaid
+    }
+
+
+@app.get("/api/unified/settlement/summary")
+def get_unified_settlement_summary(
+    user_id: Optional[int] = None,
+    office_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """获取统一结算汇总（Portal首页使用）"""
+    query = db.query(OfficeSettlement)
+    
+    if user_id:
+        # 通过office_pickups关联查询用户的结算
+        query = query.filter(OfficeSettlement.settlement_person_id == user_id)
+    
+    if office_id:
+        query = query.filter(OfficeSettlement.office_id == office_id)
+    
+    settlements = query.all()
+    
+    total_unsettled = sum(
+        s.total_amount for s in settlements 
+        if s.settlement_status == "unsettled"
+    )
+    total_settled = sum(
+        s.total_amount for s in settlements 
+        if s.settlement_status == "settled"
+    )
+    
+    return {
+        "total_unsettled": total_unsettled,
+        "total_settled": total_settled,
+        "settlement_count": len(settlements)
+    }
+
+
+@app.get("/api/meeting/user/{user_id}/free-hours")
+def get_meeting_user_free_hours(user_id: int, db: Session = Depends(get_db)):
+    """获取用户会议室免费时长（Portal首页使用）"""
+    from datetime import datetime, date
+    from sqlalchemy import func, and_
+    
+    # 尝试从会议室数据库获取
+    try:
+        from services.meeting.api import MeetingSessionLocal, MeetingRoom, MeetingBooking
+        
+        meeting_db = MeetingSessionLocal()
+        
+        # 获取本月第一天和最后一天
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        month_end = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
+        
+        # 查询本月已使用的免费时长
+        used_free_hours = meeting_db.query(
+            func.sum(MeetingBooking.duration_hours)
+        ).filter(
+            and_(
+                MeetingBooking.user_id == user_id,
+                MeetingBooking.booking_date >= month_start,
+                MeetingBooking.booking_date < month_end,
+                MeetingBooking.status.in_(["confirmed", "completed"])
+            )
+        ).scalar() or 0
+        
+        # 默认每月5小时免费时长
+        total_free_hours = 5
+        remaining_hours = max(0, total_free_hours - float(used_free_hours))
+        
+        meeting_db.close()
+        
+        return {
+            "user_id": user_id,
+            "total_free_hours": total_free_hours,
+            "used_free_hours": float(used_free_hours),
+            "free_hours": remaining_hours,
+            "month": f"{today.year}-{today.month:02d}"
+        }
+    except Exception as e:
+        # 如果会议室数据库不可用，返回默认值
+        return {
+            "user_id": user_id,
+            "total_free_hours": 5,
+            "used_free_hours": 0,
+            "free_hours": 5,
+            "month": f"{date.today().year}-{date.today().month:02d}",
+            "error": str(e)
+        }
+
+
+# ==================== Portal APIs ====================
+
+@app.get("/api/unified/user/{user_id}/balance")
+def get_unified_user_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户统一余额信息（Portal首页使用）"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 计算预付余额
+    prepaid_orders = db.query(PrepaidOrder).filter(
+        PrepaidOrder.user_id == user_id,
+        PrepaidOrder.payment_status == "paid",
+        PrepaidOrder.is_active == 1
+    ).all()
+    
+    balance_prepaid = sum(
+        (order.total_qty - order.used_qty) * order.unit_price 
+        for order in prepaid_orders
+    )
+    
+    return {
+        "user_id": user_id,
+        "balance_credit": user.balance_credit or 0,
+        "balance_prepaid": balance_prepaid,
+        "total_balance": (user.balance_credit or 0) + balance_prepaid
+    }
+
+
+@app.get("/api/unified/settlement/summary")
+def get_unified_settlement_summary(
+    user_id: Optional[int] = None,
+    office_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """获取统一结算汇总（Portal首页使用）"""
+    query = db.query(OfficeSettlement)
+    
+    if user_id:
+        query = query.filter(OfficeSettlement.settlement_person_id == user_id)
+    
+    if office_id:
+        query = query.filter(OfficeSettlement.office_id == office_id)
+    
+    settlements = query.all()
+    
+    total_unsettled = sum(
+        s.total_amount for s in settlements 
+        if s.settlement_status == "unsettled"
+    )
+    total_settled = sum(
+        s.total_amount for s in settlements 
+        if s.settlement_status == "settled"
+    )
+    
+    return {
+        "total_unsettled": total_unsettled,
+        "total_settled": total_settled,
+        "settlement_count": len(settlements)
+    }
+
+
+@app.get("/api/meeting/user/{user_id}/free-hours")
+def get_meeting_user_free_hours(user_id: int, db: Session = Depends(get_db)):
+    """获取用户会议室免费时长（Portal首页使用）"""
+    from datetime import date
+    from sqlalchemy import func, and_
+    
+    try:
+        from services.meeting.api import MeetingSessionLocal, MeetingRoom, MeetingBooking
+        
+        meeting_db = MeetingSessionLocal()
+        
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        month_end = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
+        
+        used_free_hours = meeting_db.query(
+            func.sum(MeetingBooking.duration_hours)
+        ).filter(
+            and_(
+                MeetingBooking.user_id == user_id,
+                MeetingBooking.booking_date >= month_start,
+                MeetingBooking.booking_date < month_end,
+                MeetingBooking.status.in_(["confirmed", "completed"])
+            )
+        ).scalar() or 0
+        
+        total_free_hours = 5
+        remaining_hours = max(0, total_free_hours - float(used_free_hours))
+        
+        meeting_db.close()
+        
+        return {
+            "user_id": user_id,
+            "total_free_hours": total_free_hours,
+            "used_free_hours": float(used_free_hours),
+            "free_hours": remaining_hours,
+            "month": f"{today.year}-{today.month:02d}"
+        }
+    except Exception as e:
+        return {
+            "user_id": user_id,
+            "total_free_hours": 5,
+            "used_free_hours": 0,
+            "free_hours": 5,
+            "month": f"{date.today().year}-{date.today().month:02d}",
+            "error": str(e)
+        }

@@ -219,9 +219,64 @@
     </div>
     
     <script>
-        // 页面加载完成后的处理
+        // 环境检测：自动适配本地开发和服务器部署路径
+        const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
+        
+        // 定义路径映射
+        const paths = {
+            water: {
+                user: isLocalDev ? '/Service_WaterManage/frontend/index.html' : '/service/water/',
+                admin: isLocalDev ? '/Service_WaterManage/frontend/admin.html' : '/service/water-admin/admin.html'
+            },
+            meeting: {
+                user: isLocalDev ? '/Service_MeetingRoom/frontend/index.html' : '/service/meeting/',
+                admin: isLocalDev ? '/Service_MeetingRoom/frontend/admin.html' : '/service/meeting-admin/admin.html'
+            }
+        };
+        
+        // 更新页面中的链接
+        function updateLinks() {
+            // 水站管理卡片
+            const waterCard = document.querySelector('.service-card:nth-child(1)');
+            if (waterCard) {
+                waterCard.onclick = () => window.location.href = paths.water.user;
+            }
+            
+            // 会议室预定卡片
+            const meetingCard = document.querySelector('.service-card:nth-child(2)');
+            if (meetingCard) {
+                meetingCard.onclick = () => window.location.href = paths.meeting.user;
+            }
+            
+            // 更新所有链接
+            document.querySelectorAll('.service-links a').forEach(link => {
+                const href = link.getAttribute('href');
+                // 精确匹配各个链接，避免模糊匹配导致的问题
+                if (href === '/service/water/admin.html' || href.includes('/service/water-admin/')) {
+                    link.href = paths.water.admin;
+                } else if (href === '/service/water/index.html') {
+                    link.href = paths.water.user;
+                } else if (href === '/service/meeting/admin.html' || href.includes('/service/meeting-admin/')) {
+                    link.href = paths.meeting.admin;
+                } else if (href === '/service/meeting/index.html') {
+                    link.href = paths.meeting.user;
+                }
+            });
+            
+            // 更新系统管理入口
+            const systemLink = document.querySelector('.footer a');
+            if (systemLink && systemLink.getAttribute('href').includes('/service/')) {
+                systemLink.href = paths.water.admin;
+            }
+        }
+        
+        // 页面加载后更新链接
+        updateLinks();
+        
         console.log('✅ AI产业集群空间服务管理平台已加载');
+        console.log('📍 运行环境:', isLocalDev ? '本地开发 (localhost:8080)' : '服务器部署');
         console.log('📍 当前时间:', new Date().toLocaleString('zh-CN'));
+        console.log('📍 链接路径:', paths);
         
         // 检查API服务状态
         const API_BASE = window.location.origin + '/api';

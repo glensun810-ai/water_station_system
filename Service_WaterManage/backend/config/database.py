@@ -113,7 +113,7 @@ db_manager = DatabaseManager()
 # 便捷函数：获取数据库会话
 def get_db() -> Generator[Session, None, None]:
     """获取主数据库会话（依赖注入）"""
-    return db_manager.get_main_session()
+    yield from db_manager.get_main_session()
 
 
 def get_meeting_db() -> Generator[Session, None, None]:

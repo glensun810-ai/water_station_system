@@ -11,6 +11,13 @@ from models.inventory import InventoryRecord, InventoryAlertConfig
 from models.account import OfficeAccount, AccountTransaction
 from models.prepaid import PrepaidPackage, PrepaidOrder, PrepaidPickup
 from models.system import DeleteLog, Notification
+from models.office import Office
+from models.pickup import OfficePickup
+from models.recharge import OfficeRecharge
+from models.settlement import OfficeSettlement
+from models.config import SystemConfig
+from models.promotion import Promotion, PromotionConfig
+from models.reservation import ReservationPickup
 
 __all__ = [
     "Base",
@@ -27,4 +34,12 @@ __all__ = [
     "PrepaidPickup",
     "DeleteLog",
     "Notification",
+    "Office",
+    "OfficePickup",
+    "OfficeRecharge",
+    "OfficeSettlement",
+    "SystemConfig",
+    "Promotion",
+    "PromotionConfig",
+    "ReservationPickup",
 ]

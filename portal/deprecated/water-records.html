@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>领水记录 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+        }
+        
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            font-size: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .page-title {
+            flex: 1;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .new-order-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .new-order-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .record-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .record-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .record-id {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
+        .status-applied {
+            background: #FEF3C7;
+            color: #D97706;
+        }
+        
+        .status-settled {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .record-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .record-field {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .field-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .field-value {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .field-value.highlight {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .record-footer {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .detail-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .detail-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .detail-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .detail-section {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .detail-section-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .record-body {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-section {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Loading -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <!-- Detail Modal -->
+        <div v-if="selectedRecord" class="detail-modal" @click.self="selectedRecord = null">
+            <div class="detail-content">
+                <div class="detail-header">
+                    <div class="detail-title">领水详情 #{{ selectedRecord.id }}</div>
+                    <div class="close-btn" @click="selectedRecord = null">×</div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">基本信息</div>
+                    <div class="detail-row">
+                        <span>领水时间</span>
+                        <span>{{ formatDate(selectedRecord.pickup_time) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>办公室</span>
+                        <span>{{ selectedRecord.office_name }} {{ selectedRecord.office_room_number }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>领用人</span>
+                        <span>{{ selectedRecord.pickup_person }}</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">产品信息</div>
+                    <div class="detail-row">
+                        <span>产品名称</span>
+                        <span>{{ selectedRecord.product_name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>规格</span>
+                        <span>{{ selectedRecord.product_specification || '标准规格' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>单价</span>
+                        <span>¥{{ selectedRecord.unit_price?.toFixed(2) || '0.00' }}</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">数量与金额</div>
+                    <div class="detail-row">
+                        <span>领用数量</span>
+                        <span>{{ selectedRecord.quantity }} 件</span>
+                    </div>
+                    <div v-if="selectedRecord.free_qty > 0" class="detail-row">
+                        <span>赠送数量</span>
+                        <span>{{ selectedRecord.free_qty }} 件</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>总金额</span>
+                        <span class="text-primary font-bold">¥{{ selectedRecord.total_amount?.toFixed(2) || '0.00' }}</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <div class="detail-section-title">状态信息</div>
+                    <div class="detail-row">
+                        <span>结算状态</span>
+                        <span :class="getStatusClass(selectedRecord.settlement_status)">
+                            {{ getStatusText(selectedRecord.settlement_status) }}
+                        </span>
+                    </div>
+                    <div v-if="selectedRecord.discount_desc" class="detail-row">
+                        <span>优惠</span>
+                        <span>{{ selectedRecord.discount_desc }}</span>
+                    </div>
+                </div>
+                
+                <div v-if="selectedRecord.note" class="detail-section">
+                    <div class="detail-section-title">备注</div>
+                    <div class="text-sm">{{ selectedRecord.note }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-container">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="back-btn" @click="goBack">←</div>
+                <h1 class="page-title">领水记录</h1>
+                <button class="new-order-btn" @click="newOrder">新领水</button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-card">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">总记录数</div>
+                        <div class="stat-value">{{ records.length }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">待结算</div>
+                        <div class="stat-value">{{ pendingCount }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总金额</div>
+                        <div class="stat-value">¥{{ totalAmount.toFixed(2) }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filter -->
+            <div class="filter-section">
+                <select v-model="statusFilter" class="filter-select" @change="loadRecords">
+                    <option value="all">全部状态</option>
+                    <option value="pending">待结算</option>
+                    <option value="applied">已申请</option>
+                    <option value="settled">已结算</option>
+                </select>
+            </div>
+            
+            <!-- Records List -->
+            <div v-if="records.length === 0 && !loading" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div>暂无领水记录</div>
+                <button class="new-order-btn mt-lg" @click="newOrder">立即领水</button>
+            </div>
+            
+            <div v-else>
+                <div 
+                    v-for="record in records" 
+                    :key="record.id"
+                    class="record-card"
+                    @click="showDetail(record)"
+                >
+                    <div class="record-header">
+                        <div class="record-id">#{{ record.id }}</div>
+                        <div :class="['status-badge', getStatusClass(record.settlement_status)]">
+                            {{ getStatusText(record.settlement_status) }}
+                        </div>
+                    </div>
+                    
+                    <div class="record-body">
+                        <div class="record-field">
+                            <div class="field-label">产品</div>
+                            <div class="field-value">{{ record.product_name }}</div>
+                        </div>
+                        <div class="record-field">
+                            <div class="field-label">数量</div>
+                            <div class="field-value">{{ record.quantity }} 件</div>
+                        </div>
+                        <div class="record-field">
+                            <div class="field-label">领用时间</div>
+                            <div class="field-value">{{ formatDate(record.pickup_time) }}</div>
+                        </div>
+                        <div class="record-field">
+                            <div class="field-label">金额</div>
+                            <div class="field-value highlight">¥{{ record.total_amount?.toFixed(2) || '0.00' }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="record-footer">
+                        领用人: {{ record.pickup_person }} | 办公室: {{ record.office_name }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        const API_BASE = window.location.origin;
+        
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const records = ref([]);
+                const selectedRecord = ref(null);
+                const statusFilter = ref('all');
+                
+                const token = ref(localStorage.getItem('token'));
+                
+                const pendingCount = computed(() => {
+                    return records.value.filter(r => r.settlement_status === 'pending').length;
+                });
+                
+                const totalAmount = computed(() => {
+                    return records.value.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+                });
+                
+                const checkAuth = async () => {
+                    if (!token.value) {
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/api/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/portal/index.html';
+                            return false;
+                        }
+                        
+                        return true;
+                    } catch (err) {
+                        console.error('Auth check failed:', err);
+                        window.location.href = '/portal/index.html';
+                        return false;
+                    }
+                };
+                
+                const loadRecords = async () => {
+                    try {
+                        const params = new URLSearchParams({
+                            limit: 100,
+                            offset: 0
+                        });
+                        
+                        if (statusFilter.value && statusFilter.value !== 'all') {
+                            params.append('status', statusFilter.value);
+                        }
+                        
+                        const res = await fetch(`${API_BASE}/api/user/office-pickups?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token.value}` }
+                        });
+                        
+                        if (!res.ok) {
+                            throw new Error('Failed to load records');
+                        }
+                        
+                        records.value = await res.json();
+                    } catch (err) {
+                        console.error('Load records failed:', err);
+                        records.value = [];
+                    }
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                };
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待结算',
+                        'applied': '已申请',
+                        'settled': '已结算'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const getStatusClass = (status) => {
+                    const classMap = {
+                        'pending': 'status-pending',
+                        'applied': 'status-applied',
+                        'settled': 'status-settled'
+                    };
+                    return classMap[status] || '';
+                };
+                
+                const showDetail = (record) => {
+                    selectedRecord.value = record;
+                };
+                
+                const newOrder = () => {
+                    window.location.href = '/portal/water-order.html';
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/portal/index.html';
+                };
+                
+                onMounted(async () => {
+                    const authOk = await checkAuth();
+                    if (authOk) {
+                        await loadRecords();
+                    }
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    records,
+                    selectedRecord,
+                    statusFilter,
+                    pendingCount,
+                    totalAmount,
+                    formatDate,
+                    getStatusText,
+                    getStatusClass,
+                    showDetail,
+                    newOrder,
+                    goBack,
+                    loadRecords
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
