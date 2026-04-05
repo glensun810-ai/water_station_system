@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>云协同创新空间用水系统</title>
-    <script src="vue.global.js"></script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <script src="vue.global.js?v=20260330"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        [v-cloak] { display: none; }
+        [v-cloak] { display: none !important; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6; }
         #loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .spinner { width: 40px; height: 40px; border: 4px solid #e5e5e5; border-top-color: #2563EB; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -30,6 +31,67 @@
         
         .tab-btn { padding: 12px 20px; font-weight: 500; color: #6B7280; border-bottom: 2px solid transparent; }
         .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; }
+        
+        .home-btn {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .home-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        
+        .home-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .home-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .home-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .home-btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .home-btn-icon {
+            font-size: 16px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .home-btn:hover .home-btn-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
         
         .status-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
         .status-pending { background: #FEF3C7; color: #92400E; }
@@ -79,6 +141,23 @@
             header h1 {
                 font-size: 15px !important;
                 line-height: 1.3;
+            }
+            
+            /* Home按钮移动端优化 - 增强可见性 */
+            .home-btn {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 !important;
+                border-width: 2px !important;
+                background: rgba(255, 255, 255, 0.25) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+            }
+            .home-btn-icon {
+                font-size: 20px !important;
+            }
+            .home-btn:active {
+                background: rgba(255, 255, 255, 0.35) !important;
+                transform: scale(0.95) !important;
             }
             
             /* Tab 优化 */
@@ -171,6 +250,93 @@
                 border-color: #2563EB;
             }
         }
+
+        /* 日期输入框格式提示样式 */
+        input[type="date"]:invalid {
+            color: #94a3b8;
+        }
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+        input[type="date"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+            padding: 0 2px;
+        }
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="date"]::-webkit-datetime-edit-year-field {
+            color: #94a3b8;
+        }
+        input[type="date"]:valid::-webkit-datetime-edit-month-field,
+        input[type="date"]:valid::-webkit-datetime-edit-day-field,
+        input[type="date"]:valid::-webkit-datetime-edit-year-field {
+            color: #1e293b;
+        }
+
+        /* 时间输入框格式提示样式 */
+        input[type="time"]:invalid {
+            color: #94a3b8;
+        }
+        input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+        input[type="time"]::-webkit-datetime-edit-text {
+            color: #94a3b8;
+            padding: 0 2px;
+        }
+        input[type="time"]::-webkit-datetime-edit-hour-field,
+        input[type="time"]::-webkit-datetime-edit-minute-field {
+            color: #94a3b8;
+        }
+        input[type="time"]:valid::-webkit-datetime-edit-hour-field,
+        input[type="time"]:valid::-webkit-datetime-edit-minute-field {
+            color: #1e293b;
+        }
+
+        /* 日期输入框容器 */
+        .date-input-wrapper {
+            position: relative;
+        }
+        .date-input-wrapper input[type="date"],
+        .date-input-wrapper input[type="time"] {
+            position: relative;
+            z-index: 2;
+        }
+        .date-input-wrapper .placeholder-overlay {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            z-index: 1;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .date-input-wrapper input:not([value]):not(:focus) + .placeholder-overlay,
+        .date-input-wrapper input[value=""]:not(:focus) + .placeholder-overlay {
+            display: block;
+        }
+        .date-input-wrapper input[value]:not([value=""]) + .placeholder-overlay,
+        .date-input-wrapper input:focus + .placeholder-overlay {
+            display: none;
+        }
+
+        /* 隐藏浏览器默认的格式提示 */
+        input[type="date"]:invalid::-webkit-datetime-edit-fields-wrapper {
+            opacity: 0;
+        }
+        input[type="time"]:invalid::-webkit-datetime-edit-fields-wrapper {
+            opacity: 0;
+        }
+        input[type="date"]:valid::-webkit-datetime-edit-fields-wrapper,
+        input[type="date"]:focus::-webkit-datetime-edit-fields-wrapper {
+            opacity: 1;
+        }
+        input[type="time"]:valid::-webkit-datetime-edit-fields-wrapper,
+        input[type="time"]:focus::-webkit-datetime-edit-fields-wrapper {
+            opacity: 1;
+        }
     </style>
     <script>
         if (window.location.protocol === 'file:') {
@@ -183,13 +349,21 @@
     <div id="loading"><div class="spinner"></div></div>
     
     <div id="app" v-cloak>
-        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-2.5 sm:px-4 sm:py-3 text-white">
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-2.5 sm:px-4 sm:py-3 text-white shadow-lg">
             <div class="flex items-center justify-between">
                 <h1 class="text-base sm:text-lg font-bold truncate">水站管理系统</h1>
-                <button @click="showOfficeSettings = true" class="bg-white/20 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-transform">
-                    <i class="fas fa-cog"></i>
-                    <span class="hidden xs:inline max-w-[60px] sm:max-w-[80px] truncate">设置</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <a href="/service/home.html" class="home-btn rounded-xl text-xs sm:text-sm font-medium" title="返回首页">
+                        <div class="home-btn-content">
+                            <i class="fas fa-home home-btn-icon"></i>
+                            <span class="hidden sm:inline ml-1">返回首页</span>
+                        </div>
+                    </a>
+                    <button @click="showOfficeSettings = true" class="bg-white/20 hover:bg-white/30 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md">
+                        <i class="fas fa-cog"></i>
+                        <span class="hidden xs:inline max-w-[60px] sm:max-w-[80px] truncate">设置</span>
+                    </button>
+                </div>
             </div>
         </header>
         
@@ -198,7 +372,7 @@
             <button @click="activeTab = 'records'" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">我的记录</button>
         </div>
         
-        <div class="pb-28 px-3 py-4">
+        <div class="pb-96 px-3 py-4">
             <div v-show="activeTab === 'pickup'">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
@@ -228,6 +402,11 @@
                                     <div class="text-xs text-gray-500">{{ product.specification }}</div>
                                     <div v-if="product.promo_threshold && product.promo_gift" class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">
                                         买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                    </div>
+                                    <div v-if="product.stock !== undefined" :class="product.stock === 0 ? 'text-xs text-red-600 mt-1' : (product.stock <= 10 ? 'text-xs text-amber-600 mt-1' : 'text-xs text-green-600 mt-1')">
+                                        <i class="fas fa-box mr-1"></i>库存: {{ product.stock }}{{ product.unit }}
+                                        <span v-if="product.stock === 0" class="font-medium">(已售罄)</span>
+                                        <span v-else-if="product.stock <= 10" class="font-medium">(库存紧张)</span>
                                     </div>
                                     <div v-if="getPrepaidQty(product.id) > 0" class="text-xs text-green-600 mt-1"><i class="fas fa-wallet mr-1"></i>已预付剩余: {{ getPrepaidQty(product.id) }}{{ product.unit }}</div>
                                 </div>
@@ -285,9 +464,15 @@
                         <button @click="setRecordDateFilter('lastMonth')" :class="recordQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">上月</button>
                     </div>
                     <div class="flex gap-2 mb-3">
-                        <input type="date" v-model="recordDateFrom" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                        <div class="date-input-wrapper">
+                            <input type="date" v-model="recordDateFrom" :value="recordDateFrom" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                            <span class="placeholder-overlay">yyyy-mm-dd</span>
+                        </div>
                         <span class="text-slate-400 self-center">至</span>
-                        <input type="date" v-model="recordDateTo" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                        <div class="date-input-wrapper">
+                            <input type="date" v-model="recordDateTo" :value="recordDateTo" @change="clearRecordQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                            <span class="placeholder-overlay">yyyy-mm-dd</span>
+                        </div>
                         <button @click="resetRecordFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                     </div>
 
@@ -453,9 +638,15 @@
                     <button @click="setSettlementDateFilter('lastMonth')" :class="settlementQuickDate === 'lastMonth' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-2 py-1 rounded-lg text-xs font-medium">上月</button>
                 </div>
                 <div class="flex items-center gap-1 mb-3">
-                    <input type="date" v-model="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="开始日期">
+                    <div class="date-input-wrapper">
+                        <input type="date" v-model="settlementDateFrom" :value="settlementDateFrom" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                        <span class="placeholder-overlay">yyyy-mm-dd</span>
+                    </div>
                     <span class="text-slate-400">至</span>
-                    <input type="date" v-model="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm" placeholder="结束日期">
+                    <div class="date-input-wrapper">
+                        <input type="date" v-model="settlementDateTo" :value="settlementDateTo" @change="clearSettlementQuickDate" class="px-2 py-2 border rounded-lg text-sm">
+                        <span class="placeholder-overlay">yyyy-mm-dd</span>
+                    </div>
                     <button @click="resetSettlementDateFilter" class="px-3 py-2 border rounded-lg text-sm text-slate-500">重置</button>
                 </div>
 
@@ -574,9 +765,23 @@
         </div>
         
         <div v-show="activeTab === 'pickup'" class="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 z-50">
+            <!-- 优惠明细 -->
+            <div v-if="totalGiftQty > 0" class="mb-2 p-2 bg-green-50 rounded border border-green-200">
+                <div class="text-xs text-green-800">
+                    🎉 已优惠 <span class="font-bold">{{ totalGiftQty }}</span> 件
+                    <span class="float-right">
+                        原价：<span class="line-through">¥{{ originalAmount }}</span>
+                        优惠：<span class="font-bold text-red-600">-¥{{ discountAmount }}</span>
+                        实付：<span class="font-bold text-blue-600">¥{{ totalAmount }}</span>
+                    </span>
+                </div>
+            </div>
             <div class="flex items-center justify-between mb-2">
                 <div class="text-sm"><span class="text-gray-500">已选 </span><span class="text-blue-600 font-bold">{{ totalQty }}</span><span class="text-gray-500"> 件</span></div>
-                <div class="text-xl font-bold text-blue-600">¥{{ totalAmount }}</div>
+                <div>
+                    <div v-if="totalGiftQty > 0" class="text-xs text-gray-400 line-through">¥{{ originalAmount }}</div>
+                    <div class="text-xl font-bold text-blue-600">¥{{ totalAmount }}</div>
+                </div>
             </div>
             <button @click="submitPickup" :disabled="!canSubmit" :class="canSubmit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'" class="w-full text-white py-3 rounded-lg font-bold text-base">确认提交</button>
         </div>
@@ -734,7 +939,9 @@
     
     <script>
         const { createApp } = Vue;
-        const API_BASE = localStorage.getItem('API_BASE') || 'https://jhw-ai.com/api';
+        // 根据当前主机名自动选择API服务器
+        // API配置：自动适配IP/域名访问
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}/api`;
         
         createApp({
             data() {
@@ -788,7 +995,67 @@
                     return this.offices.filter(o => this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1); 
                 },
                 totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
-                totalAmount() { return this.products.reduce((sum, p) => sum + (this.cart[p.id] || 0) * p.price, 0).toFixed(2); },
+                // 买 N 赠 M 优惠计算
+                totalGiftQty() {
+                    return this.products.reduce((sum, p) => {
+                        if (!this.cart[p.id]) return sum;
+                        const qty = this.cart[p.id];
+                        if (p.promo_threshold && p.promo_gift && qty >= p.promo_threshold) {
+                            const cycle = p.promo_threshold + p.promo_gift;
+                            const cycles = Math.floor(qty / cycle);
+                            const remainder = qty % cycle;
+                            let gift = cycles * p.promo_gift;
+                            if (remainder > p.promo_threshold) {
+                                gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                            }
+                            sum += gift;
+                        }
+                        return sum;
+                    }, 0);
+                },
+                totalAmount() {
+                    const original = this.products.reduce((sum, p) => {
+                        if (!this.cart[p.id]) return sum;
+                        return sum + this.cart[p.id] * p.price;
+                    }, 0);
+                    const discount = this.products.reduce((sum, p) => {
+                        if (!this.cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
+                        const qty = this.cart[p.id];
+                        if (qty < p.promo_threshold) return sum;
+                        const cycle = p.promo_threshold + p.promo_gift;
+                        const cycles = Math.floor(qty / cycle);
+                        const remainder = qty % cycle;
+                        let gift = cycles * p.promo_gift;
+                        if (remainder > p.promo_threshold) {
+                            gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                        }
+                        return sum + gift * p.price;
+                    }, 0);
+                    return (original - discount).toFixed(2);
+                },
+                originalAmount() {
+                    const amount = this.products.reduce((sum, p) => {
+                        if (!this.cart[p.id]) return sum;
+                        return sum + this.cart[p.id] * p.price;
+                    }, 0);
+                    return amount.toFixed(2);
+                },
+                discountAmount() {
+                    const amount = this.products.reduce((sum, p) => {
+                        if (!this.cart[p.id] || !p.promo_threshold || !p.promo_gift) return sum;
+                        const qty = this.cart[p.id];
+                        if (qty < p.promo_threshold) return sum;
+                        const cycle = p.promo_threshold + p.promo_gift;
+                        const cycles = Math.floor(qty / cycle);
+                        const remainder = qty % cycle;
+                        let gift = cycles * p.promo_gift;
+                        if (remainder > p.promo_threshold) {
+                            gift += Math.min(remainder - p.promo_threshold, p.promo_gift);
+                        }
+                        return sum + gift * p.price;
+                    }, 0);
+                    return amount.toFixed(2);
+                },
                 canSubmit() { if (!this.form.officeId || this.totalQty === 0) return false; if (!this.form.personId && !this.form.personName) return false; return true; },
                 displayRecords() { 
                     let recs = this.records;
@@ -881,24 +1148,47 @@
                 }
             },
             async mounted() {
-                document.getElementById('loading').style.display = 'none';
+                // ESC key to close modals
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.showOfficeSettings = false;
+                        this.showFirstTimeGuide = false;
+                    }
+                });
+                
+                // 先加载基础数据
                 await this.loadData();
+                
+                // 隐藏 loading
+                document.getElementById('loading').style.display = 'none';
+                
                 const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 this.form.pickupTime = now.toISOString().slice(0, 16);
-                // 如果没有设置用户办公室，仍然加载结算数据（显示所有办公室的记录）
-                if (this.offices.length > 0) {
-                    this.loadSettlementData();
+                
+                // 根据当前 tab 加载对应数据
+                if (this.activeTab === 'settlement') {
+                    await this.loadSettlementData();
+                } else if (this.activeTab === 'records') {
+                    await this.loadRecordList();
                 }
             },
             watch: {
                 activeTab(newVal) {
                     localStorage.setItem('userActiveTab', newVal);
-                    if (newVal === 'settlement' && this.form.officeId) {
-                        this.settlementOfficeId = this.form.officeId;
-                        this.loadSettlementData();
+                    // 切换到结算 tab 时立即加载数据
+                    if (newVal === 'settlement') {
+                        if (this.form.officeId) {
+                            this.settlementOfficeId = this.form.officeId;
+                        }
+                        this.$nextTick(() => {
+                            this.loadSettlementData();
+                        });
                     }
-                    if (newVal === 'records' && this.recordList.length === 0) {
-                        this.loadRecordList();
+                    // 切换到记录 tab 时立即加载数据
+                    if (newVal === 'records') {
+                        this.$nextTick(() => {
+                            this.loadRecordList();
+                        });
                     }
                 },
                 'form.officeId': function(newVal) {
@@ -939,18 +1229,18 @@
                     }
                     
                     try {
+                        // 并行加载办公室和产品数据
                         const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/offices?is_active=1'), fetch(API_BASE + '/products?is_active=1')]);
                         if (officesRes.ok) this.offices = await officesRes.json();
                         if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
                         
+                        // 设置默认办公室和领水人
                         if (this.userOffices.length > 0) {
                             const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
                             const defaultId = defaultOffice.id;
-                            // Always set default office if not already set, or force update personName
                             if (!this.form.officeId) {
                                 this.form.officeId = defaultId;
                             }
-                            // Always set pickup person to office leader if available
                             if (defaultOffice.leader_name) {
                                 this.form.personName = defaultOffice.leader_name;
                                 this.form.personId = '';
@@ -959,11 +1249,11 @@
                             if (!this.settlementOfficeId) {
                                 this.settlementOfficeId = defaultId;
                             }
-                            this.loadSettlementData();
                         }
                     } catch (e) { console.error(e); }
+                    
+                    // 加载支付二维码
                     this.loadPaymentQr();
-                    this.loadRecordList();
                 },
                 async loadPaymentQr() { try { const res = await fetch(API_BASE + '/config/payment-qr'); if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; } } catch (e) { console.error(e); } },
                 async loadRecordList() {

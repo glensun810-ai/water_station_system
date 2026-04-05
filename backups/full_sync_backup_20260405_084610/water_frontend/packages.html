@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>套餐管理 - 企业服务管理平台</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        /* Flexbox固定布局架构 */
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F1F5F9;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- 顶部导航 -->
+        <nav class="bg-white shadow-sm border-b border-slate-200 z-50 flex-shrink-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="admin.html" class="text-slate-500 hover:text-slate-700 mr-4 transition-all duration-200 hover:scale-105">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                        </a>
+                        <h1 class="text-xl font-bold text-slate-800">套餐管理</h1>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <a href="/service/home.html" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-200 flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                            </svg>
+                            首页
+                        </a>
+                        <span class="text-sm text-slate-500 hidden sm:inline">企业服务管理平台 v2.0</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="flex-1 overflow-y-auto max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" style="-webkit-overflow-scrolling: touch;">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-slate-500">套餐总数</div>
+                            <div class="text-2xl font-bold text-slate-800">{{ stats.packages?.total || 0 }}</div>
+                        </div>
+                        <div class="text-3xl">📦</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-slate-500">激活套餐</div>
+                            <div class="text-2xl font-bold text-green-600">{{ stats.packages?.active || 0 }}</div>
+                        </div>
+                        <div class="text-3xl">✅</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-slate-500">套餐订单</div>
+                            <div class="text-2xl font-bold text-blue-600">{{ stats.orders?.total || 0 }}</div>
+                        </div>
+                        <div class="text-3xl">📋</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-slate-500">累计收入</div>
+                            <div class="text-2xl font-bold text-orange-600">¥{{ (stats.revenue?.total || 0).toFixed(2) }}</div>
+                        </div>
+                        <div class="text-3xl">💰</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 套餐列表 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
+                <div class="p-4 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-slate-800">套餐列表</h2>
+                        <div class="flex items-center space-x-3">
+                            <select v-model="statusFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                                <option value="">全部状态</option>
+                                <option value="active">激活</option>
+                                <option value="inactive">停用</option>
+                            </select>
+                            <button @click="showAddPackageModal = true"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                                + 新建套餐
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 套餐网格 -->
+                <div class="p-4">
+                    <div v-if="filteredPackages.length === 0" class="text-center py-8 text-slate-400">
+                        暂无套餐数据
+                    </div>
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div v-for="pkg in filteredPackages" :key="pkg.id"
+                             class="border-2 border-slate-200 rounded-xl p-4 hover:border-blue-300 transition cursor-pointer"
+                             @click="showPackageDetail(pkg)">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 class="font-semibold text-slate-800">{{ pkg.name }}</h3>
+                                    <p class="text-sm text-slate-500 mt-1">{{ pkg.description }}</p>
+                                </div>
+                                <span :class="[
+                                    'px-2 py-1 rounded text-xs font-medium',
+                                    pkg.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                                ]">
+                                    {{ pkg.status === 'active' ? '激活' : '停用' }}
+                                </span>
+                            </div>
+
+                            <!-- 价格信息 -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <div class="text-sm text-slate-500">原价</div>
+                                    <div class="text-lg font-bold text-slate-400">¥{{ pkg.original_price }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm text-slate-500">套餐价</div>
+                                    <div class="text-lg font-bold text-blue-600">¥{{ pkg.package_price }}</div>
+                                </div>
+                            </div>
+
+                            <!-- 折扣信息 -->
+                            <div class="bg-blue-50 rounded-lg p-2 mb-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-blue-600">优惠幅度</span>
+                                    <span class="text-sm font-bold text-blue-600">
+                                        {{ pkg.discount_rate }}% (省 ¥{{ pkg.original_price - pkg.package_price }})
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 套餐项目 -->
+                            <div v-if="pkg.items && pkg.items.length > 0" class="border-t border-slate-200 pt-3">
+                                <div class="text-xs text-slate-500 mb-2">包含服务：</div>
+                                <div class="space-y-1">
+                                    <div v-for="item in pkg.items" :key="item.id"
+                                         class="flex items-center justify-between text-sm">
+                                        <span class="text-slate-700">{{ item.product_name || item.service_type }}</span>
+                                        <span class="text-slate-500">{{ item.quantity }} {{ item.unit }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 有效期 -->
+                            <div class="flex items-center justify-between mt-3 text-xs text-slate-500">
+                                <span>有效期：{{ pkg.valid_days }} 天</span>
+                                <span>排序：{{ pkg.sort_order }}</span>
+                            </div>
+
+                            <!-- 操作按钮 -->
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+                                <button @click.stop="editPackage(pkg)"
+                                        class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                    编辑
+                                </button>
+                                <button @click.stop="orderPackage(pkg)"
+                                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
+                                        v-if="pkg.status === 'active'">
+                                    订购
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 套餐订单列表 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                <div class="p-4 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-slate-800">套餐订单</h2>
+                        <div class="flex items-center space-x-3">
+                            <select v-model="orderStatusFilter" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                                <option value="">全部状态</option>
+                                <option value="pending">待激活</option>
+                                <option value="active">进行中</option>
+                                <option value="completed">已完成</option>
+                                <option value="expired">已过期</option>
+                                <option value="cancelled">已取消</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 订单表格 -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">订单ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">套餐名称</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">办公室</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">订购人</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">价格</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">节省</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">状态</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">有效期</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">创建时间</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-slate-50 transition">
+                                <td class="px-4 py-3 text-sm text-slate-600">#{{ order.id }}</td>
+                                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ order.package_name }}</td>
+                                <td class="px-4 py-3 text-sm text-slate-600">{{ order.office_name }}</td>
+                                <td class="px-4 py-3 text-sm text-slate-600">{{ order.order_user_name || '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-blue-600 font-medium">¥{{ order.package_price }}</td>
+                                <td class="px-4 py-3 text-sm text-green-600">¥{{ order.saved_amount }}</td>
+                                <td class="px-4 py-3">
+                                    <span :class="[
+                                        'px-2 py-1 rounded text-xs font-medium',
+                                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                        order.status === 'active' ? 'bg-green-100 text-green-700' :
+                                        order.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                                        order.status === 'expired' ? 'bg-slate-100 text-slate-600' :
+                                        'bg-red-100 text-red-700'
+                                    ]">
+                                        {{ getOrderStatusText(order.status) }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-slate-600">
+                                    {{ order.valid_from }} ~ {{ order.valid_until }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-slate-600">
+                                    {{ formatDate(order.created_at) }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center space-x-2">
+                                        <select v-model="order.status"
+                                                @change="updateOrderStatus(order)"
+                                                class="text-xs border border-slate-300 rounded px-2 py-1">
+                                            <option value="pending">待激活</option>
+                                            <option value="active">进行中</option>
+                                            <option value="completed">已完成</option>
+                                            <option value="expired">已过期</option>
+                                            <option value="cancelled">已取消</option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div v-if="filteredOrders.length === 0" class="text-center py-8 text-slate-400">
+                        暂无订单数据
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 新建/编辑套餐模态框 -->
+        <div v-if="showAddPackageModal || showEditPackageModal" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+             @click.self="closePackageModal">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-slate-800">
+                            {{ showEditPackageModal ? '编辑套餐' : '新建套餐' }}
+                        </h3>
+                        <button @click="closePackageModal" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <form @submit.prevent="savePackage">
+                        <!-- 基本信息 -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">套餐名称 *</label>
+                                <input v-model="packageForm.name" type="text" required
+                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">套餐描述</label>
+                                <textarea v-model="packageForm.description" rows="3"
+                                          class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            </div>
+
+                            <!-- 价格设置 -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">原价 *</label>
+                                    <input v-model.number="packageForm.original_price" type="number" step="0.01" required
+                                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">套餐价 *</label>
+                                    <input v-model.number="packageForm.package_price" type="number" step="0.01" required
+                                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">折扣率 (%)</label>
+                                    <input v-model.number="packageForm.discount_rate" type="number" step="0.01"
+                                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">有效期 (天)</label>
+                                    <input v-model.number="packageForm.valid_days" type="number"
+                                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">状态</label>
+                                    <select v-model="packageForm.status"
+                                            class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="active">激活</option>
+                                        <option value="inactive">停用</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">排序</label>
+                                    <input v-model.number="packageForm.sort_order" type="number"
+                                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- 套餐项目 -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">套餐项目</label>
+                                <div class="space-y-2">
+                                    <div v-for="(item, index) in packageForm.items" :key="index"
+                                         class="flex items-center space-x-2 bg-slate-50 p-2 rounded">
+                                        <select v-model="item.service_type" 
+                                                class="px-2 py-1 border border-slate-300 rounded text-sm flex-1">
+                                            <option v-for="type in serviceTypes" :key="type.value" :value="type.value">
+                                                {{ type.label }}
+                                            </option>
+                                        </select>
+                                        <input v-model="item.product_name" type="text" placeholder="项目名称"
+                                               class="px-2 py-1 border border-slate-300 rounded text-sm flex-1">
+                                        <input v-model.number="item.quantity" type="number" placeholder="数量"
+                                               class="px-2 py-1 border border-slate-300 rounded text-sm w-20">
+                                        <input v-model="item.unit" type="text" placeholder="单位"
+                                               class="px-2 py-1 border border-slate-300 rounded text-sm w-20">
+                                        <input v-model.number="item.unit_price" type="number" step="0.01" placeholder="单价"
+                                               class="px-2 py-1 border border-slate-300 rounded text-sm w-24">
+                                        <button @click="removePackageItem(index)"
+                                                class="text-red-600 hover:text-red-700 text-sm">
+                                            删除
+                                        </button>
+                                    </div>
+                                    <button @click="addPackageItem"
+                                            class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                        + 添加项目
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-slate-200">
+                            <button type="button" @click="closePackageModal"
+                                    class="px-4 py-2 text-slate-600 hover:text-slate-700 transition">
+                                取消
+                            </button>
+                            <button type="submit"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+                                {{ showEditPackageModal ? '保存' : '创建' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 订购套餐模态框 -->
+        <div v-if="showOrderModal"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+             @click.self="showOrderModal = false">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+                <div class="p-6 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-slate-800">订购套餐</h3>
+                        <button @click="showOrderModal = false" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <div v-if="selectedPackage" class="mb-4">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <h4 class="font-semibold text-blue-800">{{ selectedPackage.name }}</h4>
+                            <p class="text-sm text-blue-600 mt-1">{{ selectedPackage.description }}</p>
+                            <div class="mt-3">
+                                <span class="text-lg font-bold text-blue-700">¥{{ selectedPackage.package_price }}</span>
+                                <span class="text-sm text-slate-500 ml-2">（原价 ¥{{ selectedPackage.original_price }}）</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form @submit.prevent="submitOrder">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">办公室 *</label>
+                                <select v-model="orderForm.office_id" required
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option v-for="office in offices" :key="office.id" :value="office.id">
+                                        {{ office.name }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">订购人姓名</label>
+                                <input v-model="orderForm.order_user_name" type="text"
+                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">备注</label>
+                                <textarea v-model="orderForm.note" rows="2"
+                                          class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-slate-200">
+                            <button type="button" @click="showOrderModal = false"
+                                    class="px-4 py-2 text-slate-600 hover:text-slate-700 transition">
+                                取消
+                            </button>
+                            <button type="submit"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+                                确认订购
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 套餐详情模态框 -->
+        <div v-if="showDetailModal"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+             @click.self="showDetailModal = false">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-slate-800">套餐详情</h3>
+                        <button @click="showDetailModal = false" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="selectedPackage" class="p-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <div class="text-sm text-slate-500">套餐名称</div>
+                            <div class="text-lg font-semibold text-slate-800">{{ selectedPackage.name }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-slate-500">状态</div>
+                            <span :class="[
+                                'px-3 py-1 rounded text-sm font-medium',
+                                selectedPackage.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                            ]">
+                                {{ selectedPackage.status === 'active' ? '激活' : '停用' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="text-sm text-slate-500 mb-2">套餐描述</div>
+                        <p class="text-slate-700">{{ selectedPackage.description || '暂无描述' }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <div class="text-sm text-slate-500">原价</div>
+                            <div class="text-2xl font-bold text-slate-600">¥{{ selectedPackage.original_price }}</div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="text-sm text-slate-500">套餐价</div>
+                            <div class="text-2xl font-bold text-blue-600">¥{{ selectedPackage.package_price }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="text-sm text-slate-500 mb-2">包含服务项目</div>
+                        <div v-if="selectedPackage.items && selectedPackage.items.length > 0" class="space-y-2">
+                            <div v-for="item in selectedPackage.items" :key="item.id"
+                                 class="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-2xl">{{ getServiceIcon(item.service_type) }}</div>
+                                    <div>
+                                        <div class="font-medium text-slate-800">{{ item.product_name || item.service_type }}</div>
+                                        <div class="text-sm text-slate-500">{{ item.service_type }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-medium text-slate-700">{{ item.quantity }} {{ item.unit }}</div>
+                                    <div class="text-sm text-slate-500">¥{{ item.unit_price || 0 }}/{{ item.unit }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-slate-400 text-center py-4">
+                            暂无项目信息
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div class="bg-slate-50 rounded-lg p-3">
+                            <div class="text-slate-500">折扣率</div>
+                            <div class="font-semibold text-slate-700">{{ selectedPackage.discount_rate }}%</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-3">
+                            <div class="text-slate-500">有效期</div>
+                            <div class="font-semibold text-slate-700">{{ selectedPackage.valid_days }} 天</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-3">
+                            <div class="text-slate-500">排序</div>
+                            <div class="font-semibold text-slate-700">#{{ selectedPackage.sort_order }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue
+
+        createApp({
+            setup() {
+                const packages = ref([])
+                const orders = ref([])
+                const offices = ref([])
+                const stats = ref({})
+                const serviceTypes = ref([])
+
+                const statusFilter = ref('')
+                const orderStatusFilter = ref('')
+
+                const showAddPackageModal = ref(false)
+                const showEditPackageModal = ref(false)
+                const showOrderModal = ref(false)
+                const showDetailModal = ref(false)
+
+                const selectedPackage = ref(null)
+                const editingPackageId = ref(null)
+
+                const packageForm = ref({
+                    name: '',
+                    description: '',
+                    original_price: 0,
+                    package_price: 0,
+                    discount_rate: 100,
+                    valid_days: 30,
+                    max_usage: 0,
+                    status: 'active',
+                    sort_order: 0,
+                    items: []
+                })
+
+                const orderForm = ref({
+                    office_id: null,
+                    order_user_name: '',
+                    note: ''
+                })
+
+                const filteredPackages = computed(() => {
+                    let result = packages.value
+                    if (statusFilter.value) {
+                        result = result.filter(p => p.status === statusFilter.value)
+                    }
+                    return result
+                })
+
+                const filteredOrders = computed(() => {
+                    let result = orders.value
+                    if (orderStatusFilter.value) {
+                        result = result.filter(o => o.status === orderStatusFilter.value)
+                    }
+                    return result
+                })
+
+                const loadPackages = async () => {
+                    try {
+                        const res = await fetch('/api/packages')
+                        if (res.ok) {
+                            packages.value = await res.json()
+                        }
+                    } catch (err) {
+                        console.error('加载套餐失败:', err)
+                    }
+                }
+
+                const loadOrders = async () => {
+                    try {
+                        const res = await fetch('/api/packages/orders/list')
+                        if (res.ok) {
+                            orders.value = await res.json()
+                        }
+                    } catch (err) {
+                        console.error('加载订单失败:', err)
+                    }
+                }
+
+                const loadStats = async () => {
+                    try {
+                        const res = await fetch('/api/packages/stats/summary')
+                        if (res.ok) {
+                            stats.value = await res.json()
+                        }
+                    } catch (err) {
+                        console.error('加载统计失败:', err)
+                    }
+                }
+
+                const loadOffices = async () => {
+                    try {
+                        const res = await fetch('/api/offices')
+                        if (res.ok) {
+                            offices.value = await res.json()
+                        }
+                    } catch (err) {
+                        console.error('加载办公室失败:', err)
+                    }
+                }
+
+                const loadServiceTypes = async () => {
+                    try {
+                        const res = await fetch('/api/services/config')
+                        if (res.ok) {
+                            const data = await res.json()
+                            serviceTypes.value = data.serviceTypes || []
+                        }
+                    } catch (err) {
+                        console.error('加载服务类型失败:', err)
+                    }
+                }
+
+                const savePackage = async () => {
+                    try {
+                        const url = showEditPackageModal.value 
+                            ? `/api/packages/${editingPackageId.value}`
+                            : '/api/packages'
+                        const method = showEditPackageModal.value ? 'PUT' : 'POST'
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(packageForm.value)
+                        })
+
+                        if (res.ok) {
+                            await loadPackages()
+                            await loadStats()
+                            closePackageModal()
+                            alert(showEditPackageModal.value ? '套餐已更新' : '套餐已创建')
+                        } else {
+                            const err = await res.json()
+                            alert('保存失败: ' + err.detail)
+                        }
+                    } catch (err) {
+                        alert('保存失败: ' + err.message)
+                    }
+                }
+
+                const editPackage = (pkg) => {
+                    editingPackageId.value = pkg.id
+                    packageForm.value = {
+                        name: pkg.name,
+                        description: pkg.description || '',
+                        original_price: pkg.original_price,
+                        package_price: pkg.package_price,
+                        discount_rate: pkg.discount_rate,
+                        valid_days: pkg.valid_days,
+                        max_usage: pkg.max_usage,
+                        status: pkg.status,
+                        sort_order: pkg.sort_order,
+                        items: pkg.items ? pkg.items.map(i => ({
+                            service_type: i.service_type,
+                            product_name: i.product_name || '',
+                            quantity: i.quantity,
+                            unit: i.unit || '',
+                            unit_price: i.unit_price || 0
+                        })) : []
+                    }
+                    showEditPackageModal.value = true
+                }
+
+                const orderPackage = (pkg) => {
+                    selectedPackage.value = pkg
+                    orderForm.value = {
+                        office_id: offices.value.length > 0 ? offices.value[0].id : null,
+                        order_user_name: '',
+                        note: ''
+                    }
+                    showOrderModal.value = true
+                }
+
+                const submitOrder = async () => {
+                    try {
+                        const office = offices.value.find(o => o.id === orderForm.value.office_id)
+                        
+                        const res = await fetch(`/api/packages/${selectedPackage.value.id}/order`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                package_id: selectedPackage.value.id,
+                                office_id: orderForm.value.office_id,
+                                office_name: office ? office.name : '',
+                                order_user_name: orderForm.value.order_user_name,
+                                note: orderForm.value.note
+                            })
+                        })
+
+                        if (res.ok) {
+                            await loadOrders()
+                            await loadStats()
+                            showOrderModal.value = false
+                            alert('订购成功')
+                        } else {
+                            const err = await res.json()
+                            alert('订购失败: ' + err.detail)
+                        }
+                    } catch (err) {
+                        alert('订购失败: ' + err.message)
+                    }
+                }
+
+                const updateOrderStatus = async (order) => {
+                    try {
+                        const res = await fetch(`/api/packages/orders/${order.id}/status?status=${order.status}`, {
+                            method: 'PUT'
+                        })
+
+                        if (res.ok) {
+                            await loadStats()
+                        } else {
+                            const err = await res.json()
+                            alert('更新失败: ' + err.detail)
+                            await loadOrders()
+                        }
+                    } catch (err) {
+                        alert('更新失败: ' + err.message)
+                        await loadOrders()
+                    }
+                }
+
+                const closePackageModal = () => {
+                    showAddPackageModal.value = false
+                    showEditPackageModal.value = false
+                    editingPackageId.value = null
+                    packageForm.value = {
+                        name: '',
+                        description: '',
+                        original_price: 0,
+                        package_price: 0,
+                        discount_rate: 100,
+                        valid_days: 30,
+                        max_usage: 0,
+                        status: 'active',
+                        sort_order: 0,
+                        items: []
+                    }
+                }
+
+                const addPackageItem = () => {
+                    packageForm.value.items.push({
+                        service_type: 'water',
+                        product_name: '',
+                        quantity: 1,
+                        unit: '次',
+                        unit_price: 0
+                    })
+                }
+
+                const removePackageItem = (index) => {
+                    packageForm.value.items.splice(index, 1)
+                }
+
+                const showPackageDetail = (pkg) => {
+                    selectedPackage.value = pkg
+                    showDetailModal.value = true
+                }
+
+                const getServiceIcon = (serviceType) => {
+                    const type = serviceTypes.value.find(t => t.value === serviceType)
+                    return type ? type.icon : '📦'
+                }
+
+                const getOrderStatusText = (status) => {
+                    const statusMap = {
+                        pending: '待激活',
+                        active: '进行中',
+                        completed: '已完成',
+                        expired: '已过期',
+                        cancelled: '已取消'
+                    }
+                    return statusMap[status] || status
+                }
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return ''
+                    const date = new Date(dateStr)
+                    return date.toLocaleString('zh-CN')
+                }
+
+                onMounted(async () => {
+                    await Promise.all([
+                        loadPackages(),
+                        loadOrders(),
+                        loadStats(),
+                        loadOffices(),
+                        loadServiceTypes()
+                    ])
+                })
+
+                return {
+                    packages,
+                    orders,
+                    offices,
+                    stats,
+                    serviceTypes,
+                    statusFilter,
+                    orderStatusFilter,
+                    filteredPackages,
+                    filteredOrders,
+                    showAddPackageModal,
+                    showEditPackageModal,
+                    showOrderModal,
+                    showDetailModal,
+                    selectedPackage,
+                    packageForm,
+                    orderForm,
+                    savePackage,
+                    editPackage,
+                    orderPackage,
+                    submitOrder,
+                    updateOrderStatus,
+                    closePackageModal,
+                    addPackageItem,
+                    removePackageItem,
+                    showPackageDetail,
+                    getServiceIcon,
+                    getOrderStatusText,
+                    formatDate
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

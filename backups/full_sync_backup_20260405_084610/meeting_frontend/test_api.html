@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>API诊断 - 会议室管理系统</title>
+</head>
+<body>
+    <h1>API诊断页面</h1>
+    <div id="result"></div>
+    
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        async function testAPI() {
+            try {
+                resultDiv.innerHTML = '<p>正在测试API...</p>';
+                
+                const response = await fetch('/api/meeting/bookings/enhanced?is_deleted=0');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const bookings = data.data.bookings;
+                    resultDiv.innerHTML = `
+                        <p style="color: green;">✅ API连接成功！</p>
+                        <p>找到 ${bookings.length} 条预约记录</p>
+                        <h3>前3条记录：</h3>
+                        <pre>${JSON.stringify(bookings.slice(0, 3), null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">❌ API返回失败</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">❌ API连接失败: ${error.message}</p>`;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

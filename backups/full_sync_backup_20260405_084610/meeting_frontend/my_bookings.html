@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>我的预约 - 会议室管理系统</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        html { height: 100%; overflow: hidden; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+            background-color: #F1F5F9;
+            height: 100%;
+            overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        #app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .tab-button {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: #2563eb;
+            font-weight: 600;
+        }
+        
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, #2563eb, #3b82f6);
+            border-radius: 2px;
+        }
+        
+        .sort-button {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sort-button:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .quick-filter {
+            transition: all 0.2s ease;
+        }
+        
+        .quick-filter.active {
+            background-color: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        
+        .booking-card {
+            transition: all 0.3s ease;
+        }
+        
+        .booking-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-badge {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out forwards;
+            overflow: hidden;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @supports (padding: max(0px)) {
+            .bottom-nav { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+        }
+        
+        @media (max-width: 768px) {
+            button:active { transform: scale(0.98); }
+            select, input { font-size: 16px; }
+            * { -webkit-tap-highlight-color: transparent; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- PC端顶部导航 -->
+        <nav class="hidden md:flex bg-white shadow-sm border-b border-slate-200 z-50 h-16 flex-shrink-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full w-full">
+                <div class="flex justify-between items-center h-full">
+                    <div class="flex items-center space-x-3">
+                        <a href="/service/home.html" class="flex items-center space-x-1 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <span>首页</span>
+                        </a>
+                        <div class="h-6 w-px bg-slate-300"></div>
+                        <h1 class="text-lg font-bold text-slate-800">会议室预约记录</h1>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <a href="index.html" class="flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span>预约会议室</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- 移动端顶部导航 -->
+        <nav class="md:hidden bg-white shadow-sm z-50 h-14 flex-shrink-0">
+            <div class="flex items-center justify-between h-full px-4">
+                <a href="/service/home.html" class="text-slate-600 hover:text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                </a>
+                <h1 class="text-base font-bold text-slate-800">预约记录</h1>
+                <a href="index.html" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium">预约</a>
+            </div>
+        </nav>
+        
+        <!-- 主内容区域 -->
+        <div class="flex-1 overflow-y-auto scrollbar-hide">
+            <div class="max-w-7xl mx-auto">
+                
+                <!-- 移动端Sticky Tab切换 + 折叠筛选 -->
+                <div class="md:hidden sticky top-0 z-40 bg-slate-50 pb-4 px-4 sm:px-6 lg:px-8 pt-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <!-- Tab切换 -->
+                        <div class="flex border-b border-slate-200">
+                        <button @click="viewMode = 'my'; collapseFilters()" :class="['tab-button flex-1 px-6 py-3.5 text-sm font-medium transition-colors', viewMode === 'my' ? 'active text-blue-600' : 'text-slate-600 hover:text-slate-800']">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <span>我的预约</span>
+                                <span v-if="myBookingsStats.total > 0" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{{ myBookingsStats.total }}</span>
+                            </div>
+                        </button>
+                        
+                        <button @click="viewMode = 'all'; collapseFilters()" :class="['tab-button flex-1 px-6 py-3.5 text-sm font-medium transition-colors', viewMode === 'all' ? 'active text-blue-600' : 'text-slate-600 hover:text-slate-800']">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                </svg>
+                                <span>全部记录</span>
+                                <span v-if="bookings.length > 0" class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full">{{ bookings.length }}</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <!-- 简洁筛选按钮栏 -->
+                    <div class="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <button @click="toggleMobileFilters" 
+                                    :class="['flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200', showMobileFilters ? 'bg-blue-600 text-white shadow-md' : 'bg-white border border-slate-300 text-slate-700 hover:border-blue-500']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 01-.707.293H4.414A1 1 0 013 13.586V4z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                    <span class="text-sm font-medium">筛选</span>
+                                    <span v-if="activeFilterCount > 0" :class="['px-2 py-0.5 rounded-full text-xs font-bold', showMobileFilters ? 'bg-white text-blue-600' : 'bg-blue-600 text-white']">
+                                        {{ activeFilterCount }}
+                                    </span>
+                                </button>
+                                
+                                <button v-if="activeFilterCount > 0" @click="resetFilters" 
+                                    class="flex items-center space-x-1 px-3 py-2 bg-slate-100 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-200 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                    <span class="text-sm font-medium">清除</span>
+                                </button>
+                            </div>
+                            
+                            <div class="text-sm text-slate-500">
+                                {{ sortedBookings.length }} 条结果
+                            </div>
+                        </div>
+                        
+                        <!-- 当前筛选提示 -->
+                        <div v-if="activeFilterCount > 0 && !showMobileFilters" class="mt-2 flex items-center space-x-1 overflow-x-auto scrollbar-hide">
+                            <div v-if="cardFilter && cardFilter !== 'all'" @click="setCardFilter('all')" class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full whitespace-nowrap cursor-pointer hover:bg-blue-200 transition">
+                                {{ cardFilterText }}
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div v-if="filters.date" @click="filters.date = ''" class="inline-flex items-center px-2 py-1 bg-violet-100 text-violet-700 text-xs rounded-full whitespace-nowrap cursor-pointer hover:bg-violet-200 transition">
+                                {{ filters.date }}
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div v-if="filters.status" @click="filters.status = ''" class="inline-flex items-center px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full whitespace-nowrap cursor-pointer hover:bg-emerald-200 transition">
+                                {{ statusMap[filters.status] }}
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div v-if="filters.search" @click="filters.search = ''" class="inline-flex items-center px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded-full whitespace-nowrap cursor-pointer hover:bg-pink-200 transition">
+                                搜索: {{ filters.search }}
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 折叠式筛选面板 -->
+                    <div v-if="showMobileFilters" 
+                        class="border-b border-slate-200 bg-gradient-to-b from-blue-50 to-white animate-slide-down">
+                        <!-- 快捷筛选 -->
+                        <div class="px-4 py-3 border-b border-slate-100">
+                            <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                                <span class="text-xs text-slate-600 font-medium flex-shrink-0">快捷:</span>
+                                <button @click="setQuickFilter('today')" :class="['quick-filter px-3 py-1.5 text-xs border rounded-lg flex-shrink-0 transition-all', quickFilter === 'today' ? 'active bg-blue-600 text-white border-blue-600' : 'text-slate-600 border-slate-300 hover:bg-slate-50']">今天</button>
+                                <button @click="setQuickFilter('week')" :class="['quick-filter px-3 py-1.5 text-xs border rounded-lg flex-shrink-0 transition-all', quickFilter === 'week' ? 'active bg-blue-600 text-white border-blue-600' : 'text-slate-600 border-slate-300 hover:bg-slate-50']">本周</button>
+                                <button @click="setQuickFilter('month')" :class="['quick-filter px-3 py-1.5 text-xs border rounded-lg flex-shrink-0 transition-all', quickFilter === 'month' ? 'active bg-blue-600 text-white border-blue-600' : 'text-slate-600 border-slate-300 hover:bg-slate-50']">本月</button>
+                                <button @click="setQuickFilter('pending')" :class="['quick-filter px-3 py-1.5 text-xs border rounded-lg flex-shrink-0 transition-all', quickFilter === 'pending' ? 'active bg-blue-600 text-white border-blue-600' : 'text-slate-600 border-slate-300 hover:bg-slate-50']">待确认</button>
+                                <button @click="setQuickFilter('unpaid')" :class="['quick-filter px-3 py-1.5 text-xs border rounded-lg flex-shrink-0 transition-all', quickFilter === 'unpaid' ? 'active bg-blue-600 text-white border-blue-600' : 'text-slate-600 border-slate-300 hover:bg-slate-50']">待支付</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 详细筛选 -->
+                        <div class="px-4 py-3 space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">预约日期</label>
+                                    <input type="date" v-model="filters.date" 
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                        @change="currentPage = 1">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">预约状态</label>
+                                    <select v-model="filters.status" 
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                        @change="currentPage = 1">
+                                        <option value="">全部</option>
+                                        <option value="pending">待确认</option>
+                                        <option value="confirmed">已确认</option>
+                                        <option value="cancelled">已取消</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">关键词搜索</label>
+                                <div class="flex items-center space-x-2">
+                                    <div class="flex-1 relative">
+                                        <input type="text" v-model="filters.search" 
+                                            placeholder="预约编号/会议室/主题"
+                                            class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                            @input="currentPage = 1">
+                                        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="flex items-center space-x-2 pt-2">
+                                <button @click="collapseFilters" 
+                                    class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm font-medium">
+                                    收起筛选
+                                </button>
+                                <button v-if="activeFilterCount > 0" @click="resetFilters; collapseFilters()" 
+                                    class="px-4 py-2.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition text-sm font-medium">
+                                    清除全部
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                
+                <!-- PC端Sticky Tab切换 + 筛选区域 -->
+                <div class="hidden md:block sticky top-0 z-40 bg-slate-50 pb-6 px-4 sm:px-6 lg:px-8 pt-6">
+                    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <!-- Tab切换 -->
+                        <div class="flex border-b border-slate-200">
+                        <button @click="viewMode = 'my'" :class="['tab-button flex-1 px-6 py-4 text-sm font-medium transition-colors', viewMode === 'my' ? 'active text-blue-600' : 'text-slate-600 hover:text-slate-800']">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <span>我的预约</span>
+                                <span v-if="myBookingsStats.total > 0" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{{ myBookingsStats.total }}</span>
+                            </div>
+                        </button>
+                        
+                        <button @click="viewMode = 'all'" :class="['tab-button flex-1 px-6 py-4 text-sm font-medium transition-colors', viewMode === 'all' ? 'active text-blue-600' : 'text-slate-600 hover:text-slate-800']">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                </svg>
+                                <span>全部记录</span>
+                                <span v-if="bookings.length > 0" class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full">{{ bookings.length }}</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <!-- 快捷筛选 -->
+                    <div class="px-4 py-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                            <span class="text-xs text-slate-500 flex-shrink-0">快捷筛选:</span>
+                            <button @click="setQuickFilter('today')" :class="['quick-filter px-3 py-1.5 text-xs border border-slate-300 rounded-lg flex-shrink-0', quickFilter === 'today' ? 'active' : 'text-slate-600 hover:bg-slate-50']">今天</button>
+                            <button @click="setQuickFilter('week')" :class="['quick-filter px-3 py-1.5 text-xs border border-slate-300 rounded-lg flex-shrink-0', quickFilter === 'week' ? 'active' : 'text-slate-600 hover:bg-slate-50']">本周</button>
+                            <button @click="setQuickFilter('month')" :class="['quick-filter px-3 py-1.5 text-xs border border-slate-300 rounded-lg flex-shrink-0', quickFilter === 'month' ? 'active' : 'text-slate-600 hover:bg-slate-50']">本月</button>
+                            <button @click="setQuickFilter('pending')" :class="['quick-filter px-3 py-1.5 text-xs border border-slate-300 rounded-lg flex-shrink-0', quickFilter === 'pending' ? 'active' : 'text-slate-600 hover:bg-slate-50']">待确认</button>
+                            <button @click="setQuickFilter('unpaid')" :class="['quick-filter px-3 py-1.5 text-xs border border-slate-300 rounded-lg flex-shrink-0', quickFilter === 'unpaid' ? 'active' : 'text-slate-600 hover:bg-slate-50']">待支付</button>
+                            <button v-if="quickFilter" @click="setQuickFilter('')" class="px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 flex-shrink-0">清除</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 筛选区域 -->
+                    <div class="p-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1.5">预约日期</label>
+                                <input type="date" v-model="filters.date" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1.5">预约状态</label>
+                                <select v-model="filters.status" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">全部状态</option>
+                                    <option value="pending">待确认</option>
+                                    <option value="confirmed">已确认</option>
+                                    <option value="cancelled">已取消</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1.5">搜索</label>
+                                <input type="text" v-model="filters.search" placeholder="预约编号/会议室/主题" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div class="flex items-end gap-2">
+                                <button @click="loadMyBookings" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">查询</button>
+                                <button @click="resetFilters" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition text-sm">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                
+                <!-- 移动端横向滚动统计卡片 -->
+                <div class="md:hidden px-4 sm:px-6 lg:px-8 mb-6">
+                    <!-- 状态统计 -->
+                    <div class="overflow-x-auto pb-2 scrollbar-hide">
+                        <div class="flex space-x-2 min-w-max">
+                            <div @click="setCardFilter('all')" 
+                                :class="cardFilter === 'all' ? 'bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-md' : 'bg-white border border-slate-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+                                <p class="text-xs font-medium" :class="cardFilter === 'all' ? 'text-slate-200' : 'text-slate-500'">全部</p>
+                                <p class="text-base font-bold mt-0.5" :class="cardFilter === 'all' ? '' : 'text-slate-700'">{{ viewStats.total }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('pending')" 
+                                :class="cardFilter === 'pending' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md' : 'bg-white border border-amber-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+                                <p class="text-xs font-medium" :class="cardFilter === 'pending' ? 'text-amber-100' : 'text-amber-600'">待确认</p>
+                                <p class="text-base font-bold mt-0.5" :class="cardFilter === 'pending' ? '' : 'text-amber-700'">{{ viewStats.pending }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('confirmed')" 
+                                :class="cardFilter === 'confirmed' ? 'bg-gradient-to-br from-emerald-400 to-green-600 text-white shadow-md' : 'bg-white border border-emerald-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+                                <p class="text-xs font-medium" :class="cardFilter === 'confirmed' ? 'text-emerald-100' : 'text-emerald-600'">已确认</p>
+                                <p class="text-base font-bold mt-0.5" :class="cardFilter === 'confirmed' ? '' : 'text-emerald-700'">{{ viewStats.confirmed }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('cancelled')" 
+                                :class="cardFilter === 'cancelled' ? 'bg-gradient-to-br from-red-400 to-rose-600 text-white shadow-md' : 'bg-white border border-red-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+                                <p class="text-xs font-medium" :class="cardFilter === 'cancelled' ? 'text-red-100' : 'text-red-600'">已取消</p>
+                                <p class="text-base font-bold mt-0.5" :class="cardFilter === 'cancelled' ? '' : 'text-red-700'">{{ viewStats.cancelled }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('unpaid')" 
+                                :class="cardFilter === 'unpaid' ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-md' : 'bg-white border border-cyan-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+                                <p class="text-xs font-medium" :class="cardFilter === 'unpaid' ? 'text-cyan-100' : 'text-cyan-600'">待支付</p>
+                                <p class="text-base font-bold mt-0.5" :class="cardFilter === 'unpaid' ? '' : 'text-cyan-700'">{{ viewStats.unpaid }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时间维度 -->
+                    <div class="overflow-x-auto pb-3 scrollbar-hide" style="margin: 0 -1rem; padding: 0 1rem;">
+                        <div class="flex space-x-2 min-w-max px-1">
+                            <div @click="setCardFilter('today')" 
+                                :class="cardFilter === 'today' ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md' : 'bg-violet-50 border-2 border-violet-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+                                <p class="text-xs font-semibold" :class="cardFilter === 'today' ? 'text-violet-100' : 'text-violet-700'">今日</p>
+                                <p class="text-lg font-bold mt-0.5" :class="cardFilter === 'today' ? '' : 'text-violet-700'">{{ viewStats.today }}</p>
+                                <p class="text-xs font-medium mt-0.5" :class="cardFilter === 'today' ? 'text-violet-200' : 'text-violet-500'">¥{{ viewStats.todayRevenue }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('week')" 
+                                :class="cardFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md' : 'bg-indigo-50 border-2 border-indigo-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+                                <p class="text-xs font-semibold" :class="cardFilter === 'week' ? 'text-indigo-100' : 'text-indigo-700'">本周</p>
+                                <p class="text-lg font-bold mt-0.5" :class="cardFilter === 'week' ? '' : 'text-indigo-700'">{{ viewStats.week }}</p>
+                                <p class="text-xs font-medium mt-0.5" :class="cardFilter === 'week' ? 'text-indigo-200' : 'text-indigo-500'">¥{{ viewStats.weekRevenue }}</p>
+                            </div>
+                            
+                            <div @click="setCardFilter('month')" 
+                                :class="cardFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md' : 'bg-teal-50 border-2 border-teal-200'"
+                                class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+                                <p class="text-xs font-semibold" :class="cardFilter === 'month' ? 'text-teal-100' : 'text-teal-700'">本月</p>
+                                <p class="text-lg font-bold mt-0.5" :class="cardFilter === 'month' ? '' : 'text-teal-700'">{{ viewStats.month }}</p>
+                                <p class="text-xs font-medium mt-0.5" :class="cardFilter === 'month' ? 'text-teal-200' : 'text-teal-500'">¥{{ viewStats.monthRevenue }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PC端统计卡片区域 -->
+                <div class="hidden md:block px-4 sm:px-6 lg:px-8 mb-6">
+                    <!-- 状态统计 -->
+                    <div class="grid grid-cols-5 gap-3 mb-4">
+                        <div @click="setCardFilter('all')" 
+                            :class="cardFilter === 'all' ? 'bg-gradient-to-br from-slate-700 to-slate-800 text-white shadow-lg' : 'bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-400'"
+                            class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'all' ? 'text-slate-300' : 'text-slate-500'">全部预约</div>
+                            <div class="text-3xl font-bold mt-2" :class="cardFilter === 'all' ? '' : 'text-slate-700'">{{ viewStats.total }}</div>
+                        </div>
+                        
+                        <div @click="setCardFilter('pending')" 
+                            :class="cardFilter === 'pending' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg' : 'bg-white hover:bg-amber-50 border-2 border-amber-200 hover:border-amber-400'"
+                            class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'pending' ? 'text-amber-100' : 'text-amber-600'">待确认</div>
+                            <div class="text-3xl font-bold mt-2" :class="cardFilter === 'pending' ? '' : 'text-amber-700'">{{ viewStats.pending }}</div>
+                        </div>
+                        
+                        <div @click="setCardFilter('confirmed')" 
+                            :class="cardFilter === 'confirmed' ? 'bg-gradient-to-br from-emerald-400 to-green-600 text-white shadow-lg' : 'bg-white hover:bg-emerald-50 border-2 border-emerald-200 hover:border-emerald-400'"
+                            class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'confirmed' ? 'text-emerald-100' : 'text-emerald-600'">已确认</div>
+                            <div class="text-3xl font-bold mt-2" :class="cardFilter === 'confirmed' ? '' : 'text-emerald-700'">{{ viewStats.confirmed }}</div>
+                        </div>
+                        
+                        <div @click="setCardFilter('cancelled')" 
+                            :class="cardFilter === 'cancelled' ? 'bg-gradient-to-br from-red-400 to-rose-600 text-white shadow-lg' : 'bg-white hover:bg-red-50 border-2 border-red-200 hover:border-red-400'"
+                            class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'cancelled' ? 'text-red-100' : 'text-red-600'">已取消</div>
+                            <div class="text-3xl font-bold mt-2" :class="cardFilter === 'cancelled' ? '' : 'text-red-700'">{{ viewStats.cancelled }}</div>
+                        </div>
+                        
+                        <div @click="setCardFilter('unpaid')" 
+                            :class="cardFilter === 'unpaid' ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-lg' : 'bg-white hover:bg-cyan-50 border-2 border-cyan-200 hover:border-cyan-400'"
+                            class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'unpaid' ? 'text-cyan-100' : 'text-cyan-600'">待支付</div>
+                            <div class="text-3xl font-bold mt-2" :class="cardFilter === 'unpaid' ? '' : 'text-cyan-700'">{{ viewStats.unpaid }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时间维度统计 -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div @click="setCardFilter('today')" 
+                            :class="cardFilter === 'today' ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg' : 'bg-white hover:bg-violet-50 border-2 border-violet-200 hover:border-violet-400'"
+                            class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="flex items-baseline justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'today' ? 'text-violet-100' : 'text-violet-600'">今日预约</div>
+                                    <div class="text-4xl font-bold mt-2" :class="cardFilter === 'today' ? '' : 'text-violet-700'">{{ viewStats.today }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs font-medium" :class="cardFilter === 'today' ? 'text-violet-200' : 'text-violet-500'">费用</div>
+                                    <div class="text-xl font-bold mt-1" :class="cardFilter === 'today' ? '' : 'text-violet-700'">¥{{ viewStats.todayRevenue }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div @click="setCardFilter('week')" 
+                            :class="cardFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg' : 'bg-white hover:bg-indigo-50 border-2 border-indigo-200 hover:border-indigo-400'"
+                            class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="flex items-baseline justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'week' ? 'text-indigo-100' : 'text-indigo-600'">本周预约</div>
+                                    <div class="text-4xl font-bold mt-2" :class="cardFilter === 'week' ? '' : 'text-indigo-700'">{{ viewStats.week }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs font-medium" :class="cardFilter === 'week' ? 'text-indigo-200' : 'text-indigo-500'">费用</div>
+                                    <div class="text-xl font-bold mt-1" :class="cardFilter === 'week' ? '' : 'text-indigo-700'">¥{{ viewStats.weekRevenue }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div @click="setCardFilter('month')" 
+                            :class="cardFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg' : 'bg-white hover:bg-teal-50 border-2 border-teal-200 hover:border-teal-400'"
+                            class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+                            <div class="flex items-baseline justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold tracking-wide" :class="cardFilter === 'month' ? 'text-teal-100' : 'text-teal-600'">本月预约</div>
+                                    <div class="text-4xl font-bold mt-2" :class="cardFilter === 'month' ? '' : 'text-teal-700'">{{ viewStats.month }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs font-medium" :class="cardFilter === 'month' ? 'text-teal-200' : 'text-teal-500'">费用</div>
+                                    <div class="text-xl font-bold mt-1" :class="cardFilter === 'month' ? '' : 'text-teal-700'">¥{{ viewStats.monthRevenue }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 当前筛选提示 -->
+                    <div v-if="cardFilter && cardFilter !== 'all'" class="mt-3 flex items-center">
+                        <span class="text-sm text-slate-500">当前筛选：</span>
+                        <span @click="setCardFilter('all')" class="ml-2 inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded cursor-pointer hover:bg-blue-200 transition">
+                            {{ cardFilterText }}
+                            <span class="ml-1 text-blue-500">✕</span>
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- PC端表格 -->
+                <div class="hidden md:block px-4 sm:px-6 lg:px-8 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1000px]">
+                            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                                <tr>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                                        <div class="sort-button flex items-center gap-1" @click="toggleSort('booking_no')">
+                                            预约信息
+                                            <span v-if="sortBy === 'booking_no'" class="text-blue-600">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                                        </div>
+                                    </th>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">会议室</th>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                                        <div class="sort-button flex items-center gap-1" @click="toggleSort('booking_date')">
+                                            时间安排
+                                            <span v-if="sortBy === 'booking_date'" class="text-blue-600">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                                        </div>
+                                    </th>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                                        <div class="sort-button flex items-center gap-1" @click="toggleSort('total_fee')">
+                                            费用信息
+                                            <span v-if="sortBy === 'total_fee'" class="text-blue-600">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                                        </div>
+                                    </th>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">状态</th>
+                                    <th class="text-left py-4 px-4 font-semibold text-slate-700 text-xs uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="booking in paginatedBookings" :key="booking.id" class="hover:bg-slate-50 transition-colors booking-card">
+                                    <td class="py-4 px-4">
+                                        <div class="space-y-1">
+                                            <div class="font-mono text-sm font-semibold text-slate-800">{{ booking.booking_no }}</div>
+                                            <div class="text-sm text-slate-600">{{ booking.meeting_title || '未填写主题' }}</div>
+                                            <div class="text-xs text-slate-500">
+                                                <span :class="booking.user_type === 'internal' ? 'text-blue-600' : 'text-purple-600'" class="font-medium">
+                                                    {{ booking.user_type === 'internal' ? '内部会议' : '外部会议' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="py-4 px-4">
+                                        <div class="font-medium text-slate-800">{{ booking.room_name }}</div>
+                                        <div class="text-xs text-slate-500 mt-1">
+                                            {{ booking.user_type === 'internal' ? (booking.office_name || '未分配') : (booking.external_contact_name || booking.user_name) }}
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="py-4 px-4">
+                                        <div class="space-y-1">
+                                            <div class="flex items-center text-sm text-slate-800">
+                                                <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                </svg>
+                                                <span class="font-medium">{{ booking.booking_date }}</span>
+                                            </div>
+                                            <div class="flex items-center text-xs text-slate-600">
+                                                <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span>{{ booking.start_time }} - {{ booking.end_time }}</span>
+                                            </div>
+                                            <div class="text-xs text-slate-500">{{ booking.duration }}小时</div>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="py-4 px-4">
+                                        <div class="space-y-1">
+                                            <div class="text-lg font-bold text-blue-600">¥{{ (booking.actual_fee || booking.total_fee || 0).toFixed(2) }}</div>
+                                            <div v-if="booking.discount_amount > 0" class="text-xs text-green-600">优惠 ¥{{ booking.discount_amount.toFixed(2) }}</div>
+                                            <div v-if="booking.user_type === 'internal' && booking.internal_rate" class="text-xs text-slate-500">内部价 ¥{{ booking.internal_rate }}/小时</div>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="py-4 px-4">
+                                        <div class="space-y-2">
+                                            <span :class="getBookingStatusClass(booking.status)" class="status-badge px-3 py-1 rounded-full text-xs font-medium inline-block">
+                                                {{ getBookingStatusText(booking.status) }}
+                                            </span>
+                                            <div v-if="booking.status !== 'cancelled'">
+                                                <span :class="getPaymentStatusClass(booking.payment_status)" class="status-badge px-2 py-0.5 rounded text-xs font-medium inline-block">
+                                                    {{ getPaymentStatusText(booking.payment_status) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col gap-2 min-w-[120px]">
+                                            <button @click="viewDetail(booking)" class="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition text-center">详情</button>
+                                            <div class="flex gap-2">
+                                                <button v-if="booking.payment_status === 'unpaid' && booking.status === 'confirmed'" @click="showPaymentModal(booking)" class="flex-1 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition">支付</button>
+                                                <button v-if="canCancelBooking(booking).allowed" @click="showCancelBookingModal(booking)" :class="['flex-1 px-3 py-1.5 text-white rounded-lg text-sm font-medium transition', canCancelBooking(booking).type === 'request' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600']">
+                                                    {{ getCancelButtonText(booking) }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+                        <div class="text-sm text-slate-600">
+                            显示 {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, sortedBookings.length) }} 条，共 {{ sortedBookings.length }} 条
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition">上一页</button>
+                            <div class="flex items-center gap-1">
+                                <button v-for="page in displayPages" :key="page" @click="currentPage = page" :class="['px-3 py-1.5 rounded-lg text-sm transition', currentPage === page ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50']">{{ page }}</button>
+                            </div>
+                            <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition">下一页</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="sortedBookings.length === 0" class="text-center py-20">
+                        <div class="text-7xl mb-4">📋</div>
+                        <p class="text-lg text-slate-700 mb-2">暂无预约记录</p>
+                        <p class="text-sm text-slate-500 mb-6">您还没有预约过会议室，立即开始预约吧！</p>
+                        <a href="index.html" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">预约会议室</a>
+                    </div>
+                    </div>
+                </div>
+                
+                <!-- 移动端卡片列表（保持之前的设计，增加分页） -->
+                <div class="md:hidden px-4 sm:px-6 lg:px-8 space-y-4 pb-20">
+                    <div v-for="booking in paginatedBookings" :key="booking.id" class="booking-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-b border-slate-100">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-semibold text-slate-700">{{ booking.booking_no }}</span>
+                                    <span :class="booking.user_type === 'internal' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'" class="px-2 py-0.5 rounded text-xs font-medium">
+                                        {{ booking.user_type === 'internal' ? '内部' : '外部' }}
+                                    </span>
+                                </div>
+                                <span :class="getBookingStatusClass(booking.status)" class="status-badge px-2 py-0.5 rounded-full text-xs font-medium">{{ getBookingStatusText(booking.status) }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 space-y-3">
+                            <div>
+                                <div class="font-bold text-slate-900 text-base">{{ booking.room_name }}</div>
+                                <div v-if="booking.meeting_title" class="text-sm text-slate-600 mt-1">{{ booking.meeting_title }}</div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg p-3 space-y-2">
+                                <div class="flex items-center text-sm">
+                                    <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span class="font-medium text-slate-800">{{ booking.booking_date }}</span>
+                                </div>
+                                <div class="flex items-center text-xs text-slate-600">
+                                    <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>{{ booking.start_time }} - {{ booking.end_time }} ({{ booking.duration }}小时)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                                <div>
+                                    <div class="text-xs text-slate-500">费用</div>
+                                    <div class="text-lg font-bold text-blue-600">¥{{ (booking.actual_fee || booking.total_fee || 0).toFixed(2) }}</div>
+                                    <div v-if="booking.discount_amount > 0" class="text-xs text-green-600">已优惠 ¥{{ booking.discount_amount.toFixed(2) }}</div>
+                                </div>
+                                <div v-if="booking.status !== 'cancelled'" class="text-right">
+                                    <div class="text-xs text-slate-500 mb-1">支付状态</div>
+                                    <span :class="getPaymentStatusClass(booking.payment_status)" class="status-badge px-2 py-1 rounded text-xs font-medium">
+                                        {{ getPaymentStatusText(booking.payment_status) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- 操作按钮 - 单行布局 -->
+                            <div class="flex gap-2 pt-3 border-t border-slate-100">
+                                <button @click="viewDetail(booking)" class="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">详情</button>
+                                <button v-if="booking.payment_status === 'unpaid' && booking.status === 'confirmed'" @click="showPaymentModal(booking)" class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">支付</button>
+                                <button v-if="canCancelBooking(booking).allowed" @click="showCancelBookingModal(booking)" :class="['flex-1 py-2.5 text-white rounded-lg text-sm font-medium transition', canCancelBooking(booking).type === 'request' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600']">
+                                    {{ getCancelButtonText(booking) }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 移动端分页 -->
+                    <div v-if="sortedBookings.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <button @click="currentPage--" :disabled="currentPage === 1" class="px-4 py-2 border border-slate-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+                            <div class="text-sm text-slate-600">{{ currentPage }} / {{ totalPages }}</div>
+                            <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-4 py-2 border border-slate-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 移动端空状态 -->
+                    <div v-if="sortedBookings.length === 0" class="text-center py-16 bg-white rounded-xl shadow-sm">
+                        <div class="text-6xl mb-4">📋</div>
+                        <p class="text-base text-slate-700 mb-2">暂无预约记录</p>
+                        <p class="text-sm text-slate-500 mb-4">立即预约会议室吧！</p>
+                        <a href="index.html" class="inline-block px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium">预约会议室</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 移动端底部导航 -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 bottom-nav shadow-lg">
+            <div class="grid grid-cols-3 h-16">
+                <a href="index.html" 
+                   class="flex flex-col items-center justify-center text-slate-600 tap-feedback">
+                    <span class="text-xl mb-1">📋</span>
+                    <span class="text-xs font-medium">预约</span>
+                </a>
+                
+                <a href="calendar.html" 
+                   class="flex flex-col items-center justify-center text-slate-600 tap-feedback">
+                    <span class="text-xl mb-1">📅</span>
+                    <span class="text-xs font-medium">日历</span>
+                </a>
+                
+                <a href="my_bookings.html" 
+                   class="flex flex-col items-center justify-center text-blue-600 bg-blue-50 tap-feedback">
+                    <span class="text-xl mb-1">📝</span>
+                    <span class="text-xs font-medium">我的</span>
+                </a>
+            </div>
+        </nav>
+        
+        <!-- 支付模态框 -->
+        <div v-cloak v-if="showPaymentModalFlag && currentBooking && currentBooking.id" 
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
+            @click="closePaymentModal">
+            <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl" @click.stop>
+                <div class="p-6 border-b border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-800">提交支付申请</h3>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">支付方式</label>
+                        <select v-model="paymentForm.payment_method" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">请选择支付方式</option>
+                            <option value="wechat">微信支付</option>
+                            <option value="alipay">支付宝</option>
+                            <option value="bank">银行转账</option>
+                            <option value="cash">现金</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">备注</label>
+                        <textarea v-model="paymentForm.payment_remark" rows="3" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="可选：填写支付备注信息"></textarea>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t border-slate-200 flex gap-3">
+                    <button @click="closePaymentModal" class="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">取消</button>
+                    <button @click="submitPayment" :disabled="submittingPayment || !paymentForm.payment_method" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ submittingPayment ? '提交中...' : '确认提交' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 取消预约模态框 -->
+        <!-- 取消预约模态框 -->
+        <div v-cloak v-if="showCancelModal && cancelBookingData && cancelBookingData.id" 
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
+            @click="showCancelModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl" @click.stop>
+                <div class="p-6 border-b border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-800">取消预约</h3>
+                </div>
+                
+                <div class="p-6">
+                    <div class="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg mb-4">
+                        <p class="text-sm text-orange-800">确定要取消预约 <span class="font-bold">{{ cancelBookingData?.booking_no }}</span> 吗？</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">取消原因</label>
+                        <textarea v-model="cancelReason" rows="3" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="请填写取消原因"></textarea>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t border-slate-200 flex gap-3">
+                    <button @click="showCancelModal = false" class="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">返回</button>
+                    <button @click="confirmCancelBooking" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">确认取消</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 详情模态框 -->
+        <!-- 预约详情模态框 -->
+        <div v-cloak v-if="showDetailModal && selectedBooking && selectedBooking.id" 
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
+            @click="showDetailModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+                <!-- 头部 -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 sticky top-0 z-10">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">预约详情</h3>
+                            <p class="text-blue-100 text-sm mt-1">{{ selectedBooking.booking_no }}</p>
+                        </div>
+                        <button @click="showDetailModal = false" class="text-white/80 hover:text-white">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 内容 -->
+                <div class="p-6 space-y-6">
+                    <!-- 基本信息 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">基本信息</h4>
+                        <div class="bg-slate-50 rounded-lg p-4 space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-slate-600">会议室</span>
+                                <span class="text-sm font-medium text-slate-900">{{ selectedBooking.room_name }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-slate-600">会议主题</span>
+                                <span class="text-sm font-medium text-slate-900">{{ selectedBooking.meeting_title || '未填写' }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-slate-600">预约类型</span>
+                                <span :class="selectedBooking.user_type === 'internal' ? 'text-blue-600' : 'text-purple-600'" class="text-sm font-medium">
+                                    {{ selectedBooking.user_type === 'internal' ? '内部会议' : '外部会议' }}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-slate-600">参会人数</span>
+                                <span class="text-sm font-medium text-slate-900">{{ selectedBooking.attendees_count }}人</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时间信息 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">时间安排</h4>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center mb-2">
+                                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span class="font-semibold text-slate-900">{{ selectedBooking.booking_date }}</span>
+                            </div>
+                            <div class="flex items-center text-slate-700">
+                                <svg class="w-5 h-5 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>{{ selectedBooking.start_time }} - {{ selectedBooking.end_time }} ({{ selectedBooking.duration }}小时)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 费用信息 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">费用信息</h4>
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-sm text-slate-600">原价</span>
+                                <span class="text-sm text-slate-700">¥{{ (selectedBooking.total_fee || 0).toFixed(2) }}</span>
+                            </div>
+                            <div v-if="selectedBooking.discount_amount > 0" class="flex justify-between items-center mb-3">
+                                <span class="text-sm text-slate-600">优惠金额</span>
+                                <span class="text-sm font-medium text-green-600">-¥{{ selectedBooking.discount_amount.toFixed(2) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-3 border-t border-green-200">
+                                <span class="text-base font-semibold text-slate-900">实付金额</span>
+                                <span class="text-2xl font-bold text-green-600">¥{{ (selectedBooking.actual_fee || selectedBooking.total_fee || 0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 状态信息 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">状态信息</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-50 rounded-lg p-4">
+                                <div class="text-xs text-slate-500 mb-1">预约状态</div>
+                                <span :class="getBookingStatusClass(selectedBooking.status)" class="px-3 py-1 rounded-full text-sm font-medium inline-block">
+                                    {{ getBookingStatusText(selectedBooking.status) }}
+                                </span>
+                            </div>
+                            
+                            <div v-if="selectedBooking.status !== 'cancelled'" class="bg-slate-50 rounded-lg p-4">
+                                <div class="text-xs text-slate-500 mb-1">支付状态</div>
+                                <span :class="getPaymentStatusClass(selectedBooking.payment_status)" class="px-3 py-1 rounded-full text-sm font-medium inline-block">
+                                    {{ getPaymentStatusText(selectedBooking.payment_status) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 创建时间 -->
+                    <div class="text-xs text-slate-400 text-center">
+                        创建时间: {{ selectedBooking.created_at ? new Date(selectedBooking.created_at).toLocaleString('zh-CN') : '-' }}
+                    </div>
+                </div>
+                
+                <!-- 底部操作 -->
+                <div class="p-6 border-t border-slate-200 bg-slate-50 sticky bottom-0">
+                    <div class="flex gap-3">
+                        <button @click="showDetailModal = false" class="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-white transition font-medium">关闭</button>
+                        <button v-if="selectedBooking.payment_status === 'unpaid' && selectedBooking.status === 'confirmed'" @click="showDetailModal = false; showPaymentModal(selectedBooking)" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">提交支付</button>
+                        <button v-if="canCancelBooking(selectedBooking).allowed" @click="showDetailModal = false; showCancelBookingModal(selectedBooking)" :class="['flex-1 px-4 py-3 text-white rounded-lg transition font-medium', canCancelBooking(selectedBooking).type === 'request' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600']">
+                            {{ getCancelButtonText(selectedBooking) }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    viewMode: 'my',
+                    bookings: [],
+                    filters: { date: '', status: '', search: '' },
+                    quickFilter: '',
+                    stats: { total: 0, myBookings: 0, pending: 0, confirmed: 0, cancelled: 0, unpaid: 0, applied: 0, paid: 0 },
+                    
+                    // 卡片筛选
+                    cardFilter: 'all',
+                    
+                    // 移动端筛选面板
+                    showMobileFilters: false,
+                    
+                    // 状态映射
+                    statusMap: {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'cancelled': '已取消'
+                    },
+                    
+                    // 分页
+                    currentPage: 1,
+                    pageSize: 10,
+                    
+                    // 排序
+                    sortBy: 'booking_date',
+                    sortOrder: 'desc',
+                    
+                    showPaymentModalFlag: false,
+                    currentBooking: {},
+                    paymentForm: { payment_method: '', payment_remark: '' },
+                    submittingPayment: false,
+                    
+                    showCancelModal: false,
+                    cancelBookingData: null,
+                    cancelReason: '',
+                    
+                    showDetailModal: false,
+                    selectedBooking: null,
+                    
+                    API_BASE: localStorage.getItem('API_BASE') || 
+                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                            ? 'http://localhost:8000/api/meeting' 
+                            : '/api/meeting')
+                };
+            },
+            
+            computed: {
+                myBookingsStats() {
+                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (!currentUser.name) {
+                        return { total: 0, pending: 0, confirmed: 0, cancelled: 0, unpaid: 0 };
+                    }
+                    
+                    const myBookings = this.bookings.filter(b => 
+                        b.user_name === currentUser.name || 
+                        b.external_contact_name === currentUser.name
+                    );
+                    
+                    return {
+                        total: myBookings.length,
+                        pending: myBookings.filter(b => b.status === 'pending').length,
+                        confirmed: myBookings.filter(b => b.status === 'confirmed').length,
+                        cancelled: myBookings.filter(b => b.status === 'cancelled').length,
+                        unpaid: myBookings.filter(b => b.payment_status === 'unpaid').length
+                    };
+                },
+                
+                viewStats() {
+                    let baseBookings = this.bookings;
+                    
+                    if (this.viewMode === 'my') {
+                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        if (currentUser.name) {
+                            baseBookings = baseBookings.filter(b => 
+                                b.user_name === currentUser.name || 
+                                b.external_contact_name === currentUser.name
+                            );
+                        }
+                    }
+                    
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayStr = today.toISOString().split('T')[0];
+                    
+                    const weekEnd = new Date(today);
+                    weekEnd.setDate(today.getDate() + 7);
+                    
+                    const monthEnd = new Date(today);
+                    monthEnd.setMonth(today.getMonth() + 1);
+                    
+                    const todayBookings = baseBookings.filter(b => b.booking_date === todayStr);
+                    const weekBookings = baseBookings.filter(b => {
+                        const date = new Date(b.booking_date);
+                        return date >= today && date <= weekEnd;
+                    });
+                    const monthBookings = baseBookings.filter(b => {
+                        const date = new Date(b.booking_date);
+                        return date >= today && date <= monthEnd;
+                    });
+                    
+                    return {
+                        total: baseBookings.length,
+                        pending: baseBookings.filter(b => b.status === 'pending').length,
+                        confirmed: baseBookings.filter(b => b.status === 'confirmed').length,
+                        cancelled: baseBookings.filter(b => b.status === 'cancelled').length,
+                        unpaid: baseBookings.filter(b => b.payment_status === 'unpaid').length,
+                        today: todayBookings.length,
+                        todayRevenue: todayBookings.reduce((sum, b) => sum + (b.actual_fee || b.total_fee || 0), 0).toFixed(2),
+                        week: weekBookings.length,
+                        weekRevenue: weekBookings.reduce((sum, b) => sum + (b.actual_fee || b.total_fee || 0), 0).toFixed(2),
+                        month: monthBookings.length,
+                        monthRevenue: monthBookings.reduce((sum, b) => sum + (b.actual_fee || b.total_fee || 0), 0).toFixed(2)
+                    };
+                },
+                
+                cardFilterText() {
+                    const texts = {
+                        'all': '全部',
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'cancelled': '已取消',
+                        'unpaid': '待支付',
+                        'today': '今日',
+                        'week': '本周',
+                        'month': '本月'
+                    };
+                    return texts[this.cardFilter] || '';
+                },
+                
+                activeFilterCount() {
+                    let count = 0;
+                    if (this.cardFilter && this.cardFilter !== 'all') count++;
+                    if (this.filters.date) count++;
+                    if (this.filters.status) count++;
+                    if (this.filters.search) count++;
+                    if (this.quickFilter) count++;
+                    return count;
+                },
+                
+                sortedBookings() {
+                    let filtered = this.bookings;
+                    
+                    if (this.viewMode === 'my') {
+                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        if (currentUser.name) {
+                            filtered = filtered.filter(b => 
+                                b.user_name === currentUser.name || 
+                                b.external_contact_name === currentUser.name
+                            );
+                        }
+                    }
+                    
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayStr = today.toISOString().split('T')[0];
+                    
+                    if (this.cardFilter && this.cardFilter !== 'all') {
+                        if (this.cardFilter === 'pending') {
+                            filtered = filtered.filter(b => b.status === 'pending');
+                        } else if (this.cardFilter === 'confirmed') {
+                            filtered = filtered.filter(b => b.status === 'confirmed');
+                        } else if (this.cardFilter === 'cancelled') {
+                            filtered = filtered.filter(b => b.status === 'cancelled');
+                        } else if (this.cardFilter === 'unpaid') {
+                            filtered = filtered.filter(b => b.payment_status === 'unpaid');
+                        } else if (this.cardFilter === 'today') {
+                            filtered = filtered.filter(b => b.booking_date === todayStr);
+                        } else if (this.cardFilter === 'week') {
+                            const weekEnd = new Date(today);
+                            weekEnd.setDate(today.getDate() + 7);
+                            filtered = filtered.filter(b => {
+                                const date = new Date(b.booking_date);
+                                return date >= today && date <= weekEnd;
+                            });
+                        } else if (this.cardFilter === 'month') {
+                            const monthEnd = new Date(today);
+                            monthEnd.setMonth(today.getMonth() + 1);
+                            filtered = filtered.filter(b => {
+                                const date = new Date(b.booking_date);
+                                return date >= today && date <= monthEnd;
+                            });
+                        }
+                    }
+                    
+                    if (this.quickFilter) {
+                        if (this.quickFilter === 'today') {
+                            filtered = filtered.filter(b => b.booking_date === todayStr);
+                        } else if (this.quickFilter === 'week') {
+                            const weekEnd = new Date(today);
+                            weekEnd.setDate(today.getDate() + 7);
+                            filtered = filtered.filter(b => {
+                                const date = new Date(b.booking_date);
+                                return date >= today && date <= weekEnd;
+                            });
+                        } else if (this.quickFilter === 'month') {
+                            const monthEnd = new Date(today);
+                            monthEnd.setMonth(today.getMonth() + 1);
+                            filtered = filtered.filter(b => {
+                                const date = new Date(b.booking_date);
+                                return date >= today && date <= monthEnd;
+                            });
+                        } else if (this.quickFilter === 'pending') {
+                            filtered = filtered.filter(b => b.status === 'pending');
+                        } else if (this.quickFilter === 'unpaid') {
+                            filtered = filtered.filter(b => b.payment_status === 'unpaid' && b.status === 'confirmed');
+                        }
+                    }
+                    
+                    if (this.filters.date) {
+                        filtered = filtered.filter(b => b.booking_date === this.filters.date);
+                    }
+                    
+                    if (this.filters.status) {
+                        filtered = filtered.filter(b => b.status === this.filters.status);
+                    }
+                    
+                    if (this.filters.search) {
+                        const search = this.filters.search.toLowerCase();
+                        filtered = filtered.filter(b => 
+                            b.booking_no?.toLowerCase().includes(search) ||
+                            b.room_name?.toLowerCase().includes(search) ||
+                            b.meeting_title?.toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    filtered.sort((a, b) => {
+                        let valueA = a[this.sortBy];
+                        let valueB = b[this.sortBy];
+                        
+                        if (this.sortBy === 'booking_date') {
+                            valueA = new Date(valueA + ' ' + (a.start_time || '00:00'));
+                            valueB = new Date(valueB + ' ' + (b.start_time || '00:00'));
+                        } else if (this.sortBy === 'total_fee') {
+                            valueA = a.actual_fee || a.total_fee || 0;
+                            valueB = b.actual_fee || b.total_fee || 0;
+                        }
+                        
+                        if (valueA < valueB) return this.sortOrder === 'asc' ? -1 : 1;
+                        if (valueA > valueB) return this.sortOrder === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                    
+                    return filtered;
+                },
+                
+                paginatedBookings() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    return this.sortedBookings.slice(start, end);
+                },
+                
+                totalPages() {
+                    return Math.ceil(this.sortedBookings.length / this.pageSize);
+                },
+                
+                displayPages() {
+                    const pages = [];
+                    const total = this.totalPages;
+                    const current = this.currentPage;
+                    
+                    if (total <= 5) {
+                        for (let i = 1; i <= total; i++) pages.push(i);
+                    } else {
+                        if (current <= 3) {
+                            pages.push(1, 2, 3, 4, '...', total);
+                        } else if (current >= total - 2) {
+                            pages.push(1, '...', total - 3, total - 2, total - 1, total);
+                        } else {
+                            pages.push(1, '...', current - 1, current, current + 1, '...', total);
+                        }
+                    }
+                    
+                    return pages.filter(p => typeof p === 'number');
+                }
+            },
+            
+            methods: {
+                toggleMobileFilters() {
+                    this.showMobileFilters = !this.showMobileFilters;
+                },
+                
+                collapseFilters() {
+                    this.showMobileFilters = false;
+                },
+                
+                setCardFilter(filter) {
+                    if (this.cardFilter === filter) {
+                        this.cardFilter = 'all';
+                    } else {
+                        this.cardFilter = filter;
+                    }
+                    this.currentPage = 1;
+                    this.quickFilter = '';
+                    this.filters.status = '';
+                    this.filters.date = '';
+                },
+                
+                setQuickFilter(filter) {
+                    this.quickFilter = filter;
+                    this.cardFilter = 'all';
+                    this.currentPage = 1;
+                },
+                
+                async loadMyBookings() {
+                    try {
+                        console.log('开始加载预约数据，API_BASE:', this.API_BASE);
+                        
+                        const response = await fetch(`${this.API_BASE}/bookings?is_deleted=0`);
+                        console.log('响应状态:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('获取到的数据:', data);
+                        
+                        if (Array.isArray(data)) {
+                            this.bookings = data;
+                        } else if (data.data) {
+                            this.bookings = data.data.bookings || data.data || [];
+                        } else {
+                            this.bookings = [];
+                        }
+                        
+                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        this.stats.total = this.bookings.length;
+                        this.stats.myBookings = currentUser.name 
+                            ? this.bookings.filter(b => 
+                                b.user_name === currentUser.name || 
+                                b.external_contact_name === currentUser.name
+                              ).length 
+                            : 0;
+                        this.stats.pending = this.bookings.filter(b => b.status === 'pending').length;
+                        this.stats.confirmed = this.bookings.filter(b => b.status === 'confirmed').length;
+                        this.stats.cancelled = this.bookings.filter(b => b.status === 'cancelled').length;
+                        this.stats.unpaid = this.bookings.filter(b => b.payment_status === 'unpaid').length;
+                        this.stats.applied = this.bookings.filter(b => b.payment_status === 'applied').length;
+                        this.stats.paid = this.bookings.filter(b => b.payment_status === 'paid').length;
+                        
+                        console.log('统计数据:', this.stats);
+                    } catch (error) {
+                        console.error('加载预约列表失败:', error);
+                        this.bookings = [];
+                        alert('加载数据失败：' + error.message);
+                    }
+                },
+                
+                resetFilters() {
+                    this.filters = { date: '', status: '', search: '' };
+                    this.quickFilter = '';
+                    this.cardFilter = 'all';
+                    this.currentPage = 1;
+                },
+                
+                toggleSort(field) {
+                    if (this.sortBy === field) {
+                        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        this.sortBy = field;
+                        this.sortOrder = 'desc';
+                    }
+                    this.currentPage = 1;
+                },
+                
+                viewDetail(booking) {
+                    this.selectedBooking = booking;
+                    this.showDetailModal = true;
+                },
+                
+                showPaymentModal(booking) {
+                    this.currentBooking = booking;
+                    this.paymentForm = { payment_method: '', payment_remark: '' };
+                    this.showPaymentModalFlag = true;
+                },
+                
+                closePaymentModal() {
+                    this.showPaymentModalFlag = false;
+                    this.currentBooking = {};
+                },
+                
+                async submitPayment() {
+                    if (!this.paymentForm.payment_method) {
+                        alert('请选择支付方式');
+                        return;
+                    }
+                    
+                    this.submittingPayment = true;
+                    
+                    try {
+                        const response = await fetch(`${this.API_BASE}/payment/submit`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                booking_id: this.currentBooking.id,
+                                payment_method: this.paymentForm.payment_method,
+                                payment_remark: this.paymentForm.payment_remark
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert(`支付申请已提交！\n\n支付单号：${result.data.payment_no}\n\n管理员将在收到您的支付后确认收款。`);
+                            this.closePaymentModal();
+                            this.loadMyBookings();
+                        } else {
+                            alert('提交失败：' + (result.message || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('提交支付失败:', error);
+                        alert('提交失败，请检查网络连接后重试');
+                    } finally {
+                        this.submittingPayment = false;
+                    }
+                },
+                
+                canCancelBooking(booking) {
+                    if (booking.status === 'cancelled') {
+                        return { allowed: false };
+                    }
+                    
+                    const bookingDate = new Date(booking.booking_date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    const hoursDiff = (bookingDate - today) / (1000 * 60 * 60);
+                    
+                    if (hoursDiff >= 24) {
+                        return { allowed: true, type: 'direct' };
+                    } else if (hoursDiff > 0) {
+                        return { allowed: true, type: 'request' };
+                    } else {
+                        return { allowed: false };
+                    }
+                },
+                
+                getCancelButtonText(booking) {
+                    const result = this.canCancelBooking(booking);
+                    if (result.type === 'request') {
+                        return '申请取消';
+                    }
+                    return '取消预约';
+                },
+                
+                showCancelBookingModal(booking) {
+                    this.cancelBookingData = booking;
+                    this.cancelReason = '';
+                    this.showCancelModal = true;
+                },
+                
+                async confirmCancelBooking() {
+                    if (!this.cancelReason.trim()) {
+                        alert('请填写取消原因');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${this.API_BASE}/bookings/${this.cancelBookingData.id}/cancel`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ cancel_reason: this.cancelReason })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success || response.ok) {
+                            const cancelType = this.canCancelBooking(this.cancelBookingData).type;
+                            alert(cancelType === 'request' ? '取消申请已提交，等待管理员审批' : '预约已成功取消');
+                            this.showCancelModal = false;
+                            this.loadMyBookings();
+                        } else {
+                            alert('取消失败：' + (result.message || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('取消预约失败:', error);
+                        alert('操作失败，请稍后重试');
+                    }
+                },
+                
+                getBookingStatusClass(status) {
+                    const classes = {
+                        'pending': 'bg-amber-100 text-amber-700',
+                        'confirmed': 'bg-green-100 text-green-700',
+                        'cancelled': 'bg-red-100 text-red-700'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-700';
+                },
+                
+                getBookingStatusText(status) {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'cancelled': '已取消'
+                    };
+                    return texts[status] || status;
+                },
+                
+                getPaymentStatusClass(status) {
+                    const classes = {
+                        'unpaid': 'bg-red-100 text-red-700',
+                        'applied': 'bg-blue-100 text-blue-700',
+                        'paid': 'bg-green-100 text-green-700'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-700';
+                },
+                
+                getPaymentStatusText(status) {
+                    const texts = {
+                        'unpaid': '未支付',
+                        'applied': '已申请',
+                        'paid': '已支付'
+                    };
+                    return texts[status] || status;
+                }
+            },
+            
+            watch: {
+                'filters.date'() { this.currentPage = 1; },
+                'filters.status'() { this.currentPage = 1; },
+                'filters.search'() { this.currentPage = 1; },
+                'quickFilter'() { this.currentPage = 1; },
+                'cardFilter'() { this.currentPage = 1; },
+                'viewMode'() { this.currentPage = 1; }
+            },
+            
+            mounted() {
+                this.loadMyBookings();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

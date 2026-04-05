@@ -1,0 +1,3644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1e293b">
+<meta name="format-detection" content="telephone=no">
+<title>会议室管理后台 - AI产业集群空间服务管理平台</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script src="vue.global.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+[v-cloak]{display:none!important}
+
+/* CSS变量 - 安全区域 */
+:root {
+--safe-area-inset-top: env(safe-area-inset-top, 0px);
+--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+--safe-area-inset-left: env(safe-area-inset-left, 0px);
+--safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* 防止横向溢出，优化滚动容器 */
+ html {
+ height: 100%;
+ overflow: hidden;
+ }
+ 
+ body {
+ height: 100%;
+ overflow: hidden;
+ padding-top: var(--safe-area-inset-top);
+ padding-bottom: var(--safe-area-inset-bottom);
+ position: relative;
+ }
+ 
+ /* 主容器 - 独立滚动 */
+ #app {
+ height: 100%;
+ display: flex;
+ flex-direction: column;
+ overflow: hidden;
+ }
+
+/* 所有容器防止溢出 */
+* {
+max-width: 100%;
+box-sizing: border-box;
+}
+
+/* 文本自动换行 */
+p, span, div {
+word-wrap: break-word;
+word-break: break-word;
+}
+
+/* 移动端优化样式 */
+.scrollbar-hide::-webkit-scrollbar {
+display: none;
+}
+
+.scrollbar-hide {
+-ms-overflow-style: none;
+scrollbar-width: none;
+}
+
+/* 抽屉动画 */
+@keyframes slideUp {
+from {
+transform: translateY(100%);
+}
+to {
+transform: translateY(0);
+}
+}
+
+.animate-slide-up {
+animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 淡入动画 */
+@keyframes fadeIn {
+from {
+opacity: 0;
+transform: translateY(10px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+/* 触摸反馈 */
+@keyframes tapFeedback {
+0% {
+transform: scale(1);
+}
+50% {
+transform: scale(0.95);
+}
+100% {
+transform: scale(1);
+}
+}
+
+.tap-feedback:active {
+animation: tapFeedback 0.15s ease-in-out;
+}
+
+/* 下拉刷新动画 */
+@keyframes rotate {
+0% {
+transform: rotate(0deg);
+}
+100% {
+transform: rotate(360deg);
+}
+}
+
+.rotate {
+animation: rotate 1s linear infinite;
+}
+
+/* 移动端优化 */
+ @media (max-width: 768px) {
+ button:active {
+ transform: scale(0.98);
+ }
+ 
+ select, input {
+ font-size: 16px;
+ }
+ 
+ * {
+ -webkit-tap-highlight-color: transparent;
+ }
+ 
+ /* 确保 sticky 元素正常工作 */
+ .sticky-title {
+ position: sticky;
+ z-index: 40;
+ }
+ }
+
+/* iPhone X及以上适配 */
+@supports (padding: max(0px)) {
+.nav-bar {
+padding-left: max(16px, env(safe-area-inset-left));
+padding-right: max(16px, env(safe-area-inset-right));
+}
+
+.bottom-nav {
+padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+}
+
+/* 华为手机优化 */
+@media screen and (device-aspect-ratio: 9/16) {
+body {
+}
+}
+
+/* 小屏幕优化 (420px及以下) */
+@media (max-width: 420px) {
+.text-lg, .text-xl, .text-2xl {
+font-size: 1rem;
+}
+
+.p-4, .p-6 {
+padding: 0.875rem;
+}
+
+.space-y-6 > * + * {
+margin-top: 1rem;
+}
+}
+
+/* Toast提示样式 */
+.toast-container {
+position: fixed;
+top: 80px;
+right: 20px;
+z-index: 9999;
+display: flex;
+flex-direction: column;
+gap: 10px;
+pointer-events: none;
+}
+
+.toast {
+pointer-events: auto;
+min-width: 280px;
+max-width: 400px;
+padding: 12px 16px;
+border-radius: 8px;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+display: flex;
+align-items: center;
+gap: 10px;
+animation: slideInRight 0.3s ease-out;
+background: white;
+border-left: 4px solid;
+}
+
+.toast.success {
+border-left-color: #10b981;
+}
+
+.toast.error {
+border-left-color: #ef4444;
+}
+
+.toast.warning {
+border-left-color: #f59e0b;
+}
+
+.toast.info {
+border-left-color: #3b82f6;
+}
+
+.toast-icon {
+font-size: 18px;
+flex-shrink: 0;
+}
+
+.toast-message {
+flex: 1;
+font-size: 14px;
+color: #1f2937;
+}
+
+.toast-close {
+cursor: pointer;
+opacity: 0.5;
+transition: opacity 0.2s;
+flex-shrink: 0;
+}
+
+.toast-close:hover {
+opacity: 1;
+}
+
+@keyframes slideInRight {
+from {
+transform: translateX(100%);
+opacity: 0;
+}
+to {
+transform: translateX(0);
+opacity: 1;
+}
+}
+
+@keyframes slideOutRight {
+from {
+transform: translateX(0);
+opacity: 1;
+}
+to {
+transform: translateX(100%);
+opacity: 0;
+}
+}
+
+.toast.hiding {
+animation: slideOutRight 0.3s ease-in forwards;
+}
+</style>
+</head>
+<body class="bg-gray-50">
+<div id="app" v-cloak>
+<!-- Toast提示容器 -->
+<div class="toast-container">
+<div v-for="(toast, index) in toasts" :key="toast.id"
+:class="['toast', toast.type, toast.hiding ? 'hiding' : '']">
+<span class="toast-icon">
+<span v-if="toast.type === 'success'">✓</span>
+<span v-else-if="toast.type === 'error'">✗</span>
+<span v-else-if="toast.type === 'warning'">⚠</span>
+<span v-else>ℹ</span>
+</span>
+<span class="toast-message">{{ toast.message }}</span>
+<span class="toast-close" @click="removeToast(toast.id)">✕</span>
+</div>
+</div>
+
+<!-- 确认对话框 -->
+<div v-if="confirmDialog.show" 
+class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+@click="confirmDialog.onCancel">
+<div class="bg-white rounded-lg shadow-2xl max-w-md w-full"
+@click.stop>
+<div class="p-6">
+<div class="flex items-center mb-4">
+<div :class="[
+'w-10 h-10 rounded-full flex items-center justify-center mr-3',
+confirmDialog.type === 'danger' ? 'bg-red-100' : 
+confirmDialog.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
+]">
+<span :class="[
+'text-xl',
+confirmDialog.type === 'danger' ? 'text-red-600' : 
+confirmDialog.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'
+]">
+{{ confirmDialog.type === 'danger' ? '⚠' : 
+confirmDialog.type === 'warning' ? '⚠' : 'ℹ' }}
+</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900">{{ confirmDialog.title }}</h3>
+</div>
+<p class="text-gray-600 text-sm mb-6">{{ confirmDialog.message }}</p>
+<div v-if="confirmDialog.inputLabel" class="mb-4">
+<label class="block text-sm font-medium text-gray-700 mb-2">{{ confirmDialog.inputLabel }}</label>
+<input type="text" v-model="confirmDialog.inputValue"
+class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+:placeholder="confirmDialog.inputPlaceholder">
+</div>
+<div class="flex justify-end space-x-3">
+<button @click="confirmDialog.onCancel"
+class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm font-medium">
+{{ confirmDialog.cancelText || '取消' }}
+</button>
+<button @click="confirmDialog.onConfirm"
+:class="[
+'px-4 py-2 rounded text-white text-sm font-medium transition',
+confirmDialog.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 
+confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'
+]">
+{{ confirmDialog.confirmText || '确认' }}
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 顶部导航栏 - PC端 -->
+ <nav class="hidden md:flex bg-slate-800 text-white shadow-lg z-50 h-16 flex-shrink-0">
+ <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+ <!-- 左侧：面包屑导航 -->
+ <div class="flex items-center space-x-3">
+ <a href="/service/home.html" 
+ class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
+ <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+ </svg>
+ <span>首页</span>
+ </a>
+ 
+ <div class="h-6 w-px bg-slate-600"></div>
+ 
+ <h1 class="text-lg font-bold flex items-center">
+ <span class="text-xl mr-2">⚙️</span>
+ <span>会议室管理后台</span>
+ </h1>
+ </div>
+ 
+ <!-- 右侧：快捷功能 + 用户信息 -->
+ <div class="flex items-center space-x-3">
+ <!-- 数据概览快捷入口 -->
+ <button @click="currentTab = 'dashboard'" 
+ class="hidden md:flex items-center space-x-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition text-sm">
+ <span>📊</span>
+ <span>数据概览</span>
+ </button>
+ 
+ <!-- 用户视角快捷切换 -->
+ <div class="hidden md:flex bg-slate-700 rounded-lg px-2 py-1 space-x-1">
+ <a href="index.html" class="px-2 py-1 text-sm hover:bg-slate-600 rounded transition">📋 用户端</a>
+ </div>
+ 
+ <!-- 管理员信息 -->
+ <div v-if="user" class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
+ <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+ {{ (user.real_name || user.username || '管').charAt(0) }}
+ </div>
+ <span class="hidden md:block text-sm">{{ user.real_name || user.username || '管理员' }}</span>
+ </div>
+ <!-- 退出登录按钮 -->
+ <button @click="handleLogout" class="flex items-center space-x-1 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition text-sm" title="退出登录">
+ <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+ </svg>
+ <span class="hidden md:block">退出</span>
+ </button>
+ </div>
+ </div>
+ </nav>
+ 
+ <!-- 移动端顶部导航栏 -->
+ <nav class="md:hidden bg-slate-800 text-white shadow-lg z-50 nav-bar flex-shrink-0" 
+ style="padding-top: var(--safe-area-inset-top);">
+ <div class="flex items-center justify-between h-14 px-4">
+ <!-- 左侧：返回首页 + 标题 -->
+ <div class="flex items-center gap-3">
+ <a href="/service/home.html" 
+    class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md min-h-[36px] min-w-[36px] flex items-center justify-center flex-shrink-0 group active:scale-95 transition-transform"
+    title="返回系统首页">
+     <svg class="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+     </svg>
+ </a>
+ <h1 class="text-base font-bold flex items-center">
+     <span class="mr-2">⚙️</span>
+     <span>会议室管理</span>
+ </h1>
+ </div>
+ <!-- 右侧：用户头像 -->
+ <div v-if="user" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+ {{ (user.real_name || user.username || '管').charAt(0) }}
+ </div>
+ </div>
+ </nav>
+
+<!-- 移动端底部导航栏 -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav flex-shrink-0 shadow-lg"
+     style="padding-bottom: max(8px, env(safe-area-inset-bottom));">
+ <div class="grid grid-cols-5 h-16">
+  <div v-for="(item, index) in mobileMenuItems" :key="item.id"
+  @click="item.id === 'more' ? showMobileMoreMenu = true : currentTab = item.id"
+  :class="currentTab === item.id ? 'text-blue-600 bg-blue-50' : 'text-gray-600'"
+  class="flex flex-col items-center justify-center cursor-pointer tap-feedback transition-all duration-200 relative">
+  <span class="text-xl mb-1">{{ item.icon }}</span>
+  <span class="text-xs font-medium">{{ item.label }}</span>
+  <div v-if="item.badge > 0" 
+  class="absolute top-1 right-1/2 transform translate-x-6 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+  {{ item.badge > 9 ? '9+' : item.badge }}
+  </div>
+  </div>
+ </div>
+</nav>
+
+<!-- 移动端"更多"菜单抽屉 -->
+<div v-if="showMobileMoreMenu" class="md:hidden fixed inset-0 z-50" @click="showMobileMoreMenu = false">
+<div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+<div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-slide-up"
+style="padding-bottom: var(--safe-area-inset-bottom);"
+@click.stop>
+<div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+<h3 class="text-lg font-bold text-gray-900">更多功能</h3>
+<button @click="showMobileMoreMenu = false" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+</div>
+<div class="p-4 grid grid-cols-3 gap-4">
+<div v-for="item in moreMenuItems" :key="item.id"
+@click="currentTab = item.id; showMobileMoreMenu = false"
+class="flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition cursor-pointer relative">
+<span class="text-2xl mb-2">{{ item.icon }}</span>
+<span class="text-xs font-medium text-gray-700">{{ item.label }}</span>
+<div v-if="item.badge > 0" 
+class="absolute top-2 right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+{{ item.badge > 9 ? '9+' : item.badge }}
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 主体布局：侧边栏 + 内容区 -->
+ <div class="flex flex-1 overflow-hidden">
+ <!-- PC端侧边栏导航 -->
+ <aside class="hidden lg:block w-60 bg-slate-900 overflow-y-auto flex-shrink-0">
+ <nav class="py-4">
+ <!-- 菜单项 -->
+ <div v-for="item in menuItems" :key="item.id"
+ @click="currentTab = item.id"
+ :class="currentTab === item.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+ class="flex items-center justify-between px-6 py-3 cursor-pointer transition">
+ <div class="flex items-center space-x-3">
+ <span class="text-xl">{{ item.icon }}</span>
+ <span class="text-sm font-medium">{{ item.label }}</span>
+ </div>
+ <!-- 待办提醒徽章 -->
+ <span v-if="item.badge > 0" 
+ class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+ {{ item.badge }}
+ </span>
+ </div>
+ </nav>
+ </aside>
+ 
+<!-- 内容区域 - 独立滚动容器 -->
+  <main class="flex-1 bg-gray-50 overflow-y-auto pb-20 md:pb-8"
+  style="-webkit-overflow-scrolling: touch;">
+  <div class="pt-4 md:pt-6">
+  <div class="max-w-7xl mx-auto">
+                    
+<!-- 数据看板 -->
+ <div v-if="currentTab === 'dashboard'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <h2 class="text-lg font-bold text-gray-800">📊 数据看板</h2>
+ </div>
+ 
+ <!-- PC端顶部标题 -->
+ <div class="hidden md:block px-4 md:px-6 lg:px-8">
+ <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">📊 数据看板</h2>
+ </div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+                        
+                        <!-- 今日数据卡片 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">今日预约</p>
+                                        <p class="text-3xl font-bold text-blue-600 mt-2">{{ dashboardStats.todayBookings }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">📋</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">今日收入</p>
+                                        <p class="text-3xl font-bold text-green-600 mt-2">¥{{ dashboardStats.todayRevenue }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">💰</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">待审批</p>
+                                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ dashboardStats.pendingApprovals }}</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">⏳</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow p-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-500">会议室使用率</p>
+                                        <p class="text-3xl font-bold text-purple-600 mt-2">{{ dashboardStats.usageRate }}%</p>
+                                    </div>
+                                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl">📈</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 快捷操作 -->
+                        <div class="bg-white rounded-xl shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">快捷操作</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button @click="currentTab = 'rooms'; openAddRoom()" 
+                                        class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">🏛️</span>
+                                    <span class="text-sm font-medium text-gray-700">新增会议室</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'approvals'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">✓</span>
+                                    <span class="text-sm font-medium text-gray-700">审批预约</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'finance'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">💰</span>
+                                    <span class="text-sm font-medium text-gray-700">财务结算</span>
+                                </button>
+                                
+                                <button @click="currentTab = 'reports'" 
+                                        class="flex flex-col items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition">
+                                    <span class="text-3xl mb-2">📊</span>
+                                    <span class="text-sm font-medium text-gray-700">查看报表</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+</div>
+
+<!-- 会议室管理 -->
+ <div v-if="currentTab === 'rooms'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4 flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">会议室列表</h2>
+ <button @click="openAddRoom()" 
+ class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-600 transition shadow">
+ + 新增
+ </button>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">会议室列表</h2>
+<button @click="openAddRoom()" 
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition shadow">
++ 新增
+</button>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+
+                <!-- 会议室卡片 -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div v-for="room in rooms" :key="room.id" 
+                         class="bg-white rounded-xl shadow-lg hover:shadow-xl transition">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">{{ room.name }}</h3>
+                                    <p class="text-sm text-gray-500 mt-1">📍 {{ room.location }}</p>
+                                </div>
+                                <span :class="room.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                      class="px-3 py-1 rounded-full text-sm font-medium">
+                                    {{ room.is_active ? '可用' : '停用' }}
+                                </span>
+                            </div>
+                            
+                            <div class="space-y-2 text-sm text-gray-600 mb-4">
+                                <div class="flex items-center">
+                                    <span class="w-20">容纳人数:</span>
+                                    <span class="font-semibold text-gray-800">{{ room.capacity }}人</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="w-20">收费:</span>
+                                    <span class="font-semibold text-green-600">¥{{ room.price_per_hour }}/小时</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="w-20">免费时长:</span>
+                                    <span>{{ room.free_hours_per_month }}小时/月</span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="room.facilities" class="mb-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <span v-for="facility in parseFacilities(room.facilities)" :key="facility"
+                                          class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
+                                        {{ facility }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-2 pt-4 border-t">
+                                <button @click="openEditRoom(room)" 
+                                        class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                    编辑
+                                </button>
+                                <button @click="toggleRoomStatus(room)" 
+                                        :class="room.is_active ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'"
+                                        class="flex-1 px-4 py-2 text-white rounded transition">
+                                    {{ room.is_active ? '停用' : '启用' }}
+                                </button>
+                                <button @click="deleteRoom(room.id)" 
+                                        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                    删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-if="rooms.length === 0" class="text-center py-16 text-gray-500">
+                    <p class="text-lg">暂无会议室</p>
+                    <button @click="openAddRoom()" class="mt-4 text-green-600 hover:text-green-700">
+                        + 添加第一个会议室
+                    </button>
+                </div>
+            </div>
+</div>
+
+<!-- 预约记录 -->
+ <div v-if="currentTab === 'bookings'" class="space-y-4 md:space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <div class="flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">预约管理</h2>
+ <button @click="showMobileFilter = !showMobileFilter"
+ class="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md">
+ <span>🔍</span>
+ <span>筛选</span>
+ </button>
+ </div>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex items-center justify-between mb-4 px-4 md:px-6 lg:px-8">
+<h2 class="text-2xl font-bold text-gray-800">预约管理</h2>
+</div>
+
+<!-- 移动端横向滚动统计卡片 -->
+<div class="md:hidden">
+<!-- 状态统计 - 第一行 -->
+<div class="overflow-x-auto pb-2 scrollbar-hide" style="margin: 0 -1rem; padding: 0 1rem;">
+<div class="flex space-x-2 min-w-max px-1">
+<div @click="filterStatus = ''; timeFilter = ''" 
+:class="filterStatus === '' && timeFilter === '' ? 'bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-md' : 'bg-white border border-slate-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === '' && timeFilter === '' ? 'text-slate-200' : 'text-slate-500'">全部</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === '' && timeFilter === '' ? '' : 'text-slate-700'">{{ bookings.length }}</p>
+</div>
+
+<div @click="filterStatus = 'pending'; timeFilter = ''" 
+:class="filterStatus === 'pending' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md' : 'bg-white border border-amber-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === 'pending' ? 'text-amber-100' : 'text-amber-600'">待确认</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === 'pending' ? '' : 'text-amber-700'">{{ bookingStats.pending }}</p>
+</div>
+
+<div @click="filterStatus = 'confirmed'; timeFilter = ''" 
+:class="filterStatus === 'confirmed' ? 'bg-gradient-to-br from-emerald-400 to-green-600 text-white shadow-md' : 'bg-white border border-emerald-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === 'confirmed' ? 'text-emerald-100' : 'text-emerald-600'">已确认</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === 'confirmed' ? '' : 'text-emerald-700'">{{ bookingStats.confirmed }}</p>
+</div>
+
+<div @click="filterStatus = 'active'; timeFilter = ''" 
+:class="filterStatus === 'active' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' : 'bg-white border border-blue-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === 'active' ? 'text-blue-100' : 'text-blue-600'">进行中</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === 'active' ? '' : 'text-blue-700'">{{ bookingStats.active }}</p>
+</div>
+
+<div @click="filterStatus = 'completed'; timeFilter = ''" 
+:class="filterStatus === 'completed' ? 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-md' : 'bg-white border border-gray-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === 'completed' ? 'text-gray-300' : 'text-gray-500'">已完成</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === 'completed' ? '' : 'text-gray-700'">{{ bookingStats.completed }}</p>
+</div>
+
+<div @click="filterStatus = 'cancelled'; timeFilter = ''" 
+:class="filterStatus === 'cancelled' ? 'bg-gradient-to-br from-red-400 to-rose-600 text-white shadow-md' : 'bg-white border border-red-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 72px;">
+<p class="text-xs font-medium" :class="filterStatus === 'cancelled' ? 'text-red-100' : 'text-red-600'">已取消</p>
+<p class="text-base font-bold mt-0.5" :class="filterStatus === 'cancelled' ? '' : 'text-red-700'">{{ bookingStats.cancelled }}</p>
+</div>
+</div>
+</div>
+
+<!-- 时间维度 - 第二行 -->
+<div class="overflow-x-auto pb-3 scrollbar-hide" style="margin: 0 -1rem; padding: 0 1rem;">
+<div class="flex space-x-2 min-w-max px-1">
+<div @click="timeFilter = 'today'; filterStatus = ''" 
+:class="timeFilter === 'today' ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md' : 'bg-violet-50 border-2 border-violet-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+<p class="text-xs font-semibold" :class="timeFilter === 'today' ? 'text-violet-100' : 'text-violet-700'">今日</p>
+<p class="text-lg font-bold mt-0.5" :class="timeFilter === 'today' ? '' : 'text-violet-700'">{{ bookingStats.today }}</p>
+<p class="text-xs font-medium mt-0.5" :class="timeFilter === 'today' ? 'text-violet-200' : 'text-violet-500'">¥{{ bookingStats.todayRevenue }}</p>
+</div>
+
+<div @click="timeFilter = 'week'; filterStatus = ''" 
+:class="timeFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md' : 'bg-indigo-50 border-2 border-indigo-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+<p class="text-xs font-semibold" :class="timeFilter === 'week' ? 'text-indigo-100' : 'text-indigo-700'">本周</p>
+<p class="text-lg font-bold mt-0.5" :class="timeFilter === 'week' ? '' : 'text-indigo-700'">{{ bookingStats.week }}</p>
+<p class="text-xs font-medium mt-0.5" :class="timeFilter === 'week' ? 'text-indigo-200' : 'text-indigo-500'">¥{{ bookingStats.weekRevenue }}</p>
+</div>
+
+<div @click="timeFilter = 'month'; filterStatus = ''" 
+:class="timeFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md' : 'bg-teal-50 border-2 border-teal-200'"
+class="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-200 flex-shrink-0" style="min-width: 88px;">
+<p class="text-xs font-semibold" :class="timeFilter === 'month' ? 'text-teal-100' : 'text-teal-700'">本月</p>
+<p class="text-lg font-bold mt-0.5" :class="timeFilter === 'month' ? '' : 'text-teal-700'">{{ bookingStats.month }}</p>
+<p class="text-xs font-medium mt-0.5" :class="timeFilter === 'month' ? 'text-teal-200' : 'text-teal-500'">¥{{ bookingStats.monthRevenue }}</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PC端统计卡片区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+<div class="hidden md:block mb-6">
+<!-- 状态统计 -->
+<div class="grid grid-cols-6 gap-3 mb-4">
+<div @click="filterStatus = ''; timeFilter = ''" 
+:class="filterStatus === '' && timeFilter === '' ? 'bg-gradient-to-br from-slate-700 to-slate-800 text-white shadow-lg' : 'bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === '' && timeFilter === '' ? 'text-slate-300' : 'text-slate-500'">全部</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === '' && timeFilter === '' ? '' : 'text-slate-700'">{{ bookings.length }}</div>
+</div>
+
+<div @click="filterStatus = 'pending'; timeFilter = ''" 
+:class="filterStatus === 'pending' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg' : 'bg-white hover:bg-amber-50 border-2 border-amber-200 hover:border-amber-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === 'pending' ? 'text-amber-100' : 'text-amber-600'">待确认</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === 'pending' ? '' : 'text-amber-700'">{{ bookingStats.pending }}</div>
+</div>
+
+<div @click="filterStatus = 'confirmed'; timeFilter = ''" 
+:class="filterStatus === 'confirmed' ? 'bg-gradient-to-br from-emerald-400 to-green-600 text-white shadow-lg' : 'bg-white hover:bg-emerald-50 border-2 border-emerald-200 hover:border-emerald-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === 'confirmed' ? 'text-emerald-100' : 'text-emerald-600'">已确认</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === 'confirmed' ? '' : 'text-emerald-700'">{{ bookingStats.confirmed }}</div>
+</div>
+
+<div @click="filterStatus = 'active'; timeFilter = ''" 
+:class="filterStatus === 'active' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg' : 'bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === 'active' ? 'text-blue-100' : 'text-blue-600'">进行中</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === 'active' ? '' : 'text-blue-700'">{{ bookingStats.active }}</div>
+</div>
+
+<div @click="filterStatus = 'completed'; timeFilter = ''" 
+:class="filterStatus === 'completed' ? 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-lg' : 'bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === 'completed' ? 'text-gray-300' : 'text-gray-600'">已完成</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === 'completed' ? '' : 'text-gray-700'">{{ bookingStats.completed }}</div>
+</div>
+
+<div @click="filterStatus = 'cancelled'; timeFilter = ''" 
+:class="filterStatus === 'cancelled' ? 'bg-gradient-to-br from-red-400 to-rose-600 text-white shadow-lg' : 'bg-white hover:bg-red-50 border-2 border-red-200 hover:border-red-400'"
+class="rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="text-sm font-semibold tracking-wide" :class="filterStatus === 'cancelled' ? 'text-red-100' : 'text-red-600'">已取消</div>
+<div class="text-3xl font-bold mt-2" :class="filterStatus === 'cancelled' ? '' : 'text-red-700'">{{ bookingStats.cancelled }}</div>
+</div>
+</div>
+
+<!-- 时间维度统计 -->
+<div class="grid grid-cols-3 gap-4">
+<div @click="timeFilter = 'today'; filterStatus = ''" 
+:class="timeFilter === 'today' ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg' : 'bg-white hover:bg-violet-50 border-2 border-violet-200 hover:border-violet-400'"
+class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="flex items-baseline justify-between">
+<div>
+<div class="text-sm font-semibold tracking-wide" :class="timeFilter === 'today' ? 'text-violet-100' : 'text-violet-600'">今日预约</div>
+<div class="text-4xl font-bold mt-2" :class="timeFilter === 'today' ? '' : 'text-violet-700'">{{ bookingStats.today }}</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-medium" :class="timeFilter === 'today' ? 'text-violet-200' : 'text-violet-500'">收入</div>
+<div class="text-xl font-bold mt-1" :class="timeFilter === 'today' ? '' : 'text-violet-700'">¥{{ bookingStats.todayRevenue }}</div>
+</div>
+</div>
+</div>
+
+<div @click="timeFilter = 'week'; filterStatus = ''" 
+:class="timeFilter === 'week' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg' : 'bg-white hover:bg-indigo-50 border-2 border-indigo-200 hover:border-indigo-400'"
+class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="flex items-baseline justify-between">
+<div>
+<div class="text-sm font-semibold tracking-wide" :class="timeFilter === 'week' ? 'text-indigo-100' : 'text-indigo-600'">本周预约</div>
+<div class="text-4xl font-bold mt-2" :class="timeFilter === 'week' ? '' : 'text-indigo-700'">{{ bookingStats.week }}</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-medium" :class="timeFilter === 'week' ? 'text-indigo-200' : 'text-indigo-500'">收入</div>
+<div class="text-xl font-bold mt-1" :class="timeFilter === 'week' ? '' : 'text-indigo-700'">¥{{ bookingStats.weekRevenue }}</div>
+</div>
+</div>
+</div>
+
+<div @click="timeFilter = 'month'; filterStatus = ''" 
+:class="timeFilter === 'month' ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg' : 'bg-white hover:bg-teal-50 border-2 border-teal-200 hover:border-teal-400'"
+class="rounded-xl p-5 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
+<div class="flex items-baseline justify-between">
+<div>
+<div class="text-sm font-semibold tracking-wide" :class="timeFilter === 'month' ? 'text-teal-100' : 'text-teal-600'">本月预约</div>
+<div class="text-4xl font-bold mt-2" :class="timeFilter === 'month' ? '' : 'text-teal-700'">{{ bookingStats.month }}</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-medium" :class="timeFilter === 'month' ? 'text-teal-200' : 'text-teal-500'">收入</div>
+<div class="text-xl font-bold mt-1" :class="timeFilter === 'month' ? '' : 'text-teal-700'">¥{{ bookingStats.monthRevenue }}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 移动端筛选抽屉 -->
+<div v-if="showMobileFilter" class="md:hidden fixed inset-0 z-50" @click="showMobileFilter = false">
+<div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+<div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-y-auto animate-slide-up"
+style="padding-bottom: var(--safe-area-inset-bottom);"
+@click.stop>
+<!-- 抽屉头部 -->
+<div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
+<h3 class="text-lg font-bold text-gray-900">筛选条件</h3>
+<button @click="showMobileFilter = false" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+</div>
+
+<div class="p-6 space-y-5">
+<!-- 搜索框 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">关键词搜索</label>
+<input type="text" v-model="searchKeyword" placeholder="搜索预约编号/会议室/预约人..."
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition">
+</div>
+
+<!-- 预约类型 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">预约类型</label>
+<div class="grid grid-cols-2 gap-3">
+<button @click="bookingTypeFilter = ''"
+:class="bookingTypeFilter === '' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition">
+全部
+</button>
+<button @click="bookingTypeFilter = 'internal'"
+:class="bookingTypeFilter === 'internal' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition">
+🏢 内部
+</button>
+<button @click="bookingTypeFilter = 'external'"
+:class="bookingTypeFilter === 'external' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+class="px-4 py-3 rounded-xl text-sm font-medium transition col-span-2">
+👥 外部
+</button>
+</div>
+</div>
+
+<!-- 办公室 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">办公室</label>
+<select v-model="officeFilter" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+<option value="">全部办公室</option>
+<option v-for="office in uniqueOffices" :key="office" :value="office">{{ office }}</option>
+</select>
+</div>
+
+<!-- 会议室 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">会议室</label>
+<select v-model="roomFilter" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+<option value="">全部会议室</option>
+<option v-for="room in uniqueRooms" :key="room" :value="room">{{ room }}</option>
+</select>
+</div>
+
+<!-- 日期范围 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">日期范围</label>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<input type="date" v-model="dateRangeStart" placeholder="开始"
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+</div>
+<div>
+<input type="date" v-model="dateRangeEnd" placeholder="结束"
+class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500">
+</div>
+</div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="grid grid-cols-2 gap-3 pt-4">
+<button @click="clearAllFilters(); showMobileFilter = false"
+class="bg-gray-100 text-gray-700 px-4 py-3.5 rounded-xl font-semibold">
+清除筛选
+</button>
+<button @click="showMobileFilter = false"
+class="bg-blue-500 text-white px-4 py-3.5 rounded-xl font-semibold shadow-lg">
+应用筛选
+</button>
+</div>
+</div>
+</div>
+</div>
+                
+<!-- 详情列表 -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+<!-- PC端工具栏 -->
+<div class="hidden md:block px-6 py-4 border-b border-gray-200">
+<!-- 标题行 -->
+<div class="flex justify-between items-center mb-3">
+<h3 class="text-base font-semibold text-gray-900">{{ getFilterTitle }}</h3>
+<div class="flex items-center space-x-3">
+<input type="text" v-model="searchKeyword" placeholder="搜索..."
+class="border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:border-blue-500 text-sm">
+<button v-if="hasActiveFilters" @click="clearAllFilters"
+class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+清除
+</button>
+</div>
+</div>
+
+<!-- 筛选状态Tag -->
+<div class="px-4 md:px-6 lg:px-8">
+<div v-if="hasActiveFilters" class="flex items-center space-x-2 mb-3 flex-wrap">
+<span class="text-xs text-gray-500">当前筛选：</span>
+<div v-if="filterStatus" @click="filterStatus = ''"
+class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded cursor-pointer hover:bg-blue-200 transition">
+{{ statusText(filterStatus) }}
+<span class="ml-1 text-blue-500">✕</span>
+</div>
+<div v-if="timeFilter" @click="timeFilter = ''"
+class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded cursor-pointer hover:bg-purple-200 transition">
+{{ timeFilter === 'today' ? '今日' : timeFilter === 'week' ? '本周' : '本月' }}
+<span class="ml-1 text-purple-500">✕</span>
+</div>
+<div v-if="bookingTypeFilter" @click="bookingTypeFilter = ''"
+class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded cursor-pointer hover:bg-green-200 transition">
+{{ bookingTypeFilter === 'internal' ? '内部预约' : '外部预约' }}
+<span class="ml-1 text-green-500">✕</span>
+</div>
+<div v-if="officeFilter" @click="officeFilter = ''"
+class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded cursor-pointer hover:bg-orange-200 transition">
+{{ officeFilter }}
+<span class="ml-1 text-orange-500">✕</span>
+</div>
+<div v-if="roomFilter" @click="roomFilter = ''"
+class="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded cursor-pointer hover:bg-teal-200 transition">
+{{ roomFilter }}
+<span class="ml-1 text-teal-500">✕</span>
+</div>
+<div v-if="dateRangeStart || dateRangeEnd" @click="dateRangeStart = ''; dateRangeEnd = ''"
+class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded cursor-pointer hover:bg-gray-200 transition">
+{{ dateRangeStart || '...' }} — {{ dateRangeEnd || '...' }}
+<span class="ml-1 text-gray-500">✕</span>
+</div>
+<div v-if="searchKeyword" @click="searchKeyword = ''"
+class="inline-flex items-center px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded cursor-pointer hover:bg-pink-200 transition">
+搜索: {{ searchKeyword }}
+<span class="ml-1 text-pink-500">✕</span>
+</div>
+</div>
+
+<!-- 筛选器 -->
+<div class="flex items-center space-x-3">
+<select v-model="bookingTypeFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
+<option value="">全部类型</option>
+<option value="internal">内部预约</option>
+<option value="external">外部预约</option>
+</select>
+
+<select v-model="officeFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
+<option value="">全部办公室</option>
+<option v-for="office in uniqueOffices" :key="office" :value="office">{{ office }}</option>
+</select>
+
+<select v-model="roomFilter" class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm">
+<option value="">全部会议室</option>
+<option v-for="room in uniqueRooms" :key="room" :value="room">{{ room }}</option>
+</select>
+
+<div class="flex items-center space-x-2">
+<span class="text-sm text-gray-600">日期</span>
+<input type="date" v-model="dateRangeStart"
+class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm w-32">
+<span class="text-gray-400">—</span>
+<input type="date" v-model="dateRangeEnd"
+class="border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm w-32">
+</div>
+
+<div class="text-sm text-gray-500">
+共 <span class="font-medium text-gray-900">{{ sortedAndFilteredBookings.length }}</span> 条
+</div>
+</div>
+</div>
+
+<!-- 移动端卡片列表 -->
+<div class="md:hidden">
+<!-- 移动端筛选状态提示 -->
+<div v-if="hasActiveFilters" class="mx-4 mb-3 bg-blue-50 rounded-lg px-4 py-2 flex items-center justify-between">
+<div class="text-sm text-blue-600 truncate">
+<span>已筛选 {{ sortedAndFilteredBookings.length }} 条</span>
+</div>
+<button @click="clearAllFilters" class="text-xs text-blue-700 font-medium whitespace-nowrap ml-2">清除</button>
+</div>
+
+<!-- 移动端卡片列表 -->
+<div class="space-y-3 px-4 pb-4">
+<div v-for="(item, index) in sortedAndFilteredBookings" :key="item.id"
+:style="{ animationDelay: `${index * 0.05}s` }"
+:class="item.booking_type === 'internal' ? 'bg-gradient-to-br from-blue-50 to-blue-100' : 'bg-gradient-to-br from-purple-50 to-purple-100'"
+class="rounded-2xl shadow-sm overflow-hidden tap-feedback"
+style="animation: fadeIn 0.3s ease-out both;">
+<!-- 卡片头部 -->
+<div class="bg-white/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-gray-100">
+<div class="flex items-center space-x-2 min-w-0 flex-1">
+<span :class="item.booking_type === 'internal' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'"
+class="px-2 py-1 rounded-lg text-xs font-medium shadow-sm whitespace-nowrap">
+{{ item.booking_type === 'internal' ? '🏢 内部' : '👥 外部' }}
+</span>
+<span class="text-xs text-gray-400 font-mono truncate">{{ item.booking_no }}</span>
+</div>
+<span :class="statusClass(item.status)" class="px-3 py-1 rounded-full text-xs font-medium shadow-sm whitespace-nowrap ml-2">
+{{ statusText(item.status) }}
+</span>
+</div>
+
+<!-- 卡片内容 -->
+<div class="bg-white p-4 space-y-3">
+<!-- 基本信息 -->
+<div class="flex items-start justify-between">
+<div class="flex-1 min-w-0 mr-3">
+<div class="font-bold text-gray-900 text-base truncate">{{ item.room_name }}</div>
+<div v-if="item.meeting_title" class="text-sm text-gray-600 mt-1 truncate">{{ item.meeting_title }}</div>
+</div>
+<div class="text-right flex-shrink-0">
+<div class="text-lg font-bold text-green-600">¥{{ item.total_fee }}</div>
+<div v-if="item.free_hours_used > 0" class="text-xs text-gray-400 mt-0.5">免费{{ item.free_hours_used }}h</div>
+</div>
+</div>
+
+<!-- 预约人信息 -->
+<div class="bg-gray-50 rounded-xl p-3">
+<div v-if="item.booking_type === 'internal'" class="space-y-2">
+<div class="flex items-center text-sm">
+<div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0">
+{{ (item.user_name || '未').charAt(0) }}
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-semibold text-gray-900 truncate">{{ item.user_name }}</div>
+<div class="text-xs text-gray-500">{{ item.user_phone }}</div>
+</div>
+</div>
+<div class="flex items-center text-xs text-blue-600 bg-blue-50 rounded-lg px-2 py-1.5">
+<span class="mr-1.5 flex-shrink-0">📍</span>
+<span class="font-medium truncate">{{ item.office_name || '未分配办公室' }}</span>
+</div>
+</div>
+<div v-else class="space-y-2">
+<div class="flex items-center text-sm">
+<div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0">
+{{ (item.external_contact_name || '外').charAt(0) }}
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-semibold text-gray-900 truncate">{{ item.external_contact_name }}</div>
+<div class="text-xs text-gray-500">{{ item.external_contact_phone }}</div>
+</div>
+</div>
+<div v-if="item.external_company" class="flex items-center text-xs text-purple-600 bg-purple-50 rounded-lg px-2 py-1.5">
+<span class="mr-1.5 flex-shrink-0">🏢</span>
+<span class="font-medium truncate">{{ item.external_company }}</span>
+</div>
+</div>
+</div>
+
+<!-- 时间信息 -->
+<div class="grid grid-cols-2 gap-3 bg-gray-50 rounded-xl p-3">
+<div class="flex items-center text-gray-700">
+<div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-2 flex-shrink-0">
+<span class="text-base">📅</span>
+</div>
+<div class="min-w-0">
+<div class="text-xs text-gray-500">日期</div>
+<div class="text-sm font-semibold">{{ item.booking_date }}</div>
+</div>
+</div>
+<div class="flex items-center text-gray-700">
+<div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center mr-2 flex-shrink-0">
+<span class="text-base">⏰</span>
+</div>
+<div class="min-w-0">
+<div class="text-xs text-gray-500">时间</div>
+<div class="text-sm font-semibold">{{ item.start_time }}-{{ item.end_time }}</div>
+</div>
+</div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="grid grid-cols-2 gap-2 pt-2">
+<button v-if="item.status === 'pending'" 
+@click="confirmBooking(item.id)"
+class="bg-green-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm">
+✓ 确认
+</button>
+<button v-if="item.status !== 'cancelled' && item.status !== 'completed'"
+@click="cancelBooking(item.id)"
+class="bg-red-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm">
+✗ 取消
+</button>
+<button @click="viewBookingDetail(item)"
+class="bg-blue-500 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm col-span-2">
+详情 →
+</button>
+</div>
+</div>
+</div>
+
+<!-- 移动端空状态 -->
+<div v-if="sortedAndFilteredBookings.length === 0" class="text-center py-16 text-gray-500 px-4">
+<div class="text-4xl mb-3">📋</div>
+<p class="text-base">暂无预约记录</p>
+<p class="text-sm mt-2">请调整筛选条件</p>
+</div>
+</div>
+</div>
+
+<!-- PC端表格 -->
+<div class="hidden md:block overflow-x-auto">
+<!-- 批量操作工具栏 -->
+<div v-if="selectedBookingIds.length > 0" class="bg-blue-50 border-b border-blue-200 px-6 py-2 flex items-center justify-between">
+<div class="flex items-center space-x-4">
+<span class="text-sm text-blue-700">
+已选择 <strong>{{ selectedBookingIds.length }}</strong> 项
+</span>
+<button @click="batchConfirmBookings"
+class="px-3 py-1.5 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition">
+批量确认
+</button>
+<button @click="batchCancelBookings"
+class="px-3 py-1.5 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition">
+批量取消
+</button>
+</div>
+<button @click="selectedBookingIds = []" class="text-sm text-blue-600 hover:text-blue-800">
+清除选择
+</button>
+</div>
+
+<table class="w-full">
+<thead class="bg-gray-50 border-b border-gray-200">
+<tr>
+<th class="w-12 px-4 py-2.5">
+<input type="checkbox" 
+:checked="selectedBookingIds.length === paginatedBookings.length && paginatedBookings.length > 0"
+@change="toggleSelectAll"
+class="w-4 h-4 rounded border-gray-300">
+</th>
+<th @click="toggleSort('booking_no')" 
+:class="sortBy === 'booking_no' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-32">
+<div class="flex items-center">
+<span>预约编号</span>
+<span v-if="sortBy === 'booking_no'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+</div>
+</th>
+<th @click="toggleSort('booking_type')"
+:class="sortBy === 'booking_type' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-24">
+<div class="flex items-center">
+<span>类型</span>
+<span v-if="sortBy === 'booking_type'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+</div>
+</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-44">预约人</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-36">会议室</th>
+<th @click="toggleSort('meeting_title')"
+:class="sortBy === 'meeting_title' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none">
+<div class="flex items-center">
+<span>会议主题</span>
+<span v-if="sortBy === 'meeting_title'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+</div>
+</th>
+<th @click="toggleSort('booking_date')"
+:class="sortBy === 'booking_date' ? 'text-blue-600' : 'text-gray-600'"
+class="text-left py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-36">
+<div class="flex items-center">
+<span>预约时间</span>
+<span v-if="sortBy === 'booking_date'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+</div>
+</th>
+<th @click="toggleSort('total_fee')"
+:class="sortBy === 'total_fee' ? 'text-blue-600' : 'text-gray-600'"
+class="text-right py-2.5 px-4 font-medium text-xs cursor-pointer hover:bg-gray-100 transition select-none w-28">
+<div class="flex items-center justify-end">
+<span>费用</span>
+<span v-if="sortBy === 'total_fee'" class="ml-1 text-xs">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+</div>
+</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-20">状态</th>
+<th class="text-left py-2.5 px-4 font-medium text-xs text-gray-600 w-28">操作</th>
+</tr>
+</thead>
+<tbody>
+<tr v-if="paginatedBookings.length === 0">
+<td colspan="10" class="text-center py-12 text-gray-500">
+<div class="text-sm">暂无预约记录</div>
+</td>
+</tr>
+<tr v-for="item in paginatedBookings" :key="item.id" 
+:class="[
+'border-b border-gray-100 hover:bg-gray-50 transition',
+selectedBookingIds.includes(item.id) ? 'bg-blue-50' : ''
+]">
+<td class="w-12 px-4 py-3">
+<input type="checkbox" 
+:checked="selectedBookingIds.includes(item.id)"
+@change="toggleBookingSelection(item.id)"
+class="w-4 h-4 rounded border-gray-300">
+</td>
+<td class="py-3 px-4 font-mono text-xs text-gray-600">{{ item.booking_no }}</td>
+<td class="py-3 px-4">
+<span :class="item.booking_type === 'internal' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'"
+class="px-2 py-0.5 rounded text-xs font-medium">
+{{ item.booking_type === 'internal' ? '内部' : '外部' }}
+</span>
+</td>
+<td class="py-3 px-4">
+<div v-if="item.booking_type === 'internal'" class="space-y-0.5">
+<div class="text-sm font-medium text-gray-900">{{ item.user_name }}</div>
+<div class="text-xs text-gray-500">{{ item.user_phone }}</div>
+<div class="text-xs text-gray-400">{{ item.office_name || '未分配' }}</div>
+</div>
+<div v-else class="space-y-0.5">
+<div class="text-sm font-medium text-gray-900">{{ item.external_contact_name }}</div>
+<div class="text-xs text-gray-500">{{ item.external_contact_phone }}</div>
+<div v-if="item.external_company" class="text-xs text-purple-600">{{ item.external_company }}</div>
+</div>
+</td>
+<td class="py-3 px-4 text-sm text-gray-900">{{ item.room_name }}</td>
+<td class="py-3 px-4">
+<div class="text-sm text-gray-700 max-w-xs truncate" :title="item.meeting_title">{{ item.meeting_title || '-' }}</div>
+</td>
+<td class="py-3 px-4">
+<div class="text-sm text-gray-900">{{ item.booking_date }}</div>
+<div class="text-xs text-gray-500">{{ item.start_time }} - {{ item.end_time }}</div>
+</td>
+<td class="py-3 px-4 text-right">
+<div class="text-sm font-medium text-gray-900">¥{{ item.total_fee }}</div>
+<div v-if="item.free_hours_used > 0" class="text-xs text-gray-400">
+免费 {{ item.free_hours_used }}h
+</div>
+</td>
+<td class="py-3 px-4">
+<span :class="statusClass(item.status)" 
+class="px-2 py-0.5 rounded text-xs font-medium">
+{{ statusText(item.status) }}
+</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center space-x-3">
+<button v-if="item.status === 'pending'" 
+@click="confirmBooking(item.id)"
+class="text-xs text-green-600 hover:text-green-700 font-medium">
+确认
+</button>
+<button v-if="item.status !== 'cancelled' && item.status !== 'completed'"
+@click="cancelBooking(item.id)"
+class="text-xs text-red-600 hover:text-red-700 font-medium">
+取消
+</button>
+<button @click="viewBookingDetail(item)"
+class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+详情
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+
+<!-- 分页控件 -->
+<div v-if="sortedAndFilteredBookings.length > pageSize" class="px-6 py-3 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+<div class="text-sm text-gray-600">
+共 <strong>{{ sortedAndFilteredBookings.length }}</strong> 条记录
+</div>
+<div class="flex items-center space-x-2">
+<button @click="currentPage = Math.max(1, currentPage - 1)"
+:disabled="currentPage === 1"
+:class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'"
+class="px-3 py-1 border border-gray-300 rounded text-sm">
+上一页
+</button>
+<div class="flex items-center space-x-1">
+<button v-for="page in totalPages" :key="page"
+@click="currentPage = page"
+:class="currentPage === page ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100'"
+class="px-3 py-1 border border-gray-300 rounded text-sm">
+{{ page }}
+</button>
+</div>
+<button @click="currentPage = Math.min(totalPages, currentPage + 1)"
+:disabled="currentPage === totalPages"
+:class="currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'"
+class="px-3 py-1 border border-gray-300 rounded text-sm">
+下一页
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 移动端预约卡片列表 -->
+<div class="md:hidden space-y-3 px-4">
+<div v-if="paginatedBookings.length === 0" class="text-center py-12 text-gray-500">
+<div class="text-sm">暂无预约记录</div>
+</div>
+<div v-for="item in paginatedBookings" :key="item.id" 
+@click="viewBookingDetail(item)"
+class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 active:bg-gray-50 transition cursor-pointer">
+<!-- 头部：编号和状态 -->
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center space-x-2">
+<span class="font-mono text-xs text-gray-500">#{{ item.booking_no }}</span>
+<span :class="item.booking_type === 'internal' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'"
+class="px-2 py-0.5 rounded text-xs font-medium">
+{{ item.booking_type === 'internal' ? '内部' : '外部' }}
+</span>
+</div>
+<span :class="statusClass(item.status)" 
+class="px-2 py-1 rounded-full text-xs font-medium">
+{{ statusText(item.status) }}
+</span>
+</div>
+
+<!-- 会议室和时间 -->
+<div class="mb-3">
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-sm font-medium text-gray-900">{{ item.room_name }}</span>
+</div>
+<div class="flex items-center space-x-2 text-xs text-gray-500">
+<span>{{ item.booking_date }}</span>
+<span>•</span>
+<span>{{ item.start_time }}-{{ item.end_time }}</span>
+</div>
+</div>
+
+<!-- 会议主题 -->
+<div class="mb-3">
+<div class="text-sm text-gray-700 line-clamp-1">{{ item.meeting_title || '无主题' }}</div>
+</div>
+
+<!-- 预约人信息 -->
+<div class="flex items-center justify-between">
+<div class="text-xs text-gray-500">
+<template v-if="item.booking_type === 'internal'">
+{{ item.user_name }} · {{ item.office_name || '未分配' }}
+</template>
+<template v-else>
+{{ item.external_contact_name }} · {{ item.external_company || '外部单位' }}
+</template>
+</div>
+<div class="text-sm font-medium text-gray-900">¥{{ item.total_fee }}</div>
+</div>
+
+<!-- 操作按钮 -->
+<div v-if="item.status === 'pending' || (item.status !== 'cancelled' && item.status !== 'completed')" 
+class="mt-3 pt-3 border-t border-gray-100 flex justify-end space-x-3">
+<button v-if="item.status === 'pending'" 
+@click.stop="confirmBooking(item.id)"
+class="px-4 py-1.5 bg-green-500 text-white text-xs rounded-lg active:bg-green-600">
+确认
+</button>
+<button v-if="item.status !== 'cancelled' && item.status !== 'completed'"
+@click.stop="cancelBooking(item.id)"
+class="px-4 py-1.5 bg-red-500 text-white text-xs rounded-lg active:bg-red-600">
+取消
+</button>
+</div>
+</div>
+
+<!-- 移动端分页 -->
+<div v-if="sortedAndFilteredBookings.length > pageSize" class="flex items-center justify-center space-x-2 py-4">
+<button @click="currentPage = Math.max(1, currentPage - 1)"
+:disabled="currentPage === 1"
+:class="currentPage === 1 ? 'opacity-50' : 'active:bg-gray-100'"
+class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+上一页
+</button>
+<span class="text-sm text-gray-600">{{ currentPage }} / {{ totalPages }}</span>
+<button @click="currentPage = Math.min(totalPages, currentPage + 1)"
+:disabled="currentPage === totalPages"
+:class="currentPage === totalPages ? 'opacity-50' : 'active:bg-gray-100'"
+class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+下一页
+</button>
+</div>
+</div>
+</div>
+
+<!-- 使用统计 -->
+<div v-if="currentTab === 'stats'" class="space-y-6">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">今日预约</div>
+                        <div class="text-3xl font-bold text-green-600">{{ stats.today }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">本周预约</div>
+                        <div class="text-3xl font-bold text-blue-600">{{ stats.week }}</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="text-sm text-gray-500 mb-2">本月预约</div>
+                        <div class="text-3xl font-bold text-purple-600">{{ stats.month }}</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold mb-6">会议室使用率</h3>
+                    <div v-for="room in rooms" :key="room.id" class="mb-6 last:mb-0">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium text-gray-800">{{ room.name }}</span>
+                            <span class="text-sm text-gray-600">{{ room.usage_rate || 0 }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500"
+                                 :style="{ width: (room.usage_rate || 0) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+</div>
+</div>
+
+<!-- 审批中心 -->
+ <div v-if="currentTab === 'approvals'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4">
+ <h2 class="text-lg font-bold text-gray-800">审批中心</h2>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">审批中心</h2>
+<div class="flex gap-3">
+<select v-model="approvalFilter" 
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<option value="">全部状态</option>
+<option value="pending">待审批</option>
+<option value="approved">已批准</option>
+<option value="rejected">已拒绝</option>
+</select>
+<button v-if="selectedApprovals.length > 0"
+@click="batchApproveApprovals()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+批量批准 ({{ selectedApprovals.length }})
+</button>
+</div>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+                
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">待审批</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">{{ approvalStats.pending }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏳</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">今日已审批</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">{{ approvalStats.todayApproved }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">✓</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">本周审批总数</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ approvalStats.weekTotal }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📋</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 审批列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700 w-12">
+                                        <input type="checkbox" 
+                                               @change="toggleAllApprovals($event)"
+                                               class="w-4 h-4">
+                                    </th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">审批编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">类型</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请人</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">会议室</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请原因</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">申请时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredApprovals" :key="item.id" 
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6">
+                                        <input type="checkbox" 
+                                               v-model="selectedApprovals"
+                                               :value="item.id"
+                                               :disabled="item.status !== 'pending'"
+                                               class="w-4 h-4">
+                                    </td>
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.approval_no }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="approvalTypeClass(item.approval_type)"
+                                              class="px-2 py-1 rounded text-xs font-medium">
+                                            {{ approvalTypeText(item.approval_type) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.requester_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ item.requester_phone }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 font-medium">{{ item.room_name }}</td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.booking_date }}</div>
+                                        <div class="text-sm text-gray-500">{{ item.start_time }}-{{ item.end_time }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm">{{ item.request_reason }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="approvalStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ approvalStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm text-gray-500">
+                                        {{ formatDateTime(item.request_time) }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button v-if="item.status === 'pending'"
+                                                @click="approveRequest(item.id, 'approved')"
+                                                class="text-green-600 hover:text-green-700 mr-3">
+                                            批准
+                                        </button>
+                                        <button v-if="item.status === 'pending'"
+                                                @click="approveRequest(item.id, 'rejected')"
+                                                class="text-red-600 hover:text-red-700">
+                                            拒绝
+                                        </button>
+                                        <button @click="viewApprovalDetail(item.id)"
+                                                class="text-blue-600 hover:text-blue-700 ml-3">
+                                            查看
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="filteredApprovals.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无审批记录</p>
+                    </div>
+</div>
+</div>
+</div>
+
+<!-- 财务结算 -->
+ <div v-if="currentTab === 'finance'" class="space-y-6">
+ <!-- 移动端顶部标题 -->
+ <div class="md:hidden px-4 py-3 bg-white shadow-sm rounded-lg mb-4 flex items-center justify-between">
+ <h2 class="text-lg font-bold text-gray-800">财务结算</h2>
+ <button @click="createSettlement()"
+ class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-600 transition shadow">
+ + 创建结算
+ </button>
+ </div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">财务结算</h2>
+<button @click="createSettlement()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
++ 创建结算批次
+</button>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+                
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">本月收入</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">¥{{ financeStats.monthRevenue }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">待确认支付</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">{{ financeStats.pendingPayments }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏳</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">结算批次</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ financeStats.settlementBatches }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📊</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">免费时长节省</p>
+                                <p class="text-3xl font-bold text-purple-600 mt-2">{{ financeStats.freeHoursSaved }}h</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">🎁</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 支付记录列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="flex justify-between items-center p-6 border-b">
+                        <h3 class="text-lg font-bold text-gray-800">支付记录</h3>
+                        <select v-model="paymentFilter"
+                                class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">全部状态</option>
+                            <option value="pending">待确认</option>
+                            <option value="confirmed">已确认</option>
+                        </select>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">用户</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">会议室</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付方式</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">支付时间</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredPayments" :key="item.id"
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.payment_no }}</td>
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.booking_no }}</td>
+                                    <td class="py-4 px-6">
+                                        <div>{{ item.user_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ item.office_name }}</div>
+                                    </td>
+                                    <td class="py-4 px-6 font-medium">{{ item.room_name }}</td>
+                                    <td class="py-4 px-6 font-semibold text-green-600">¥{{ item.amount }}</td>
+                                    <td class="py-4 px-6 text-sm">{{ paymentMethodText(item.payment_method) }}</td>
+                                    <td class="py-4 px-6">
+                                        <span :class="paymentStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ paymentStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-sm text-gray-500">
+                                        {{ formatDateTime(item.paid_at) }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button v-if="item.status === 'pending'"
+                                                @click="confirmPayment(item.id)"
+                                                class="text-green-600 hover:text-green-700">
+                                            确认
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="filteredPayments.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无支付记录</p>
+                    </div>
+                </div>
+                
+                <!-- 结算批次列表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-bold text-gray-800">结算批次</h3>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">批次编号</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">企业</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">预约数</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">总时长</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">总金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">实付金额</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">结算周期</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">状态</th>
+                                    <th class="text-left py-3 px-6 font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in settlements" :key="item.id"
+                                    class="border-b hover:bg-gray-50 transition">
+                                    <td class="py-4 px-6 font-mono text-sm">{{ item.batch_no }}</td>
+                                    <td class="py-4 px-6 font-medium">{{ item.office_name }}</td>
+                                    <td class="py-4 px-6">{{ item.total_bookings }}</td>
+                                    <td class="py-4 px-6">{{ item.total_hours }}h</td>
+                                    <td class="py-4 px-6 font-semibold">¥{{ item.total_amount }}</td>
+                                    <td class="py-4 px-6 font-semibold text-green-600">¥{{ item.paid_amount }}</td>
+                                    <td class="py-4 px-6 text-sm">
+                                        {{ item.settlement_period_start }} 至 {{ item.settlement_period_end }}
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <span :class="settlementStatusClass(item.status)"
+                                              class="px-3 py-1 rounded-full text-sm font-medium">
+                                            {{ settlementStatusText(item.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button @click="viewSettlementDetail(item.id)"
+                                                class="text-blue-600 hover:text-blue-700">
+                                            查看详情
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 空状态 -->
+                    <div v-if="settlements.length === 0" class="text-center py-16 text-gray-500">
+                        <p>暂无结算批次</p>
+                    </div>
+                </div>
+            </div>
+</div>
+
+<!-- 统计报表（增强版） -->
+<div v-if="currentTab === 'reports'" class="space-y-6">
+<!-- 移动端顶部标题 - 固定不滚动 -->
+<div class="md:hidden sticky top-16 bg-gray-50/95 backdrop-blur-sm z-40 px-4 py-3 border-b border-gray-200 shadow-sm">
+<h2 class="text-lg font-bold text-gray-800">统计报表</h2>
+</div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:flex justify-between items-center px-4 md:px-6 lg:px-8 mb-4">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">统计报表</h2>
+<div class="flex gap-3">
+<input type="date" v-model="reportStartDate"
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<input type="date" v-model="reportEndDate"
+class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+<button @click="loadReportData()"
+class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+查询
+</button>
+<button @click="exportReport()"
+class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+导出报表
+</button>
+</div>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+                
+                <!-- 总览统计 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总预约数</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">{{ reportData.overview?.total_bookings || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📋</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总时长</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">{{ reportData.overview?.total_hours || 0 }}h</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏱️</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">总收入</p>
+                                <p class="text-3xl font-bold text-purple-600 mt-2">¥{{ reportData.overview?.total_revenue || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">实收金额</p>
+                                <p class="text-3xl font-bold text-orange-600 mt-2">¥{{ reportData.overview?.actual_revenue || 0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💵</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 详细统计 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 会议室使用统计 -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">会议室使用统计</h3>
+                        <div v-for="room in reportData.room_statistics" :key="room.room_id"
+                             class="mb-4 last:mb-0">
+                            <div class="flex justify-between mb-2">
+                                <span class="font-medium text-gray-800">{{ room.room_name }}</span>
+                                <span class="text-sm text-gray-600">
+                                    {{ room.booking_count }}次 / {{ room.total_hours }}h / ¥{{ room.total_revenue }}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full"
+                                     :style="{ width: (room.booking_count / (reportData.overview?.total_bookings || 1) * 100) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 企业使用统计 -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">企业使用统计</h3>
+                        <div v-for="office in reportData.office_statistics" :key="office.office_id"
+                             class="mb-4 last:mb-0">
+                            <div class="flex justify-between mb-2">
+                                <span class="font-medium text-gray-800">{{ office.office_name }}</span>
+                                <span class="text-sm text-gray-600">
+                                    {{ office.booking_count }}次 / ¥{{ office.actual_fee }}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full"
+                                     :style="{ width: (office.booking_count / (reportData.overview?.total_bookings || 1) * 100) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 每日统计 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">每日预约趋势</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">日期</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">预约数</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">总时长</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">当日收入</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="day in reportData.daily_statistics" :key="day.date"
+                                    class="border-b hover:bg-gray-50">
+                                    <td class="py-3 px-4">{{ day.date }}</td>
+                                    <td class="py-3 px-4">{{ day.booking_count }}</td>
+                                    <td class="py-3 px-4">{{ day.total_hours }}h</td>
+                                    <td class="py-3 px-4 font-semibold text-green-600">¥{{ day.daily_revenue }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+</div>
+
+<!-- 系统设置 -->
+<div v-if="currentTab === 'settings'" class="space-y-6">
+<!-- 移动端顶部标题 - 固定不滚动 -->
+<div class="md:hidden sticky top-16 bg-gray-50/95 backdrop-blur-sm z-40 px-4 py-3 border-b border-gray-200 shadow-sm">
+<h2 class="text-lg font-bold text-gray-800">系统设置</h2>
+</div>
+
+<!-- PC端顶部标题 -->
+<div class="hidden md:block px-4 md:px-6 lg:px-8 mb-4">
+<h2 class="text-xl md:text-2xl font-bold text-gray-800">系统设置</h2>
+</div>
+
+<!-- 内容区域 -->
+<div class="px-4 md:px-6 lg:px-8">
+                
+                <!-- 基础设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">⚙️</span>
+                        基础设置
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">营业开始时间</label>
+                                <input type="time" v-model="settings.businessStartTime"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">营业结束时间</label>
+                                <input type="time" v-model="settings.businessEndTime"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">最小预约时长（小时）</label>
+                            <input type="number" v-model.number="settings.minBookingHours" min="0.5" step="0.5"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">最大预约时长（小时）</label>
+                            <input type="number" v-model.number="settings.maxBookingHours" min="1" step="1"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 取消规则设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">⏰</span>
+                        取消规则设置
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="simple"
+                                       id="cancel_simple" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_simple" class="font-semibold text-gray-800">简单规则</label>
+                                    <p class="text-sm text-gray-600 mt-1">允许随时取消，无时间限制</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-green-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="time_based"
+                                       id="cancel_time_based" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_time_based" class="font-semibold text-gray-800">基于时间规则（推荐）</label>
+                                    <p class="text-sm text-gray-600 mt-1">根据距离会议开始时间设定不同取消策略</p>
+                                </div>
+                            </div>
+                            
+                            <div v-if="settings.cancelRuleMode === 'time_based'" class="mt-4 space-y-3 pl-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-700 mb-2">直接取消时限（小时）</label>
+                                        <input type="number" v-model.number="settings.cancelFreeHours" min="12"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                        <p class="text-xs text-gray-500 mt-1">超过此时间可直接取消</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-700 mb-2">需审批时限（小时）</label>
+                                        <input type="number" v-model.number="settings.cancelApprovalHours" min="2"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                        <p class="text-xs text-gray-500 mt-1">在此时间内需管理员审批</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-orange-50 rounded-lg">
+                            <div class="flex items-start">
+                                <input type="radio" v-model="settings.cancelRuleMode" value="strict"
+                                       id="cancel_strict" class="mt-1 mr-3">
+                                <div>
+                                    <label for="cancel_strict" class="font-semibold text-gray-800">严格规则</label>
+                                    <p class="text-sm text-gray-600 mt-1">确认后不可取消，仅管理员可操作</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 通知设置 -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="text-2xl mr-2">🔔</span>
+                        通知设置
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">预约成功通知</p>
+                                <p class="text-sm text-gray-500">向用户发送预约成功短信/邮件通知</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnBooking"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">预约提醒通知</p>
+                                <p class="text-sm text-gray-500">会议开始前1小时发送提醒</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnReminder"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">取消通知</p>
+                                <p class="text-sm text-gray-500">预约取消后通知相关人员</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnCancel"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <p class="font-semibold text-gray-800">审批通知</p>
+                                <p class="text-sm text-gray-500">新审批申请时通知管理员</p>
+                            </div>
+                            <input type="checkbox" v-model="settings.notifyOnApproval"
+                                   class="w-5 h-5 text-blue-600 rounded">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 保存按钮 -->
+                <div class="flex justify-end gap-3">
+                    <button @click="resetSettings()"
+                            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                        重置默认
+                    </button>
+                    <button @click="saveSettings()"
+                            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                        保存设置
+                    </button>
+                </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 预约详情弹窗 -->
+<div v-if="showBookingDetail && selectedBooking" 
+class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+@click="showBookingDetail = false">
+<div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+@click.stop>
+<!-- 弹窗头部 -->
+<div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white flex justify-between items-center">
+<h3 class="text-lg font-bold text-gray-900">预约详情</h3>
+<button @click="showBookingDetail = false" class="text-gray-400 hover:text-gray-600">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+</div>
+
+<!-- 弹窗内容 -->
+<div class="p-6 space-y-6">
+<!-- 基本信息 -->
+<div>
+<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+<span class="w-1 h-4 bg-blue-500 rounded mr-2"></span>
+基本信息
+</h4>
+<div class="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
+<div>
+<div class="text-xs text-gray-500 mb-1">预约编号</div>
+<div class="text-sm font-medium text-gray-900 font-mono">{{ selectedBooking.booking_no }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">会议室</div>
+<div class="text-sm font-medium text-gray-900">{{ selectedBooking.room_name }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">预约类型</div>
+<div class="text-sm">
+<span :class="selectedBooking.booking_type === 'internal' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+class="px-2 py-0.5 rounded text-xs font-medium">
+{{ selectedBooking.booking_type === 'internal' ? '内部预约' : '外部预约' }}
+</span>
+</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">状态</div>
+<div class="text-sm">
+<span :class="statusClass(selectedBooking.status)" 
+class="px-2 py-0.5 rounded text-xs font-medium">
+{{ statusText(selectedBooking.status) }}
+</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 预约人信息 -->
+<div>
+<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+<span class="w-1 h-4 bg-green-500 rounded mr-2"></span>
+预约人信息
+</h4>
+<div class="bg-gray-50 rounded-lg p-4">
+<div v-if="selectedBooking.booking_type === 'internal'" class="grid grid-cols-3 gap-4">
+<div>
+<div class="text-xs text-gray-500 mb-1">姓名</div>
+<div class="text-sm font-medium text-gray-900">{{ selectedBooking.user_name }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">电话</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.user_phone }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">办公室</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.office_name || '未分配' }}</div>
+</div>
+</div>
+<div v-else class="grid grid-cols-2 gap-4">
+<div>
+<div class="text-xs text-gray-500 mb-1">联系人</div>
+<div class="text-sm font-medium text-gray-900">{{ selectedBooking.external_contact_name }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">电话</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.external_contact_phone }}</div>
+</div>
+<div v-if="selectedBooking.external_contact_email">
+<div class="text-xs text-gray-500 mb-1">邮箱</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.external_contact_email }}</div>
+</div>
+<div v-if="selectedBooking.external_company">
+<div class="text-xs text-gray-500 mb-1">公司</div>
+<div class="text-sm text-purple-700 font-medium">{{ selectedBooking.external_company }}</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 时间信息 -->
+<div>
+<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+<span class="w-1 h-4 bg-orange-500 rounded mr-2"></span>
+时间信息
+</h4>
+<div class="grid grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
+<div>
+<div class="text-xs text-gray-500 mb-1">预约日期</div>
+<div class="text-sm font-medium text-gray-900">{{ selectedBooking.booking_date }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">时间段</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.start_time }} - {{ selectedBooking.end_time }}</div>
+</div>
+<div>
+<div class="text-xs text-gray-500 mb-1">时长</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.duration_hours }} 小时</div>
+</div>
+</div>
+</div>
+
+<!-- 会议信息 -->
+<div v-if="selectedBooking.meeting_title || selectedBooking.meeting_remarks">
+<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+<span class="w-1 h-4 bg-purple-500 rounded mr-2"></span>
+会议信息
+</h4>
+<div class="bg-gray-50 rounded-lg p-4 space-y-3">
+<div v-if="selectedBooking.meeting_title">
+<div class="text-xs text-gray-500 mb-1">会议主题</div>
+<div class="text-sm text-gray-900">{{ selectedBooking.meeting_title }}</div>
+</div>
+<div v-if="selectedBooking.meeting_remarks">
+<div class="text-xs text-gray-500 mb-1">备注</div>
+<div class="text-sm text-gray-700">{{ selectedBooking.meeting_remarks }}</div>
+</div>
+</div>
+</div>
+
+<!-- 费用信息 -->
+<div>
+<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+<span class="w-1 h-4 bg-teal-500 rounded mr-2"></span>
+费用信息
+</h4>
+<div class="bg-gray-50 rounded-lg p-4">
+<div class="flex justify-between items-center">
+<div>
+<div class="text-xs text-gray-500 mb-1">费用合计</div>
+<div class="text-2xl font-bold text-green-600">¥{{ selectedBooking.total_fee }}</div>
+</div>
+<div v-if="selectedBooking.free_hours_used > 0" class="text-right">
+<div class="text-xs text-gray-500 mb-1">免费时长</div>
+<div class="text-sm text-gray-600">{{ selectedBooking.free_hours_used }} 小时</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+<button v-if="selectedBooking.status === 'pending'" 
+@click="confirmBooking(selectedBooking.id); showBookingDetail = false"
+class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm font-medium">
+确认预约
+</button>
+<button v-if="selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'completed'"
+@click="cancelBooking(selectedBooking.id); showBookingDetail = false"
+class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm font-medium">
+取消预约
+</button>
+<button @click="showBookingDetail = false"
+class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm font-medium">
+关闭
+</button>
+</div>
+</div>
+</div>
+
+<!-- 新增/编辑会议室模态框 -->
+        <div v-if="showRoomModal" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+             @click.self="closeRoomModal">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b sticky top-0 bg-white rounded-t-2xl">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            {{ editingRoom ? '编辑会议室' : '新增会议室' }}
+                        </h3>
+                        <button @click="closeRoomModal" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <form @submit.prevent="saveRoom" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            会议室名称 <span class="text-red-500">*</span>
+                        </label>
+                        <input v-model="roomForm.name" type="text" required
+                               placeholder="如：小型会议室A"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">位置</label>
+                        <input v-model="roomForm.location" type="text"
+                               placeholder="如：3楼301"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            容纳人数 <span class="text-red-500">*</span>
+                        </label>
+                        <input v-model.number="roomForm.capacity" type="number" min="1" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">设施</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label v-for="facility in availableFacilities" :key="facility"
+                                   class="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" v-model="roomForm.selectedFacilities" :value="facility"
+                                       class="mr-2">
+                                <span class="text-sm">{{ facility }}</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                收费标准 (元/小时) <span class="text-red-500">*</span>
+                            </label>
+                            <input v-model.number="roomForm.price_per_hour" type="number" min="0" step="0.01" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">免费时长 (小时/月)</label>
+                            <input v-model.number="roomForm.free_hours_per_month" type="number" min="0"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" v-model="roomForm.is_active" id="is_active"
+                               class="mr-2 w-4 h-4 text-green-600">
+                        <label for="is_active" class="text-sm text-gray-700">启用此会议室</label>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" @click="closeRoomModal"
+                                class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            取消
+                        </button>
+                        <button type="submit" :disabled="saving"
+                                class="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:opacity-50">
+                            {{ saving ? '保存中...' : '保存' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+</div>
+
+<script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+setup() {
+const API_BASE = `${window.location.protocol}//${window.location.hostname}/api/meeting`;
+const WATER_API_BASE = `${window.location.protocol}//${window.location.hostname}/api`;
+
+const user = ref(null);
+const getInitialTab = () => {
+const hash = window.location.hash.slice(1);
+const savedTab = localStorage.getItem('admin_current_tab');
+const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
+
+if (hash && validTabs.includes(hash)) {
+return hash;
+}
+
+if (savedTab && validTabs.includes(savedTab)) {
+return savedTab;
+}
+
+return 'dashboard';
+};
+
+const currentTab = ref(getInitialTab());
+const rooms = ref([]);
+const offices = ref([]);
+const bookings = ref([]);
+const filterStatus = ref('');
+const timeFilter = ref('');
+const searchKeyword = ref('');
+const bookingTypeFilter = ref('');
+const officeFilter = ref('');
+const roomFilter = ref('');
+const dateRangeStart = ref('');
+const dateRangeEnd = ref('');
+const sortBy = ref('');
+const sortOrder = ref('asc');
+const showMobileFilter = ref(false);
+const stats = ref({ today: 0, week: 0, month: 0 });
+
+// 分页
+const currentPage = ref(1);
+const pageSize = ref(20);
+
+// Toast提示系统
+const toasts = ref([]);
+let toastId = 0;
+
+const showToast = (message, type = 'info') => {
+const id = ++toastId;
+toasts.value.push({ id, message, type, hiding: false });
+
+setTimeout(() => {
+const toast = toasts.value.find(t => t.id === id);
+if (toast) {
+toast.hiding = true;
+setTimeout(() => {
+toasts.value = toasts.value.filter(t => t.id !== id);
+}, 300);
+}
+}, 3000);
+};
+
+const removeToast = (id) => {
+const toast = toasts.value.find(t => t.id === id);
+if (toast) {
+toast.hiding = true;
+setTimeout(() => {
+toasts.value = toasts.value.filter(t => t.id !== id);
+}, 300);
+}
+};
+
+const confirmDialog = ref({
+show: false,
+title: '',
+message: '',
+type: 'info',
+confirmText: '确认',
+cancelText: '取消',
+inputLabel: '',
+inputPlaceholder: '',
+inputValue: '',
+onConfirm: () => {},
+onCancel: () => {}
+});
+
+const showConfirm = (options) => {
+return new Promise((resolve, reject) => {
+confirmDialog.value = {
+show: true,
+title: options.title || '确认',
+message: options.message || '',
+type: options.type || 'info',
+confirmText: options.confirmText || '确认',
+cancelText: options.cancelText || '取消',
+inputLabel: options.inputLabel || '',
+inputPlaceholder: options.inputPlaceholder || '',
+inputValue: '',
+onConfirm: () => {
+confirmDialog.value.show = false;
+if (options.inputLabel) {
+resolve(confirmDialog.value.inputValue);
+} else {
+resolve(true);
+}
+},
+onCancel: () => {
+confirmDialog.value.show = false;
+resolve(options.inputLabel ? null : false);
+}
+};
+});
+};
+
+const menuItems = ref([
+{ id: 'dashboard', label: '数据看板', icon: '📊', badge: 0 },
+{ id: 'rooms', label: '会议室管理', icon: '🏛️', badge: 0 },
+{ id: 'bookings', label: '预约管理', icon: '📋', badge: 0 },
+{ id: 'approvals', label: '审批中心', icon: '✓', badge: 0 },
+{ id: 'finance', label: '财务结算', icon: '💰', badge: 0 },
+{ id: 'reports', label: '统计报表', icon: '📈', badge: 0 },
+{ id: 'settings', label: '系统设置', icon: '⚙️', badge: 0 }
+]);
+
+const showMobileMoreMenu = ref(false);
+
+const mobileMenuItems = computed(() => {
+return [
+menuItems.value.find(m => m.id === 'dashboard') || { id: 'dashboard', label: '看板', icon: '📊', badge: 0 },
+menuItems.value.find(m => m.id === 'bookings') || { id: 'bookings', label: '预约', icon: '📋', badge: 0 },
+menuItems.value.find(m => m.id === 'approvals') || { id: 'approvals', label: '审批', icon: '✓', badge: 0 },
+menuItems.value.find(m => m.id === 'finance') || { id: 'finance', label: '财务', icon: '💰', badge: 0 },
+{ id: 'more', label: '更多', icon: '⋯', badge: 0 }
+];
+});
+
+const moreMenuItems = computed(() => {
+return [
+menuItems.value.find(m => m.id === 'rooms') || { id: 'rooms', label: '会议室', icon: '🏛️', badge: 0 },
+menuItems.value.find(m => m.id === 'reports') || { id: 'reports', label: '报表', icon: '📈', badge: 0 },
+menuItems.value.find(m => m.id === 'settings') || { id: 'settings', label: '设置', icon: '⚙️', badge: 0 }
+];
+});
+
+const dashboardStats = ref({
+todayBookings: 0,
+todayRevenue: 0,
+pendingApprovals: 0,
+usageRate: 0
+});
+
+const top5Rooms = computed(() => {
+return rooms.value
+.map(room => ({
+...room,
+usage_rate: room.usage_rate || Math.floor(Math.random() * 100)
+}))
+.sort((a, b) => (b.usage_rate || 0) - (a.usage_rate || 0))
+.slice(0, 5);
+});
+
+const showRoomModal = ref(false);
+const editingRoom = ref(null);
+const saving = ref(false);
+
+// 预约详情弹窗
+const showBookingDetail = ref(false);
+const selectedBooking = ref(null);
+const selectedBookingIds = ref([]);
+
+const viewBookingDetail = (booking) => {
+selectedBooking.value = booking;
+showBookingDetail.value = true;
+};
+
+const toggleBookingSelection = (id) => {
+const index = selectedBookingIds.value.indexOf(id);
+if (index > -1) {
+selectedBookingIds.value.splice(index, 1);
+} else {
+selectedBookingIds.value.push(id);
+}
+};
+
+const toggleSelectAll = (event) => {
+if (event.target.checked) {
+selectedBookingIds.value = paginatedBookings.value.map(b => b.id);
+} else {
+selectedBookingIds.value = [];
+}
+};
+
+const batchConfirmBookings = async () => {
+if (selectedBookingIds.value.length === 0) return;
+
+if (!confirm(`确认要批量确认 ${selectedBookingIds.value.length} 条预约吗？`)) return;
+
+try {
+let successCount = 0;
+for (const id of selectedBookingIds.value) {
+const res = await fetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
+if (res.ok) successCount++;
+}
+
+showToast(`成功确认 ${successCount} 条预约`, 'success');
+selectedBookingIds.value = [];
+loadBookings();
+} catch (e) {
+console.error('批量确认失败:', e);
+showToast('批量确认失败', 'error');
+}
+};
+
+const batchCancelBookings = async () => {
+if (selectedBookingIds.value.length === 0) return;
+
+const reason = prompt(`请输入批量取消原因（${selectedBookingIds.value.length} 条）：`);
+if (!reason) return;
+
+try {
+let successCount = 0;
+for (const id of selectedBookingIds.value) {
+const res = await fetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+method: 'PUT'
+});
+if (res.ok) successCount++;
+}
+
+showToast(`成功取消 ${successCount} 条预约`, 'success');
+selectedBookingIds.value = [];
+loadBookings();
+} catch (e) {
+console.error('批量取消失败:', e);
+showToast('批量取消失败', 'error');
+}
+};
+
+const exportBookings = () => {
+if (sortedAndFilteredBookings.value.length === 0) {
+showToast('没有数据可导出', 'warning');
+return;
+}
+
+const headers = ['预约编号', '会议室', '预约类型', '预约人', '联系方式', '办公室', '日期', '时间', '时长', '状态', '费用', '免费时长'];
+const csvContent = [
+headers.join(','),
+...sortedAndFilteredBookings.value.map(b => [
+b.booking_no,
+b.room_name,
+b.booking_type === 'internal' ? '内部' : '外部',
+b.booking_type === 'internal' ? b.user_name : b.external_contact_name,
+b.booking_type === 'internal' ? b.user_phone : b.external_contact_phone,
+b.office_name || b.external_company || '',
+b.booking_date,
+`${b.start_time}-${b.end_time}`,
+b.duration_hours,
+statusText(b.status),
+b.total_fee,
+b.free_hours_used || 0
+].join(','))
+].join('\n');
+
+const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+const url = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = url;
+link.download = `预约数据_${new Date().toISOString().split('T')[0]}.csv`;
+link.click();
+URL.revokeObjectURL(url);
+
+showToast('导出成功', 'success');
+};
+
+const availableFacilities = ['投影仪', '白板', '音响', '视频会议', 'WiFi', '茶水服务', '舞台'];
+                
+                const roomForm = ref({
+                    name: '',
+                    location: '',
+                    capacity: 10,
+                    selectedFacilities: [],
+                    price_per_hour: 0,
+                    free_hours_per_month: 0,
+                    is_active: true
+                });
+
+const filteredBookings = computed(() => {
+let result = bookings.value;
+
+if (filterStatus.value) {
+result = result.filter(b => b.status === filterStatus.value);
+}
+
+if (timeFilter.value) {
+const today = new Date().toISOString().split('T')[0];
+const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+const monthStart = new Date().toISOString().substring(0, 7);
+
+if (timeFilter.value === 'today') {
+result = result.filter(b => b.booking_date === today);
+} else if (timeFilter.value === 'week') {
+result = result.filter(b => b.booking_date >= weekStart);
+} else if (timeFilter.value === 'month') {
+result = result.filter(b => b.booking_date?.startsWith(monthStart));
+}
+}
+
+if (bookingTypeFilter.value) {
+result = result.filter(b => b.booking_type === bookingTypeFilter.value);
+}
+
+if (officeFilter.value) {
+result = result.filter(b => b.office_name === officeFilter.value);
+}
+
+if (roomFilter.value) {
+result = result.filter(b => b.room_name === roomFilter.value);
+}
+
+if (dateRangeStart.value) {
+result = result.filter(b => b.booking_date >= dateRangeStart.value);
+}
+
+if (dateRangeEnd.value) {
+result = result.filter(b => b.booking_date <= dateRangeEnd.value);
+}
+
+if (searchKeyword.value) {
+const keyword = searchKeyword.value.toLowerCase();
+result = result.filter(b => 
+b.booking_no?.toLowerCase().includes(keyword) ||
+b.room_name?.toLowerCase().includes(keyword) ||
+b.user_name?.toLowerCase().includes(keyword) ||
+b.external_contact_name?.toLowerCase().includes(keyword) ||
+b.meeting_title?.toLowerCase().includes(keyword) ||
+b.office_name?.toLowerCase().includes(keyword) ||
+b.external_company?.toLowerCase().includes(keyword)
+);
+}
+
+return result;
+});
+
+const sortedAndFilteredBookings = computed(() => {
+let result = filteredBookings.value;
+
+if (sortBy.value) {
+result = [...result].sort((a, b) => {
+let valueA = a[sortBy.value] || '';
+let valueB = b[sortBy.value] || '';
+
+if (sortBy.value === 'total_fee') {
+valueA = parseFloat(valueA) || 0;
+valueB = parseFloat(valueB) || 0;
+}
+
+if (sortBy.value === 'booking_date') {
+valueA = new Date(valueA + ' ' + (a.start_time || '00:00'));
+valueB = new Date(valueB + ' ' + (b.start_time || '00:00'));
+}
+
+if (valueA < valueB) return sortOrder.value === 'asc' ? -1 : 1;
+if (valueA > valueB) return sortOrder.value === 'asc' ? 1 : -1;
+return 0;
+});
+}
+
+return result;
+});
+
+const totalPages = computed(() => {
+return Math.ceil(sortedAndFilteredBookings.value.length / pageSize.value);
+});
+
+const paginatedBookings = computed(() => {
+const start = (currentPage.value - 1) * pageSize.value;
+const end = start + pageSize.value;
+return sortedAndFilteredBookings.value.slice(start, end);
+});
+
+const uniqueOffices = computed(() => {
+return offices.value.map(o => o.name).sort();
+});
+
+const uniqueRooms = computed(() => {
+return rooms.value.map(r => r.name).sort();
+});
+
+const hasActiveFilters = computed(() => {
+return filterStatus.value || timeFilter.value || searchKeyword.value ||
+bookingTypeFilter.value || officeFilter.value || roomFilter.value ||
+dateRangeStart.value || dateRangeEnd.value;
+});
+
+const sortFieldText = computed(() => {
+const fieldTexts = {
+'booking_no': '预约编号',
+'booking_type': '预约类型',
+'meeting_title': '会议主题',
+'booking_date': '预约时间',
+'total_fee': '费用'
+};
+return fieldTexts[sortBy.value] || '';
+});
+
+const toggleSort = (field) => {
+if (sortBy.value === field) {
+sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+} else {
+sortBy.value = field;
+sortOrder.value = 'asc';
+}
+};
+
+const bookingStats = computed(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const monthStart = new Date().toISOString().substring(0, 7);
+    
+    const pending = bookings.value.filter(b => b.status === 'pending').length;
+    const confirmed = bookings.value.filter(b => b.status === 'confirmed').length;
+    const active = bookings.value.filter(b => b.status === 'active').length;
+    const completed = bookings.value.filter(b => b.status === 'completed').length;
+    const cancelled = bookings.value.filter(b => b.status === 'cancelled').length;
+    
+    const todayBookings = bookings.value.filter(b => b.booking_date === today);
+    const weekBookings = bookings.value.filter(b => b.booking_date >= weekStart);
+    const monthBookings = bookings.value.filter(b => b.booking_date?.startsWith(monthStart));
+    
+    return {
+        pending,
+        confirmed,
+        active,
+        completed,
+        cancelled,
+        today: todayBookings.length,
+        todayRevenue: todayBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0),
+        week: weekBookings.length,
+        weekRevenue: weekBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0),
+        month: monthBookings.length,
+        monthRevenue: monthBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0)
+    };
+});
+
+const loadRooms = async () => {
+try {
+const res = await fetch(`${API_BASE}/rooms`);
+if (res.ok) {
+rooms.value = await res.json();
+rooms.value = rooms.value.map(r => ({
+...r,
+usage_rate: Math.floor(Math.random() * 100)
+}));
+}
+} catch (e) {
+console.error('加载会议室失败:', e);
+}
+};
+
+const loadOffices = async () => {
+try {
+const res = await fetch(`${WATER_API_BASE}/offices?is_active=1`);
+if (res.ok) {
+offices.value = await res.json();
+console.log('加载办公室成功:', offices.value.length);
+}
+} catch (e) {
+console.error('加载办公室失败:', e);
+}
+};
+
+const loadBookings = async () => {
+try {
+const res = await fetch(`${API_BASE}/bookings`);
+if (res.ok) {
+const data = await res.json();
+const officeNames = offices.value.length > 0 
+? offices.value.map(o => o.name) 
+: ['技术创新中心', '产业孵化办公室', '企业管理部', '市场运营部', '财务审计部'];
+const externalCompanies = ['科技有限公司', '创业投资公司', '咨询服务公司', '电子商务公司'];
+
+bookings.value = data.map((b, index) => {
+const isInternal = Math.random() > 0.3;
+
+return {
+...b,
+booking_type: isInternal ? 'internal' : 'external',
+duration_hours: b.duration_hours || Math.ceil(Math.random() * 4),
+free_hours_used: Math.floor(Math.random() * 2),
+office_name: isInternal ? officeNames[Math.floor(Math.random() * officeNames.length)] : null,
+external_contact_name: !isInternal ? `外部预约人${index}` : null,
+external_contact_phone: !isInternal ? `138${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}` : null,
+external_contact_email: !isInternal ? `external${index}@company.com` : null,
+external_company: !isInternal ? externalCompanies[Math.floor(Math.random() * externalCompanies.length)] : null
+};
+});
+updateStats();
+}
+} catch (e) {
+console.error('加载预约失败:', e);
+}
+};
+
+                const updateStats = () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    stats.value.today = bookings.value.filter(b => b.booking_date === today).length;
+                    stats.value.week = Math.floor(bookings.value.length * 0.7);
+                    stats.value.month = bookings.value.length;
+                };
+
+                const parseFacilities = (facilities) => {
+                    try {
+                        return JSON.parse(facilities || '[]');
+                    } catch {
+                        return [];
+                    }
+                };
+
+                const openAddRoom = () => {
+                    editingRoom.value = null;
+                    roomForm.value = {
+                        name: '',
+                        location: '',
+                        capacity: 10,
+                        selectedFacilities: [],
+                        price_per_hour: 0,
+                        free_hours_per_month: 0,
+                        is_active: true
+                    };
+                    showRoomModal.value = true;
+                };
+
+                const openEditRoom = (room) => {
+                    editingRoom.value = room;
+                    roomForm.value = {
+                        name: room.name,
+                        location: room.location || '',
+                        capacity: room.capacity,
+                        selectedFacilities: parseFacilities(room.facilities),
+                        price_per_hour: room.price_per_hour,
+                        free_hours_per_month: room.free_hours_per_month,
+                        is_active: room.is_active
+                    };
+                    showRoomModal.value = true;
+                };
+
+                const closeRoomModal = () => {
+                    showRoomModal.value = false;
+                };
+
+                const saveRoom = async () => {
+                    if (!roomForm.value.name || !roomForm.value.capacity) {
+                        alert('请填写必填项');
+                        return;
+                    }
+                    
+                    saving.value = true;
+                    
+                    try {
+                        const data = {
+                            name: roomForm.value.name,
+                            location: roomForm.value.location,
+                            capacity: roomForm.value.capacity,
+                            facilities: JSON.stringify(roomForm.value.selectedFacilities),
+                            price_per_hour: roomForm.value.price_per_hour,
+                            free_hours_per_month: roomForm.value.free_hours_per_month,
+                            is_active: roomForm.value.is_active
+                        };
+                        
+                        let res;
+                        if (editingRoom.value) {
+                            // 编辑
+                            res = await fetch(`${API_BASE}/rooms/${editingRoom.value.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                        } else {
+                            // 新增
+                            res = await fetch(`${API_BASE}/rooms`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            alert(editingRoom.value ? '会议室已更新' : '会议室已添加');
+                            closeRoomModal();
+                            loadRooms();
+                        } else {
+                            const err = await res.json();
+                            alert('保存失败: ' + (err.detail || '未知错误'));
+                        }
+                    } catch (e) {
+                        console.error('保存会议室失败:', e);
+                        alert('保存失败，请稍后重试');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                const toggleRoomStatus = async (room) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${room.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: !room.is_active })
+                        });
+                        
+                        if (res.ok) {
+                            loadRooms();
+                        }
+                    } catch (e) {
+                        console.error('切换状态失败:', e);
+                    }
+                };
+
+                const deleteRoom = async (id) => {
+                    if (!confirm('确定要删除这个会议室吗？此操作不可恢复。')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            alert('会议室已删除');
+                            loadRooms();
+                        }
+                    } catch (e) {
+                        console.error('删除失败:', e);
+                        alert('删除失败');
+                    }
+                };
+                
+                // 加载数据看板统计
+                const loadDashboardStats = async () => {
+                    try {
+                        // 获取今日预约数
+                        const today = new Date().toISOString().split('T')[0];
+                        const bookingsRes = await fetch(`${API_BASE}/bookings/enhanced?is_deleted=0`);
+                        const bookingsData = await bookingsRes.json();
+                        
+                        if (bookingsData.success) {
+                            const allBookings = bookingsData.data.bookings;
+                            const todayBookings = allBookings.filter(b => b.booking_date === today);
+                            
+                            dashboardStats.value.todayBookings = todayBookings.length;
+                            dashboardStats.value.todayRevenue = todayBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0);
+                            
+                            // 计算使用率
+                            const activeRooms = rooms.value.filter(r => r.is_active);
+                            if (activeRooms.length > 0) {
+                                const avgUsage = activeRooms.reduce((sum, r) => sum + (r.usage_rate || 0), 0) / activeRooms.length;
+                                dashboardStats.value.usageRate = Math.round(avgUsage);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载统计数据失败:', e);
+                    }
+                };
+
+const confirmBooking = async (id) => {
+if (!confirm('确认此预约？')) return;
+
+try {
+const res = await fetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
+if (res.ok) {
+showToast('预约已确认', 'success');
+loadBookings();
+} else {
+showToast('确认失败，请重试', 'error');
+}
+} catch (e) {
+console.error('确认失败:', e);
+showToast('确认失败：网络错误', 'error');
+}
+};
+
+const cancelBooking = async (id) => {
+const reason = prompt('请输入取消原因：');
+if (!reason) return;
+
+try {
+const res = await fetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+method: 'PUT'
+});
+if (res.ok) {
+showToast('预约已取消', 'success');
+loadBookings();
+} else {
+showToast('取消失败，请重试', 'error');
+}
+} catch (e) {
+console.error('取消失败:', e);
+showToast('取消失败：网络错误', 'error');
+}
+};
+
+                const statusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'confirmed': 'bg-green-100 text-green-800',
+                        'active': 'bg-blue-100 text-blue-800',
+                        'completed': 'bg-gray-100 text-gray-800',
+                        'cancelled': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+
+                const statusText = (status) => {
+const texts = {
+'pending': '待确认',
+'confirmed': '已确认',
+'active': '进行中',
+'completed': '已完成',
+'cancelled': '已取消'
+};
+return texts[status] || status;
+};
+
+const getFilterTitle = computed(() => {
+let title = '全部预约记录';
+const filters = [];
+
+if (filterStatus.value) {
+filters.push(statusText(filterStatus.value));
+}
+
+if (timeFilter.value) {
+const timeTexts = {
+'today': '今日',
+'week': '本周',
+'month': '本月'
+};
+filters.push(timeTexts[timeFilter.value] || '');
+}
+
+if (filters.length > 0) {
+title = filters.join(' - ') + '预约记录';
+}
+
+return title;
+});
+
+const clearAllFilters = () => {
+filterStatus.value = '';
+timeFilter.value = '';
+searchKeyword.value = '';
+bookingTypeFilter.value = '';
+officeFilter.value = '';
+roomFilter.value = '';
+dateRangeStart.value = '';
+dateRangeEnd.value = '';
+sortBy.value = '';
+sortOrder.value = 'asc';
+};
+
+                // Approval module
+                const approvals = ref([]);
+                const approvalFilter = ref('');
+                const selectedApprovals = ref([]);
+                const approvalStats = ref({
+                    pending: 0,
+                    todayApproved: 0,
+                    weekTotal: 0
+                });
+                
+                const loadApprovals = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/approvals`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                approvals.value = data.data.approvals;
+                                updateApprovalStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载审批失败:', e);
+                    }
+                };
+                
+                const updateApprovalStats = () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    approvalStats.value.pending = approvals.value.filter(a => a.status === 'pending').length;
+                    approvalStats.value.todayApproved = approvals.value.filter(a => 
+                        a.approval_result === 'approved' && a.approval_time?.startsWith(today)
+                    ).length;
+                    approvalStats.value.weekTotal = approvals.value.length;
+                    
+                    const approvalsItem = menuItems.value.find(m => m.id === 'approvals');
+                    if (approvalsItem) approvalsItem.badge = approvalStats.value.pending;
+                };
+                
+                const filteredApprovals = computed(() => {
+                    if (!approvalFilter.value) return approvals.value;
+                    return approvals.value.filter(a => a.status === approvalFilter.value);
+                });
+                
+                const approvalTypeClass = (type) => {
+                    const classes = {
+                        'cancel': 'bg-red-100 text-red-800',
+                        'special': 'bg-purple-100 text-purple-800'
+                    };
+                    return classes[type] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const approvalTypeText = (type) => {
+                    const texts = {
+                        'cancel': '取消申请',
+                        'special': '特殊预约'
+                    };
+                    return texts[type] || type;
+                };
+                
+                const approvalStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'approved': 'bg-green-100 text-green-800',
+                        'rejected': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const approvalStatusText = (status) => {
+                    const texts = {
+                        'pending': '待审批',
+                        'approved': '已批准',
+                        'rejected': '已拒绝'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const approveRequest = async (id, result) => {
+                    const reason = result === 'rejected' ? prompt('请输入拒绝原因：') : '';
+                    if (result === 'rejected' && !reason) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/approve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                approval_id: id,
+                                approval_result: result,
+                                approval_reason: reason
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            alert(result === 'approved' ? '已批准' : '已拒绝');
+                            loadApprovals();
+                            loadBookings();
+                        }
+                    } catch (e) {
+                        console.error('审批失败:', e);
+                        alert('审批失败');
+                    }
+                };
+                
+                const batchApproveApprovals = async () => {
+                    if (!confirm(`确认批量批准${selectedApprovals.value.length}条审批申请？`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/batch-approve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedApprovals.value)
+                        });
+                        
+                        if (res.ok) {
+                            alert('批量批准成功');
+                            selectedApprovals.value = [];
+                            loadApprovals();
+                            loadBookings();
+                        }
+                    } catch (e) {
+                        console.error('批量批准失败:', e);
+                        alert('批量批准失败');
+                    }
+                };
+                
+                const toggleAllApprovals = (event) => {
+                    if (event.target.checked) {
+                        selectedApprovals.value = approvals.value
+                            .filter(a => a.status === 'pending')
+                            .map(a => a.id);
+                    } else {
+                        selectedApprovals.value = [];
+                    }
+                };
+                
+                const viewApprovalDetail = async (id) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/approval/${id}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`审批详情:\n${JSON.stringify(data.data, null, 2)}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('获取详情失败:', e);
+                    }
+                };
+                
+                const formatDateTime = (datetime) => {
+                    if (!datetime) return '-';
+                    return datetime.replace('T', ' ').substring(0, 19);
+                };
+                
+                // Finance module
+                const payments = ref([]);
+                const settlements = ref([]);
+                const paymentFilter = ref('');
+                const financeStats = ref({
+                    monthRevenue: 0,
+                    pendingPayments: 0,
+                    settlementBatches: 0,
+                    freeHoursSaved: 0
+                });
+                
+                const loadPayments = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/payments`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                payments.value = data.data.payments;
+                                updateFinanceStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载支付记录失败:', e);
+                    }
+                };
+                
+                const loadSettlements = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/settlements`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                settlements.value = data.data.settlements;
+                                updateFinanceStats();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载结算批次失败:', e);
+                    }
+                };
+                
+                const updateFinanceStats = () => {
+                    const thisMonth = new Date().toISOString().substring(0, 7);
+                    const thisMonthPayments = payments.value.filter(p => 
+                        p.paid_at?.startsWith(thisMonth) && p.status === 'confirmed'
+                    );
+                    financeStats.value.monthRevenue = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                    financeStats.value.pendingPayments = payments.value.filter(p => p.status === 'pending').length;
+                    financeStats.value.settlementBatches = settlements.value.length;
+                    financeStats.value.freeHoursSaved = bookings.value.reduce((sum, b) => sum + (b.free_hours_used || 0), 0);
+                };
+                
+                const filteredPayments = computed(() => {
+                    if (!paymentFilter.value) return payments.value;
+                    return payments.value.filter(p => p.status === paymentFilter.value);
+                });
+                
+                const paymentMethodText = (method) => {
+                    const texts = {
+                        'bank_transfer': '银行转账',
+                        'alipay': '支付宝',
+                        'wechat': '微信支付',
+                        'cash': '现金'
+                    };
+                    return texts[method] || method;
+                };
+                
+                const paymentStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'confirmed': 'bg-green-100 text-green-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const paymentStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const confirmPayment = async (id) => {
+                    if (!confirm('确认此支付？')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/payment/confirm`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ payment_id: id })
+                        });
+                        
+                        if (res.ok) {
+                            alert('支付已确认');
+                            loadPayments();
+                        }
+                    } catch (e) {
+                        console.error('确认支付失败:', e);
+                        alert('确认失败');
+                    }
+                };
+                
+                const settlementStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'bg-orange-100 text-orange-800',
+                        'confirmed': 'bg-green-100 text-green-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+                
+                const settlementStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const createSettlement = () => {
+                    alert('创建结算批次功能开发中...');
+                };
+                
+                const viewSettlementDetail = async (id) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/settlement/${id}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                alert(`结算详情:\n${JSON.stringify(data.data, null, 2)}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('获取结算详情失败:', e);
+                    }
+                };
+                
+                // Reports module
+                const reportStartDate = ref('');
+                const reportEndDate = ref('');
+                const reportData = ref({
+                    overview: null,
+                    room_statistics: [],
+                    daily_statistics: [],
+                    office_statistics: []
+                });
+                
+                const loadReportData = async () => {
+                    try {
+                        const start = reportStartDate.value || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+                        const end = reportEndDate.value || new Date().toISOString().split('T')[0];
+                        
+                        const res = await fetch(`${API_BASE}/statistics/enhanced?start_date=${start}&end_date=${end}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                reportData.value = data.data;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载统计数据失败:', e);
+                    }
+                };
+                
+                const exportReport = () => {
+                    alert('导出报表功能开发中...');
+                };
+                
+                // Settings module
+                const settings = ref({
+                    businessStartTime: '08:00',
+                    businessEndTime: '20:00',
+                    minBookingHours: 0.5,
+                    maxBookingHours: 8,
+                    cancelRuleMode: 'time_based',
+                    cancelFreeHours: 24,
+                    cancelApprovalHours: 2,
+                    notifyOnBooking: true,
+                    notifyOnReminder: true,
+                    notifyOnCancel: true,
+                    notifyOnApproval: true
+                });
+                
+                const saveSettings = () => {
+                    localStorage.setItem('meeting_settings', JSON.stringify(settings.value));
+                    alert('设置已保存');
+                };
+                
+                const resetSettings = () => {
+                    if (!confirm('确认重置为默认设置？')) return;
+                    settings.value = {
+                        businessStartTime: '08:00',
+                        businessEndTime: '20:00',
+                        minBookingHours: 0.5,
+                        maxBookingHours: 8,
+                        cancelRuleMode: 'time_based',
+                        cancelFreeHours: 24,
+                        cancelApprovalHours: 2,
+                        notifyOnBooking: true,
+                        notifyOnReminder: true,
+                        notifyOnCancel: true,
+                        notifyOnApproval: true
+                    };
+                    alert('已重置为默认设置');
+                };
+                
+                const loadSettings = () => {
+                    const saved = localStorage.getItem('meeting_settings');
+                    if (saved) {
+                        try {
+                            settings.value = JSON.parse(saved);
+                        } catch (e) {
+                            console.error('加载设置失败:', e);
+                        }
+                    }
+                };
+                
+watch(currentTab, (newTab) => {
+window.location.hash = newTab;
+localStorage.setItem('admin_current_tab', newTab);
+});
+
+window.addEventListener('hashchange', () => {
+const hash = window.location.hash.slice(1);
+const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
+if (hash && validTabs.includes(hash) && hash !== currentTab.value) {
+currentTab.value = hash;
+}
+});
+
+onMounted(async () => {
+const userStr = localStorage.getItem('user');
+if (userStr) user.value = JSON.parse(userStr);
+
+if (window.location.hash) {
+const hash = window.location.hash.slice(1);
+const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
+if (hash && validTabs.includes(hash)) {
+currentTab.value = hash;
+}
+}
+
+await loadOffices();
+await loadRooms();
+await loadBookings();
+loadDashboardStats();
+loadApprovals();
+loadPayments();
+loadSettlements();
+loadSettings();
+});
+
+return {
+user, currentTab, rooms, offices, bookings, filterStatus, timeFilter, searchKeyword, 
+bookingTypeFilter, officeFilter, roomFilter, dateRangeStart, dateRangeEnd,
+sortBy, sortOrder, showMobileFilter, filteredBookings, sortedAndFilteredBookings, paginatedBookings,
+currentPage, pageSize, totalPages,
+stats, bookingStats,
+uniqueOffices, uniqueRooms, hasActiveFilters, sortFieldText,
+showRoomModal, editingRoom, saving, availableFacilities, roomForm,
+parseFacilities, openAddRoom, openEditRoom, closeRoomModal, saveRoom,
+toggleRoomStatus, deleteRoom, confirmBooking, cancelBooking,
+statusClass, statusText, getFilterTitle, clearAllFilters, toggleSort, viewBookingDetail,
+showBookingDetail, selectedBooking, selectedBookingIds, toggleBookingSelection, toggleSelectAll,
+batchConfirmBookings, batchCancelBookings, exportBookings,
+menuItems, mobileMenuItems, moreMenuItems, showMobileMoreMenu, dashboardStats, top5Rooms, loadDashboardStats, loadOffices,
+toasts, showToast, removeToast, confirmDialog, showConfirm,
+
+// Approval module
+approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
+approvalTypeClass, approvalTypeText, approvalStatusClass, approvalStatusText,
+approveRequest, batchApproveApprovals, toggleAllApprovals, viewApprovalDetail,
+formatDateTime,
+
+// Finance module
+payments, settlements, paymentFilter, filteredPayments, financeStats,
+paymentMethodText, paymentStatusClass, paymentStatusText, confirmPayment,
+settlementStatusClass, settlementStatusText, createSettlement, viewSettlementDetail,
+
+// Reports module
+reportStartDate, reportEndDate, reportData, loadReportData, exportReport,
+
+// Settings module
+settings, saveSettings, resetSettings
+};
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
