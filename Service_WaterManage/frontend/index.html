@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>云协同创新空间用水系统</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
     <script src="vue.global.js?v=20260330"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -30,6 +31,67 @@
         
         .tab-btn { padding: 12px 20px; font-weight: 500; color: #6B7280; border-bottom: 2px solid transparent; }
         .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; }
+        
+        .home-btn {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .home-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        
+        .home-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .home-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .home-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .home-btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .home-btn-icon {
+            font-size: 16px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .home-btn:hover .home-btn-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
         
         .status-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
         .status-pending { background: #FEF3C7; color: #92400E; }
@@ -79,6 +141,23 @@
             header h1 {
                 font-size: 15px !important;
                 line-height: 1.3;
+            }
+            
+            /* Home按钮移动端优化 - 增强可见性 */
+            .home-btn {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 !important;
+                border-width: 2px !important;
+                background: rgba(255, 255, 255, 0.25) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+            }
+            .home-btn-icon {
+                font-size: 20px !important;
+            }
+            .home-btn:active {
+                background: rgba(255, 255, 255, 0.35) !important;
+                transform: scale(0.95) !important;
             }
             
             /* Tab 优化 */
@@ -270,13 +349,21 @@
     <div id="loading"><div class="spinner"></div></div>
     
     <div id="app" v-cloak>
-        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-2.5 sm:px-4 sm:py-3 text-white">
+        <header class="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-2.5 sm:px-4 sm:py-3 text-white shadow-lg">
             <div class="flex items-center justify-between">
                 <h1 class="text-base sm:text-lg font-bold truncate">水站管理系统</h1>
-                <button @click="showOfficeSettings = true" class="bg-white/20 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-transform">
-                    <i class="fas fa-cog"></i>
-                    <span class="hidden xs:inline max-w-[60px] sm:max-w-[80px] truncate">设置</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <a href="/service/home.html" class="home-btn rounded-xl text-xs sm:text-sm font-medium" title="返回首页">
+                        <div class="home-btn-content">
+                            <i class="fas fa-home home-btn-icon"></i>
+                            <span class="hidden sm:inline ml-1">返回首页</span>
+                        </div>
+                    </a>
+                    <button @click="showOfficeSettings = true" class="bg-white/20 hover:bg-white/30 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md">
+                        <i class="fas fa-cog"></i>
+                        <span class="hidden xs:inline max-w-[60px] sm:max-w-[80px] truncate">设置</span>
+                    </button>
+                </div>
             </div>
         </header>
         

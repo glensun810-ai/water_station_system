@@ -15,11 +15,8 @@ import os
 
 router = APIRouter()
 
-# 修复数据库路径 - 指向正确的会议室数据库
-DATABASE_URL = os.path.join(
-    os.path.dirname(__file__), "../../Service_MeetingRoom/backend/meeting.db"
-)
-DATABASE_URL = os.path.abspath(DATABASE_URL)
+# 数据库路径 - 部署后数据库在backend目录下
+DATABASE_URL = os.path.join(os.path.dirname(__file__), "meeting.db")
 
 
 def get_db():
