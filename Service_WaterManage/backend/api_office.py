@@ -32,7 +32,7 @@ class OfficeBase(BaseModel):
 
 
 class OfficeCreate(OfficeBase):
-    pass
+    create_leader_account: bool = False
 
 
 class OfficeUpdate(BaseModel):
@@ -40,10 +40,12 @@ class OfficeUpdate(BaseModel):
     room_number: Optional[str] = None
     description: Optional[str] = None
     leader_name: Optional[str] = None
+    leader_phone: Optional[str] = None
     water_user_count: Optional[int] = None
     is_common: Optional[int] = None
     is_active: Optional[int] = None
-    super_admin_id: Optional[int] = None
+    primary_admin_id: Optional[int] = None
+    create_leader_account: bool = False
 
 
 class OfficeResponse(OfficeBase):
@@ -52,6 +54,10 @@ class OfficeResponse(OfficeBase):
     is_common: int = 1
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    user_count: int = 0
+    primary_admin_id: Optional[int] = None
+    primary_admin_name: Optional[str] = None
+    leader_phone: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -163,61 +169,81 @@ def get_offices(
     - **limit**: 返回记录数限制
     - **is_active**: 筛选启用/禁用的办公室
     """
-    # 动态导入 User 模型
-    import main
+    try:
+        # 动态导入 User 模型
+        import main
 
-    query = db.query(Office)
+        query = db.query(Office)
 
-    if is_active is not None:
-        query = query.filter(Office.is_active == is_active)
+        if is_active is not None:
+            query = query.filter(Office.is_active == is_active)
 
-    offices = query.offset(skip).limit(limit).all()
+        offices = query.offset(skip).limit(limit).all()
 
-    # 为每个办公室添加实际用户数（通过 department 匹配）
-    result = []
-    for office in offices:
-        # 获取超级管理员信息
-        super_admin_name = None
-        if office.super_admin_id:
-            super_admin = (
+        # 为每个办公室添加实际用户数（通过 department 匹配）
+        result = []
+        for office in offices:
+            # 获取主要管理员信息
+            primary_admin_name = None
+            primary_admin_id = getattr(office, "primary_admin_id", None)
+            if primary_admin_id:
+                primary_admin = (
+                    db.query(main.User).filter(main.User.id == primary_admin_id).first()
+                )
+                if primary_admin:
+                    primary_admin_name = primary_admin.name
+
+            office_dict = {
+                "id": office.id,
+                "name": office.name,
+                "room_number": office.room_number,
+                "description": office.description,
+                "leader_name": office.leader_name,
+                "leader_phone": getattr(office, "leader_phone", None),
+                "water_user_count": office.water_user_count,
+                "is_common": office.is_common,
+                "is_active": office.is_active,
+                "primary_admin_id": primary_admin_id,
+                "primary_admin_name": primary_admin_name,
+                "created_at": office.created_at.isoformat()
+                if office.created_at
+                else None,
+                "updated_at": office.updated_at.isoformat()
+                if office.updated_at
+                else None,
+            }
+            # 统计实际用户数（通过 department 匹配）
+            user_count = (
                 db.query(main.User)
-                .filter(main.User.id == office.super_admin_id)
-                .first()
+                .filter(main.User.department == office.name, main.User.is_active == 1)
+                .count()
             )
-            if super_admin:
-                super_admin_name = super_admin.name
+            office_dict["user_count"] = user_count
+            result.append(office_dict)
 
-        office_dict = {
-            "id": office.id,
-            "name": office.name,
-            "room_number": office.room_number,
-            "description": office.description,
-            "leader_name": office.leader_name,
-            "water_user_count": office.water_user_count,
-            "is_common": office.is_common,
-            "is_active": office.is_active,
-            "super_admin_id": office.super_admin_id,
-            "super_admin_name": super_admin_name,
-            "created_at": office.created_at.isoformat() if office.created_at else None,
-            "updated_at": office.updated_at.isoformat() if office.updated_at else None,
-        }
-        # 统计实际用户数（通过 department 匹配）
-        user_count = (
-            db.query(main.User)
-            .filter(main.User.department == office.name, main.User.is_active == 1)
-            .count()
-        )
-        office_dict["user_count"] = user_count
-        result.append(office_dict)
+        return result
+    except Exception as e:
+        import traceback
 
-    return result
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"获取办公室列表失败: {str(e)}")
 
 
-@router.post("/offices", response_model=OfficeResponse)
+@router.post("/offices")
 def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
     """
     创建办公室
+
+    - 如果填写了负责人姓名且 create_leader_account=True，会自动创建对应账号
+    - 默认密码：123456
+    - 默认角色：办公室管理员
+    - 自动绑定该办公室
     """
+    import main
+    from passlib.context import CryptContext
+
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
     # 检查办公室名称是否已存在
     existing = (
         db.query(Office)
@@ -242,7 +268,107 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_office)
 
-    return db_office
+    # 自动创建负责人账号
+    created_user_info = None
+    if office.leader_name and office.create_leader_account:
+        # 检查是否已存在同名用户
+        existing_user = (
+            db.query(main.User).filter(main.User.name == office.leader_name).first()
+        )
+
+        if existing_user:
+            # 同名用户已存在，不创建，但提示
+            created_user_info = {
+                "created": False,
+                "reason": "同名用户已存在",
+                "existing_user_id": existing_user.id,
+                "existing_user_name": existing_user.name,
+                "existing_user_role": existing_user.role,
+                "existing_user_office": existing_user.department,
+            }
+        else:
+            # 创建新用户
+            try:
+                default_password = "123456"
+                password_hash = pwd_context.hash(default_password)
+
+                new_user = main.User(
+                    name=office.leader_name,
+                    password_hash=password_hash,
+                    department=office.name,  # 绑定该办公室
+                    role="office_admin",  # 办公室管理员
+                    is_active=1,
+                    balance_credit=0,
+                    created_at=datetime.now(),
+                )
+
+                db.add(new_user)
+                db.commit()
+                db.refresh(new_user)
+
+                # 添加到办公室管理员关联表
+                try:
+                    from sqlalchemy import text
+
+                    db.execute(
+                        text("""
+                        INSERT OR IGNORE INTO office_admin_relations 
+                        (office_id, user_id, is_primary, role_type, created_at)
+                        VALUES (:office_id, :user_id, 1, 1, :created_at)
+                    """),
+                        {
+                            "office_id": db_office.id,
+                            "user_id": new_user.id,
+                            "created_at": datetime.now(),
+                        },
+                    )
+                    db.commit()
+                except Exception as e:
+                    print(f"添加办公室管理员关联失败: {e}")
+
+                created_user_info = {
+                    "created": True,
+                    "user_id": new_user.id,
+                    "user_name": new_user.name,
+                    "default_password": default_password,
+                    "office_name": office.name,
+                    "role": "office_admin",
+                    "role_name": "办公室管理员",
+                    "permissions": [
+                        "审核该办公室新用户注册",
+                        "管理该办公室用户",
+                        "查看该办公室统计数据",
+                    ],
+                }
+            except Exception as e:
+                db.rollback()
+                created_user_info = {
+                    "created": False,
+                    "reason": f"创建用户失败: {str(e)}",
+                }
+
+    # 在响应中添加用户创建信息
+    response = {
+        "id": db_office.id,
+        "name": db_office.name,
+        "room_number": db_office.room_number,
+        "description": db_office.description,
+        "leader_name": db_office.leader_name,
+        "water_user_count": db_office.water_user_count,
+        "is_common": db_office.is_common,
+        "is_active": db_office.is_active,
+        "created_at": db_office.created_at.isoformat()
+        if db_office.created_at
+        else None,
+        "updated_at": db_office.updated_at.isoformat()
+        if db_office.updated_at
+        else None,
+    }
+
+    if created_user_info:
+        response["leader_account_info"] = created_user_info
+
+    return response
 
 
 @router.get("/offices/{office_id}", response_model=OfficeResponse)
@@ -256,13 +382,23 @@ def get_office(office_id: int, db: Session = Depends(get_db)):
     return office
 
 
-@router.put("/offices/{office_id}", response_model=OfficeResponse)
+@router.put("/offices/{office_id}")
 def update_office(
     office_id: int, office_update: OfficeUpdate, db: Session = Depends(get_db)
 ):
     """
     更新办公室信息
+
+    - 如果更新了负责人姓名且 create_leader_account=True，会自动创建对应账号
+    - 默认密码：123456
+    - 默认角色：普通用户
+    - 自动绑定该办公室
     """
+    import main
+    from passlib.context import CryptContext
+
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
     office = db.query(Office).filter(Office.id == office_id).first()
 
     if not office:
@@ -285,17 +421,117 @@ def update_office(
         if existing:
             raise HTTPException(status_code=400, detail="办公室名称已存在")
 
+    # 记录是否需要创建负责人账号
+    create_leader_account = update_data.pop("create_leader_account", False)
+    new_leader_name = update_data.get("leader_name")
+
     # 更新传入的字段
     for key, value in update_data.items():
         if hasattr(office, key):
-            setattr(office, key, value)
+            setattr(office, value)
 
     office.updated_at = datetime.now()
 
     db.commit()
     db.refresh(office)
 
-    return office
+    # 自动创建负责人账号
+    created_user_info = None
+    if new_leader_name and create_leader_account:
+        # 检查是否已存在同名用户
+        existing_user = (
+            db.query(main.User).filter(main.User.name == new_leader_name).first()
+        )
+
+        if existing_user:
+            # 同名用户已存在，不创建，但提示
+            created_user_info = {
+                "created": False,
+                "reason": "同名用户已存在",
+                "existing_user_id": existing_user.id,
+                "existing_user_name": existing_user.name,
+                "existing_user_role": existing_user.role,
+                "existing_user_office": existing_user.department,
+            }
+        else:
+            # 创建新用户
+            try:
+                default_password = "123456"
+                password_hash = pwd_context.hash(default_password)
+
+                new_user = main.User(
+                    name=new_leader_name,
+                    password_hash=password_hash,
+                    department=office.name,  # 绑定该办公室
+                    role="office_admin",  # 办公室管理员
+                    is_active=1,
+                    balance_credit=0,
+                    created_at=datetime.now(),
+                )
+
+                db.add(new_user)
+                db.commit()
+                db.refresh(new_user)
+
+                # 添加到办公室管理员关联表
+                try:
+                    from sqlalchemy import text
+
+                    db.execute(
+                        text("""
+                        INSERT OR IGNORE INTO office_admin_relations 
+                        (office_id, user_id, is_primary, role_type, created_at)
+                        VALUES (:office_id, :user_id, 1, 1, :created_at)
+                    """),
+                        {
+                            "office_id": office.id,
+                            "user_id": new_user.id,
+                            "created_at": datetime.now(),
+                        },
+                    )
+                    db.commit()
+                except Exception as e:
+                    print(f"添加办公室管理员关联失败: {e}")
+
+                created_user_info = {
+                    "created": True,
+                    "user_id": new_user.id,
+                    "user_name": new_user.name,
+                    "default_password": default_password,
+                    "office_name": office.name,
+                    "role": "office_admin",
+                    "role_name": "办公室管理员",
+                    "permissions": [
+                        "审核该办公室新用户注册",
+                        "管理该办公室用户",
+                        "查看该办公室统计数据",
+                    ],
+                }
+            except Exception as e:
+                db.rollback()
+                created_user_info = {
+                    "created": False,
+                    "reason": f"创建用户失败: {str(e)}",
+                }
+
+    # 构建响应
+    response = {
+        "id": office.id,
+        "name": office.name,
+        "room_number": office.room_number,
+        "description": office.description,
+        "leader_name": office.leader_name,
+        "water_user_count": office.water_user_count,
+        "is_common": office.is_common,
+        "is_active": office.is_active,
+        "created_at": office.created_at.isoformat() if office.created_at else None,
+        "updated_at": office.updated_at.isoformat() if office.updated_at else None,
+    }
+
+    if created_user_info:
+        response["leader_account_info"] = created_user_info
+
+    return response
 
 
 @router.delete("/offices/{office_id}")

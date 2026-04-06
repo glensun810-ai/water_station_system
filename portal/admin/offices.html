@@ -180,7 +180,8 @@
             background: var(--bg-card);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
-            overflow: hidden;
+            overflow: visible;
+            position: relative;
         }
         
         table {
@@ -190,6 +191,22 @@
         
         thead {
             background: var(--bg-secondary);
+        }
+        
+        thead tr:first-child th:first-child {
+            border-top-left-radius: var(--radius-lg);
+        }
+        
+        thead tr:first-child th:last-child {
+            border-top-right-radius: var(--radius-lg);
+        }
+        
+        tbody tr:last-child td:first-child {
+            border-bottom-left-radius: var(--radius-lg);
+        }
+        
+        tbody tr:last-child td:last-child {
+            border-bottom-right-radius: var(--radius-lg);
         }
         
         th {
@@ -362,16 +379,20 @@
         }
         
         .dropdown-menu {
-            position: absolute;
-            right: 0;
-            top: calc(100% + 4px);
+            position: fixed;
+            right: auto;
+            top: auto;
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             min-width: 180px;
-            z-index: 100;
+            z-index: 10000;
             overflow: hidden;
+        }
+        
+        .dropdown-menu-up {
+            bottom: auto;
         }
         
         .dropdown-item {
@@ -857,9 +878,9 @@
                                 <span class="sort-icon">{{ sortField === 'room_number' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
                             </th>
                             <th>负责人</th>
-                            <th class="sortable" :class="{ active: sortField === 'super_admin_name' }" @click="toggleSort('super_admin_name')">
+                            <th class="sortable" :class="{ active: sortField === 'primary_admin_name' }" @click="toggleSort('primary_admin_name')">
                                 办公室管理员
-                                <span class="sort-icon">{{ sortField === 'super_admin_name' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                                <span class="sort-icon">{{ sortField === 'primary_admin_name' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
                             </th>
                             <th class="sortable" :class="{ active: sortField === 'water_user_count' }" @click="toggleSort('water_user_count')">
                                 配置人数
@@ -897,10 +918,11 @@
                             <td>{{ office.room_number || '—' }}</td>
                             <td>{{ office.leader_name || '—' }}</td>
                             <td>
-                                <span v-if="office.super_admin_name" class="badge badge-info">
-                                    {{ office.super_admin_name }}
+                                <span @click="showAdminModal(office)" class="clickable-link" style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <span v-if="office.primary_admin_name">{{ office.primary_admin_name }}</span>
+                                    <span v-else style="color: var(--text-tertiary);">未设置</span>
+                                    <span class="link-icon">⚙</span>
                                 </span>
-                                <span v-else style="color: var(--text-tertiary); font-size: var(--font-size-xs);">未设置</span>
                             </td>
                             <td>{{ office.water_user_count || 0 }}</td>
                             <td>
@@ -935,13 +957,16 @@
                                         编辑
                                     </button>
                                     <div class="action-dropdown">
-                                        <button @click="toggleDropdown(office.id)" class="dropdown-toggle">
+                                        <button @click="toggleDropdown(office.id, $event)" class="dropdown-toggle">
                                             更多 ▾
                                         </button>
-                                        <div v-if="activeDropdown === office.id" class="dropdown-menu" @click.stop>
-                                            <button @click="setAdmin(office)" class="dropdown-item">
+                                        <div v-if="activeDropdown === office.id" 
+                                             class="dropdown-menu" 
+                                             :class="{ 'dropdown-menu-up': dropdownUpIds.has(office.id) }" 
+                                             @click.stop>
+                                            <button @click="showAdminModal(office)" class="dropdown-item">
                                                 <span>👤</span>
-                                                <span>设置管理员</span>
+                                                <span>管理管理员</span>
                                             </button>
                                             <button @click="showOfficeStats(office)" class="dropdown-item">
                                                 <span>📊</span>
@@ -988,11 +1013,31 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">负责人</label>
-                        <input v-model="form.leader_name" type="text" class="form-input" placeholder="负责人姓名">
+                        <input v-model="form.leader_name" @input="checkLeaderName" type="text" class="form-input" placeholder="负责人姓名">
+                        <div v-if="checkingLeaderName" style="margin-top: var(--spacing-xs); font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                            检查中...
+                        </div>
+                        <div v-else-if="existingLeaderUser && form.leader_name" style="margin-top: var(--spacing-xs); padding: var(--spacing-sm); background: var(--warning-light); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--warning-dark);">
+                            ⚠️ 用户「{{ form.leader_name }}」已存在<br>
+                            <span style="opacity: 0.8;">角色：{{ getRoleName(existingLeaderUser.role) }} | 办公室：{{ existingLeaderUser.department || '未分配' }}</span>
+                        </div>
+                        <div v-if="form.leader_name" style="margin-top: var(--spacing-sm);">
+                            <label style="display: flex; align-items: center; gap: var(--spacing-sm); font-size: var(--font-size-sm); cursor: pointer;">
+                                <input type="checkbox" v-model="form.create_leader_account" :disabled="existingLeaderUser" style="cursor: pointer;">
+                                <span>{{ existingLeaderUser ? '同名用户已存在，无法创建' : '同时创建负责人登录账号' }}</span>
+                            </label>
+                            <div v-if="form.create_leader_account && !existingLeaderUser" style="margin-top: var(--spacing-xs); padding: var(--spacing-sm); background: var(--primary-light); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--primary-dark);">
+                                ✓ 将自动创建用户「{{ form.leader_name }}」<br>
+                                ✓ 默认密码：<strong>123456</strong><br>
+                                ✓ 默认角色：<strong>办公室管理员</strong><br>
+                                ✓ 自动绑定到「{{ form.name || '该办公室' }}」<br>
+                                ✓ 权限：审核用户、管理办公室用户
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">办公室管理员</label>
-                        <select v-model="form.super_admin_id" class="form-input">
+                        <select v-model="form.primary_admin_id" class="form-input">
                             <option :value="null">— 不设置 —</option>
                             <option v-for="admin in adminUsers" :key="admin.id" :value="admin.id">
                                 {{ admin.name }} {{ admin.department ? `(${admin.department})` : '' }}
@@ -1072,7 +1117,7 @@
                         </div>
                         <div class="stat-detail-card">
                             <div class="stat-detail-label">办公室管理员</div>
-                            <div class="stat-detail-value">{{ currentOffice?.super_admin_name || '未设置' }}</div>
+                            <div class="stat-detail-value">{{ currentOffice?.primary_admin_name || '未设置' }}</div>
                         </div>
                         <div class="stat-detail-card">
                             <div class="stat-detail-label">配置人数</div>
@@ -1108,6 +1153,84 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 办公室管理员管理模态框 -->
+        <div v-if="showAdminManageModal" class="modal-overlay" @click="showAdminManageModal = false">
+            <div class="modal modal-lg" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">👤 {{ currentOffice?.name }} — 管理员配置</h3>
+                    <button @click="showAdminManageModal = false" class="modal-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                            💡 管理员说明
+                        </div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); line-height: 1.6;">
+                            办公室管理员可审核该办公室的新用户注册、管理用户。一个办公室可配置多个管理员。
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--spacing-md);">
+                        <div style="font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                            当前管理员列表
+                        </div>
+                        <div v-if="officeAdmins.length > 0" style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
+                            <div v-for="(admin, index) in officeAdmins" :key="admin.id" 
+                                 style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); border-bottom: 1px solid var(--border-light);">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                                    <div style="width: 36px; height: 36px; border-radius: var(--radius-full); background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+                                        👤
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 500; color: var(--text-primary);">{{ admin.user_name }}</div>
+                                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                            {{ admin.role_type_name }}
+                                            <span v-if="admin.is_primary" style="color: var(--primary); margin-left: 4px;">★ 主要</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: var(--spacing-sm);">
+                                    <button v-if="!admin.is_primary" @click="setPrimaryAdmin(admin)" class="btn btn-sm btn-outline">设为主要</button>
+                                    <button @click="removeAdmin(admin)" class="btn btn-sm btn-danger">移除</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+                            暂无管理员
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border); padding-top: var(--spacing-lg);">
+                        <div style="font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                            添加新管理员
+                        </div>
+                        <div style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--text-tertiary); margin-bottom: var(--spacing-xs);">选择用户</label>
+                                <select v-model="newAdminUser" class="form-input">
+                                    <option value="">— 请选择 —</option>
+                                    <option v-for="user in availableAdminCandidates" :key="user.id" :value="user.id">
+                                        {{ user.name }} ({{ user.role_name }})
+                                    </option>
+                                </select>
+                            </div>
+                            <div style="width: 150px;">
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--text-tertiary); margin-bottom: var(--spacing-xs);">管理员类型</label>
+                                <select v-model="newAdminType" class="form-input">
+                                    <option :value="1">负责人</option>
+                                    <option :value="2">行政对接人</option>
+                                    <option :value="3">其他管理员</option>
+                                </select>
+                            </div>
+                            <button @click="addAdmin" class="btn btn-primary" :disabled="!newAdminUser">
+                                添加
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -1123,6 +1246,7 @@
                 const searchText = ref('');
                 const selectedIds = ref([]);
                 const activeDropdown = ref(null);
+                const dropdownUpIds = ref(new Set());
                 
                 const statusFilter = ref('');
                 const commonFilter = ref('');
@@ -1136,9 +1260,14 @@
                 const showEditModal = ref(false);
                 const showUserModal = ref(false);
                 const showStatsModal = ref(false);
+                const showAdminManageModal = ref(false);
                 const editingOffice = ref(null);
                 const currentOffice = ref(null);
                 const officeUsers = ref([]);
+                const officeAdmins = ref([]);
+                const newAdminUser = ref('');
+                const newAdminType = ref(1);
+                const adminCandidates = ref([]);
                 
                 const form = ref({
                     name: '',
@@ -1146,8 +1275,13 @@
                     leader_name: '',
                     water_user_count: 0,
                     description: '',
-                    super_admin_id: null
+                    primary_admin_id: null,
+                    create_leader_account: false
                 });
+                
+                const checkingLeaderName = ref(false);
+                const existingLeaderUser = ref(null);
+                let checkLeaderTimer = null;
                 
                 const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
                 
@@ -1156,7 +1290,7 @@
                     const active = offices.value.filter(o => o.is_active).length;
                     const inactive = offices.value.filter(o => !o.is_active).length;
                     const common = offices.value.filter(o => o.is_common).length;
-                    const noAdmin = offices.value.filter(o => !o.super_admin_id).length;
+                    const noAdmin = offices.value.filter(o => !o.primary_admin_id).length;
                     const hasUsers = offices.value.filter(o => o.user_count > 0).length;
                     return { total, active, inactive, common, noAdmin, hasUsers };
                 });
@@ -1180,7 +1314,7 @@
                     } else if (activeFilter.value === 'common') {
                         result = result.filter(o => o.is_common);
                     } else if (activeFilter.value === 'no_admin') {
-                        result = result.filter(o => !o.super_admin_id);
+                        result = result.filter(o => !o.primary_admin_id);
                     } else if (activeFilter.value === 'has_users') {
                         result = result.filter(o => o.user_count > 0);
                     }
@@ -1198,9 +1332,9 @@
                     }
                     
                     if (adminFilter.value === 'has_admin') {
-                        result = result.filter(o => o.super_admin_id);
+                        result = result.filter(o => o.primary_admin_id);
                     } else if (adminFilter.value === 'no_admin') {
-                        result = result.filter(o => !o.super_admin_id);
+                        result = result.filter(o => !o.primary_admin_id);
                     }
                     
                     result = result.sort((a, b) => {
@@ -1215,9 +1349,9 @@
                         } else if (sortField.value === 'room_number') {
                             aVal = a.room_number || '';
                             bVal = b.room_number || '';
-                        } else if (sortField.value === 'super_admin_name') {
-                            aVal = a.super_admin_name || '';
-                            bVal = b.super_admin_name || '';
+                        } else if (sortField.value === 'primary_admin_name') {
+                            aVal = a.primary_admin_name || '';
+                            bVal = b.primary_admin_name || '';
                         } else if (sortField.value === 'water_user_count') {
                             aVal = a.water_user_count || 0;
                             bVal = b.water_user_count || 0;
@@ -1271,6 +1405,11 @@
                     return 'var(--danger)';
                 });
                 
+                const availableAdminCandidates = computed(() => {
+                    const existingIds = officeAdmins.value.map(a => a.user_id);
+                    return adminCandidates.value.filter(u => !existingIds.includes(u.id));
+                });
+                
                 const loadOffices = async () => {
                     try {
                         const response = await fetch(`${API_BASE}/offices`);
@@ -1290,6 +1429,100 @@
                         }
                     } catch (error) {
                         console.error('加载管理员列表失败:', error);
+                    }
+                };
+                
+                const loadAdminCandidates = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/office-admins/candidates`);
+                        if (response.ok) {
+                            adminCandidates.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载候选人列表失败:', error);
+                    }
+                };
+                
+                const showAdminModal = async (office) => {
+                    currentOffice.value = office;
+                    await loadOfficeAdmins(office.id);
+                    await loadAdminCandidates();
+                    newAdminUser.value = '';
+                    newAdminType.value = 1;
+                    showAdminManageModal.value = true;
+                };
+                
+                const loadOfficeAdmins = async (officeId) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/office-admins/office/${officeId}`);
+                        if (response.ok) {
+                            officeAdmins.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室管理员失败:', error);
+                        officeAdmins.value = [];
+                    }
+                };
+                
+                const addAdmin = async () => {
+                    if (!newAdminUser.value) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/office-admins`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                office_id: currentOffice.value.id,
+                                user_id: parseInt(newAdminUser.value),
+                                is_primary: officeAdmins.value.length === 0 ? 1 : 0,
+                                role_type: newAdminType.value
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            await loadOfficeAdmins(currentOffice.value.id);
+                            await loadOffices();
+                            newAdminUser.value = '';
+                            newAdminType.value = 1;
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '添加失败');
+                        }
+                    } catch (error) {
+                        console.error('添加管理员失败:', error);
+                        alert('添加失败');
+                    }
+                };
+                
+                const removeAdmin = async (admin) => {
+                    if (!confirm(`确定移除管理员「${admin.user_name}」吗？`)) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/office-admins/${admin.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            await loadOfficeAdmins(currentOffice.value.id);
+                            await loadOffices();
+                        }
+                    } catch (error) {
+                        console.error('移除管理员失败:', error);
+                    }
+                };
+                
+                const setPrimaryAdmin = async (admin) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/office-admins/${admin.id}?is_primary=1`, {
+                            method: 'PUT'
+                        });
+                        
+                        if (response.ok) {
+                            await loadOfficeAdmins(currentOffice.value.id);
+                            await loadOffices();
+                        }
+                    } catch (error) {
+                        console.error('设置主要管理员失败:', error);
                     }
                 };
                 
@@ -1321,8 +1554,44 @@
                     }
                 };
                 
-                const toggleDropdown = (officeId) => {
-                    activeDropdown.value = activeDropdown.value === officeId ? null : officeId;
+                const toggleDropdown = (officeId, event) => {
+                    if (activeDropdown.value === officeId) {
+                        activeDropdown.value = null;
+                        dropdownUpIds.value.delete(officeId);
+                    } else {
+                        activeDropdown.value = officeId;
+                        
+                        // 获取按钮位置
+                        const button = event.target;
+                        const rect = button.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        const menuHeight = 180; // 预估下拉菜单高度
+                        
+                        // 判断是否需要向上展开
+                        const shouldOpenUp = rect.bottom + menuHeight > windowHeight - 20;
+                        
+                        if (shouldOpenUp) {
+                            const newSet = new Set(dropdownUpIds.value);
+                            newSet.add(officeId);
+                            dropdownUpIds.value = newSet;
+                        } else {
+                            dropdownUpIds.value.delete(officeId);
+                        }
+                        
+                        // 设置下拉菜单位置
+                        setTimeout(() => {
+                            const dropdown = document.querySelector('.dropdown-menu');
+                            if (dropdown) {
+                                dropdown.style.left = rect.right - dropdown.offsetWidth + 'px';
+                                
+                                if (shouldOpenUp) {
+                                    dropdown.style.top = rect.top - dropdown.offsetHeight - 4 + 'px';
+                                } else {
+                                    dropdown.style.top = rect.bottom + 4 + 'px';
+                                }
+                            }
+                        }, 0);
+                    }
                 };
                 
                 const toggleCommon = async (office) => {
@@ -1424,14 +1693,15 @@
                         leader_name: office.leader_name || '',
                         water_user_count: office.water_user_count || 0,
                         description: office.description || '',
-                        super_admin_id: office.super_admin_id || null
+                        primary_admin_id: office.primary_admin_id || null,
+                        create_leader_account: false
                     };
                     showEditModal.value = true;
                     activeDropdown.value = null;
                 };
                 
-                const setAdmin = (office) => {
-                    editOffice(office);
+                const setAdmin = async (office) => {
+                    await showAdminModal(office);
                 };
                 
                 const saveOffice = async () => {
@@ -1447,8 +1717,35 @@
                         });
                         
                         if (response.ok) {
+                            const result = await response.json();
                             await loadOffices();
                             closeModal();
+                            
+                            // 显示负责人账号创建结果
+                            if (result.leader_account_info) {
+                                const info = result.leader_account_info;
+                                if (info.created) {
+                                    const permissions = info.permissions ? info.permissions.join('、') : '管理该办公室';
+                                    alert(
+                                        `✅ 办公室创建成功！\n\n` +
+                                        `已自动创建办公室管理员账号：\n` +
+                                        `• 用户名：${info.user_name}\n` +
+                                        `• 默认密码：${info.default_password}\n` +
+                                        `• 所属办公室：${info.office_name}\n` +
+                                        `• 角色：${info.role_name || '办公室管理员'}\n` +
+                                        `• 权限：${permissions}\n\n` +
+                                        `请通知负责人及时登录并修改密码。`
+                                    );
+                                } else {
+                                    const existingInfo = info.existing_user_role ? 
+                                        `\n• 已有角色：${getRoleName(info.existing_user_role)}\n• 已有办公室：${info.existing_user_office || '未分配'}` : '';
+                                    alert(
+                                        `⚠️ 办公室已创建，但负责人账号未创建\n\n` +
+                                        `原因：${info.reason}${existingInfo}\n\n` +
+                                        `如需创建账号，请前往用户管理手动创建。`
+                                    );
+                                }
+                            }
                         } else {
                             const error = await response.json();
                             alert(error.detail || '保存失败，请重试');
@@ -1514,8 +1811,42 @@
                 
                 const getRoleName = (role) => {
                     if (role === 'super_admin') return '超级管理员';
-                    if (role === 'admin') return '管理员';
+                    if (role === 'admin') return '系统管理员';
+                    if (role === 'office_admin') return '办公室管理员';
                     return '普通用户';
+                };
+                
+                const checkLeaderName = async () => {
+                    // 清除之前的定时器
+                    if (checkLeaderTimer) clearTimeout(checkLeaderTimer);
+                    
+                    // 重置状态
+                    existingLeaderUser.value = null;
+                    
+                    // 如果没有输入，不检查
+                    if (!form.value.leader_name || !form.value.leader_name.trim()) {
+                        return;
+                    }
+                    
+                    // 延迟500ms后检查
+                    checkLeaderTimer = setTimeout(async () => {
+                        checkingLeaderName.value = true;
+                        try {
+                            const response = await fetch(`${API_BASE}/users/check-name/${encodeURIComponent(form.value.leader_name)}`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.exists) {
+                                    existingLeaderUser.value = data.user;
+                                    // 如果用户已存在，取消勾选
+                                    form.value.create_leader_account = false;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('检查用户名失败:', error);
+                        } finally {
+                            checkingLeaderName.value = false;
+                        }
+                    }, 500);
                 };
                 
                 const exportData = () => {
@@ -1524,7 +1855,7 @@
                         '办公室名称': o.name,
                         '门号': o.room_number || '',
                         '负责人': o.leader_name || '',
-                        '办公室管理员': o.super_admin_name || '',
+                        '办公室管理员': o.primary_admin_name || '',
                         '配置人数': o.water_user_count || 0,
                         '实际人数': o.user_count || 0,
                         '常用': o.is_common ? '是' : '否',
@@ -1549,13 +1880,15 @@
                     showAddModal.value = false;
                     showEditModal.value = false;
                     editingOffice.value = null;
+                    existingLeaderUser.value = null;
                     form.value = {
                         name: '',
                         room_number: '',
                         leader_name: '',
                         water_user_count: 0,
                         description: '',
-                        super_admin_id: null
+                        primary_admin_id: null,
+                        create_leader_account: false
                     };
                 };
                 
@@ -1576,6 +1909,7 @@
                     searchText,
                     selectedIds,
                     activeDropdown,
+                    dropdownUpIds,
                     stats,
                     filteredOffices,
                     isAllSelected,
@@ -1590,12 +1924,20 @@
                     showEditModal,
                     showUserModal,
                     showStatsModal,
+                    showAdminManageModal,
                     currentOffice,
                     officeUsers,
+                    officeAdmins,
+                    adminCandidates,
+                    availableAdminCandidates,
+                    newAdminUser,
+                    newAdminType,
                     utilizationRate,
                     utilizationClass,
                     utilizationColor,
                     form,
+                    checkingLeaderName,
+                    existingLeaderUser,
                     setFilter,
                     applyFilters,
                     toggleSort,
@@ -1612,7 +1954,13 @@
                     deleteOffice,
                     showUserList,
                     showOfficeStats,
+                    showAdminModal,
+                    loadOfficeAdmins,
+                    addAdmin,
+                    removeAdmin,
+                    setPrimaryAdmin,
                     getRoleName,
+                    checkLeaderName,
                     exportData,
                     closeModal
                 };

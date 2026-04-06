@@ -23,19 +23,20 @@ class Office(Base):
     room_number = Column(String(50), nullable=True)
     description = Column(String(500), nullable=True)
 
-    # 负责人信息
+    # 负责人信息（可以是外部人员，不一定在系统中）
     leader_name = Column(String(100), nullable=True)
+    leader_phone = Column(String(20), nullable=True, comment="负责人电话")
+
+    # 主要管理员（系统用户，默认办公室管理员）
+    primary_admin_id = Column(Integer, nullable=True, comment="主要管理员用户ID")
 
     # 配置人数
     water_user_count = Column(Integer, default=0)
 
     # 常用标记
-    is_common = Column(Integer, default=1)  # 1: 常用，0: 不常用
-
-    # 超级管理员关联
-    super_admin_id = Column(Integer, nullable=True)
+    is_common = Column(Integer, default=1)
 
     # 审计字段
-    is_active = Column(Integer, default=1)  # 1: 启用，0: 禁用
+    is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

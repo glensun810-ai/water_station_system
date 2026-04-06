@@ -10,18 +10,33 @@ from models.base import Base
 
 
 class User(Base):
-    """用户表"""
+    """
+    用户表
+
+    角色说明：
+    - super_admin: 超级管理员，系统最高权限
+    - admin: 系统管理员，管理整个系统
+    - office_admin: 办公室管理员，管理特定办公室（department字段指定）
+    - user: 普通用户，使用服务的员工
+
+    department字段说明：
+    - 存储用户所属的办公室名称（不是部门）
+    - office_admin角色的用户，此字段表示其管理的办公室
+    """
 
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True)
-    department = Column(String, nullable=False)
-    role = Column(String, default="staff")
-    password_hash = Column(String, nullable=True)
+    name = Column(String(100), nullable=False, unique=True)
+    department = Column(String(100), nullable=True, comment="所属办公室名称")
+    role = Column(
+        String(50), default="user", comment="角色：super_admin/admin/office_admin/user"
+    )
+    password_hash = Column(String(255), nullable=True)
     balance_credit = Column(Float, default=0)
     is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     transactions = relationship(
         "Transaction", foreign_keys="Transaction.user_id", back_populates="user"
