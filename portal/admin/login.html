@@ -225,6 +225,9 @@
                     <div class="demo-hint-title">演示账号：</div>
                     <div>用户名：admin</div>
                     <div>密码：admin123</div>
+                    <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">
+                        其他用户默认密码：123456
+                    </div>
                 </div>
                 
                 <div class="login-footer">
@@ -255,13 +258,13 @@
                     loading.value = true;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/api/admin/login`, {
+                        const response = await fetch(`${API_BASE}/user/login`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                username: form.value.username,
+                                name: form.value.username,
                                 password: form.value.password
                             })
                         });
@@ -278,13 +281,21 @@
                         const token = data.access_token;
                         const user = data.user_info;
                         
+                        // 验证是否有管理权限
+                        if (!['super_admin', 'admin', 'office_admin'].includes(user.role)) {
+                            errorMessage.value = '您没有管理后台访问权限';
+                            loading.value = false;
+                            return;
+                        }
+                        
                         localStorage.setItem('token', token);
                         localStorage.setItem('userInfo', JSON.stringify({
                             id: user.user_id,
-                            name: user.username,
-                            role: user.role_name,
-                            roleLabel: getRoleLabel(user.role_name),
-                            is_admin: user.role_id === 1 || user.role_name === '超级管理员' || user.role_name === 'admin'
+                            name: user.name,
+                            role: user.role,
+                            roleLabel: user.role_name,
+                            department: user.department,
+                            is_admin: ['super_admin', 'admin'].includes(user.role)
                         }));
                         
                         if (form.value.remember) {

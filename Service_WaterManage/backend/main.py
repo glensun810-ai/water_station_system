@@ -85,12 +85,41 @@ def api_health_check():
 
 @app.get("/api/ready")
 def readiness_check():
-    """就绪检查"""
+    """就绪检查并初始化必要表"""
     from sqlalchemy import text
 
     try:
         with db_manager.main_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+
+        # 初始化登录日志表
+        try:
+            with db_manager.main_engine.begin() as conn:
+                conn.execute(
+                    text("""
+                    CREATE TABLE IF NOT EXISTS user_login_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        username VARCHAR(100),
+                        role VARCHAR(50),
+                        login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        ip_address VARCHAR(50),
+                        user_agent TEXT,
+                        device_type VARCHAR(50),
+                        browser VARCHAR(100),
+                        os VARCHAR(100),
+                        login_method VARCHAR(20) DEFAULT 'password',
+                        status VARCHAR(20) NOT NULL,
+                        failure_reason VARCHAR(255),
+                        logout_time TIMESTAMP,
+                        session_duration INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                )
+        except:
+            pass
+
         return {"status": "ready", "database": "connected"}
     except Exception as e:
         return {"status": "not_ready", "database": "error", "detail": str(e)}
@@ -154,10 +183,12 @@ def root_redirect():
 from core.user.api import router as core_user_router
 from core.office.api import router as core_office_router
 from core.settlement.api import router as core_settlement_router
+from api_user_auth import router as user_auth_router
 
 app.include_router(core_user_router)
 app.include_router(core_office_router)
 app.include_router(core_settlement_router)
+app.include_router(user_auth_router)
 
 # ==================== 服务域路由 ====================
 
@@ -202,6 +233,7 @@ from api_dashboard_meeting import router as meeting_dashboard_router
 from api_user_management import router as user_management_router
 from api_settlement_management import router as settlement_management_router
 from api_office_admin import router as office_admin_router
+from api_login_logs import router as login_logs_router
 
 app.include_router(legacy_office_router)
 app.include_router(legacy_unified_router)
@@ -226,6 +258,7 @@ app.include_router(meeting_dashboard_router)
 app.include_router(user_management_router)
 app.include_router(settlement_management_router)
 app.include_router(office_admin_router)
+app.include_router(login_logs_router)
 
 # ==================== 健康检查 ====================
 

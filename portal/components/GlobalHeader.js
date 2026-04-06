@@ -78,7 +78,7 @@ const GlobalHeader = {
                             <span class="menu-icon">💰</span>
                             <span class="menu-text">我的余额</span>
                         </a>
-                        <a href="/water/change-password.html" class="menu-item">
+                        <a href="/portal/change-password.html" class="menu-item">
                             <span class="menu-icon">🔐</span>
                             <span class="menu-text">修改密码</span>
                         </a>
@@ -101,6 +101,10 @@ const GlobalHeader = {
                             <a href="/portal/admin/index.html" class="menu-item">
                                 <span class="menu-icon">📊</span>
                                 <span class="menu-text">统一管理</span>
+                            </a>
+                            <a href="/portal/admin/login-logs.html" class="menu-item">
+                                <span class="menu-icon">📝</span>
+                                <span class="menu-text">登录日志</span>
                             </a>
                         </template>
                         

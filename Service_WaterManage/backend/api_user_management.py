@@ -78,6 +78,23 @@ def get_user_stats(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"获取统计数据失败: {str(e)}")
 
 
+@router.get("/check-name")
+def check_username_availability(name: str, db: Session = Depends(get_db)):
+    """
+    检查用户名是否可用
+
+    用于注册页面实时检查用户名是否已被注册
+    """
+    try:
+        import main
+
+        existing_user = db.query(main.User).filter(main.User.name == name).first()
+
+        return {"available": existing_user is None, "name": name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"检查用户名失败: {str(e)}")
+
+
 @router.get("/admin-list")
 def get_admin_list(db: Session = Depends(get_db)):
     """获取所有管理员列表（用于选择办公室管理员等场景）"""

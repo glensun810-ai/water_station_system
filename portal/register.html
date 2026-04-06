@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .register-container {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            width: 100%;
+            max-width: 480px;
+            margin: 20px;
+        }
+        
+        .register-header {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .register-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        
+        .register-header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .register-header .logo {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        
+        .register-form {
+            padding: 40px 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-input.error {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px var(--danger-light);
+        }
+        
+        .form-input.success {
+            border-color: var(--success);
+        }
+        
+        .input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            opacity: 0.5;
+            cursor: pointer;
+        }
+        
+        .input-icon:hover {
+            opacity: 1;
+        }
+        
+        .password-strength {
+            margin-top: 8px;
+        }
+        
+        .strength-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-bottom: 4px;
+        }
+        
+        .strength-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .strength-fill.weak { background: var(--danger); width: 33%; }
+        .strength-fill.medium { background: var(--warning); width: 66%; }
+        .strength-fill.strong { background: var(--success); width: 100%; }
+        
+        .strength-text {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+        
+        .strength-text.weak { color: var(--danger-dark); }
+        .strength-text.medium { color: var(--warning-dark); }
+        .strength-text.strong { color: var(--success-dark); }
+        
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        
+        .form-error {
+            font-size: 12px;
+            color: var(--danger);
+            margin-top: 4px;
+        }
+        
+        .username-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        .username-check.checking { color: var(--info); }
+        .username-check.available { color: var(--success-dark); }
+        .username-check.taken { color: var(--danger-dark); }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .submit-btn.loading {
+            position: relative;
+            color: transparent;
+        }
+        
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .success-message {
+            background: var(--success-light);
+            color: var(--success-dark);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .requirements {
+            background: var(--bg-primary);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+        
+        .requirements-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .requirement-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+        
+        .requirement-item.met {
+            color: var(--success-dark);
+        }
+        
+        .footer-links {
+            text-align: center;
+            padding: 20px 30px;
+            background: var(--bg-primary);
+            font-size: 14px;
+        }
+        
+        .footer-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .back-home {
+            display: inline-block;
+            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .back-home:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .register-container {
+                margin: 10px;
+            }
+            
+            .register-header {
+                padding: 30px 20px;
+            }
+            
+            .register-form {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="register-container">
+            <div class="register-header">
+                <div class="logo">🏢</div>
+                <h1>用户注册</h1>
+                <p>AI产业集群空间服务平台</p>
+                <a href="/portal/index.html" class="back-home">
+                    <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    返回首页
+                </a>
+            </div>
+            
+            <form class="register-form" @submit.prevent="handleSubmit">
+                <div v-if="successMessage" class="success-message">
+                    ✅ {{ successMessage }}
+                    <div style="margin-top: 8px; font-size: 13px;">
+                        请等待管理员审核激活您的账户
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <a href="/Service_WaterManage/frontend/login.html" style="color: var(--primary); font-weight: 500;">前往登录</a>
+                    </div>
+                </div>
+                
+                <div v-if="errorMessage" class="error-message">
+                    ❌ {{ errorMessage }}
+                </div>
+                
+                <div v-if="!successMessage">
+                    <div class="requirements">
+                        <div class="requirements-title">注册须知</div>
+                        <div class="requirement-item" :class="{ met: requirements.username }">
+                            <span>{{ requirements.username ? '✓' : '○' }}</span>
+                            <span>用户名2-50字符，仅支持字母、数字、下划线、中文</span>
+                        </div>
+                        <div class="requirement-item" :class="{ met: requirements.password }">
+                            <span>{{ requirements.password ? '✓' : '○' }}</span>
+                            <span>密码至少6位</span>
+                        </div>
+                        <div class="requirement-item" :class="{ met: requirements.unique }">
+                            <span>{{ requirements.unique ? '✓' : '○' }}</span>
+                            <span>用户名未被注册</span>
+                        </div>
+                        <div class="requirement-item" :class="{ met: requirements.confirm }">
+                            <span>{{ requirements.confirm ? '✓' : '○' }}</span>
+                            <span>两次密码一致</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input 
+                            type="text"
+                            class="form-input"
+                            :class="{ error: errors.name, success: usernameAvailable }"
+                            v-model="name"
+                            placeholder="请输入用户名"
+                            required
+                            :disabled="loading || successMessage"
+                            @input="checkUsername"
+                        >
+                        <div v-if="checkingUsername" class="username-check checking">
+                            ⏳ 正在检查...
+                        </div>
+                        <div v-else-if="usernameAvailable" class="username-check available">
+                            ✓ 用户名可用
+                        </div>
+                        <div v-else-if="usernameTaken" class="username-check taken">
+                            ✗ 用户名已被注册
+                        </div>
+                        <div v-if="errors.name" class="form-error">{{ errors.name }}</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <div class="input-wrapper">
+                            <input 
+                                :type="showPassword ? 'text' : 'password'"
+                                class="form-input"
+                                :class="{ error: errors.password, success: password.length >= 6 }"
+                                v-model="password"
+                                placeholder="请输入密码"
+                                required
+                                :disabled="loading || successMessage"
+                                @input="checkPasswordStrength"
+                            >
+                            <span class="input-icon" @click="showPassword = !showPassword">
+                                {{ showPassword ? '👁️' : '🔒' }}
+                            </span>
+                        </div>
+                        
+                        <div v-if="password" class="password-strength">
+                            <div class="strength-bar">
+                                <div :class="['strength-fill', passwordStrength]"></div>
+                            </div>
+                            <div :class="['strength-text', passwordStrength]">
+                                {{ strengthText }}
+                            </div>
+                        </div>
+                        
+                        <div v-if="errors.password" class="form-error">{{ errors.password }}</div>
+                        <div v-else class="form-hint">建议使用字母、数字和符号的组合</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">确认密码</label>
+                        <div class="input-wrapper">
+                            <input 
+                                :type="showConfirmPassword ? 'text' : 'password'"
+                                class="form-input"
+                                :class="{ error: errors.confirmPassword, success: confirmPassword === password && password }"
+                                v-model="confirmPassword"
+                                placeholder="请再次输入密码"
+                                required
+                                :disabled="loading || successMessage"
+                            >
+                            <span class="input-icon" @click="showConfirmPassword = !showConfirmPassword">
+                                {{ showConfirmPassword ? '👁️' : '🔒' }}
+                            </span>
+                        </div>
+                        <div v-if="errors.confirmPassword" class="form-error">{{ errors.confirmPassword }}</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">所属办公室（可选）</label>
+                        <select 
+                            class="form-input"
+                            v-model="department"
+                            :disabled="loading || successMessage"
+                        >
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :key="office.id" :value="office.name">
+                                {{ office.name }} - {{ office.location }}
+                            </option>
+                        </select>
+                        <div class="form-hint">注册后可在个人中心修改</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">邮箱（可选）</label>
+                        <input 
+                            type="email"
+                            class="form-input"
+                            :class="{ error: errors.email }"
+                            v-model="email"
+                            placeholder="example@email.com"
+                            :disabled="loading || successMessage"
+                        >
+                        <div v-if="errors.email" class="form-error">{{ errors.email }}</div>
+                        <div v-else class="form-hint">用于接收系统通知</div>
+                    </div>
+                    
+                    <button 
+                        type="submit"
+                        class="submit-btn"
+                        :class="{ loading: loading }"
+                        :disabled="loading || !canSubmit || successMessage"
+                    >
+                        {{ loading ? '' : '注册账号' }}
+                    </button>
+                </div>
+            </form>
+            
+            <div class="footer-links">
+                已有账号？<a href="/Service_WaterManage/frontend/login.html">立即登录</a>
+            </div>
+        </div>
+        
+        <div v-if="loadingPage" class="loading-overlay">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            setup() {
+                const name = ref('');
+                const password = ref('');
+                const confirmPassword = ref('');
+                const department = ref('');
+                const email = ref('');
+                
+                const showPassword = ref(false);
+                const showConfirmPassword = ref(false);
+                
+                const loading = ref(false);
+                const loadingPage = ref(true);
+                const errorMessage = ref('');
+                const successMessage = ref('');
+                
+                const checkingUsername = ref(false);
+                const usernameAvailable = ref(false);
+                const usernameTaken = ref(false);
+                
+                const passwordStrength = ref('weak');
+                const offices = ref([]);
+                
+                const errors = ref({
+                    name: '',
+                    password: '',
+                    confirmPassword: '',
+                    email: ''
+                });
+                
+                let usernameCheckTimeout = null;
+                
+                const requirements = computed(() => ({
+                    username: name.value.length >= 2 && name.value.length <= 50,
+                    password: password.value.length >= 6,
+                    unique: usernameAvailable.value,
+                    confirm: confirmPassword.value === password.value && password.value.length > 0
+                }));
+                
+                const canSubmit = computed(() => {
+                    return name.value.length >= 2 &&
+                           password.value.length >= 6 &&
+                           confirmPassword.value === password.value &&
+                           usernameAvailable.value &&
+                           !Object.values(errors.value).some(e => e);
+                });
+                
+                const strengthText = computed(() => {
+                    const texts = {
+                        weak: '密码强度：弱',
+                        medium: '密码强度：中等',
+                        strong: '密码强度：强'
+                    };
+                    return texts[passwordStrength.value];
+                });
+                
+                const getAPIBase = () => {
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                    return `${protocol}//${hostname}:${port}/api`;
+                };
+                
+                const checkUsername = () => {
+                    usernameAvailable.value = false;
+                    usernameTaken.value = false;
+                    errors.value.name = '';
+                    
+                    // 验证用户名格式
+                    const usernameRegex = /^[\w\u4e00-\u9fa5]+$/;
+                    if (name.value && !usernameRegex.test(name.value)) {
+                        errors.value.name = '用户名只能包含字母、数字、下划线和中文';
+                        return;
+                    }
+                    
+                    if (name.value.length < 2) {
+                        return;
+                    }
+                    
+                    // 延迟检查用户名是否已存在
+                    if (usernameCheckTimeout) {
+                        clearTimeout(usernameCheckTimeout);
+                    }
+                    
+                    checkingUsername.value = true;
+                    
+                    usernameCheckTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getAPIBase()}/users/check-name?name=${encodeURIComponent(name.value)}`);
+                            const data = await response.json();
+                            
+                            checkingUsername.value = false;
+                            
+                            if (data.available) {
+                                usernameAvailable.value = true;
+                                usernameTaken.value = false;
+                            } else {
+                                usernameAvailable.value = false;
+                                usernameTaken.value = true;
+                                errors.value.name = '用户名已被注册';
+                            }
+                        } catch (error) {
+                            console.error('检查用户名失败:', error);
+                            checkingUsername.value = false;
+                        }
+                    }, 500);
+                };
+                
+                const checkPasswordStrength = () => {
+                    const pwd = password.value;
+                    
+                    if (pwd.length < 6) {
+                        passwordStrength.value = 'weak';
+                    } else {
+                        const hasLetters = /[a-zA-Z]/.test(pwd);
+                        const hasNumbers = /[0-9]/.test(pwd);
+                        const hasSymbols = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
+                        
+                        const types = [hasLetters, hasNumbers, hasSymbols].filter(Boolean).length;
+                        
+                        if (types === 3 && pwd.length >= 10) {
+                            passwordStrength.value = 'strong';
+                        } else if (types >= 2) {
+                            passwordStrength.value = 'medium';
+                        } else {
+                            passwordStrength.value = 'weak';
+                        }
+                    }
+                };
+                
+                const validateForm = () => {
+                    errors.value = {
+                        name: '',
+                        password: '',
+                        confirmPassword: '',
+                        email: ''
+                    };
+                    
+                    if (name.value.length < 2 || name.value.length > 50) {
+                        errors.value.name = '用户名长度应在2-50个字符之间';
+                        return false;
+                    }
+                    
+                    const usernameRegex = /^[\w\u4e00-\u9fa5]+$/;
+                    if (!usernameRegex.test(name.value)) {
+                        errors.value.name = '用户名只能包含字母、数字、下划线和中文';
+                        return false;
+                    }
+                    
+                    if (!usernameAvailable.value) {
+                        errors.value.name = '用户名已被注册或正在检查中';
+                        return false;
+                    }
+                    
+                    if (password.value.length < 6) {
+                        errors.value.password = '密码长度至少为6位';
+                        return false;
+                    }
+                    
+                    if (confirmPassword.value !== password.value) {
+                        errors.value.confirmPassword = '两次输入的密码不一致';
+                        return false;
+                    }
+                    
+                    if (email.value) {
+                        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                        if (!emailRegex.test(email.value)) {
+                            errors.value.email = '邮箱格式不正确';
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                };
+                
+                const handleSubmit = async () => {
+                    if (!validateForm()) return;
+                    
+                    loading.value = true;
+                    errorMessage.value = '';
+                    
+                    try {
+                        const response = await fetch(`${getAPIBase()}/user/register`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                name: name.value,
+                                password: password.value,
+                                department: department.value,
+                                email: email.value
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            successMessage.value = '注册成功！';
+                            
+                            // 清空表单
+                            name.value = '';
+                            password.value = '';
+                            confirmPassword.value = '';
+                            department.value = '';
+                            email.value = '';
+                            passwordStrength.value = 'weak';
+                            usernameAvailable.value = false;
+                        } else {
+                            errorMessage.value = data.detail || '注册失败，请稍后重试';
+                        }
+                    } catch (error) {
+                        console.error('注册失败:', error);
+                        errorMessage.value = '网络错误，请稍后重试';
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch(`${getAPIBase()}/offices?is_active=true`);
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                    }
+                };
+                
+                onMounted(() => {
+                    loadOffices();
+                    loadingPage.value = false;
+                });
+                
+                watch([password, confirmPassword], () => {
+                    if (password.value.length >= 6) errors.value.password = '';
+                    if (confirmPassword.value === password.value) errors.value.confirmPassword = '';
+                });
+                
+                watch(email, () => {
+                    if (!email.value) {
+                        errors.value.email = '';
+                    } else {
+                        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                        if (emailRegex.test(email.value)) {
+                            errors.value.email = '';
+                        }
+                    }
+                });
+                
+                return {
+                    name,
+                    password,
+                    confirmPassword,
+                    department,
+                    email,
+                    showPassword,
+                    showConfirmPassword,
+                    loading,
+                    loadingPage,
+                    errorMessage,
+                    successMessage,
+                    checkingUsername,
+                    usernameAvailable,
+                    usernameTaken,
+                    passwordStrength,
+                    offices,
+                    errors,
+                    requirements,
+                    canSubmit,
+                    strengthText,
+                    checkUsername,
+                    checkPasswordStrength,
+                    handleSubmit
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

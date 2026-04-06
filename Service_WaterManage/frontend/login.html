@@ -413,13 +413,13 @@ async handleLogin() {
                     console.log('登录API配置:', { hostname, port, API_BASE });
                     
                     try {
-                        const response = await fetch(`${API_BASE}/admin/login`, {
+                        const response = await fetch(`${API_BASE}/user/login`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                username: this.username,
+                                name: this.username,
                                 password: this.password
                             })
                         });
@@ -434,7 +434,7 @@ async handleLogin() {
                             
                             // 检查用户是否已设置办公室
                             const storedOffices = localStorage.getItem('user_offices');
-                            if (!storedOffices && !data.user_info.office_id) {
+                            if (!storedOffices && !data.user_info.department) {
                                 // 首次登录，需要选择办公室
                                 this.showOfficeSelection = true;
                                 this.loadOffices();
@@ -446,9 +446,9 @@ async handleLogin() {
                                     id: data.user_info.user_id,
                                     name: data.user_info.username,
                                     role: data.user_info.role_name,
-                                    department: data.user_info.email || '',
+                                    department: data.user_info.department || '',
                                     avatar: '👤',
-                                    is_admin: data.user_info.role_id === 1
+                                    is_admin: data.user_info.role === 'super_admin' || data.user_info.role === 'admin'
                                 }));
                                 
                                 window.location.href = '/portal/index.html';
@@ -494,9 +494,9 @@ async handleLogin() {
                             id: this.tempUserInfo.user_id,
                             name: this.tempUserInfo.username,
                             role: this.tempUserInfo.role_name,
-                            department: this.tempUserInfo.email || '',
+                            department: this.tempUserInfo.department || '',
                             avatar: '👤',
-                            is_admin: this.tempUserInfo.role_id === 1
+                            is_admin: this.tempUserInfo.role === 'super_admin' || this.tempUserInfo.role === 'admin'
                         }));
                         
                         // 保存用户办公室
