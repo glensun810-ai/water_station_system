@@ -340,7 +340,7 @@ confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blu
  <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
  <!-- 左侧：面包屑导航 -->
  <div class="flex items-center space-x-3">
- <a href="/service/home.html" 
+ <a href="/portal/index.html" 
  class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -394,7 +394,7 @@ confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blu
  <div class="flex items-center justify-between h-14 px-4">
  <!-- 左侧：返回首页 + 标题 -->
  <div class="flex items-center gap-3">
- <a href="/service/home.html" 
+ <a href="/portal/index.html" 
     class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md min-h-[36px] min-w-[36px] flex items-center justify-center flex-shrink-0 group active:scale-95 transition-transform"
     title="返回系统首页">
      <svg class="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2480,21 +2480,58 @@ if (isLocalhost) {
 
 console.log('会议室管理API配置:', { hostname, port: currentPort, isLocalhost, API_BASE, WATER_API_BASE });
 
+// 统一获取token和用户信息
+const getToken = () => localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
+const getUserInfo = () => {
+    const userInfoStr = localStorage.getItem('userInfo') || localStorage.getItem('admin_user') || localStorage.getItem('user');
+    if (!userInfoStr) return null;
+    
+    const userInfo = JSON.parse(userInfoStr);
+    // 统一用户信息格式，兼容多种存储方式
+    return {
+        id: userInfo.id,
+        username: userInfo.username || userInfo.name || '未知',
+        real_name: userInfo.real_name || userInfo.name || '管理员',
+        name: userInfo.name || '管理员',
+        role: userInfo.role || 'staff'
+    };
+};
+
+// 统一的fetch调用，自动添加Authorization头
+const authFetch = async (url, options = {}) => {
+    const token = getToken();
+    const headers = {
+        ...options.headers,
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+};
+
 const user = ref(null);
+
+// 统一获取token和用户信息
+const getToken = () => localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
+const getUserInfo = () => {
+    const userInfo = localStorage.getItem('userInfo') || localStorage.getItem('admin_user') || localStorage.getItem('user');
+    return userInfo ? JSON.parse(userInfo) : null;
+};
+
 const getInitialTab = () => {
-const hash = window.location.hash.slice(1);
-const savedTab = localStorage.getItem('admin_current_tab');
-const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
+    const hash = window.location.hash.slice(1);
+    const savedTab = localStorage.getItem('admin_current_tab');
+    const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
 
-if (hash && validTabs.includes(hash)) {
-return hash;
-}
+    if (hash && validTabs.includes(hash)) {
+        return hash;
+    }
 
-if (savedTab && validTabs.includes(savedTab)) {
-return savedTab;
-}
+    if (savedTab && validTabs.includes(savedTab)) {
+        return savedTab;
+    }
 
-return 'dashboard';
+    return 'dashboard';
 };
 
 const currentTab = ref(getInitialTab());
@@ -2562,31 +2599,42 @@ onCancel: () => {}
 });
 
 const showConfirm = (options) => {
-return new Promise((resolve, reject) => {
-confirmDialog.value = {
-show: true,
-title: options.title || '确认',
-message: options.message || '',
-type: options.type || 'info',
-confirmText: options.confirmText || '确认',
-cancelText: options.cancelText || '取消',
-inputLabel: options.inputLabel || '',
-inputPlaceholder: options.inputPlaceholder || '',
-inputValue: '',
-onConfirm: () => {
-confirmDialog.value.show = false;
-if (options.inputLabel) {
-resolve(confirmDialog.value.inputValue);
-} else {
-resolve(true);
-}
-},
-onCancel: () => {
-confirmDialog.value.show = false;
-resolve(options.inputLabel ? null : false);
-}
+    return new Promise((resolve, reject) => {
+        confirmDialog.value = {
+            show: true,
+            title: options.title || '确认',
+            message: options.message || '',
+            type: options.type || 'info',
+            confirmText: options.confirmText || '确认',
+            cancelText: options.cancelText || '取消',
+            inputLabel: options.inputLabel || '',
+            inputPlaceholder: options.inputPlaceholder || '',
+            inputValue: '',
+            onConfirm: () => {
+                confirmDialog.value.show = false;
+                if (options.inputLabel) {
+                    resolve(confirmDialog.value.inputValue);
+                } else {
+                    resolve(true);
+                }
+            },
+            onCancel: () => {
+                confirmDialog.value.show = false;
+                resolve(options.inputLabel ? null : false);
+            }
+        };
+    });
 };
-});
+
+// 统一退出登录
+const handleLogout = () => {
+    if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userInfo');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        window.location.href = 'admin_login.html';
+    }
 };
 
 const menuItems = ref([
@@ -2675,7 +2723,7 @@ if (!confirm(`确认要批量确认 ${selectedBookingIds.value.length} 条预约
 try {
 let successCount = 0;
 for (const id of selectedBookingIds.value) {
-const res = await fetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
+const res = await authFetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
 if (res.ok) successCount++;
 }
 
@@ -2697,7 +2745,7 @@ if (!reason) return;
 try {
 let successCount = 0;
 for (const id of selectedBookingIds.value) {
-const res = await fetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+const res = await authFetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
 method: 'PUT'
 });
 if (res.ok) successCount++;
@@ -2920,7 +2968,7 @@ const bookingStats = computed(() => {
 
 const loadRooms = async () => {
 try {
-const res = await fetch(`${API_BASE}/rooms`);
+const res = await authFetch(`${API_BASE}/rooms`);
 if (res.ok) {
 rooms.value = await res.json();
 rooms.value = rooms.value.map(r => ({
@@ -2935,7 +2983,7 @@ console.error('加载会议室失败:', e);
 
 const loadOffices = async () => {
 try {
-const res = await fetch(`${WATER_API_BASE}/offices?is_active=1`);
+const res = await authFetch(`${WATER_API_BASE}/offices?is_active=1`);
 if (res.ok) {
 offices.value = await res.json();
 console.log('加载办公室成功:', offices.value.length);
@@ -2947,7 +2995,7 @@ console.error('加载办公室失败:', e);
 
 const loadBookings = async () => {
 try {
-const res = await fetch(`${API_BASE}/bookings`);
+const res = await authFetch(`${API_BASE}/bookings`);
 if (res.ok) {
 const data = await res.json();
 const officeNames = offices.value.length > 0 
@@ -3046,14 +3094,14 @@ console.error('加载预约失败:', e);
                         let res;
                         if (editingRoom.value) {
                             // 编辑
-                            res = await fetch(`${API_BASE}/rooms/${editingRoom.value.id}`, {
+                            res = await authFetch(`${API_BASE}/rooms/${editingRoom.value.id}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(data)
                             });
                         } else {
                             // 新增
-                            res = await fetch(`${API_BASE}/rooms`, {
+                            res = await authFetch(`${API_BASE}/rooms`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(data)
@@ -3078,7 +3126,7 @@ console.error('加载预约失败:', e);
 
                 const toggleRoomStatus = async (room) => {
                     try {
-                        const res = await fetch(`${API_BASE}/rooms/${room.id}`, {
+                        const res = await authFetch(`${API_BASE}/rooms/${room.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active: !room.is_active })
@@ -3096,7 +3144,7 @@ console.error('加载预约失败:', e);
                     if (!confirm('确定要删除这个会议室吗？此操作不可恢复。')) return;
                     
                     try {
-                        const res = await fetch(`${API_BASE}/rooms/${id}`, { method: 'DELETE' });
+                        const res = await authFetch(`${API_BASE}/rooms/${id}`, { method: 'DELETE' });
                         if (res.ok) {
                             alert('会议室已删除');
                             loadRooms();
@@ -3112,7 +3160,7 @@ console.error('加载预约失败:', e);
                     try {
                         // 获取今日预约数
                         const today = new Date().toISOString().split('T')[0];
-                        const bookingsRes = await fetch(`${API_BASE}/bookings/enhanced?is_deleted=0`);
+                        const bookingsRes = await authFetch(`${API_BASE}/bookings/enhanced?is_deleted=0`);
                         const bookingsData = await bookingsRes.json();
                         
                         if (bookingsData.success) {
@@ -3138,7 +3186,7 @@ const confirmBooking = async (id) => {
 if (!confirm('确认此预约？')) return;
 
 try {
-const res = await fetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
+const res = await authFetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
 if (res.ok) {
 showToast('预约已确认', 'success');
 loadBookings();
@@ -3156,7 +3204,7 @@ const reason = prompt('请输入取消原因：');
 if (!reason) return;
 
 try {
-const res = await fetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+const res = await authFetch(`${API_BASE}/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
 method: 'PUT'
 });
 if (res.ok) {
@@ -3242,7 +3290,7 @@ sortOrder.value = 'asc';
                 
                 const loadApprovals = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/approvals`);
+                        const res = await authFetch(`${API_BASE}/approvals`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3311,7 +3359,7 @@ sortOrder.value = 'asc';
                     if (result === 'rejected' && !reason) return;
                     
                     try {
-                        const res = await fetch(`${API_BASE}/approval/approve`, {
+                        const res = await authFetch(`${API_BASE}/approval/approve`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -3336,7 +3384,7 @@ sortOrder.value = 'asc';
                     if (!confirm(`确认批量批准${selectedApprovals.value.length}条审批申请？`)) return;
                     
                     try {
-                        const res = await fetch(`${API_BASE}/approval/batch-approve`, {
+                        const res = await authFetch(`${API_BASE}/approval/batch-approve`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(selectedApprovals.value)
@@ -3366,7 +3414,7 @@ sortOrder.value = 'asc';
                 
                 const viewApprovalDetail = async (id) => {
                     try {
-                        const res = await fetch(`${API_BASE}/approval/${id}`);
+                        const res = await authFetch(`${API_BASE}/approval/${id}`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3396,7 +3444,7 @@ sortOrder.value = 'asc';
                 
                 const loadPayments = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/payments`);
+                        const res = await authFetch(`${API_BASE}/payments`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3411,7 +3459,7 @@ sortOrder.value = 'asc';
                 
                 const loadSettlements = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/settlements`);
+                        const res = await authFetch(`${API_BASE}/settlements`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3470,7 +3518,7 @@ sortOrder.value = 'asc';
                     if (!confirm('确认此支付？')) return;
                     
                     try {
-                        const res = await fetch(`${API_BASE}/payment/confirm`, {
+                        const res = await authFetch(`${API_BASE}/payment/confirm`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ payment_id: id })
@@ -3508,7 +3556,7 @@ sortOrder.value = 'asc';
                 
                 const viewSettlementDetail = async (id) => {
                     try {
-                        const res = await fetch(`${API_BASE}/settlement/${id}`);
+                        const res = await authFetch(`${API_BASE}/settlement/${id}`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3535,7 +3583,7 @@ sortOrder.value = 'asc';
                         const start = reportStartDate.value || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
                         const end = reportEndDate.value || new Date().toISOString().split('T')[0];
                         
-                        const res = await fetch(`${API_BASE}/statistics/enhanced?start_date=${start}&end_date=${end}`);
+                        const res = await authFetch(`${API_BASE}/statistics/enhanced?start_date=${start}&end_date=${end}`);
                         if (res.ok) {
                             const data = await res.json();
                             if (data.success) {
@@ -3614,25 +3662,33 @@ currentTab.value = hash;
 });
 
 onMounted(async () => {
-const userStr = localStorage.getItem('user');
-if (userStr) user.value = JSON.parse(userStr);
+    // 统一获取用户信息
+    const userInfo = getUserInfo();
+    if (userInfo) user.value = userInfo;
+    
+    // 检查是否已登录，未登录则跳转登录页
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'admin_login.html';
+        return;
+    }
 
-if (window.location.hash) {
-const hash = window.location.hash.slice(1);
-const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
-if (hash && validTabs.includes(hash)) {
-currentTab.value = hash;
-}
-}
+    if (window.location.hash) {
+        const hash = window.location.hash.slice(1);
+        const validTabs = ['dashboard', 'rooms', 'bookings', 'approvals', 'finance', 'reports', 'settings'];
+        if (hash && validTabs.includes(hash)) {
+            currentTab.value = hash;
+        }
+    }
 
-await loadOffices();
-await loadRooms();
-await loadBookings();
-loadDashboardStats();
-loadApprovals();
-loadPayments();
-loadSettlements();
-loadSettings();
+    await loadOffices();
+    await loadRooms();
+    await loadBookings();
+    loadDashboardStats();
+    loadApprovals();
+    loadPayments();
+    loadSettlements();
+    loadSettings();
 });
 
 return {
@@ -3649,7 +3705,7 @@ statusClass, statusText, getFilterTitle, clearAllFilters, toggleSort, viewBookin
 showBookingDetail, selectedBooking, selectedBookingIds, toggleBookingSelection, toggleSelectAll,
 batchConfirmBookings, batchCancelBookings, exportBookings,
 menuItems, mobileMenuItems, moreMenuItems, showMobileMoreMenu, dashboardStats, top5Rooms, loadDashboardStats, loadOffices,
-toasts, showToast, removeToast, confirmDialog, showConfirm,
+toasts, showToast, removeToast, confirmDialog, showConfirm, handleLogout,
 
 // Approval module
 approvals, approvalFilter, selectedApprovals, approvalStats, filteredApprovals,
@@ -3675,9 +3731,9 @@ settings, saveSettings, resetSettings
         // 环境检测：更新返回首页链接
         (function() {
             const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
-            const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+            const homeHref = isLocalDev ? '/portal/index.html' : '/portal/index.html';
             document.addEventListener('DOMContentLoaded', function() {
-                document.querySelectorAll('a[href="/service/home.html"]').forEach(link => {
+                document.querySelectorAll('a[href="/portal/index.html"]').forEach(link => {
                     link.href = homeHref;
                 });
             });

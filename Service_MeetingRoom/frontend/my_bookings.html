@@ -121,7 +121,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full w-full">
                 <div class="flex justify-between items-center h-full">
                     <div class="flex items-center space-x-3">
-                        <a href="/service/home.html" class="flex items-center space-x-1 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm">
+                        <a href="/portal/index.html" class="flex items-center space-x-1 px-3 py-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                             </svg>
@@ -146,7 +146,7 @@
         <!-- 移动端顶部导航 -->
         <nav class="md:hidden bg-white shadow-sm z-50 h-14 flex-shrink-0">
             <div class="flex items-center justify-between h-full px-4">
-                <a href="/service/home.html" class="text-slate-600 hover:text-blue-600">
+                <a href="/portal/index.html" class="text-slate-600 hover:text-blue-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                     </svg>
@@ -1306,12 +1306,13 @@
                             this.bookings = [];
                         }
                         
-                        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        // 统一获取用户信息
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || localStorage.getItem('user') || '{}');
                         this.stats.total = this.bookings.length;
-                        this.stats.myBookings = currentUser.name 
+                        this.stats.myBookings = userInfo.name 
                             ? this.bookings.filter(b => 
-                                b.user_name === currentUser.name || 
-                                b.external_contact_name === currentUser.name
+                                b.user_name === userInfo.name || 
+                                b.external_contact_name === userInfo.name
                               ).length 
                             : 0;
                         this.stats.pending = this.bookings.filter(b => b.status === 'pending').length;
@@ -1516,9 +1517,9 @@
         // 环境检测：更新返回首页链接
         (function() {
             const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
-            const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+            const homeHref = isLocalDev ? '/portal/index.html' : '/portal/index.html';
             document.addEventListener('DOMContentLoaded', function() {
-                document.querySelectorAll('a[href="/service/home.html"]').forEach(link => {
+                document.querySelectorAll('a[href="/portal/index.html"]').forEach(link => {
                     link.href = homeHref;
                 });
             });

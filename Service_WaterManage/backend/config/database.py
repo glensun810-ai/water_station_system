@@ -105,6 +105,11 @@ class DatabaseManager:
         """获取会议室数据库引擎"""
         return self._meeting_engine
 
+    @property
+    def meeting_session_factory(self):
+        """获取会议室数据库会话工厂"""
+        return self._meeting_session_factory
+
 
 # 全局数据库管理器实例
 db_manager = DatabaseManager()
@@ -119,3 +124,12 @@ def get_db() -> Generator[Session, None, None]:
 def get_meeting_db() -> Generator[Session, None, None]:
     """获取会议室数据库会话（依赖注入）"""
     return db_manager.get_meeting_session()
+
+
+# ==================== 向后兼容导出 ====================
+# 导出旧版api_meeting.py中使用的会话工厂名称
+SessionLocal = db_manager._main_session_factory
+MeetingSessionLocal = db_manager._meeting_session_factory
+
+# 导出引擎
+engine = db_manager.main_engine

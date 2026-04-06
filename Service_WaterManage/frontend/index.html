@@ -950,16 +950,8 @@
         // API基础地址配置
         let API_BASE;
         if (isLocalhost) {
-            // 本地开发：如果访问的是8080端口（静态服务器），API应该在8000端口
-            if (currentPort === '8080' || currentPort === '3000') {
-                API_BASE = 'http://localhost:8000/api';
-            } else if (currentPort === '8000') {
-                // 如果已经在8000端口，使用当前端口
-                API_BASE = `${protocol}//${hostname}:${currentPort}/api`;
-            } else {
-                // 其他情况，默认使用8000端口
-                API_BASE = 'http://localhost:8000/api';
-            }
+            // 本地开发：使用当前访问的端口号
+            API_BASE = `${protocol}//${hostname}:${currentPort}/api`;
         } else {
             // 生产环境：使用当前域名和协议
             API_BASE = `${protocol}//${hostname}/api`;
@@ -1173,8 +1165,7 @@
             },
             async mounted() {
                 // 环境检测：更新返回首页链接
-                const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '8080';
-                const homeHref = isLocalDev ? '/portal/home.html' : '/service/home.html';
+                const homeHref = '/portal/index.html';
                 const homeBtn = document.querySelector('.home-btn');
                 if (homeBtn) {
                     homeBtn.href = homeHref;
@@ -1262,9 +1253,20 @@
                     
                     try {
                         // 并行加载办公室和产品数据
-                        const [officesRes, productsRes] = await Promise.all([fetch(API_BASE + '/offices?is_active=1'), fetch(API_BASE + '/products?is_active=1')]);
+                        const [officesRes, productsRes] = await Promise.all([
+                            fetch(API_BASE + '/offices?is_active=1'),
+                            fetch(API_BASE + '/packages')
+                        ]);
                         if (officesRes.ok) this.offices = await officesRes.json();
-                        if (productsRes.ok) { this.products = await productsRes.json(); this.products.forEach(p => this.cart[p.id] = 0); }
+                        if (productsRes.ok) { 
+                            const packagesData = await packagesRes.json();
+                            // 从套餐中提取产品
+                            if (packagesData && packagesData.length > 0) {
+                                // 假设套餐数据结构
+                                this.products = packagesData;
+                                this.products.forEach(p => this.cart[p.id] = 0);
+                            }
+                        }
                         
                         // 设置默认办公室和领水人
                         if (this.userOffices.length > 0) {
@@ -1282,35 +1284,70 @@
                                 this.settlementOfficeId = defaultId;
                             }
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) { 
+                        console.error('加载数据失败:', e);
+                        console.error('错误详情:', e.message);
+                    }
                     
                     // 加载支付二维码
                     this.loadPaymentQr();
                 },
                 async loadPaymentQr() { try { const res = await fetch(API_BASE + '/config/payment-qr'); if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; } } catch (e) { console.error(e); } },
-                async loadRecordList() {
+async loadRecordList() {
                     try {
-                        const res = await fetch(API_BASE + '/user/office-pickups?limit=10000');
+                        console.log('开始加载领水记录，API_BASE:', API_BASE);
+                        const res = await fetch(API_BASE + '/office-pickups?limit=10000');
+                        console.log('API响应状态:', res.status);
+                        
                         if (res.ok) {
                             let records = await res.json();
-                            if (this.userOffices.length > 0) {
-                                const userOfficeIds = this.userOffices.map(uo => uo.id);
-                                records = records.filter(r => userOfficeIds.includes(r.office_id));
+                            console.log('原始领水记录:', records.length, '条');
+                            
+                            if (records && records.length > 0) {
+                                // 如果用户有办公室权限，按办公室过滤
+                                if (this.userOffices && this.userOffices.length > 0) {
+                                    const userOfficeIds = this.userOffices.map(uo => uo.id);
+                                    console.log('用户办公室ID列表:', userOfficeIds);
+                                    const filteredRecords = records.filter(r => userOfficeIds.includes(r.office_id));
+                                    console.log('匹配的领水记录:', filteredRecords.length, '条');
+                                    this.recordList = filteredRecords;
+                                } else {
+                                    // 如果没有办公室权限，显示所有记录（访客模式）
+                                    console.log('用户没有办公室权限，显示所有记录');
+                                    this.recordList = records;
+                                }
+                            } else {
+                                console.log('数据库中没有领水记录');
+                                this.recordList = [];
                             }
-                            this.recordList = records;
+                            
+                            console.log('最终recordList:', this.recordList);
+                        } else {
+                            console.error('加载领水记录失败:', res.status, res.statusText);
+                            this.recordList = [];
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error('加载领水记录错误:', e);
+                        console.error('错误详情:', e.message);
+                        this.recordList = [];
+                    }
                 },
-                async loadRecords(officeId, status) { 
-                    try { 
-                        const params = new URLSearchParams(); 
+async loadRecords(officeId, status) {
+                    try {
+                        const params = new URLSearchParams();
                         const oid = officeId || this.settlementOfficeId;
                         const s = status || this.settlementStatus;
-                        if (oid) params.append('office_id', oid); 
-                        if (s && s !== 'all') params.append('status', s); 
-                        const res = await fetch(API_BASE + '/user/office-pickups?' + params); 
-                        if (res.ok) this.records = await res.json(); 
-                    } catch (e) { console.error(e); } 
+                        if (oid) params.append('office_id', oid);
+                        if (s && s !== 'all') params.append('status', s);
+                        const res = await fetch(API_BASE + '/office-pickups?' + params);
+                        if (res.ok) {
+                            this.records = await res.json();
+                        } else {
+                            console.error('加载记录失败:', res.status);
+                        }
+                    } catch (e) {
+                        console.error('加载记录错误:', e);
+                    }
                 },
                 async loadSettlementData() {
                     await Promise.all([

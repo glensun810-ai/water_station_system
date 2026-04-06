@@ -82,7 +82,7 @@
             
             <!-- 返回主页 -->
             <div class="text-center mt-6">
-                <a href="/service/home.html" class="text-white hover:text-gray-200 transition">
+                <a href="/portal/index.html" class="text-white hover:text-gray-200 transition">
                     ← 返回主页
                 </a>
             </div>
@@ -119,20 +119,30 @@
                     errorMessage.value = '';
                     
                     try {
-                        const response = await fetch(`${API_BASE}/admin/login`, {
+                        // 使用统一登录接口
+                        const API_BASE = window.location.origin;
+                        const response = await fetch(`${API_BASE}/api/auth/login`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify(loginForm.value)
+                            body: JSON.stringify({
+                                name: loginForm.value.username,
+                                password: loginForm.value.password
+                            })
                         });
                         
                         const data = await response.json();
                         
                         if (response.ok) {
-                            // 保存token
-                            localStorage.setItem('admin_token', data.access_token);
-                            localStorage.setItem('admin_user', JSON.stringify(data.user_info));
+                            // 统一存储：token存储为'token'，用户信息存储为'userInfo'
+                            localStorage.setItem('token', data.access_token);
+                            localStorage.setItem('userInfo', JSON.stringify({
+                                id: data.user.id,
+                                name: data.user.name,
+                                role: data.user.role,
+                                department: data.user.department
+                            }));
                             
                             // 跳转到管理后台
                             window.location.href = 'admin.html';

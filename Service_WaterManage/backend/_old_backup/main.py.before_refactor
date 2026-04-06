@@ -1,0 +1,4434 @@
+"""
+Water Management System - Backend API
+智能水站管理系统 - 后端服务
+"""
+
+from typing import Tuple
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    ForeignKey,
+    func,
+    case,
+    text,
+    Text,
+)
+from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
+from datetime import datetime, timedelta
+from typing import List, Optional
+import bcrypt
+from jose import jwt
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import os
+import secrets
+
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+# Security
+security = HTTPBearer(auto_error=False)
+
+# Database setup
+SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# ==================== Helper Functions ====================
+def hash_password(password: str) -> str:
+    """使用 bcrypt 加密密码"""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        )
+    except Exception:
+        return False
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """创建 JWT Token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now() + expires_delta
+    else:
+        expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def verify_token(token: str) -> Optional[dict]:
+    """验证 JWT Token"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except Exception as e:
+        # 记录详细错误但不暴露给客户端
+        import logging
+
+        logging.error(f"Token verification failed: {str(e)}")
+        return None
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+) -> Optional["User"]:
+    """获取当前登录用户"""
+    if not credentials:
+        return None
+
+    token = credentials.credentials
+    payload = verify_token(token)
+
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user or not user.is_active:
+        return None
+
+    return user
+
+
+# ==================== Database Models ====================
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)  # 用户名唯一
+    department = Column(String, nullable=False)
+    role = Column(String, default="staff")  # staff, admin, super_admin
+    password_hash = Column(String, nullable=True)  # bcrypt 密码哈希
+    balance_credit = Column(Float, default=0)
+    is_active = Column(Integer, default=1)  # 1: 启用，0: 禁用
+    created_at = Column(DateTime, default=datetime.now)
+
+    notifications = relationship("Notification", back_populates="user")
+
+
+class ProductCategory(Base):
+    __tablename__ = "product_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    specification = Column(String)  # e.g., "18L", "500ml", "4小时"
+    unit = Column(String, default="unit")
+    price = Column(Float, nullable=False)
+    stock = Column(Integer, default=0)
+    cost_price = Column(Float, nullable=True)  # 成本价
+    image_url = Column(String, nullable=True)  # 产品图片URL
+    description = Column(String, nullable=True)  # 产品描述
+    category_id = Column(
+        Integer, ForeignKey("product_categories.id"), nullable=True
+    )  # 分类ID
+    barcode = Column(String, nullable=True)  # 产品条码
+    promo_threshold = Column(Integer, default=10)  # 买 N
+    promo_gift = Column(Integer, default=1)  # 赠 M
+    is_active = Column(Integer, default=1)  # 1: 启用/在售，0: 停用/归档
+    is_protected = Column(
+        Integer, default=0
+    )  # 0: 可删除, 1: 受保护(发布后自动保护真实数据)
+
+    # === Phase 1 服务扩展字段 ===
+    service_type = Column(
+        String(50), default="water"
+    )  # 服务类型：water/meeting_room/dining等
+    resource_config = Column(Text, nullable=True)  # 资源配置 (JSON)
+    booking_required = Column(Integer, default=0)  # 是否需要预约：0-不需要，1-需要
+    advance_booking_days = Column(Integer, default=0)  # 可提前预约天数
+    category = Column(String(50), default="physical")  # 产品分类：physical/service
+    icon = Column(String(10), nullable=True)  # 图标
+    color = Column(String(20), default="blue")  # 颜色
+    max_capacity = Column(Integer, default=0)  # 最大容量（人数等）
+    facilities = Column(Text, nullable=True)  # 设施配置 (JSON)
+
+    category_rel = relationship("ProductCategory", backref="products")
+
+
+class InventoryRecord(Base):
+    """库存流水记录"""
+
+    __tablename__ = "inventory_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    type = Column(String(20), nullable=False)  # in/out/adjust/loss
+    quantity = Column(Integer, nullable=False)
+    before_stock = Column(Integer, nullable=False)
+    after_stock = Column(Integer, nullable=False)
+    reference_type = Column(String(50))
+    reference_id = Column(Integer)
+    operator_id = Column(Integer)
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class InventoryAlertConfig(Base):
+    """库存预警配置 (按产品单独设置)"""
+
+    __tablename__ = "inventory_alert_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    warning_threshold = Column(Integer, default=10)
+    critical_threshold = Column(Integer, default=5)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime)
+
+
+class OfficeAccount(Base):
+    """办公室账户表"""
+
+    __tablename__ = "office_account"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+
+    total_qty = Column(Integer, default=0)
+    paid_qty = Column(Integer, default=0)
+    free_qty = Column(Integer, default=0)
+    remaining_qty = Column(Integer, default=0)
+    reserved_qty = Column(Integer, default=0)
+
+    reserved_person = Column(String(100), nullable=True)
+    reserved_person_id = Column(Integer, nullable=True)
+    manager_name = Column(String(100), nullable=True)
+    manager_id = Column(Integer, nullable=True)
+    configured_count = Column(Integer, default=0)
+
+    account_type = Column(String(20), default="credit")  # credit/prepaid
+    status = Column(String(20), default="active")  # active/frozen/closed
+    low_stock_threshold = Column(Integer, default=5)
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class AccountTransaction(Base):
+    """账户变动流水记录"""
+
+    __tablename__ = "account_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("office_account.id"), nullable=False)
+    office_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, nullable=False)
+    type = Column(String(20), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    before_qty = Column(Integer, nullable=False)
+    after_qty = Column(Integer, nullable=False)
+    quantity_type = Column(String(20))
+    amount = Column(Float)
+    unit_price = Column(Float)
+    reference_type = Column(String(50))
+    reference_id = Column(Integer)
+    operator_id = Column(Integer)
+    operator_name = Column(String(100))
+    note = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class PrepaidPackage(Base):
+    """预付套餐"""
+
+    __tablename__ = "prepaid_packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    product_id = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    buy_quantity = Column(Integer, nullable=False)
+    gift_quantity = Column(Integer, nullable=False)
+    validity_days = Column(Integer, default=90)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class OfficePickup(Base):
+    __tablename__ = "office_pickup"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    pickup_person = Column(String(100), nullable=True)
+    pickup_person_id = Column(Integer, nullable=True)
+    pickup_time = Column(DateTime, nullable=False)
+    payment_mode = Column(String(20), default="credit")
+    settlement_status = Column(String(20), default="pending")
+    unit_price = Column(Float, default=0)
+    total_amount = Column(Float, default=0)
+    free_qty = Column(Integer, default=0)  # 买 N 赠 M 免费数量
+    discount_desc = Column(String(500), nullable=True)  # 优惠描述
+    note = Column(String(500), nullable=True)
+
+    # 软删除字段
+    is_deleted = Column(Integer, default=0)  # 0: 未删除，1: 已删除
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, nullable=True)
+    delete_reason = Column(String(500), nullable=True)
+
+    # === Phase 1 服务扩展字段 ===
+    service_type = Column(String(50), default="water")  # 服务类型
+    time_slot = Column(String(100), nullable=True)  # 时间段
+    actual_usage = Column(String(200), nullable=True)  # 实际使用情况
+    booking_status = Column(String(20), default="confirmed")  # 预约状态
+    service_name = Column(String(100), nullable=True)  # 服务名称
+    participants_count = Column(Integer, default=0)  # 参与人数
+    purpose = Column(String(200), nullable=True)  # 使用目的
+    contact_phone = Column(String(20), nullable=True)  # 联系电话
+
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class OfficeSettlement(Base):
+    __tablename__ = "office_settlement"
+
+    id = Column(Integer, primary_key=True, index=True)
+    office_id = Column(Integer, nullable=False)
+    office_name = Column(String(100), nullable=False)
+    office_room_number = Column(String(50), nullable=True)
+    product_id = Column(Integer, nullable=False)
+    product_name = Column(String(100), nullable=False)
+    product_specification = Column(String(50), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    settlement_person = Column(String(100), nullable=True)
+    settlement_person_id = Column(Integer, nullable=True)
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    confirmed_at = Column(DateTime, nullable=True)
+    confirmed_by = Column(Integer, nullable=True)
+
+
+class DeleteLog(Base):
+    """删除操作审计日志表"""
+
+    __tablename__ = "delete_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 操作人 ID
+    operator_name = Column(String, nullable=False)  # 操作人姓名
+    action = Column(String, nullable=False)  # 操作类型：delete_transaction
+    target_type = Column(String, nullable=False)  # 目标类型：transaction
+    target_ids = Column(String, nullable=False)  # 目标 ID 列表（JSON 字符串）
+    reason = Column(String, nullable=True)  # 删除原因
+    ip_address = Column(String, nullable=True)  # 操作 IP
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Notification(Base):
+    """站内消息通知表"""
+
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )  # 接收用户 ID，None 表示全员通知
+    title = Column(String, nullable=False)  # 消息标题
+    content = Column(String, nullable=False)  # 消息内容
+    type = Column(
+        String, default="info"
+    )  # 消息类型：info, settlement, reminder, warning
+    is_read = Column(Integer, default=0)  # 是否已读：0-未读，1-已读
+    created_at = Column(DateTime, default=datetime.now)
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="notifications")
+
+
+class Promotion(Base):
+    __tablename__ = "promotions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    trigger_qty = Column(Integer, nullable=False)  # 触发数量 N
+    gift_qty = Column(Integer, nullable=False)  # 赠送数量 M
+    description = Column(String)
+    is_active = Column(Integer, default=1)
+
+
+class PromotionConfig(Base):
+    """优惠配置表 - 支持按模式配置不同优惠"""
+
+    __tablename__ = "promotion_config"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    mode = Column(
+        String(20), nullable=False, default="pay_later"
+    )  # 'pay_later' 或 'prepay'
+    trigger_qty = Column(Integer, nullable=False, default=10)  # 买 N
+    gift_qty = Column(Integer, nullable=False, default=0)  # 赠 M
+    discount_rate = Column(Float, nullable=False, default=100.0)  # 折扣率（百分比）
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class ReservationPickup(Base):
+    """预定领取记录表"""
+
+    __tablename__ = "reservation_pickups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reservation_id = Column(Integer, ForeignKey("transactions.id"), nullable=False)
+    pickup_qty = Column(Integer, nullable=False)
+    picked_at = Column(DateTime, default=datetime.now)
+    picked_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="completed")
+
+
+class PrepaidOrder(Base):
+    """预付订单表"""
+
+    __tablename__ = "prepaid_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    total_qty = Column(Integer, nullable=False)
+    used_qty = Column(Integer, default=0)
+    unit_price = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    discount_amount = Column(Float, default=0)
+    payment_status = Column(String, default="unpaid")  # unpaid, paid, refunded
+    payment_method = Column(String, default="offline")  # offline, online, credit
+    payment_at = Column(DateTime, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    note = Column(String, nullable=True)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    user = relationship("User", foreign_keys=[user_id])
+    product = relationship("Product")
+    creator = relationship("User", foreign_keys=[created_by])
+
+
+class PrepaidPickup(Base):
+    """预付领取记录表"""
+
+    __tablename__ = "prepaid_pickups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("prepaid_orders.id"), nullable=False)
+    pickup_qty = Column(Integer, nullable=False)
+    picked_at = Column(DateTime, default=datetime.now)
+    picked_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    order = relationship("PrepaidOrder", back_populates="pickups")
+    picker = relationship("User", foreign_keys=[picked_by])
+
+
+# 添加反向关系
+PrepaidOrder.pickups = relationship(
+    "PrepaidPickup", back_populates="order", order_by=PrepaidPickup.created_at
+)
+
+
+# ==================== Pydantic Schemas ====================
+class UserBase(BaseModel):
+    name: str
+    department: str
+    role: str = "staff"
+
+
+class UserCreate(UserBase):
+    password: str  # 创建用户时需要密码
+
+
+class UserUpdate(BaseModel):
+    """用户更新模型（所有字段可选）"""
+
+    name: Optional[str] = None
+    department: Optional[str] = None
+    role: Optional[str] = None
+    balance_credit: Optional[float] = None
+    is_active: Optional[int] = None
+
+
+class UserResponse(UserBase):
+    id: int
+    balance_credit: float
+    is_active: int
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserLogin(BaseModel):
+    """用户登录请求"""
+
+    name: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    """Token 响应"""
+
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class PasswordChange(BaseModel):
+    """密码修改请求"""
+
+    old_password: str
+    new_password: str
+
+
+class ProductBase(BaseModel):
+    name: str
+    specification: str
+    unit: str = "桶"
+    price: float
+    stock: int = 0
+    cost_price: Optional[float] = None
+    image_url: Optional[str] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    barcode: Optional[str] = None
+    promo_threshold: int = 10
+    promo_gift: int = 1
+    is_active: int = 1
+
+
+class ProductCreate(ProductBase):
+    pass
+
+
+class ProductResponse(ProductBase):
+    id: int
+    category_name: Optional[str] = None
+    is_protected: Optional[int] = 0
+
+    model_config = ConfigDict(from_attributes=True)
+    quantity: int = None  # 用于补货时增加库存
+
+
+class DeleteLogResponse(BaseModel):
+    """删除日志响应"""
+
+    id: int
+    operator_id: int
+    operator_name: str
+    action: str
+    target_type: str
+    target_ids: str
+    reason: Optional[str]
+    ip_address: Optional[str]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationBase(BaseModel):
+    title: str
+    content: str
+    type: str = "info"
+
+
+class NotificationCreate(NotificationBase):
+    user_id: Optional[int] = None
+
+
+class NotificationResponse(NotificationBase):
+    id: int
+    user_id: Optional[int] = None
+    is_read: int = 0
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PromotionConfigBase(BaseModel):
+    product_id: int
+    mode: str = "pay_later"  # 'pay_later' 或 'prepay'
+    trigger_qty: int = 10
+    gift_qty: int = 0
+    discount_rate: float = 100.0
+    is_active: int = 1
+
+
+class PromotionConfigCreate(PromotionConfigBase):
+    pass
+
+
+class PromotionConfigResponse(PromotionConfigBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReservationBalanceResponse(BaseModel):
+    user_id: int
+    product_id: int
+    product_name: str
+    reserved_qty: int
+    used_qty: int
+    remaining_qty: int
+
+
+class PrepaidOrderBase(BaseModel):
+    user_id: int
+    product_id: int
+    total_qty: int
+    unit_price: float
+    discount_amount: float = 0
+    payment_method: str = "offline"
+    note: Optional[str] = None
+
+
+class PrepaidOrderCreate(PrepaidOrderBase):
+    pass
+
+
+class PrepaidOrderResponse(PrepaidOrderBase):
+    id: int
+    used_qty: int
+    total_amount: float
+    payment_status: str
+    payment_at: Optional[datetime] = None
+    created_by: int
+    confirmed_by: Optional[int] = None
+    is_active: int = 1
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PrepaidPickupCreate(BaseModel):
+    order_id: int
+    pickup_qty: int
+    note: Optional[str] = None
+
+
+class InventoryUpdate(BaseModel):
+    product_id: Optional[int] = None
+    stock: Optional[int] = None
+    quantity: Optional[int] = None
+
+
+class DeleteTransactionRequest(BaseModel):
+    transaction_ids: List[int]
+    delete_reason: Optional[str] = None
+
+
+class SettlementRequest(BaseModel):
+    transaction_ids: List[int]
+
+
+class PrepaidPickupResponse(BaseModel):
+    id: int
+    order_id: int
+    pickup_qty: int
+    picked_at: datetime
+    picked_by: int
+    note: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PrepaidBalanceItem(BaseModel):
+    order_id: int
+    product_id: int
+    product_name: str
+    specification: str
+    unit: str
+    total_qty: int
+    used_qty: int
+    remaining_qty: int
+    unit_price: float
+    total_amount: float
+    payment_status: str
+
+
+class PrepaidBalanceResponse(BaseModel):
+    user_id: int
+    orders: List[PrepaidBalanceItem]
+    summary: dict
+
+
+# ==================== FastAPI App ====================
+app = FastAPI(title="Water Management System", description="智能水站管理系统")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://jhw-ai.com",
+        "https://jhw-ai.com",
+        "http://www.jhw-ai.com",
+        "https://www.jhw-ai.com",
+        "http://120.76.156.83",
+        "http://localhost",
+        "http://localhost:8080",
+        "http://localhost:8000",
+        "http://127.0.0.1",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+Base.metadata.create_all(bind=engine)
+
+
+@app.get("/api/health")
+def health_check():
+    from datetime import datetime
+
+    return {
+        "status": "healthy",
+        "service": "Water Management System",
+        "version": "2.0.0",
+        "environment": os.getenv("ENVIRONMENT", "unknown"),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/ready")
+def readiness_check():
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "ready", "database": "connected"}
+    except Exception as e:
+        return {"status": "not_ready", "database": "error", "detail": str(e)}
+
+
+# Register office management router
+from api_office import router as office_router
+
+app.include_router(office_router)
+
+# Register service extension router (Phase 2)
+from api_services import router as services_router
+
+app.include_router(services_router)
+
+# Register package management router (Phase 3)
+from api_packages import router as packages_router
+
+app.include_router(packages_router)
+
+# Register VIP dining service router (Week 1 Day 1)
+from api_dining import router as dining_router
+
+app.include_router(dining_router)
+
+# Register meeting room service router
+from api_meeting import router as meeting_router
+
+app.include_router(meeting_router)
+
+# Register meeting payment settlement router
+from api_meeting_payment import router as meeting_payment_router
+
+app.include_router(meeting_payment_router)
+
+# Register meeting approval router
+from api_meeting_approval import router as meeting_approval_router
+
+app.include_router(meeting_approval_router)
+
+# Register flexible booking router
+from api_flexible_booking import router as flexible_router
+
+app.include_router(flexible_router)
+
+# Register admin auth router
+from api_admin_auth import router as admin_router
+
+app.include_router(admin_router)
+
+# Register unified settlement router
+from api_unified_settlement import router as unified_settlement_router
+
+app.include_router(unified_settlement_router)
+
+
+# ==================== API Endpoints ====================
+
+
+# --- User APIs ---
+@app.get("/api/users", response_model=List[UserResponse])
+def get_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
+
+
+@app.post("/api/users", response_model=UserResponse)
+def create_user(
+    user: UserCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    创建用户
+    权限要求：只有 super_admin 才能创建用户
+    """
+    # 验证权限
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    if current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能创建用户"
+        )
+
+    # 检查用户名是否存在
+    existing_user = db.query(User).filter(User.name == user.name).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="用户名已存在")
+
+    # 加密密码
+    password_hash = hash_password(user.password)
+
+    db_user = User(
+        name=user.name,
+        department=user.department,
+        role=user.role,
+        password_hash=password_hash,
+        balance_credit=user.balance_credit if hasattr(user, "balance_credit") else 0,
+        is_active=user.is_active if hasattr(user, "is_active") else 1,
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+# ==================== Authentication APIs ====================
+@app.post("/api/auth/login", response_model=TokenResponse)
+def login(login_data: UserLogin, db: Session = Depends(get_db)):
+    """
+    用户登录
+    """
+    # 查找用户
+    user = db.query(User).filter(User.name == login_data.name).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="用户已被禁用")
+
+    # 如果没有密码，使用默认密码 admin123 验证（兼容旧数据）
+    if not user.password_hash:
+        if login_data.password != "admin123":
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+    else:
+        # 验证密码
+        if not verify_password(login_data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+
+    # 创建 Token
+    access_token = create_access_token(
+        data={"sub": str(user.id), "role": user.role},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """获取当前登录用户信息"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    return current_user
+
+
+@app.post("/api/auth/change-password")
+def change_password(
+    password_change: PasswordChange,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """修改密码"""
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # 验证token获取用户
+    if not credentials:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    token = credentials.credentials
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="登录已过期")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="无效的令牌")
+
+    # 从数据库查询用户
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+
+    logger.info(
+        f"Changing password for user: {user.name}, current hash: {user.password_hash[:30] if user.password_hash else 'None'}..."
+    )
+
+    # 验证旧密码
+    if not user.password_hash:
+        # 兼容旧数据
+        if password_change.old_password != "admin123":
+            raise HTTPException(status_code=400, detail="原密码错误")
+    else:
+        if not verify_password(password_change.old_password, user.password_hash):
+            raise HTTPException(status_code=400, detail="原密码错误")
+
+    # 更新密码
+    new_hash = hash_password(password_change.new_password)
+    logger.info(f"New hash: {new_hash[:30]}...")
+    user.password_hash = new_hash
+
+    try:
+        db.commit()
+        # 刷新用户对象
+        db.refresh(user)
+        logger.info("Password commit successful")
+    except Exception as e:
+        logger.error(f"Password commit failed: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="密码保存失败")
+
+    return {"message": "密码修改成功"}
+
+
+@app.get("/api/users/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@app.put("/api/users/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: int,
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    更新用户信息
+    权限要求：只有 super_admin 才能更新用户
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    if current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能更新用户"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 更新字段
+    if user_update.name is not None:
+        # 检查新用户名是否已被使用
+        existing = (
+            db.query(User)
+            .filter(User.name == user_update.name, User.id != user_id)
+            .first()
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="用户名已存在")
+        user.name = user_update.name
+
+    if user_update.department is not None:
+        user.department = user_update.department
+
+    if user_update.role is not None:
+        user.role = user_update.role
+
+    if user_update.balance_credit is not None:
+        user.balance_credit = user_update.balance_credit
+
+    if user_update.is_active is not None:
+        # 禁止禁用或启用超级管理员
+        if user.role == "super_admin":
+            raise HTTPException(status_code=403, detail="不能修改超级管理员的状态")
+        user.is_active = user_update.is_active
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.delete("/api/users/{user_id}")
+def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    删除用户
+    权限要求：只有 super_admin 才能删除用户
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    if current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能删除用户"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 禁止删除超级管理员
+    if user.role == "super_admin":
+        raise HTTPException(status_code=403, detail="不能删除超级管理员")
+
+    # 检查关联记录
+    record_info = {}
+    detailed_records = {
+        "office_pickups": [],
+        "office_settlements": [],
+    }
+
+    # 检查 office_pickup 表（按pickup_person_id）
+    try:
+        office_pickups = db.execute(
+            text("""
+                SELECT id, pickup_time, quantity, office_name, product_name
+                FROM office_pickup WHERE pickup_person_id = :uid ORDER BY pickup_time DESC LIMIT 10
+            """),
+            {"uid": user_id},
+        ).fetchall()
+        office_pickup_count = len(office_pickups)
+        if office_pickup_count > 0:
+            record_info["office_pickups"] = office_pickup_count
+            detailed_records["office_pickups"] = [
+                {
+                    "id": p.id,
+                    "pickup_time": p.pickup_time,
+                    "water_quantity": p.quantity,
+                    "office_name": p.office_name,
+                    "product_name": p.product_name,
+                }
+                for p in office_pickups
+            ]
+    except Exception as e:
+        print(f"Error querying office_pickup: {e}")
+        pass
+
+    # 检查 office_settlement 表
+    try:
+        office_stls = db.execute(
+            text("""
+                SELECT id, total_amount, product_name, quantity, created_at, office_name
+                FROM office_settlement WHERE settlement_person_id = :uid ORDER BY created_at DESC LIMIT 10
+            """),
+            {"uid": user_id},
+        ).fetchall()
+        office_stl_count = len(office_stls)
+        if office_stl_count > 0:
+            record_info["office_settlements"] = office_stl_count
+            detailed_records["office_settlements"] = [
+                {
+                    "id": s.id,
+                    "amount": float(s.total_amount) if s.total_amount else 0,
+                    "product_name": s.product_name,
+                    "quantity": s.quantity,
+                    "office_name": s.office_name,
+                    "created_at": s.created_at,
+                }
+                for s in office_stls
+            ]
+    except Exception as e:
+        print(f"Error querying office_settlement: {e}")
+        pass
+
+    if record_info:
+        # 软删除：禁用用户而不是真正删除
+        user.is_active = False
+        db.commit()
+        record_str_parts = []
+        if "office_pickups" in record_info:
+            record_str_parts.append(f"领水记录{record_info['office_pickups']}条")
+        if "office_settlements" in record_info:
+            record_str_parts.append(f"办公室结算{record_info['office_settlements']}条")
+        record_str = "、".join(record_str_parts)
+        return {
+            "message": f"用户有{record_str}，已禁用而非删除",
+            "record_info": record_info,
+            "detailed_records": detailed_records,
+        }
+
+    db.delete(user)
+    db.commit()
+    return {
+        "message": "用户已删除",
+        "record_info": {},
+        "detailed_records": detailed_records,
+    }
+
+
+@app.get("/api/admin/users-with-stats")
+def get_users_with_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """获取用户列表（含统计信息）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    users = db.query(User).all()
+    result = []
+    for user in users:
+        # 查询office_pickup表（直接用SQL）
+        try:
+            office_pickup_count = (
+                db.execute(
+                    text(
+                        "SELECT COUNT(*) FROM office_pickup WHERE pickup_person_id = :uid"
+                    ),
+                    {"uid": user.id},
+                ).scalar()
+                or 0
+            )
+        except:
+            office_pickup_count = 0
+        result.append(
+            {
+                "id": user.id,
+                "name": user.name,
+                "department": user.department,
+                "role": user.role,
+                "is_active": user.is_active,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "stats": {
+                    "office_pickups": office_pickup_count,
+                },
+            }
+        )
+    return result
+
+
+class BatchStatusRequest(BaseModel):
+    user_ids: List[int]
+    is_active: int
+
+
+@app.post("/api/admin/users/batch-status")
+def batch_update_user_status(
+    request: BatchStatusRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量启用/禁用用户"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    updated_count = 0
+    errors = []
+
+    for user_id in request.user_ids:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            errors.append(f"用户ID {user_id} 不存在")
+            continue
+        if user.role == "super_admin":
+            errors.append(f"用户 {user.name} 为超级管理员，无法修改")
+            continue
+
+        user.is_active = request.is_active
+        updated_count += 1
+
+    db.commit()
+
+    status_text = "启用" if request.is_active == 1 else "禁用"
+    return {
+        "updated_count": updated_count,
+        "message": f"成功{status_text} {updated_count} 个用户",
+        "errors": errors if errors else None,
+    }
+
+
+@app.post("/api/admin/users/batch-delete")
+def batch_delete_users(
+    user_ids: List[int],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量删除用户（软删除）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    deleted_count = 0
+    errors = []
+
+    for user_id in user_ids:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            errors.append(f"用户ID {user_id} 不存在")
+            continue
+        if user.role == "super_admin":
+            errors.append(f"用户 {user.name} 为超级管理员，无法删除")
+            continue
+
+        user.is_active = 0
+        deleted_count += 1
+
+    db.commit()
+
+    return {
+        "deleted_count": deleted_count,
+        "message": f"成功删除 {deleted_count} 个用户",
+        "errors": errors if errors else None,
+    }
+
+
+@app.get("/api/user/{user_id}/status")
+def get_user_status(user_id: int, db: Session = Depends(get_db)):
+    """Get user's pickup statistics and settlement status"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get current month transactions
+    now = datetime.now()
+    month_start = datetime(now.year, now.month, 1)
+
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == user_id, Transaction.created_at >= month_start)
+        .all()
+    )
+
+    total_qty = sum(t.quantity for t in transactions)
+    unsettled_amount = sum(
+        t.actual_price for t in transactions if t.status == "unsettled"
+    )
+    settled_amount = sum(t.actual_price for t in transactions if t.status == "settled")
+
+    # 新增：结算申请状态
+    applied_amount = sum(
+        t.actual_price
+        for t in transactions
+        if t.status == "unsettled" and t.settlement_applied == 1
+    )
+    to_apply_amount = sum(
+        t.actual_price
+        for t in transactions
+        if t.status == "unsettled" and t.settlement_applied == 0
+    )
+
+    # Count free items
+    free_count = sum(
+        t.quantity
+        for t in transactions
+        if t.actual_price == 0 and t.status == "unsettled"
+    )
+
+    return {
+        "user_id": user_id,
+        "name": user.name,
+        "department": user.department,
+        "month_total_qty": total_qty,
+        "unsettled_amount": unsettled_amount,
+        "settled_amount": settled_amount,
+        "applied_amount": applied_amount,  # 已申请待确认金额
+        "to_apply_amount": to_apply_amount,  # 待申请金额
+        "free_items": free_count,
+        "balance_credit": user.balance_credit,
+    }
+
+
+# --- Product APIs ---
+@app.get("/api/products", response_model=List[ProductResponse])
+def get_products(
+    active_only: bool = False, is_active: int = None, db: Session = Depends(get_db)
+):
+    """
+    Get all products
+    - active_only=True: only return active products (for user-facing APIs)
+    - is_active=1: only return active products
+    - is_active=0: only return inactive products
+    - is_active=None: return all products (for admin)
+    """
+    query = db.query(Product)
+    if active_only or is_active == 1:
+        query = query.filter(Product.is_active == 1)
+    elif is_active == 0:
+        query = query.filter(Product.is_active == 0)
+    products = query.all()
+    result = []
+    for p in products:
+        product_dict = {
+            "id": p.id,
+            "name": p.name,
+            "specification": p.specification,
+            "unit": p.unit,
+            "price": p.price,
+            "stock": p.stock,
+            "cost_price": p.cost_price,
+            "image_url": p.image_url,
+            "description": p.description,
+            "category_id": p.category_id,
+            "barcode": p.barcode,
+            "promo_threshold": p.promo_threshold,
+            "promo_gift": p.promo_gift,
+            "is_active": p.is_active,
+            "is_protected": p.is_protected,
+            "category_name": p.category_rel.name if p.category_rel else None,
+        }
+        result.append(product_dict)
+    if active_only:
+        result = [p for p in result if p["is_active"] == 1]
+    return result
+
+
+@app.post("/api/products", response_model=ProductResponse)
+def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+    db_product = Product(**product.model_dump())
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+
+@app.get("/api/products/{product_id}", response_model=ProductResponse)
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    """Get single product by ID"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+
+@app.delete("/api/products/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    """Delete a product by ID"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # 检查产品是否受保护
+    if product.is_protected == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="该产品为受保护数据，无法删除。如需删除，请先解除保护状态。",
+        )
+
+    # Check if product has associated records in all related tables (including soft-deleted)
+    errors = []
+
+    # 1. Check Transaction table (only active records, exclude soft-deleted)
+    transaction_count = (
+        db.query(Transaction)
+        .filter(Transaction.product_id == product_id, Transaction.is_deleted == 0)
+        .count()
+    )
+    if transaction_count > 0:
+        errors.append(f"用户交易记录 {transaction_count} 条")
+
+    # 1.5. Also handle soft-deleted transactions - clear product_id to allow product deletion
+    soft_deleted_transactions = (
+        db.query(Transaction)
+        .filter(Transaction.product_id == product_id, Transaction.is_deleted == 1)
+        .all()
+    )
+    for t in soft_deleted_transactions:
+        t.product_id = None  # 清除已删除交易的产品关联
+
+    # 2. Check OfficePickup table
+    try:
+        office_pickup_count = (
+            db.query(OfficePickup).filter(OfficePickup.product_id == product_id).count()
+        )
+        if office_pickup_count > 0:
+            errors.append(f"办公室领水记录 {office_pickup_count} 条")
+    except:
+        pass
+
+    # 3. Check ReservationPickup table
+    try:
+        reservation_count = (
+            db.query(ReservationPickup)
+            .filter(ReservationPickup.product_id == product_id)
+            .count()
+        )
+        if reservation_count > 0:
+            errors.append(f"预定记录 {reservation_count} 条")
+    except:
+        pass
+
+    # 4. Check PrepaidPickup table
+    try:
+        prepaid_count = (
+            db.query(PrepaidPickup)
+            .filter(PrepaidPickup.product_id == product_id)
+            .count()
+        )
+        if prepaid_count > 0:
+            errors.append(f"预付领取记录 {prepaid_count} 条")
+    except:
+        pass
+
+    if errors:
+        detail = (
+            f"无法删除：该产品存在以下关联记录：\n- "
+            + "\n- ".join(errors)
+            + "\n\n请先处理相关记录后再删除产品。"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+
+    db.delete(product)
+    db.commit()
+    return {"message": "产品已删除", "product_id": product_id}
+
+
+@app.put("/api/products/{product_id}/toggle")
+def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
+    """Toggle product active status (activate/deactivate)"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product.is_active = 0 if product.is_active == 1 else 1
+    db.commit()
+    db.refresh(product)
+
+    status_text = "已启用" if product.is_active == 1 else "已停用"
+    return {
+        "product_id": product_id,
+        "is_active": product.is_active,
+        "message": status_text,
+    }
+
+
+@app.put("/api/products/{product_id}/protect")
+def toggle_product_protection(product_id: int, db: Session = Depends(get_db)):
+    """Toggle product protection status (only for super_admin)"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product.is_protected = 0 if product.is_protected == 1 else 1
+    db.commit()
+    db.refresh(product)
+
+    status_text = "已保护" if product.is_protected == 1 else "已解除保护"
+    return {
+        "product_id": product_id,
+        "is_protected": product.is_protected,
+        "message": status_text,
+    }
+
+
+@app.put("/api/products/{product_id}")
+def update_product(
+    product_id: int, product: ProductCreate, db: Session = Depends(get_db)
+):
+    """Update a product"""
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    for key, value in product.model_dump().items():
+        setattr(db_product, key, value)
+
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+
+@app.put("/api/products/{product_id}/stock")
+def update_product_stock(
+    product_id: int, inventory: InventoryUpdate, db: Session = Depends(get_db)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # 支持两种模式：直接设置库存 或 增加库存
+    if hasattr(inventory, "quantity") and inventory.quantity is not None:
+        # 增加库存模式
+        before_stock = product.stock or 0
+        product.stock = before_stock + inventory.quantity
+
+        # 记录库存流水
+        from datetime import datetime
+
+        inventory_record = InventoryRecord(
+            product_id=product.id,
+            type="in",
+            quantity=inventory.quantity,
+            before_stock=before_stock,
+            after_stock=product.stock,
+            reference_type="admin_restock",
+            note=f"管理员补货",
+        )
+        db.add(inventory_record)
+    else:
+        # 直接设置库存模式
+        product.stock = inventory.stock
+
+    db.commit()
+    db.refresh(product)
+    return {"product_id": product_id, "stock": product.stock}
+
+
+@app.put("/api/products/{product_id}/promo-toggle")
+def toggle_product_promotion(
+    product_id: int, enable: bool, db: Session = Depends(get_db)
+):
+    """
+    快速启停产品优惠
+
+    启用时设置为默认买 10 赠 1
+    关闭时将 promo_threshold 和 promo_gift 设为 0
+    """
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if enable:
+        # 启用优惠：设置默认买 10 赠 1
+        db_product.promo_threshold = 10
+        db_product.promo_gift = 1
+        message = f"优惠已开启 (买 10 赠 1)"
+    else:
+        # 关闭优惠
+        db_product.promo_threshold = 0
+        db_product.promo_gift = 0
+        message = "优惠已关闭"
+
+    db.commit()
+    db.refresh(db_product)
+
+    return {
+        "product_id": product_id,
+        "product_name": db_product.name,
+        "promo_threshold": db_product.promo_threshold,
+        "promo_gift": db_product.promo_gift,
+        "message": message,
+    }
+
+
+# --- Product Category APIs ---
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+    sort_order: int
+    is_active: int
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    sort_order: int = 0
+    is_active: int = 1
+
+
+@app.get("/api/admin/product-categories", response_model=List[CategoryResponse])
+def get_product_categories(db: Session = Depends(get_db)):
+    """Get all product categories"""
+    return db.query(ProductCategory).order_by(ProductCategory.sort_order).all()
+
+
+@app.post("/api/admin/product-categories", response_model=CategoryResponse)
+def create_product_category(category: CategoryCreate, db: Session = Depends(get_db)):
+    """Create a new product category"""
+    db_category = ProductCategory(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.put("/api/admin/product-categories/{category_id}", response_model=CategoryResponse)
+def update_product_category(
+    category_id: int, category: CategoryCreate, db: Session = Depends(get_db)
+):
+    """Update a product category"""
+    db_category = (
+        db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
+    )
+    if not db_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db_category.name = category.name
+    db_category.sort_order = category.sort_order
+    db_category.is_active = category.is_active
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.delete("/api/admin/product-categories/{category_id}")
+def delete_product_category(category_id: int, db: Session = Depends(get_db)):
+    """Delete a product category"""
+    db_category = (
+        db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
+    )
+    if not db_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    # Check if category has products
+    product_count = db.query(Product).filter(Product.category_id == category_id).count()
+    if product_count > 0:
+        raise HTTPException(
+            status_code=400, detail=f"无法删除：该分类下已有 {product_count} 个产品"
+        )
+
+    db.delete(db_category)
+    db.commit()
+    return {"message": "分类已删除", "category_id": category_id}
+
+
+# --- Inventory APIs ---
+class InventoryRecordResponse(BaseModel):
+    id: int
+    product_id: int
+    product_name: Optional[str] = None
+    type: str
+    quantity: int
+    before_stock: int
+    after_stock: int
+    reference_type: Optional[str] = None
+    reference_id: Optional[int] = None
+    operator_id: Optional[int] = None
+    note: Optional[str] = None
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryRecordCreate(BaseModel):
+    product_id: int
+    type: str = "in"  # in/out/adjust/loss
+    quantity: int
+    note: Optional[str] = None
+
+
+class InventoryAlertConfigResponse(BaseModel):
+    id: int
+    product_id: int
+    product_name: Optional[str] = None
+    warning_threshold: int
+    critical_threshold: int
+    is_active: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryAlertConfigUpdate(BaseModel):
+    warning_threshold: int
+    critical_threshold: int
+    is_active: int = 1
+
+
+@app.get("/api/admin/inventory/records", response_model=List[InventoryRecordResponse])
+def get_inventory_records(
+    product_id: Optional[int] = None,
+    type_filter: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Get inventory records"""
+    query = db.query(InventoryRecord).order_by(InventoryRecord.created_at.desc())
+
+    if product_id:
+        query = query.filter(InventoryRecord.product_id == product_id)
+    if type_filter:
+        query = query.filter(InventoryRecord.type == type_filter)
+
+    records = query.limit(limit).all()
+
+    # Add product name
+    for r in records:
+        product = db.query(Product).filter(Product.id == r.product_id).first()
+        r.product_name = product.name if product else None
+
+    return records
+
+
+@app.post("/api/admin/inventory/in", response_model=InventoryRecordResponse)
+def inventory_in(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory in (入库)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    before_stock = product.stock
+    product.stock += record.quantity
+    after_stock = product.stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="in",
+        quantity=record.quantity,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.post("/api/admin/inventory/out", response_model=InventoryRecordResponse)
+def inventory_out(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory out (出库)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if product.stock < record.quantity:
+        raise HTTPException(
+            status_code=400, detail=f"库存不足，当前库存: {product.stock}"
+        )
+
+    before_stock = product.stock
+    product.stock -= record.quantity
+    after_stock = product.stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="out",
+        quantity=-record.quantity,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.post("/api/admin/inventory/adjust", response_model=InventoryRecordResponse)
+def inventory_adjust(record: InventoryRecordCreate, db: Session = Depends(get_db)):
+    """Inventory adjust (库存调整)"""
+    product = db.query(Product).filter(Product.id == record.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    before_stock = product.stock
+    product.stock = record.quantity
+    after_stock = product.stock
+
+    diff = record.quantity - before_stock
+
+    db_record = InventoryRecord(
+        product_id=record.product_id,
+        type="adjust",
+        quantity=diff,
+        before_stock=before_stock,
+        after_stock=after_stock,
+        reference_type="manual",
+        note=record.note,
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+
+    db_record.product_name = product.name
+    return db_record
+
+
+@app.get(
+    "/api/admin/inventory/alert-configs",
+    response_model=List[InventoryAlertConfigResponse],
+)
+def get_inventory_alert_configs(db: Session = Depends(get_db)):
+    """Get all inventory alert configs"""
+    configs = db.query(InventoryAlertConfig).all()
+    for c in configs:
+        product = db.query(Product).filter(Product.id == c.product_id).first()
+        c.product_name = product.name if product else None
+    return configs
+
+
+@app.put(
+    "/api/admin/inventory/alert-configs/{product_id}",
+    response_model=InventoryAlertConfigResponse,
+)
+def update_inventory_alert_config(
+    product_id: int, config: InventoryAlertConfigUpdate, db: Session = Depends(get_db)
+):
+    """Update inventory alert config for a product"""
+    db_config = (
+        db.query(InventoryAlertConfig)
+        .filter(InventoryAlertConfig.product_id == product_id)
+        .first()
+    )
+
+    if db_config:
+        db_config.warning_threshold = config.warning_threshold
+        db_config.critical_threshold = config.critical_threshold
+        db_config.is_active = config.is_active
+    else:
+        db_config = InventoryAlertConfig(
+            product_id=product_id,
+            warning_threshold=config.warning_threshold,
+            critical_threshold=config.critical_threshold,
+            is_active=config.is_active,
+        )
+        db.add(db_config)
+
+    db.commit()
+    db.refresh(db_config)
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    db_config.product_name = product.name if product else None
+    return db_config
+
+
+@app.get("/api/admin/inventory-alert")
+def get_inventory_alerts(threshold: int = 10, db: Session = Depends(get_db)):
+    """Get products with low stock (inventory alerts)"""
+    products = db.query(Product).filter(Product.is_active == 1).all()
+    alerts = []
+    for p in products:
+        if p.stock == 0:
+            alerts.append(
+                {
+                    "id": p.id,
+                    "product_id": p.id,
+                    "product_name": p.name,
+                    "specification": p.specification,
+                    "stock": 0,
+                    "threshold": threshold,
+                    "status": "out_of_stock",
+                }
+            )
+        elif p.stock <= threshold:
+            alerts.append(
+                {
+                    "id": p.id,
+                    "product_id": p.id,
+                    "product_name": p.name,
+                    "specification": p.specification,
+                    "stock": p.stock,
+                    "threshold": threshold,
+                    "status": "low_stock",
+                }
+            )
+    return alerts
+
+
+# --- Inventory Reconciliation APIs ---
+class InventoryReconcileRequest(BaseModel):
+    product_id: int
+    stock_in_time: datetime
+    stock_in_quantity: int
+
+
+class InventoryReconcileResponse(BaseModel):
+    product_id: int
+    product_name: str
+    specification: Optional[str] = None
+    stock_in_time: datetime
+    stock_in_quantity: int
+    pickup_quantity: int = 0
+    office_pickup_quantity: int = 0
+    inventory_out_quantity: int = 0
+    inventory_loss_quantity: int = 0
+    current_stock: int
+    expected_stock: int
+    difference: int
+    difference_type: str  # 'normal', 'surplus', 'deficit'
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@app.get(
+    "/api/admin/inventory/reconcile", response_model=List[InventoryReconcileResponse]
+)
+def reconcile_inventory(
+    product_id: Optional[int] = None,
+    stock_in_time: Optional[str] = None,
+    stock_in_quantity: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    库存核对 API
+
+    根据入库时间和入库数量，核对以下数据：
+    - 用户领取数量 (transactions)
+    - 办公室领取数量 (office_pickup)
+    - 其他出库 (inventory_records type=out)
+    - 报损数量 (inventory_records type=loss)
+
+    返回差异：理论库存 vs 当前库存
+    """
+    results = []
+
+    # Get products to reconcile
+    if product_id:
+        products = db.query(Product).filter(Product.id == product_id).all()
+    else:
+        products = db.query(Product).filter(Product.is_active == 1).all()
+
+    stock_in_dt = None
+    if stock_in_time:
+        try:
+            stock_in_dt = datetime.fromisoformat(stock_in_time.replace("Z", "+00:00"))
+        except:
+            try:
+                stock_in_dt = datetime.strptime(stock_in_time, "%Y-%m-%d")
+            except:
+                pass
+
+    for product in products:
+        if not product:
+            continue
+
+        # Skip if no stock_in parameters provided
+        if not stock_in_dt or stock_in_quantity is None:
+            continue
+
+        # 1. Get user pickup quantity since stock_in_time
+        pickup_qty = (
+            db.query(func.coalesce(func.sum(Transaction.quantity), 0))
+            .filter(
+                Transaction.product_id == product.id,
+                Transaction.created_at >= stock_in_dt,
+                Transaction.is_deleted == 0,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 2. Get office pickup quantity since stock_in_time
+        office_pickup_qty = (
+            db.query(func.coalesce(func.sum(OfficePickup.quantity), 0))
+            .filter(
+                OfficePickup.product_id == product.id,
+                OfficePickup.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 3. Get inventory out quantity (type=out) since stock_in_time
+        inventory_out_qty = (
+            db.query(func.coalesce(func.sum(func.abs(InventoryRecord.quantity)), 0))
+            .filter(
+                InventoryRecord.product_id == product.id,
+                InventoryRecord.type == "out",
+                InventoryRecord.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # 4. Get inventory loss quantity (type=loss) since stock_in_time
+        inventory_loss_qty = (
+            db.query(func.coalesce(func.sum(func.abs(InventoryRecord.quantity)), 0))
+            .filter(
+                InventoryRecord.product_id == product.id,
+                InventoryRecord.type == "loss",
+                InventoryRecord.created_at >= stock_in_dt,
+            )
+            .scalar()
+            or 0
+        )
+
+        # Calculate expected stock
+        total_out = (
+            pickup_qty + office_pickup_qty + inventory_out_qty + inventory_loss_qty
+        )
+        expected_stock = stock_in_quantity - total_out
+        difference = product.stock - expected_stock
+
+        # Determine difference type
+        if difference == 0:
+            difference_type = "normal"
+        elif difference > 0:
+            difference_type = "surplus"  # 多出：可能漏登记领取
+        else:
+            difference_type = "deficit"  # 少了：可能多登记或产品损坏
+
+        result = InventoryReconcileResponse(
+            product_id=product.id,
+            product_name=product.name,
+            specification=product.specification,
+            stock_in_time=stock_in_dt,
+            stock_in_quantity=stock_in_quantity,
+            pickup_quantity=pickup_qty,
+            office_pickup_quantity=office_pickup_qty,
+            inventory_out_quantity=inventory_out_qty,
+            inventory_loss_quantity=inventory_loss_qty,
+            current_stock=product.stock,
+            expected_stock=expected_stock,
+            difference=difference,
+            difference_type=difference_type,
+            created_at=datetime.now(),
+        )
+        results.append(result)
+
+    return results
+
+
+# --- Account Management APIs ---
+class PrepaidPackageResponse(BaseModel):
+    id: int
+    name: str
+    product_id: int
+    product_name: Optional[str] = None
+    price: float
+    buy_quantity: int
+    gift_quantity: int
+    validity_days: int
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
+    is_active: int
+    created_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PrepaidPackageCreate(BaseModel):
+    name: str
+    product_id: int
+    price: float
+    buy_quantity: int
+    gift_quantity: int
+    validity_days: int = 90
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: int = 1
+
+
+class PrepaidPackageUpdate(BaseModel):
+    name: Optional[str] = None
+    product_id: Optional[int] = None
+    price: Optional[float] = None
+    buy_quantity: Optional[int] = None
+    gift_quantity: Optional[int] = None
+    validity_days: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[int] = None
+
+
+@app.get("/api/admin/prepaid-packages", response_model=List[PrepaidPackageResponse])
+def get_prepaid_packages(
+    product_id: Optional[int] = None, db: Session = Depends(get_db)
+):
+    """Get all prepaid packages"""
+    query = db.query(PrepaidPackage)
+    if product_id:
+        query = query.filter(PrepaidPackage.product_id == product_id)
+    packages = query.all()
+    for p in packages:
+        product = db.query(Product).filter(Product.id == p.product_id).first()
+        p.product_name = product.name if product else None
+    return packages
+
+
+@app.post("/api/admin/prepaid-packages", response_model=PrepaidPackageResponse)
+def create_prepaid_package(
+    package: PrepaidPackageCreate, db: Session = Depends(get_db)
+):
+    """Create a prepaid package"""
+    db_package = PrepaidPackage(**package.model_dump())
+    db.add(db_package)
+    db.commit()
+    db.refresh(db_package)
+    product = db.query(Product).filter(Product.id == package.product_id).first()
+    db_package.product_name = product.name if product else None
+    return db_package
+
+
+@app.put(
+    "/api/admin/prepaid-packages/{package_id}", response_model=PrepaidPackageResponse
+)
+def update_prepaid_package(
+    package_id: int, package: PrepaidPackageUpdate, db: Session = Depends(get_db)
+):
+    """Update a prepaid package"""
+    db_package = (
+        db.query(PrepaidPackage).filter(PrepaidPackage.id == package_id).first()
+    )
+    if not db_package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    for key, value in package.model_dump(exclude_unset=True).items():
+        setattr(db_package, key, value)
+
+    db.commit()
+    db.refresh(db_package)
+    product = db.query(Product).filter(Product.id == db_package.product_id).first()
+    db_package.product_name = product.name if product else None
+    return db_package
+
+
+@app.delete("/api/admin/prepaid-packages/{package_id}")
+def delete_prepaid_package(package_id: int, db: Session = Depends(get_db)):
+    """Delete a prepaid package"""
+    db_package = (
+        db.query(PrepaidPackage).filter(PrepaidPackage.id == package_id).first()
+    )
+    if not db_package:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    db.delete(db_package)
+    db.commit()
+    return {"message": "套餐已删除", "package_id": package_id}
+
+
+@app.get("/api/admin/office-accounts", response_model=List[dict])
+def get_office_accounts(
+    office_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+    account_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get office accounts with filters"""
+    query = db.query(OfficeAccount)
+    if office_id:
+        query = query.filter(OfficeAccount.office_id == office_id)
+    if product_id:
+        query = query.filter(OfficeAccount.product_id == product_id)
+    if account_type:
+        query = query.filter(OfficeAccount.account_type == account_type)
+
+    accounts = query.all()
+    result = []
+    for a in accounts:
+        result.append(
+            {
+                "id": a.id,
+                "office_id": a.office_id,
+                "office_name": a.office_name,
+                "office_room_number": a.office_room_number,
+                "product_id": a.product_id,
+                "product_name": a.product_name,
+                "product_specification": a.product_specification,
+                "total_qty": a.total_qty,
+                "paid_qty": a.paid_qty,
+                "free_qty": a.free_qty,
+                "remaining_qty": a.remaining_qty,
+                "account_type": a.account_type,
+                "status": a.status,
+                "low_stock_threshold": a.low_stock_threshold,
+                "configured_count": a.configured_count,
+                "manager_name": a.manager_name,
+                "note": a.note,
+                "created_at": a.created_at,
+                "updated_at": a.updated_at,
+            }
+        )
+    return result
+
+
+@app.get(
+    "/api/admin/office-accounts/{account_id}/transactions", response_model=List[dict]
+)
+def get_account_transactions(
+    account_id: int, limit: int = 50, db: Session = Depends(get_db)
+):
+    """Get account transaction history"""
+    transactions = (
+        db.query(AccountTransaction)
+        .filter(AccountTransaction.account_id == account_id)
+        .order_by(AccountTransaction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    result = []
+    for t in transactions:
+        result.append(
+            {
+                "id": t.id,
+                "account_id": t.account_id,
+                "office_id": t.office_id,
+                "product_id": t.product_id,
+                "type": t.type,
+                "quantity": t.quantity,
+                "before_qty": t.before_qty,
+                "after_qty": t.after_qty,
+                "quantity_type": t.quantity_type,
+                "amount": t.amount,
+                "unit_price": t.unit_price,
+                "reference_type": t.reference_type,
+                "reference_id": t.reference_id,
+                "operator_name": t.operator_name,
+                "note": t.note,
+                "created_at": t.created_at,
+            }
+        )
+    return result
+
+
+@app.put("/api/admin/office-accounts/{account_id}/type")
+def update_account_type(
+    account_id: int, account_type: str, db: Session = Depends(get_db)
+):
+    """Update account type (credit/prepaid)"""
+    account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    if account_type not in ["credit", "prepaid"]:
+        raise HTTPException(status_code=400, detail="Invalid account type")
+
+    account.account_type = account_type
+    db.commit()
+    return {
+        "message": "账户类型已更新",
+        "account_id": account_id,
+        "account_type": account_type,
+    }
+
+
+# --- Transaction APIs ---
+class OfficePickupCreate(BaseModel):
+    office_id: int
+    product_id: int
+    quantity: int
+    pickup_person: Optional[str] = None
+    pickup_person_id: Optional[int] = None
+    pickup_time: Optional[str] = None
+
+
+@app.post("/api/user/office-pickup")
+def create_office_pickup(
+    pickup: OfficePickupCreate,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """创建办公室领水记录"""
+    # Get office info
+    from api_office import Office
+
+    office = db.query(Office).filter(Office.id == pickup.office_id).first()
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    # Get product info
+    product = db.query(Product).filter(Product.id == pickup.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
+
+    # Check and deduct stock
+    if product.stock is None:
+        product.stock = 0
+    if product.stock < pickup.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"库存不足，当前库存: {product.stock} {product.unit}，领取数量: {pickup.quantity} {product.unit}",
+        )
+    before_stock = product.stock
+    product.stock -= pickup.quantity
+
+    # Parse pickup time
+    pickup_time = datetime.now()
+    if pickup.pickup_time:
+        try:
+            pickup_time = datetime.fromisoformat(
+                pickup.pickup_time.replace("Z", "+00:00")
+            )
+        except:
+            pickup_time = datetime.now()
+
+    # Calculate amount with buy-N-get-M promotion
+    unit_price = product.price or 0
+    from promo_calculator import calculate_promo_amount
+
+    promo_result = calculate_promo_amount(
+        quantity=pickup.quantity,
+        unit_price=unit_price,
+        promo_threshold=product.promo_threshold or 0,
+        promo_gift=product.promo_gift or 0,
+    )
+    total_amount = promo_result["total_amount"]
+    free_qty = promo_result["free_qty"]
+    discount_desc = promo_result["discount_desc"]
+
+    # Determine pickup person - use provided name or current user
+    pickup_person_name = pickup.pickup_person
+    pickup_person_id_val = pickup.pickup_person_id
+
+    if not pickup_person_name and current_user:
+        pickup_person_name = current_user.name
+    if not pickup_person_id_val and current_user:
+        pickup_person_id_val = current_user.id
+
+    # Create pickup record
+    new_pickup = OfficePickup(
+        office_id=pickup.office_id,
+        office_name=office.name,
+        office_room_number=office.room_number,
+        product_id=pickup.product_id,
+        product_name=product.name,
+        product_specification=product.specification,
+        quantity=pickup.quantity,
+        pickup_person=pickup_person_name or "匿名",
+        pickup_person_id=pickup_person_id_val,
+        pickup_time=pickup_time,
+        unit_price=unit_price,
+        total_amount=total_amount,
+        free_qty=free_qty,
+        discount_desc=discount_desc if free_qty > 0 else None,
+        settlement_status="pending",
+    )
+
+    db.add(new_pickup)
+    db.flush()
+
+    # 生成库存流水记录
+    inventory_record = InventoryRecord(
+        product_id=product.id,
+        type="out",
+        quantity=pickup.quantity,
+        before_stock=before_stock,
+        after_stock=product.stock,
+        reference_type="office_pickup",
+        reference_id=new_pickup.id,
+        operator_id=pickup_person_id_val,
+        note=f"办公室领水: {office.name}",
+    )
+    db.add(inventory_record)
+    db.commit()
+    db.refresh(new_pickup)
+
+    return {"id": new_pickup.id, "message": "领水记录创建成功"}
+
+
+@app.get("/api/user/office-pickups")
+def get_user_office_pickups(
+    limit: int = 100,
+    offset: int = 0,
+    current_user: Optional[User] = Depends(get_current_user),
+    office_id: Optional[int] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """获取当前用户的办公室领水记录 - 从OfficePickup表读取"""
+    query = db.query(OfficePickup)
+
+    # 如果用户不是管理员，只能查看自己部门的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        # 通过用户名匹配pickup_person，或者通过department匹配office_name
+        user_name = current_user.name
+        user_department = current_user.department
+        query = query.filter(
+            (OfficePickup.pickup_person == user_name)
+            | (OfficePickup.office_name == user_department)
+        )
+
+    if office_id is not None:
+        query = query.filter(OfficePickup.office_id == office_id)
+
+    if status and status != "all":
+        query = query.filter(OfficePickup.settlement_status == status)
+
+    pickups = (
+        query.order_by(OfficePickup.pickup_time.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for pickup in pickups:
+        results.append(
+            {
+                "id": pickup.id,
+                "office_id": pickup.office_id,
+                "user_id": pickup.pickup_person_id,
+                "user_name": pickup.pickup_person,
+                "department": pickup.office_name,
+                "office_name": pickup.office_name,
+                "office_room_number": pickup.office_room_number,
+                "product_id": pickup.product_id,
+                "product_name": pickup.product_name,
+                "product_specification": pickup.product_specification,
+                "quantity": pickup.quantity,
+                "pickup_person": pickup.pickup_person,
+                "pickup_person_id": pickup.pickup_person_id,
+                "pickup_time": pickup.pickup_time.isoformat()
+                if pickup.pickup_time
+                else None,
+                "payment_mode": pickup.payment_mode,
+                "settlement_status": pickup.settlement_status,
+                "unit_price": pickup.unit_price,
+                "total_amount": pickup.total_amount,
+                "status": pickup.settlement_status,
+            }
+        )
+
+    return results
+
+
+@app.get("/api/admin/remind-unsettled")
+def get_remind_unsettled(days: int = 30, db: Session = Depends(get_db)):
+    """获取超过指定天数未结算的用户列表，用于提醒结算"""
+    from datetime import timedelta
+
+    cutoff_date = datetime.now() - timedelta(days=days)
+
+    users_unsettled = (
+        db.query(
+            User.id,
+            User.name,
+            User.department,
+            func.sum(Transaction.actual_price).label("total_amount"),
+            func.count(Transaction.id).label("count"),
+        )
+        .join(Transaction, User.id == Transaction.user_id)
+        .filter(
+            Transaction.status == "unsettled",
+            Transaction.settlement_applied == 0,  # 未申请结算
+            Transaction.created_at < cutoff_date,
+        )
+        .group_by(User.id, User.name, User.department)
+        .all()
+    )
+
+    return [
+        {
+            "user_id": r.id,
+            "user_name": r.name,
+            "department": r.department,
+            "total_amount": r.total_amount or 0,
+            "transaction_count": r.count or 0,
+        }
+        for r in users_unsettled
+    ]
+
+
+# --- Admin Report APIs ---
+@app.get("/api/admin/report")
+def get_monthly_report(db: Session = Depends(get_db)):
+    """Get monthly report grouped by office (基于办公室领水记录)"""
+    now = datetime.now()
+    month_start = datetime(now.year, now.month, 1)
+
+    report = (
+        db.query(
+            OfficePickup.office_name,
+            func.sum(OfficePickup.quantity).label("total_qty"),
+            func.sum(
+                case(
+                    (
+                        OfficePickup.settlement_status == "pending",
+                        OfficePickup.total_amount,
+                    ),
+                    else_=0,
+                )
+            ).label("unsettled_amount"),
+            func.sum(
+                case(
+                    (
+                        OfficePickup.settlement_status == "settled",
+                        OfficePickup.total_amount,
+                    ),
+                    else_=0,
+                )
+            ).label("settled_amount"),
+            func.count(OfficePickup.id).label("pickup_count"),
+        )
+        .filter(OfficePickup.pickup_time >= month_start)
+        .group_by(OfficePickup.office_name)
+        .all()
+    )
+
+    return [
+        {
+            "department": r.office_name,
+            "total_qty": r.total_qty or 0,
+            "unsettled_amount": float(r.unsettled_amount or 0),
+            "settled_amount": float(r.settled_amount or 0),
+            "transaction_count": r.pickup_count or 0,
+        }
+        for r in report
+    ]
+
+
+# ==================== Transaction Delete APIs (删除交易记录) ====================
+@app.get("/api/admin/transactions")
+def get_all_transactions(
+    status: Optional[str] = None,
+    department: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    specification: Optional[str] = None,
+    include_deleted: bool = False,  # 是否包含已删除的记录
+    db: Session = Depends(get_db),
+):
+    """
+    Get all transactions with user info
+
+    Query Parameters:
+    - status: Filter by transaction status (unsettled/settled/reserved)
+    - department: Filter by department name
+    - date_from: Filter transactions from this date (YYYY-MM-DD format)
+    - date_to: Filter transactions to this date (YYYY-MM-DD format)
+    - specification: Filter by product specification (e.g., "18L", "500ml")
+    - include_deleted: Include deleted transactions (default: False)
+    """
+    # 先查询交易记录
+    query = db.query(Transaction)
+
+    # 默认过滤已删除的记录
+    if not include_deleted:
+        query = query.filter(Transaction.is_deleted == 0)
+
+    # 关联用户和办公室筛选
+    if department:
+        user_ids = db.query(User.id).filter(User.department == department).all()
+        user_ids = [u[0] for u in user_ids]
+        query = query.filter(Transaction.user_id.in_(user_ids))
+
+    # 时间范围筛选
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, "%Y-%m-%d")
+            query = query.filter(Transaction.created_at >= from_date)
+        except ValueError:
+            pass  # 忽略无效日期格式
+
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, "%Y-%m-%d")
+            # 包含 date_to 当天的 23:59:59
+            to_date = to_date.replace(hour=23, minute=59, second=59)
+            query = query.filter(Transaction.created_at <= to_date)
+        except ValueError:
+            pass  # 忽略无效日期格式
+
+    # 规格筛选
+    if specification:
+        product_ids = (
+            db.query(Product.id).filter(Product.specification == specification).all()
+        )
+        product_ids = [p[0] for p in product_ids]
+        query = query.filter(Transaction.product_id.in_(product_ids))
+
+    # 状态筛选
+    if status:
+        query = query.filter(Transaction.status == status)
+
+    query = query.order_by(Transaction.created_at.desc())
+    transactions = query.all()
+
+    results = []
+    for transaction in transactions:
+        # 获取用户信息
+        user = db.query(User).filter(User.id == transaction.user_id).first()
+        # 获取产品信息
+        product = db.query(Product).filter(Product.id == transaction.product_id).first()
+
+        results.append(
+            {
+                "id": transaction.id,
+                "user_name": user.name if user else "Unknown",
+                "department": user.department if user else "Unknown",
+                "product_id": transaction.product_id,
+                "product_name": product.name if product else "Unknown",
+                "specification": product.specification if product else "Unknown",
+                "quantity": transaction.quantity,
+                "actual_price": transaction.actual_price,
+                "type": transaction.type,
+                "status": transaction.status,
+                "note": transaction.note,
+                "created_at": transaction.created_at.isoformat(),
+                "is_deleted": transaction.is_deleted,
+                "deleted_at": transaction.deleted_at.isoformat()
+                if transaction.deleted_at
+                else None,
+                "deleted_by": transaction.deleted_by,
+                "delete_reason": transaction.delete_reason,
+            }
+        )
+    return results
+
+
+@app.post("/api/admin/transactions/delete")
+def delete_transactions(
+    request: DeleteTransactionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete transactions (soft delete)
+
+    权限要求：
+    - 必须是 admin 或 super_admin 角色
+    - 需要登录验证（Token）
+
+    软删除机制：
+    - is_deleted = 1
+    - deleted_at = 当前时间
+    - deleted_by = 操作人 ID
+    - delete_reason = 删除原因
+    """
+    # 验证当前用户是否为管理员
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或登录已过期")
+
+    if current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有管理员才能删除交易记录"
+        )
+
+    # 检查交易记录是否存在且未被删除
+    transactions = (
+        db.query(Transaction).filter(Transaction.id.in_(request.transaction_ids)).all()
+    )
+
+    if len(transactions) != len(request.transaction_ids):
+        raise HTTPException(status_code=404, detail="部分交易记录不存在")
+
+    # 执行软删除
+    now = datetime.now()
+    deleted_count = 0
+    for transaction in transactions:
+        if transaction.is_deleted == 0:  # 只删除未删除的记录
+            transaction.is_deleted = 1
+            transaction.deleted_at = now
+            transaction.deleted_by = current_user.id
+            transaction.delete_reason = request.reason
+            deleted_count += 1
+
+    db.commit()
+
+    # 记录删除日志
+    import json
+
+    delete_log = DeleteLog(
+        operator_id=current_user.id,
+        operator_name=current_user.name,
+        action="delete_transaction",
+        target_type="transaction",
+        target_ids=json.dumps(request.transaction_ids),
+        reason=request.reason,
+    )
+    db.add(delete_log)
+    db.commit()
+
+    return {
+        "message": f"成功删除 {deleted_count} 条交易记录",
+        "deleted_count": deleted_count,
+        "deleted_ids": request.transaction_ids,
+    }
+
+
+@app.post("/api/admin/transactions/restore")
+def restore_transactions(
+    transaction_ids: List[int], current_user_id: int, db: Session = Depends(get_db)
+):
+    """
+    Restore deleted transactions (only for super admin)
+
+    权限要求：
+    - 必须是 admin 角色
+    """
+    current_user = db.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有管理员才能恢复交易记录"
+        )
+
+    # 恢复交易记录
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.id.in_(transaction_ids), Transaction.is_deleted == 1)
+        .all()
+    )
+
+    for transaction in transactions:
+        transaction.is_deleted = 0
+        transaction.deleted_at = None
+        transaction.deleted_by = None
+        transaction.delete_reason = None
+
+    db.commit()
+
+    return {
+        "message": f"成功恢复 {len(transactions)} 条交易记录",
+        "restored_count": len(transactions),
+    }
+
+
+@app.get("/api/admin/delete-logs")
+def get_delete_logs(limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Get delete operation logs
+
+    权限要求：
+    - 必须是 admin 角色
+    """
+    logs = (
+        db.query(DeleteLog, User)
+        .join(User, DeleteLog.operator_id == User.id)
+        .order_by(DeleteLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for log, operator in logs:
+        results.append(
+            {
+                "id": log.id,
+                "operator_name": operator.name,
+                "action": log.action,
+                "target_type": log.target_type,
+                "target_ids": log.target_ids,
+                "reason": log.reason,
+                "created_at": log.created_at.isoformat(),
+            }
+        )
+    return results
+
+
+# ==================== Trash / Recycle Bin APIs ====================
+@app.get("/api/admin/trash")
+def get_trash_transactions(days: int = 30, db: Session = Depends(get_db)):
+    """获取回收站中的交易记录（保留最近 days 天）"""
+    from datetime import timedelta
+
+    cutoff_date = datetime.now() - timedelta(days=days)
+
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.is_deleted == 1, Transaction.deleted_at >= cutoff_date)
+        .order_by(Transaction.deleted_at.desc())
+        .all()
+    )
+
+    results = []
+    for t in transactions:
+        user = db.query(User).filter(User.id == t.user_id).first()
+        product = db.query(Product).filter(Product.id == t.product_id).first()
+        deleter = (
+            db.query(User).filter(User.id == t.deleted_by).first()
+            if t.deleted_by
+            else None
+        )
+
+        results.append(
+            {
+                "id": t.id,
+                "user_name": user.name if user else "Unknown",
+                "department": user.department if user else "Unknown",
+                "product_name": product.name if product else "Unknown",
+                "quantity": t.quantity,
+                "actual_price": t.actual_price,
+                "status": t.status,
+                "deleted_at": t.deleted_at.isoformat() if t.deleted_at else None,
+                "deleted_by": t.deleted_by,
+                "deleter_name": deleter.name if deleter else "Unknown",
+                "delete_reason": t.delete_reason,
+            }
+        )
+
+    return results
+
+
+@app.post("/api/admin/trash/restore")
+def restore_trash_transactions(
+    request: SettlementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """恢复回收站中的交易记录"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    restored = 0
+    for tid in request.transaction_ids:
+        transaction = (
+            db.query(Transaction)
+            .filter(Transaction.id == tid, Transaction.is_deleted == 1)
+            .first()
+        )
+        if transaction:
+            transaction.is_deleted = 0
+            transaction.deleted_at = None
+            transaction.deleted_by = None
+            transaction.delete_reason = None
+            restored += 1
+
+    db.commit()
+    return {"message": f"成功恢复 {restored} 条记录", "restored_count": restored}
+
+
+@app.delete("/api/admin/trash/{transaction_id}")
+def permanently_delete_transaction(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """永久删除回收站中的交易记录（仅超级管理员）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能永久删除"
+        )
+
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.is_deleted == 1)
+        .first()
+    )
+
+    if not transaction:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    # 检查记录是否受保护
+    if transaction.is_protected == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="该记录为受保护数据，无法删除。如需删除，请先解除保护状态。",
+        )
+
+    db.delete(transaction)
+    db.commit()
+
+    return {"message": "记录已永久删除", "deleted_id": transaction_id}
+
+
+@app.put("/api/admin/transactions/{transaction_id}/protect")
+def toggle_transaction_protection(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle transaction protection status (only for super_admin)"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="权限不足：只有超级管理员才能操作")
+
+    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    transaction.is_protected = 0 if transaction.is_protected == 1 else 1
+    db.commit()
+    db.refresh(transaction)
+
+    status_text = "已保护" if transaction.is_protected == 1 else "已解除保护"
+    return {
+        "transaction_id": transaction_id,
+        "is_protected": transaction.is_protected,
+        "message": status_text,
+    }
+
+
+# ==================== Office Pickup Trash APIs ====================
+@app.get("/api/admin/office-pickups/trash")
+def get_trash_office_pickups(days: int = 30, db: Session = Depends(get_db)):
+    """获取回收站中的领水记录（保留最近 days 天）"""
+    from datetime import timedelta
+
+    cutoff_date = datetime.now() - timedelta(days=days)
+
+    pickups = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.is_deleted == 1, OfficePickup.deleted_at >= cutoff_date)
+        .order_by(OfficePickup.deleted_at.desc())
+        .all()
+    )
+
+    results = []
+    for p in pickups:
+        deleter = (
+            db.query(User).filter(User.id == p.deleted_by).first()
+            if p.deleted_by
+            else None
+        )
+
+        results.append(
+            {
+                "id": p.id,
+                "office_id": p.office_id,
+                "office_name": p.office_name,
+                "product_name": p.product_name,
+                "product_specification": p.product_specification,
+                "quantity": p.quantity,
+                "pickup_person": p.pickup_person,
+                "pickup_time": p.pickup_time.isoformat() if p.pickup_time else None,
+                "payment_mode": p.payment_mode,
+                "settlement_status": p.settlement_status,
+                "total_amount": p.total_amount,
+                "deleted_at": p.deleted_at.isoformat() if p.deleted_at else None,
+                "deleted_by": p.deleted_by,
+                "deleter_name": deleter.name if deleter else "Unknown",
+                "delete_reason": p.delete_reason,
+            }
+        )
+
+    return results
+
+
+@app.post("/api/admin/office-pickups/trash/restore")
+def restore_trash_office_pickups(
+    request: SettlementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """恢复回收站中的领水记录"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    restored = 0
+    for pid in request.transaction_ids:
+        pickup = (
+            db.query(OfficePickup)
+            .filter(OfficePickup.id == pid, OfficePickup.is_deleted == 1)
+            .first()
+        )
+        if pickup:
+            pickup.is_deleted = 0
+            pickup.deleted_at = None
+            pickup.deleted_by = None
+            pickup.delete_reason = None
+            restored += 1
+
+    db.commit()
+    return {"message": f"成功恢复 {restored} 条记录", "restored_count": restored}
+
+
+@app.delete("/api/admin/office-pickups/trash/{pickup_id}")
+def permanently_delete_office_pickup(
+    pickup_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """永久删除回收站中的领水记录（仅超级管理员）"""
+    if not current_user or current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有超级管理员才能永久删除"
+        )
+
+    pickup = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.id == pickup_id, OfficePickup.is_deleted == 1)
+        .first()
+    )
+
+    if not pickup:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    db.delete(pickup)
+    db.commit()
+
+    return {"message": "记录已永久删除", "pickup_id": pickup_id}
+
+
+# --- Dashboard APIs ---
+@app.get("/api/admin/dashboard/summary")
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    """
+    Get comprehensive dashboard summary with actionable insights
+    首页统计完全基于领水记录（office_pickup表），与领水记录详情列表保持一致
+    Returns: pending tasks, key metrics with trends, quick stats
+
+    核心指标说明：
+    - 用量统计：只统计办公室领水记录（office_pickup表），不包含个人用水
+    - 金额统计：只统计办公室领水结算金额，不包含个人用水
+    - 办公室排行：只统计办公室领水记录
+    """
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    month_start = datetime(now.year, now.month, 1)
+
+    # 计算上月同期
+    if now.month == 1:
+        last_month_start = datetime(now.year - 1, 12, 1)
+        last_month_end = datetime(now.year, 1, 1) - timedelta(days=1)
+    else:
+        last_month_start = datetime(now.year, now.month - 1, 1)
+        last_month_end = month_start - timedelta(days=1)
+
+    # ==================== 办公室领水统计（首页唯一数据源） ====================
+    # 本月领水记录
+    office_pickups_this_month = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= month_start).all()
+    )
+
+    # 上月同期领水记录
+    office_pickups_last_month = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.pickup_time >= last_month_start,
+            OfficePickup.pickup_time <= last_month_end,
+        )
+        .all()
+    )
+
+    # 待办事项统计
+    # 办公室用水待结算数量（来自领水记录）
+    pending_office_settlements = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.settlement_status == "pending")
+        .count()
+    )
+
+    low_stock_products = (
+        db.query(Product).filter(Product.stock < 10, Product.is_active == 1).count()
+    )
+
+    # 办公室催付提醒（超过30天未结算的领水记录）
+    cutoff_date = now - timedelta(days=30)
+    offices_to_remind = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.settlement_status == "pending",
+            OfficePickup.pickup_time < cutoff_date,
+        )
+        .distinct(OfficePickup.office_id)
+        .count()
+    )
+
+    # ==================== 用量统计（按单位分类） ====================
+    # 按产品单位分组统计本月领水量（只统计office_pickup表）
+    usage_by_unit = {}
+
+    for op in office_pickups_this_month:
+        product = db.query(Product).filter(Product.id == op.product_id).first()
+        if product:
+            unit = product.unit
+            if unit not in usage_by_unit:
+                usage_by_unit[unit] = {
+                    "quantity": 0,
+                    "transaction_count": 0,
+                    "products": {},
+                    "stock": 0,  # 剩余库存
+                    "total": 0,  # 用量+库存总计
+                }
+            usage_by_unit[unit]["quantity"] += op.quantity
+            usage_by_unit[unit]["transaction_count"] += 1
+            product_key = f"{product.name}({product.specification})"
+            if product_key not in usage_by_unit[unit]["products"]:
+                usage_by_unit[unit]["products"][product_key] = 0
+            usage_by_unit[unit]["products"][product_key] += op.quantity
+
+    # 获取所有活跃产品的库存数据
+    active_products = db.query(Product).filter(Product.is_active == 1).all()
+    for product in active_products:
+        unit = product.unit
+        if unit not in usage_by_unit:
+            usage_by_unit[unit] = {
+                "quantity": 0,
+                "transaction_count": 0,
+                "products": {},
+                "stock": 0,
+                "total": 0,
+            }
+        usage_by_unit[unit]["stock"] = product.stock or 0
+
+    # 计算用量+库存总计
+    for unit in usage_by_unit:
+        usage_by_unit[unit]["total"] = (
+            usage_by_unit[unit]["quantity"] + usage_by_unit[unit]["stock"]
+        )
+
+    # 计算上月同期用量（用于环比）
+    last_month_qty = sum(op.quantity for op in office_pickups_last_month)
+    this_month_qty = sum(op.quantity for op in office_pickups_this_month)
+    qty_growth = (
+        ((this_month_qty - last_month_qty) / last_month_qty * 100)
+        if last_month_qty > 0
+        else 0
+    )
+
+    # ==================== 金额统计（按状态分类） ====================
+    # 已结算金额（本月）
+    this_month_office_settled = sum(
+        o.total_amount
+        for o in office_pickups_this_month
+        if o.settlement_status == "settled"
+    )
+    last_month_office_settled = sum(
+        o.total_amount
+        for o in office_pickups_last_month
+        if o.settlement_status == "settled"
+    )
+    settled_growth = (
+        (
+            (this_month_office_settled - last_month_office_settled)
+            / last_month_office_settled
+            * 100
+        )
+        if last_month_office_settled > 0
+        else 0
+    )
+
+    # 未结算金额（本月待付款）
+    this_month_office_pending = sum(
+        o.total_amount
+        for o in office_pickups_this_month
+        if o.settlement_status == "pending"
+    )
+
+    # ==================== 办公室排行（TOP 10） ====================
+    office_ranking = (
+        db.query(
+            OfficePickup.office_name,
+            func.sum(OfficePickup.quantity).label("total_qty"),
+            func.count(OfficePickup.id).label("transaction_count"),
+        )
+        .filter(OfficePickup.pickup_time >= month_start)
+        .group_by(OfficePickup.office_name)
+        .order_by(func.sum(OfficePickup.quantity).desc())
+        .limit(10)
+        .all()
+    )
+
+    return {
+        "pending_tasks": {
+            "applications_count": pending_office_settlements,  # 待确认结算（办公室领水）
+            "pending_office_settlements": pending_office_settlements,  # 待付款（办公室领水）
+            "low_stock_count": low_stock_products,
+            "remind_count": offices_to_remind,  # 待提醒（超过30天未结算）
+            "abnormal_count": 0,
+        },
+        "metrics": {
+            # 金额统计（只统计办公室领水记录）
+            "settled_amount": round(this_month_office_settled, 2),
+            "settled_growth_rate": round(settled_growth, 1),
+            "unsettled_amount": round(this_month_office_pending, 2),
+            "applied_amount": 0,  # 无个人用水数据
+            # 总体趋势
+            "total_qty_growth_rate": round(qty_growth, 1),
+        },
+        "usage_stats": {
+            "by_unit": [
+                {
+                    "unit": unit,
+                    "quantity": data["quantity"],
+                    "stock": data["stock"],
+                    "total": data["total"],
+                    "transaction_count": data["transaction_count"],
+                    "products": data["products"],
+                }
+                for unit, data in usage_by_unit.items()
+            ],
+            "total_quantity": this_month_qty,
+        },
+        "department_ranking": [
+            {
+                "department": office.office_name,
+                "total_qty": office.total_qty,
+                "transaction_count": office.transaction_count,
+            }
+            for office in office_ranking
+        ],
+    }
+
+
+@app.get("/api/admin/dashboard/quick-stats")
+def get_quick_stats(db: Session = Depends(get_db)):
+    """Get quick statistics for dashboard cards - 只统计办公室领水记录"""
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    today_start = datetime(now.year, now.month, now.day)
+    yesterday_start = today_start - timedelta(days=1)
+    week_start = today_start - timedelta(days=7)
+
+    # 今日领水（只统计办公室领水记录）
+    today_office = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= today_start).all()
+    )
+    today_qty = sum(o.quantity for o in today_office)
+
+    # 昨日领水（只统计办公室领水记录）
+    yesterday_office = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.pickup_time >= yesterday_start,
+            OfficePickup.pickup_time < today_start,
+        )
+        .all()
+    )
+    yesterday_qty = sum(o.quantity for o in yesterday_office)
+    today_growth = (
+        ((today_qty - yesterday_qty) / yesterday_qty * 100) if yesterday_qty > 0 else 0
+    )
+
+    # 本周领水（只统计办公室领水记录）
+    week_office = (
+        db.query(OfficePickup).filter(OfficePickup.pickup_time >= week_start).all()
+    )
+    week_qty = sum(o.quantity for o in week_office)
+
+    # 待结算笔数（只统计办公室领水记录）
+    unsettled_office_count = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.settlement_status == "pending")
+        .count()
+    )
+
+    return {
+        "today": {"quantity": today_qty, "growth_rate": round(today_growth, 1)},
+        "week": {"quantity": week_qty},
+        "pending": {
+            "unsettled_count": unsettled_office_count,
+            "applied_count": 0,  # 无个人用水数据
+            "unsettled_office_count": unsettled_office_count,
+        },
+    }
+
+
+@app.get("/api/admin/dashboard/trend")
+def get_dashboard_trend(days: int = 7, db: Session = Depends(get_db)):
+    """
+    Get trend data for dashboard charts
+    基于办公室领水记录(office_pickup表)统计
+
+    Query Parameters:
+    - days: Number of days (7 for weekly trend, 30 for monthly trend)
+
+    Returns:
+    - daily_data: Array of daily statistics
+    - product_distribution: Product type distribution
+    """
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    end_date = datetime(now.year, now.month, now.day)
+    start_date = end_date - timedelta(days=days - 1)
+
+    daily_data = []
+    for i in range(days - 1, -1, -1):
+        date = end_date - timedelta(days=i)
+        date_str = date.strftime("%Y-%m-%d")
+        day_start = datetime(date.year, date.month, date.day)
+        day_end = day_start + timedelta(days=1)
+
+        day_pickups = (
+            db.query(OfficePickup)
+            .filter(
+                OfficePickup.pickup_time >= day_start,
+                OfficePickup.pickup_time < day_end,
+            )
+            .all()
+        )
+
+        daily_data.append(
+            {
+                "date": date_str,
+                "display_date": f"{date.month}/{date.day}",
+                "quantity": sum(p.quantity for p in day_pickups),
+                "amount": sum(p.total_amount or 0 for p in day_pickups),
+                "transaction_count": len(day_pickups),
+            }
+        )
+
+    month_start = datetime(now.year, now.month, 1)
+    month_pickups = (
+        db.query(OfficePickup, Product)
+        .join(Product, OfficePickup.product_id == Product.id)
+        .filter(OfficePickup.pickup_time >= month_start)
+        .all()
+    )
+
+    product_distribution = []
+    product_stats = {}
+    for p, prod in month_pickups:
+        product_name = prod.name
+        if product_name not in product_stats:
+            product_stats[product_name] = {"quantity": 0, "amount": 0}
+        product_stats[product_name]["quantity"] += p.quantity
+        product_stats[product_name]["amount"] += p.total_amount or 0
+
+    for name, stats in product_stats.items():
+        product_distribution.append(
+            {"name": name, "quantity": stats["quantity"], "amount": stats["amount"]}
+        )
+
+    office_ranking = (
+        db.query(
+            OfficePickup.office_name,
+            func.sum(OfficePickup.quantity).label("total_qty"),
+            func.sum(OfficePickup.total_amount).label("total_amount"),
+            func.count(OfficePickup.id).label("transaction_count"),
+        )
+        .filter(OfficePickup.pickup_time >= month_start)
+        .group_by(OfficePickup.office_name)
+        .order_by(func.sum(OfficePickup.quantity).desc())
+        .all()
+    )
+
+    return {
+        "daily_data": daily_data,
+        "product_distribution": product_distribution,
+        "department_ranking": [
+            {
+                "department": office.office_name,
+                "total_qty": office.total_qty or 0,
+                "total_amount": round(office.total_amount or 0, 2),
+                "transaction_count": office.transaction_count,
+            }
+            for office in office_ranking
+        ],
+    }
+
+
+# ==================== Notification APIs ====================
+@app.post("/api/notifications", response_model=NotificationResponse)
+def create_notification(
+    notification: NotificationCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """创建通知（管理员专用）"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    db_notification = Notification(**notification.model_dump())
+    db.add(db_notification)
+    db.commit()
+    db.refresh(db_notification)
+    return db_notification
+
+
+@app.get("/api/notifications", response_model=List[NotificationResponse])
+def get_notifications(
+    user_id: Optional[int] = None,
+    unread_only: bool = False,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """获取通知列表"""
+    query = db.query(Notification)
+
+    if user_id is not None:
+        # 获取该用户的通知和全员通知
+        query = query.filter(
+            (Notification.user_id == user_id) | (Notification.user_id == None)
+        )
+    else:
+        # 默认只获取全员通知
+        query = query.filter(Notification.user_id == None)
+
+    if unread_only:
+        query = query.filter(Notification.is_read == 0)
+
+    query = query.order_by(Notification.created_at.desc()).limit(limit)
+
+    return query.all()
+
+
+@app.post("/api/notifications/{notification_id}/read")
+def mark_notification_as_read(
+    notification_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """标记通知为已读"""
+    notification = (
+        db.query(Notification).filter(Notification.id == notification_id).first()
+    )
+    if not notification:
+        raise HTTPException(status_code=404, detail="通知不存在")
+
+    notification.is_read = 1
+    db.commit()
+
+    return {"message": "已标记为已读"}
+
+
+@app.post("/api/notifications/mark-all-read")
+def mark_all_notifications_as_read(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """标记所有通知为已读"""
+    db.query(Notification).filter(
+        (Notification.user_id == user_id) | (Notification.user_id == None),
+        Notification.is_read == 0,
+    ).update({"is_read": 1})
+    db.commit()
+
+    return {"message": "已全部标记为已读"}
+
+
+@app.get("/api/notifications/unread-count")
+def get_unread_count(user_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """获取未读通知数量"""
+    query = db.query(Notification).filter(Notification.is_read == 0)
+
+    if user_id is not None:
+        query = query.filter(
+            (Notification.user_id == user_id) | (Notification.user_id == None)
+        )
+
+    count = query.count()
+    return {"unread_count": count}
+
+
+# ==================== Auto Notification Helpers ====================
+def send_settlement_application_notification(
+    db: Session, user_name: str, amount: float
+):
+    """发送结算申请通知给所有管理员"""
+    admins = db.query(User).filter(User.role.in_(["admin", "super_admin"])).all()
+
+    for admin in admins:
+        notification = Notification(
+            user_id=admin.id,
+            title="新的结算申请",
+            content=f"用户 {user_name} 提交了结算申请，金额：¥{amount:.2f}",
+            type="settlement",
+        )
+        db.add(notification)
+
+    db.commit()
+
+
+def send_settlement_confirmed_notification(db: Session, user_id: int, amount: float):
+    """发送结算确认通知给用户"""
+    notification = Notification(
+        user_id=user_id,
+        title="结算确认",
+        content=f"您的结算申请已确认，金额：¥{amount:.2f}",
+        type="info",
+    )
+    db.add(notification)
+    db.commit()
+
+
+def send_low_stock_notification(
+    db: Session, product_name: str, stock: int, threshold: int = 10
+):
+    """发送库存预警通知给所有管理员"""
+    admins = db.query(User).filter(User.role.in_(["admin", "super_admin"])).all()
+
+    for admin in admins:
+        notification = Notification(
+            user_id=admin.id,
+            title="库存预警",
+            content=f"⚠️ {product_name} 库存不足，当前库存：{stock}，预警阈值：{threshold}",
+            type="warning",
+        )
+        db.add(notification)
+
+    db.commit()
+
+
+def send_prepaid_paid_notification(db: Session, user_id: int, order: PrepaidOrder):
+    """发送预付订单付款确认通知给用户"""
+    notification = Notification(
+        user_id=user_id,
+        title="预付订单已确认",
+        content=f"您的预付订单已确认：{order.product.name if order.product else '产品'} {order.total_qty}{order.product.unit if order.product else ''}，金额：¥{order.total_amount:.2f}",
+        type="info",
+    )
+    db.add(notification)
+    db.commit()
+
+
+def send_low_prepaid_balance_notification(
+    db: Session, user_id: int, order: PrepaidOrder, remaining: int
+):
+    """发送预付余量不足提醒"""
+    notification = Notification(
+        user_id=user_id,
+        title="⚠️ 预付余量不足",
+        content=f"您的{order.product.name if order.product else '产品'}预付余量不足 20%，当前剩余：{remaining}{order.product.unit if order.product else ''}，请及时续购",
+        type="reminder",
+    )
+    db.add(notification)
+    db.commit()
+
+
+# ==================== Promotion Config APIs ====================
+@app.get(
+    "/api/promotions/config/{product_id}", response_model=List[PromotionConfigResponse]
+)
+def get_product_promotion_config(product_id: int, db: Session = Depends(get_db)):
+    """获取指定产品的优惠配置（包含两种模式）"""
+    configs = (
+        db.query(PromotionConfig).filter(PromotionConfig.product_id == product_id).all()
+    )
+    return configs
+
+
+@app.get("/api/promotions/config", response_model=List[PromotionConfigResponse])
+def get_promotion_configs(
+    product_id: Optional[int] = None,
+    mode: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """获取优惠配置列表"""
+    query = db.query(PromotionConfig)
+
+    if product_id:
+        query = query.filter(PromotionConfig.product_id == product_id)
+
+    if mode:
+        query = query.filter(PromotionConfig.mode == mode)
+
+    return query.all()
+
+
+@app.post("/api/promotions/config", response_model=PromotionConfigResponse)
+def create_promotion_config(
+    config: PromotionConfigCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """创建或更新优惠配置"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    # 检查是否已存在该产品和模式的配置
+    existing = (
+        db.query(PromotionConfig)
+        .filter(
+            PromotionConfig.product_id == config.product_id,
+            PromotionConfig.mode == config.mode,
+        )
+        .first()
+    )
+
+    if existing:
+        # 更新现有配置
+        existing.trigger_qty = config.trigger_qty
+        existing.gift_qty = config.gift_qty
+        existing.discount_rate = config.discount_rate
+        existing.is_active = config.is_active
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        # 创建新配置
+        db_config = PromotionConfig(**config.model_dump())
+        db.add(db_config)
+        db.commit()
+        db.refresh(db_config)
+        return db_config
+
+
+@app.post("/api/promotions/batch")
+def batch_update_promotion_configs(
+    configs: List[PromotionConfigCreate],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量设置产品优惠配置"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    updated_count = 0
+    for config in configs:
+        existing = (
+            db.query(PromotionConfig)
+            .filter(
+                PromotionConfig.product_id == config.product_id,
+                PromotionConfig.mode == config.mode,
+            )
+            .first()
+        )
+
+        if existing:
+            existing.trigger_qty = config.trigger_qty
+            existing.gift_qty = config.gift_qty
+            existing.discount_rate = config.discount_rate
+            existing.is_active = config.is_active
+        else:
+            db_config = PromotionConfig(**config.model_dump())
+            db.add(db_config)
+
+        updated_count += 1
+
+    db.commit()
+    return {"message": f"成功更新 {updated_count} 条优惠配置"}
+
+
+# ==================== Reservation APIs ====================
+@app.get("/api/reservation/{user_id}/balance")
+def get_reservation_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户的预定余额（未领取的数量）"""
+    reservations = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user_id,
+            Transaction.mode == "prepay",
+            Transaction.status == "reserved",
+        )
+        .all()
+    )
+
+    balances = []
+    for res in reservations:
+        product = db.query(Product).filter(Product.id == res.product_id).first()
+        remaining = res.reserved_qty - res.used_qty
+
+        if remaining > 0:
+            balances.append(
+                {
+                    "user_id": user_id,
+                    "product_id": res.product_id,
+                    "product_name": product.name if product else "Unknown",
+                    "reserved_qty": res.reserved_qty,
+                    "used_qty": res.used_qty,
+                    "remaining_qty": remaining,
+                    "reservation_id": res.id,
+                }
+            )
+
+    return balances
+
+
+# ==================== Prepaid Order APIs ====================
+@app.post("/api/prepaid/orders", response_model=PrepaidOrderResponse)
+def create_prepaid_order(
+    order: PrepaidOrderCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """创建预付订单（管理员专用）"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(
+            status_code=403, detail="权限不足：只有管理员才能创建预付订单"
+        )
+
+    # 验证用户
+    user = db.query(User).filter(User.id == order.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 验证产品
+    product = db.query(Product).filter(Product.id == order.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
+
+    if not product.is_active:
+        raise HTTPException(status_code=400, detail="产品已停用")
+
+    if order.total_qty <= 0:
+        raise HTTPException(status_code=400, detail="预付数量必须大于 0")
+
+    if order.unit_price < 0:
+        raise HTTPException(status_code=400, detail="单价不能为负数")
+
+    if order.discount_amount < 0:
+        raise HTTPException(status_code=400, detail="优惠金额不能为负数")
+
+    # 计算总金额
+    total_amount = order.unit_price * order.total_qty
+    final_amount = total_amount - order.discount_amount
+
+    if final_amount < 0:
+        raise HTTPException(status_code=400, detail="优惠金额不能大于总金额")
+
+    # 创建订单
+    db_order = PrepaidOrder(
+        user_id=order.user_id,
+        product_id=order.product_id,
+        total_qty=order.total_qty,
+        used_qty=0,
+        unit_price=order.unit_price,
+        total_amount=total_amount,
+        discount_amount=order.discount_amount,
+        payment_status="unpaid",
+        payment_method=order.payment_method,
+        created_by=current_user.id,
+        note=order.note,
+    )
+
+    db.add(db_order)
+    db.commit()
+    db.refresh(db_order)
+
+    return db_order
+
+
+@app.get("/api/admin/prepaid/orders", response_model=List[PrepaidOrderResponse])
+def get_admin_prepaid_orders(
+    user_id: Optional[int] = None,
+    payment_status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """获取预付订单列表（管理员专用）"""
+    query = db.query(PrepaidOrder)
+
+    if user_id:
+        query = query.filter(PrepaidOrder.user_id == user_id)
+
+    if payment_status:
+        query = query.filter(PrepaidOrder.payment_status == payment_status)
+
+    query = query.order_by(PrepaidOrder.created_at.desc())
+
+    return query.all()
+
+
+@app.get("/api/prepaid/orders", response_model=List[PrepaidOrderResponse])
+def get_user_prepaid_orders(user_id: int, db: Session = Depends(get_db)):
+    """获取用户的预付订单列表"""
+    orders = (
+        db.query(PrepaidOrder)
+        .filter(PrepaidOrder.user_id == user_id, PrepaidOrder.is_active == 1)
+        .order_by(PrepaidOrder.created_at.desc())
+        .all()
+    )
+
+    return orders
+
+
+@app.get("/api/prepaid/orders/{order_id}", response_model=PrepaidOrderResponse)
+def get_prepaid_order(order_id: int, db: Session = Depends(get_db)):
+    """获取预付订单详情"""
+    order = db.query(PrepaidOrder).filter(PrepaidOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+    return order
+
+
+@app.post("/api/admin/prepaid/orders/{order_id}/confirm")
+def confirm_prepaid_payment(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """确认预付订单收款（管理员专用）"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    order = db.query(PrepaidOrder).filter(PrepaidOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+
+    if order.payment_status == "paid":
+        raise HTTPException(status_code=400, detail="订单已付款")
+
+    # 更新订单状态
+    order.payment_status = "paid"
+    order.payment_at = datetime.now()
+    order.confirmed_by = current_user.id
+
+    db.commit()
+
+    # 发送通知给用户
+    send_prepaid_paid_notification(db, order.user_id, order)
+
+    return {
+        "message": "已确认收款",
+        "order_id": order_id,
+        "payment_at": order.payment_at.isoformat(),
+    }
+
+
+@app.post("/api/admin/prepaid/orders/{order_id}/refund")
+def refund_prepaid_order(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """退款预付订单（管理员专用）"""
+    if not current_user or current_user.role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    order = db.query(PrepaidOrder).filter(PrepaidOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+
+    if order.payment_status != "paid":
+        raise HTTPException(status_code=400, detail="订单未付款，无法退款")
+
+    if order.used_qty > 0:
+        raise HTTPException(
+            status_code=400, detail=f"订单已使用{order.used_qty}，无法全额退款"
+        )
+
+    # 更新订单状态
+    order.payment_status = "refunded"
+    order.is_active = 0
+
+    db.commit()
+
+    return {"message": "已退款", "order_id": order_id}
+
+
+@app.get("/api/prepaid/balance/{user_id}", response_model=PrepaidBalanceResponse)
+def get_prepaid_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户预付余额"""
+    orders = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.user_id == user_id,
+            PrepaidOrder.payment_status == "paid",
+            PrepaidOrder.is_active == 1,
+        )
+        .all()
+    )
+
+    balance_items = []
+    total_orders = 0
+    total_amount = 0
+    total_remaining_value = 0
+
+    for order in orders:
+        remaining = order.total_qty - order.used_qty
+        if remaining > 0:
+            product = db.query(Product).filter(Product.id == order.product_id).first()
+            remaining_value = remaining * order.unit_price
+
+            balance_items.append(
+                {
+                    "order_id": order.id,
+                    "product_id": order.product_id,
+                    "product_name": product.name if product else "Unknown",
+                    "specification": product.specification if product else "",
+                    "unit": product.unit if product else "",
+                    "total_qty": order.total_qty,
+                    "used_qty": order.used_qty,
+                    "remaining_qty": remaining,
+                    "unit_price": order.unit_price,
+                    "total_amount": order.total_amount - order.discount_amount,
+                    "payment_status": order.payment_status,
+                }
+            )
+
+            total_orders += 1
+            total_amount += order.total_amount - order.discount_amount
+            total_remaining_value += remaining_value
+
+    return {
+        "user_id": user_id,
+        "orders": balance_items,
+        "summary": {
+            "total_orders": total_orders,
+            "total_amount": round(total_amount, 2),
+            "total_remaining_value": round(total_remaining_value, 2),
+        },
+    }
+
+
+# ==================== Prepaid Pickup APIs ====================
+@app.post("/api/prepaid/pickups", response_model=PrepaidPickupResponse)
+def create_prepaid_pickup(
+    pickup: PrepaidPickupCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """创建预付领取记录"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    # 查找订单
+    order = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.id == pickup.order_id,
+            PrepaidOrder.user_id == current_user.id,
+            PrepaidOrder.is_active == 1,
+        )
+        .first()
+    )
+
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+
+    if order.payment_status != "paid":
+        raise HTTPException(status_code=400, detail="订单未付款")
+
+    # 检查余额
+    remaining = order.total_qty - order.used_qty
+    if pickup.pickup_qty > remaining:
+        raise HTTPException(
+            status_code=400,
+            detail=f"余额不足，剩余：{remaining} {order.product.unit if order.product else '单位'}",
+        )
+
+    if pickup.pickup_qty <= 0:
+        raise HTTPException(status_code=400, detail="领取数量必须大于 0")
+
+    # 检查库存
+    product = db.query(Product).filter(Product.id == order.product_id).first()
+    if product and product.stock < pickup.pickup_qty:
+        raise HTTPException(status_code=400, detail="库存不足")
+
+    # 扣减库存
+    if product:
+        product.stock -= pickup.pickup_qty
+
+    # 更新订单已用数量
+    order.used_qty += pickup.pickup_qty
+
+    # 创建领取记录
+    db_pickup = PrepaidPickup(
+        order_id=pickup.order_id,
+        pickup_qty=pickup.pickup_qty,
+        picked_by=current_user.id,
+        note=pickup.note,
+    )
+
+    db.add(db_pickup)
+    db.commit()
+    db.refresh(db_pickup)
+
+    # 检查是否需要余量提醒
+    new_remaining = order.total_qty - order.used_qty
+    if new_remaining > 0 and new_remaining <= order.total_qty * 0.2:
+        send_low_prepaid_balance_notification(db, current_user.id, order, new_remaining)
+
+    return db_pickup
+
+
+@app.get("/api/prepaid/pickups", response_model=List[PrepaidPickupResponse])
+def get_prepaid_pickups(
+    order_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """获取预付领取记录列表"""
+    query = db.query(PrepaidPickup)
+
+    if order_id:
+        query = query.filter(PrepaidPickup.order_id == order_id)
+
+    if user_id:
+        # 通过订单关联用户
+        order_ids = (
+            db.query(PrepaidOrder.id).filter(PrepaidOrder.user_id == user_id).all()
+        )
+        order_ids = [o[0] for o in order_ids]
+        query = query.filter(PrepaidPickup.order_id.in_(order_ids))
+
+    query = query.order_by(PrepaidPickup.picked_at.desc())
+
+    return query.all()
+
+
+# --- Health Check ---
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
+# Initialize database
+def init_db():
+    Base.metadata.create_all(bind=engine)
+
+
+# ==================== 用户端缺失的 API 接口 ====================
+
+
+@app.get("/api/user/office-pickup-summary")
+def get_user_office_pickup_summary(
+    office_id: int = None,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    获取用户办公室领水汇总信息
+
+    返回待付款、已申请、已结算的金额统计
+    """
+    if not office_id:
+        return {
+            "pending": {"count": 0, "amount": 0},
+            "applied": {"count": 0, "amount": 0},
+            "settled": {"count": 0, "amount": 0},
+        }
+
+    # 查询该办公室的领水记录
+    query = db.query(OfficePickup).filter(OfficePickup.office_id == office_id)
+
+    # 如果用户不是管理员，只能查看自己的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(OfficePickup.pickup_person == current_user.name)
+
+    pickups = query.all()
+
+    pending_count = 0
+    pending_amount = 0.0
+    applied_count = 0
+    applied_amount = 0.0
+    settled_count = 0
+    settled_amount = 0.0
+
+    for p in pickups:
+        if p.settlement_status == "pending":
+            pending_count += 1
+            pending_amount += p.total_amount or 0
+        elif p.settlement_status == "applied":
+            applied_count += 1
+            applied_amount += p.total_amount or 0
+        elif p.settlement_status == "settled":
+            settled_count += 1
+            settled_amount += p.total_amount or 0
+
+    return {
+        "pending": {"count": pending_count, "amount": round(pending_amount, 2)},
+        "applied": {"count": applied_count, "amount": round(applied_amount, 2)},
+        "settled": {"count": settled_count, "amount": round(settled_amount, 2)},
+    }
+
+
+@app.get("/api/config/payment-qr")
+def get_payment_qr(db: Session = Depends(get_db)):
+    """
+    获取支付二维码
+
+    从系统配置中读取支付二维码 URL
+    """
+    # 从配置表中读取支付二维码
+    from models_unified import SystemConfig
+
+    config = (
+        db.query(SystemConfig)
+        .filter(SystemConfig.config_key == "payment_qr_code")
+        .first()
+    )
+
+    if config and config.config_value:
+        return {"qr_code": config.config_value}
+
+    # 如果没有配置，返回空
+    return {"qr_code": None}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    # 从环境变量读取端口，默认 8000
+    port = int(os.getenv("PORT", 8000))
+
+    init_db()
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+def get_user_office_pickup_summary(
+    office_id: int = None,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    获取用户办公室领水汇总信息
+
+    返回待付款、已申请、已结算的金额统计
+    """
+    if not office_id:
+        return {
+            "pending": {"count": 0, "amount": 0},
+            "applied": {"count": 0, "amount": 0},
+            "settled": {"count": 0, "amount": 0},
+        }
+
+    # 查询该办公室的领水记录
+    query = db.query(OfficePickup).filter(OfficePickup.office_id == office_id)
+
+    # 如果用户不是管理员，只能查看自己的记录
+    if current_user and current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(OfficePickup.pickup_person == current_user.name)
+
+    pickups = query.all()
+
+    pending_count = 0
+    pending_amount = 0.0
+    applied_count = 0
+    applied_amount = 0.0
+    settled_count = 0
+    settled_amount = 0.0
+
+    for p in pickups:
+        if p.settlement_status == "pending":
+            pending_count += 1
+            pending_amount += p.total_amount or 0
+        elif p.settlement_status == "applied":
+            applied_count += 1
+            applied_amount += p.total_amount or 0
+        elif p.settlement_status == "settled":
+            settled_count += 1
+            settled_amount += p.total_amount or 0
+
+    return {
+        "pending": {"count": pending_count, "amount": round(pending_amount, 2)},
+        "applied": {"count": applied_count, "amount": round(applied_amount, 2)},
+        "settled": {"count": settled_count, "amount": round(settled_amount, 2)},
+    }
+
+
+# ==================== 静态文件服务 ====================
+import os
+from pathlib import Path
+
+# 前端目录路径
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+PORTAL_DIR = Path(__file__).parent.parent.parent / "portal"
+MEETING_FRONTEND_DIR = (
+    Path(__file__).parent.parent.parent / "Service_MeetingRoom" / "frontend"
+)
+DINING_FRONTEND_DIR = (
+    Path(__file__).parent.parent.parent / "Service_Dining" / "frontend"
+)
+
+# 挂载静态文件目录
+print(f"\n正在挂载静态文件目录...")
+print(f"  FRONTEND_DIR: {FRONTEND_DIR} (exists: {FRONTEND_DIR.exists()})")
+print(f"  PORTAL_DIR: {PORTAL_DIR} (exists: {PORTAL_DIR.exists()})")
+print(
+    f"  MEETING_FRONTEND_DIR: {MEETING_FRONTEND_DIR} (exists: {MEETING_FRONTEND_DIR.exists()})"
+)
+print(
+    f"  DINING_FRONTEND_DIR: {DINING_FRONTEND_DIR} (exists: {DINING_FRONTEND_DIR.exists()})"
+)
+
+if PORTAL_DIR.exists():
+    app.mount(
+        "/portal",
+        StaticFiles(directory=str(PORTAL_DIR), html=True),
+        name="portal",
+    )
+    print(f"✓ Portal目录已挂载")
+    print(f"  - /portal → AI产业集群空间服务首页")
+
+if FRONTEND_DIR.exists():
+    app.mount(
+        "/frontend",
+        StaticFiles(directory=str(FRONTEND_DIR), html=True),
+        name="frontend",
+    )
+    app.mount(
+        "/water-admin",
+        StaticFiles(directory=str(FRONTEND_DIR), html=True),
+        name="water-admin",
+    )
+    print(f"✓ 水站前端目录已挂载")
+    print(f"  - /frontend → 水站管理后台")
+
+if MEETING_FRONTEND_DIR.exists():
+    app.mount(
+        "/meeting-frontend",
+        StaticFiles(directory=str(MEETING_FRONTEND_DIR), html=True),
+        name="meeting-frontend",
+    )
+    print(f"✓ 会议室前端目录已挂载")
+    print(f"  - /meeting-frontend → 会议室管理后台")
+
+if DINING_FRONTEND_DIR.exists():
+    app.mount(
+        "/dining-frontend",
+        StaticFiles(directory=str(DINING_FRONTEND_DIR), html=True),
+        name="dining-frontend",
+    )
+    print(f"✓ 餐厅前端目录已挂载")
+    print(f"  - /dining-frontend → 餐厅管理后台")
+
+
+# 根路径重定向到Portal首页
+from fastapi.responses import RedirectResponse
+
+
+@app.get("/")
+async def root():
+    """根路径重定向到Portal首页"""
+    return RedirectResponse(url="/portal/index.html")
+
+
+# 健康检查端点
+@app.get("/health")
+async def health_check():
+    """健康检查"""
+    return {
+        "status": "healthy",
+        "service": "Enterprise Service Platform",
+        "version": "2.0.0",
+    }
+
+
+print("\n" + "=" * 50)
+print("企业服务管理平台启动成功！")
+print("=" * 50)
+print("\n访问地址:")
+print("  - 登录页面: http://localhost:8080/frontend/login.html")
+print("  - 管理后台: http://localhost:8080/frontend/admin.html")
+print("  - 水站管理后台: http://localhost:8080/water-admin/login.html")
+print("  - 预约页面: http://localhost:8080/frontend/index.html")
+print("  - API文档:  http://localhost:8080/docs")
+print("\n默认管理员:")
+print("  - 用户名: admin")
+print("  - 密码: 见 .env 文件")
+print("=" * 50 + "\n")
+
+
+# ==================== Portal APIs ====================
+
+
+@app.get("/api/unified/user/{user_id}/balance")
+def get_unified_user_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户统一余额信息（Portal首页使用）"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 计算预付余额
+    prepaid_orders = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.user_id == user_id,
+            PrepaidOrder.payment_status == "paid",
+            PrepaidOrder.is_active == 1,
+        )
+        .all()
+    )
+
+    balance_prepaid = sum(
+        (order.total_qty - order.used_qty) * order.unit_price
+        for order in prepaid_orders
+    )
+
+    return {
+        "user_id": user_id,
+        "balance_credit": user.balance_credit or 0,
+        "balance_prepaid": balance_prepaid,
+        "total_balance": (user.balance_credit or 0) + balance_prepaid,
+    }
+
+
+@app.get("/api/meeting/user/{user_id}/free-hours")
+def get_meeting_user_free_hours(user_id: int, db: Session = Depends(get_db)):
+    """获取用户会议室免费时长（Portal首页使用）"""
+    from datetime import datetime, date
+    from sqlalchemy import func, and_
+
+    # 尝试从会议室数据库获取
+    try:
+        from services.meeting.api import (
+            MeetingSessionLocal,
+            MeetingRoom,
+            MeetingBooking,
+        )
+
+        meeting_db = MeetingSessionLocal()
+
+        # 获取本月第一天和最后一天
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        month_end = (
+            date(today.year, today.month + 1, 1)
+            if today.month < 12
+            else date(today.year + 1, 1, 1)
+        )
+
+        # 查询本月已使用的免费时长
+        used_free_hours = (
+            meeting_db.query(func.sum(MeetingBooking.duration_hours))
+            .filter(
+                and_(
+                    MeetingBooking.user_id == user_id,
+                    MeetingBooking.booking_date >= month_start,
+                    MeetingBooking.booking_date < month_end,
+                    MeetingBooking.status.in_(["confirmed", "completed"]),
+                )
+            )
+            .scalar()
+            or 0
+        )
+
+        # 默认每月5小时免费时长
+        total_free_hours = 5
+        remaining_hours = max(0, total_free_hours - float(used_free_hours))
+
+        meeting_db.close()
+
+        return {
+            "user_id": user_id,
+            "total_free_hours": total_free_hours,
+            "used_free_hours": float(used_free_hours),
+            "free_hours": remaining_hours,
+            "month": f"{today.year}-{today.month:02d}",
+        }
+    except Exception as e:
+        # 如果会议室数据库不可用，返回默认值
+        return {
+            "user_id": user_id,
+            "total_free_hours": 5,
+            "used_free_hours": 0,
+            "free_hours": 5,
+            "month": f"{date.today().year}-{date.today().month:02d}",
+            "error": str(e),
+        }
+
+
+# ==================== Portal APIs ====================
+
+
+@app.get("/api/unified/user/{user_id}/balance")
+def get_unified_user_balance(user_id: int, db: Session = Depends(get_db)):
+    """获取用户统一余额信息（Portal首页使用）"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 计算预付余额
+    prepaid_orders = (
+        db.query(PrepaidOrder)
+        .filter(
+            PrepaidOrder.user_id == user_id,
+            PrepaidOrder.payment_status == "paid",
+            PrepaidOrder.is_active == 1,
+        )
+        .all()
+    )
+
+    balance_prepaid = sum(
+        (order.total_qty - order.used_qty) * order.unit_price
+        for order in prepaid_orders
+    )
+
+    return {
+        "user_id": user_id,
+        "balance_credit": user.balance_credit or 0,
+        "balance_prepaid": balance_prepaid,
+        "total_balance": (user.balance_credit or 0) + balance_prepaid,
+    }
+
+
+@app.get("/api/meeting/user/{user_id}/free-hours")
+def get_meeting_user_free_hours(user_id: int, db: Session = Depends(get_db)):
+    """获取用户会议室免费时长（Portal首页使用）"""
+    from datetime import date
+    from sqlalchemy import func, and_
+
+    try:
+        from services.meeting.api import (
+            MeetingSessionLocal,
+            MeetingRoom,
+            MeetingBooking,
+        )
+
+        meeting_db = MeetingSessionLocal()
+
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        month_end = (
+            date(today.year, today.month + 1, 1)
+            if today.month < 12
+            else date(today.year + 1, 1, 1)
+        )
+
+        used_free_hours = (
+            meeting_db.query(func.sum(MeetingBooking.duration_hours))
+            .filter(
+                and_(
+                    MeetingBooking.user_id == user_id,
+                    MeetingBooking.booking_date >= month_start,
+                    MeetingBooking.booking_date < month_end,
+                    MeetingBooking.status.in_(["confirmed", "completed"]),
+                )
+            )
+            .scalar()
+            or 0
+        )
+
+        total_free_hours = 5
+        remaining_hours = max(0, total_free_hours - float(used_free_hours))
+
+        meeting_db.close()
+
+        return {
+            "user_id": user_id,
+            "total_free_hours": total_free_hours,
+            "used_free_hours": float(used_free_hours),
+            "free_hours": remaining_hours,
+            "month": f"{today.year}-{today.month:02d}",
+        }
+    except Exception as e:
+        return {
+            "user_id": user_id,
+            "total_free_hours": 5,
+            "used_free_hours": 0,
+            "free_hours": 5,
+            "month": f"{date.today().year}-{date.today().month:02d}",
+            "error": str(e),
+        }

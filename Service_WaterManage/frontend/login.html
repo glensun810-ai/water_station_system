@@ -210,49 +210,66 @@
                 };
             },
             methods: {
-                async handleLogin() {
+async handleLogin() {
                     if (this.loading) return;
                     
                     this.loading = true;
                     this.errorMessage = '';
                     
                     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-                    const API_BASE = localStorage.getItem('API_BASE') || (isLocalhost ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+                    
+                    // 使用动态端口
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                    const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                    
+                    console.log('登录API配置:', { hostname, port, API_BASE });
                     
                     try {
-                        const response = await fetch(`${API_BASE}/auth/login`, {
+                        const response = await fetch(`${API_BASE}/admin/login`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                name: this.username,
+                                username: this.username,
                                 password: this.password
                             })
                         });
                         
+                        console.log('API响应状态:', response.status);
+                        
                         const data = await response.json();
+                        console.log('API响应数据:', data);
                         
                         if (response.ok) {
                             localStorage.setItem('token', data.access_token);
-                            localStorage.setItem('user', JSON.stringify(data.user));
+                            localStorage.setItem('userInfo', JSON.stringify({
+                                id: data.user.id,
+                                name: data.user.name,
+                                role: data.user.role,
+                                department: data.user.department,
+                                avatar: data.user.avatar || '👤',
+                                is_admin: data.user.role === 'admin' || data.user.role === 'super_admin'
+                            }));
                             
-                            window.location.href = '/frontend/admin.html';
-                        } else {
-                            this.errorMessage = data.detail || data.message || '登录失败，请检查用户名和密码';
-                        }
-                    } catch (error) {
+window.location.href = '/portal/index.html';
+                         } else {
+                             this.errorMessage = data.detail || data.message || '登录失败，请检查用户名和密码';
+                         }
+} catch (error) {
                         console.error('Login error:', error);
                         this.errorMessage = '网络错误，请稍后重试';
                     } finally {
                         this.loading = false;
                     }
-                }
-            },
-            mounted() {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    window.location.href = '/frontend/admin.html';
+                },
+                mounted() {
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        window.location.href = '/portal/index.html';
+                    }
                 }
             }
         }).mount('#app');
@@ -261,7 +278,7 @@
         // 环境检测：更新返回首页链接
         (function() {
             document.addEventListener('DOMContentLoaded', function() {
-                document.querySelectorAll('a[href="/service/home.html"]').forEach(link => {
+                document.querySelectorAll('a[href="/portal/index.html"]').forEach(link => {
                     link.href = '/portal/index.html';
                 });
             });

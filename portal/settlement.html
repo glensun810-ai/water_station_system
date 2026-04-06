@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>统一结算管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F1F5F9;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .page-content {
+            padding: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #64748B;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .stat-card.water .stat-value { color: #2563EB; }
+        .stat-card.meeting .stat-value { color: #7C3AED; }
+        .stat-card.pending .stat-value { color: #F59E0B; }
+        .stat-card.applied .stat-value { color: #3B82F6; }
+        .stat-card.settled .stat-value { color: #10B981; }
+        
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .filter-select, .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 14px;
+            min-height: 40px;
+            background: white;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: #2563EB;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1D4ED8;
+        }
+        
+        .btn-outline {
+            background: white;
+            border: 1px solid #E2E8F0;
+            color: #64748B;
+        }
+        
+        .btn-outline:hover {
+            background: #F8FAFC;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .data-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 40px 100px 1fr 80px 80px 90px 80px;
+            padding: 12px 16px;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748B;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 40px 100px 1fr 80px 80px 90px 80px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #F1F5F9;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        
+        .table-row:hover {
+            background: #F8FAFC;
+        }
+        
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .service-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .service-badge.water {
+            background: #DBEAFE;
+            color: #2563EB;
+        }
+        
+        .service-badge.meeting {
+            background: #EDE9FE;
+            color: #7C3AED;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background: #FEF3C7;
+            color: #B45309;
+        }
+        
+        .status-badge.applied {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+        
+        .status-badge.settled {
+            background: #D1FAE5;
+            color: #047857;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .batch-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .selected-info {
+            font-size: 14px;
+            color: #64748B;
+        }
+        
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .page-btn:hover:not(:disabled) {
+            background: #F8FAFC;
+        }
+        
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .page-btn.active {
+            background: #2563EB;
+            color: white;
+            border-color: #2563EB;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94A3B8;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #E2E8F0;
+            border-top-color: #2563EB;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1E293B;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.success {
+            background: #059669;
+        }
+        
+        .toast.error {
+            background: #DC2626;
+        }
+        
+        @media (max-width: 768px) {
+            .table-header {
+                display: none;
+            }
+            
+            .table-row {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                padding: 16px;
+            }
+            
+            .table-row > div::before {
+                content: attr(data-label);
+                font-size: 12px;
+                color: #94A3B8;
+                display: block;
+                margin-bottom: 2px;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+            }
+            
+            .filter-select, .filter-input, .btn {
+                width: 100%;
+            }
+            
+            .batch-actions {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .batch-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <header class="page-header">
+            <button class="back-btn" @click="goBack">
+                ← 返回
+            </button>
+            <h1 class="page-title">💰 统一结算管理</h1>
+            <div style="width: 60px;"></div>
+        </header>
+        
+        <main class="page-content">
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card water">
+                    <div class="stat-label">💧 水站待结算</div>
+                    <div class="stat-value">{{ statistics.water.pending_count }}</div>
+                    <div style="font-size: 12px; color: #64748B;">¥{{ statistics.water.pending_amount.toFixed(2) }}</div>
+                </div>
+                <div class="stat-card meeting">
+                    <div class="stat-label">📅 会议室待结算</div>
+                    <div class="stat-value">{{ statistics.meeting.pending_count }}</div>
+                    <div style="font-size: 12px; color: #64748B;">¥{{ statistics.meeting.pending_amount.toFixed(2) }}</div>
+                </div>
+                <div class="stat-card applied">
+                    <div class="stat-label">📋 已申请</div>
+                    <div class="stat-value">{{ statistics.water.applied_count + statistics.meeting.applied_count }}</div>
+                    <div style="font-size: 12px; color: #64748B;">¥{{ (statistics.water.applied_amount + statistics.meeting.applied_amount).toFixed(2) }}</div>
+                </div>
+                <div class="stat-card settled">
+                    <div class="stat-label">✅ 已结清</div>
+                    <div class="stat-value">{{ statistics.water.settled_count + statistics.meeting.settled_count }}</div>
+                    <div style="font-size: 12px; color: #64748B;">¥{{ (statistics.water.settled_amount + statistics.meeting.settled_amount).toFixed(2) }}</div>
+                </div>
+            </div>
+            
+            <!-- 筛选区域 -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <select v-model="filters.serviceType" class="filter-select" @change="loadRecords">
+                        <option value="all">全部服务</option>
+                        <option value="water">💧 水站领水</option>
+                        <option value="meeting">📅 会议室预约</option>
+                    </select>
+                    <select v-model="filters.status" class="filter-select" @change="loadRecords">
+                        <option value="">全部状态</option>
+                        <option value="pending">⏳ 待结算</option>
+                        <option value="applied">📋 已申请</option>
+                        <option value="settled">✅ 已结清</option>
+                    </select>
+                    <input type="date" v-model="filters.startDate" class="filter-input" placeholder="开始日期" @change="loadRecords">
+                    <input type="date" v-model="filters.endDate" class="filter-input" placeholder="结束日期" @change="loadRecords">
+                </div>
+                <div class="filter-row">
+                    <input type="text" v-model="filters.keyword" class="filter-input" placeholder="搜索关键词..." @keyup.enter="loadRecords" style="flex: 1;">
+                    <button class="btn btn-primary" @click="loadRecords">🔍 搜索</button>
+                    <button class="btn btn-outline" @click="resetFilters">重置</button>
+                </div>
+            </div>
+            
+            <!-- 数据表格 -->
+            <div class="data-table">
+                <div class="table-header">
+                    <div><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></div>
+                    <div>服务类型</div>
+                    <div>记录信息</div>
+                    <div>金额</div>
+                    <div>办公室</div>
+                    <div>状态</div>
+                    <div>操作</div>
+                </div>
+                
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                </div>
+                
+                <div v-else-if="records.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>暂无结算记录</div>
+                </div>
+                
+                <div v-else>
+                    <div v-for="record in records" :key="record.id + '-' + record.service_type" class="table-row">
+                        <div><input type="checkbox" class="checkbox" :checked="isSelected(record)" @change="toggleSelect(record)"></div>
+                        <div>
+                            <span class="service-badge" :class="record.service_type">
+                                {{ record.service_icon }} {{ record.service_name }}
+                            </span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 500;">{{ record.record_no }}</div>
+                            <div style="font-size: 12px; color: #94A3B8;">
+                                <span v-if="record.service_type === 'water'">{{ record.product_name || '' }} {{ record.product_specification || '' }}</span>
+                                <span v-else>{{ record.room_name || '' }} {{ record.booking_date || '' }} {{ record.start_time || '' }}-{{ record.end_time || '' }}</span>
+                            </div>
+                        </div>
+                        <div style="font-weight: 600; color: #1E293B;">¥{{ record.amount.toFixed(2) }}</div>
+                        <div style="font-size: 13px;">{{ record.office_name }}</div>
+                        <div>
+                            <span class="status-badge" :class="record.status">{{ record.status_text }}</span>
+                        </div>
+                        <div class="actions">
+                            <button v-if="record.status !== 'settled'" class="btn btn-outline" style="padding: 4px 8px; font-size: 12px;" @click="confirmSingle(record)">确认</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 批量操作栏 -->
+            <div v-if="selectedRecords.length > 0" class="batch-actions">
+                <div class="selected-info">
+                    已选择 {{ selectedRecords.length }} 项
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" @click="batchConfirm">批量确认结算</button>
+                    <button class="btn btn-outline" @click="clearSelection">取消选择</button>
+                </div>
+            </div>
+            
+            <!-- 分页 -->
+            <div v-if="pagination.totalPages > 1" class="pagination">
+                <button class="page-btn" :disabled="pagination.page <= 1" @click="goPage(pagination.page - 1)">上一页</button>
+                <span style="padding: 8px;">第 {{ pagination.page }} / {{ pagination.totalPages }} 页</span>
+                <button class="page-btn" :disabled="pagination.page >= pagination.totalPages" @click="goPage(pagination.page + 1)">下一页</button>
+            </div>
+        </main>
+        
+        <!-- Toast 提示 -->
+        <div v-if="toast.show" class="toast" :class="toast.type">
+            {{ toast.message }}
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            setup() {
+                const token = localStorage.getItem('token');
+                const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                
+                const loading = ref(false);
+                const records = ref([]);
+                const selectedRecords = ref([]);
+                const selectAll = ref(false);
+                
+                const filters = ref({
+                    serviceType: 'all',
+                    status: '',
+                    startDate: '',
+                    endDate: '',
+                    keyword: ''
+                });
+                
+                const pagination = ref({
+                    total: 0,
+                    page: 1,
+                    page_size: 20,
+                    totalPages: 1
+                });
+                
+                const statistics = ref({
+                    water: { pending_count: 0, pending_amount: 0, applied_count: 0, applied_amount: 0, settled_count: 0, settled_amount: 0 },
+                    meeting: { pending_count: 0, pending_amount: 0, applied_count: 0, applied_amount: 0, settled_count: 0, settled_amount: 0 },
+                    total_count: 0,
+                    total_amount: 0
+                });
+                
+                const toast = ref({
+                    show: false,
+                    message: '',
+                    type: 'success'
+                });
+                
+                const showToast = (message, type = 'success') => {
+                    toast.value = { show: true, message, type };
+                    setTimeout(() => {
+                        toast.value.show = false;
+                    }, 3000);
+                };
+                
+                const loadSummary = async () => {
+                    try {
+                        const params = new URLSearchParams();
+                        if (filters.value.startDate) params.append('start_date', filters.value.startDate);
+                        if (filters.value.endDate) params.append('end_date', filters.value.endDate);
+                        
+                        const res = await fetch(`/api/unified/settlement/summary?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            statistics.value = data.statistics;
+                        }
+                    } catch (e) {
+                        console.error('加载统计失败:', e);
+                    }
+                };
+                
+                const loadRecords = async () => {
+                    loading.value = true;
+                    try {
+                        const params = new URLSearchParams({
+                            service_type: filters.value.serviceType,
+                            page: pagination.value.page,
+                            page_size: pagination.value.page_size
+                        });
+                        if (filters.value.status) params.append('status', filters.value.status);
+                        if (filters.value.startDate) params.append('start_date', filters.value.startDate);
+                        if (filters.value.endDate) params.append('end_date', filters.value.endDate);
+                        if (filters.value.keyword) params.append('keyword', filters.value.keyword);
+                        
+                        const res = await fetch(`/api/unified/settlement/records?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            records.value = data.records;
+                            pagination.value = data.pagination;
+                        }
+                    } catch (e) {
+                        console.error('加载记录失败:', e);
+                        showToast('加载数据失败', 'error');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const resetFilters = () => {
+                    filters.value = {
+                        serviceType: 'all',
+                        status: '',
+                        startDate: '',
+                        endDate: '',
+                        keyword: ''
+                    };
+                    pagination.value.page = 1;
+                    loadRecords();
+                    loadSummary();
+                };
+                
+                const goPage = (page) => {
+                    pagination.value.page = page;
+                    loadRecords();
+                };
+                
+                const isSelected = (record) => {
+                    return selectedRecords.value.some(r => r.service_type === record.service_type && r.record_id === record.id);
+                };
+                
+                const toggleSelect = (record) => {
+                    const key = `${record.service_type}-${record.id}`;
+                    const idx = selectedRecords.value.findIndex(r => `${r.service_type}-${r.record_id}` === key);
+                    if (idx >= 0) {
+                        selectedRecords.value.splice(idx, 1);
+                    } else {
+                        selectedRecords.value.push({ service_type: record.service_type, record_id: record.id });
+                    }
+                };
+                
+                const toggleSelectAll = () => {
+                    if (selectAll.value) {
+                        selectedRecords.value = records.value
+                            .filter(r => r.status !== 'settled')
+                            .map(r => ({ service_type: r.service_type, record_id: r.id }));
+                    } else {
+                        selectedRecords.value = [];
+                    }
+                };
+                
+                const clearSelection = () => {
+                    selectedRecords.value = [];
+                    selectAll.value = false;
+                };
+                
+                const confirmSingle = async (record) => {
+                    if (!confirm('确认结算此记录？')) return;
+                    
+                    try {
+                        const res = await fetch('/api/unified/settlement/batch-confirm', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                records: [{ service_type: record.service_type, record_id: record.id }]
+                            })
+                        });
+                        
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast('确认成功');
+                            loadRecords();
+                            loadSummary();
+                        } else {
+                            showToast(data.message || '确认失败', 'error');
+                        }
+                    } catch (e) {
+                        showToast('操作失败', 'error');
+                    }
+                };
+                
+                const batchConfirm = async () => {
+                    if (selectedRecords.value.length === 0) return;
+                    if (!confirm(`确认结算选中的 ${selectedRecords.value.length} 项记录？`)) return;
+                    
+                    try {
+                        const res = await fetch('/api/unified/settlement/batch-confirm', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ records: selectedRecords.value })
+                        });
+                        
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast(data.message);
+                            clearSelection();
+                            loadRecords();
+                            loadSummary();
+                        } else {
+                            showToast(data.message || '批量确认失败', 'error');
+                        }
+                    } catch (e) {
+                        showToast('操作失败', 'error');
+                    }
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/portal/index.html';
+                };
+                
+                watch(() => filters.value.serviceType, () => {
+                    pagination.value.page = 1;
+                });
+                
+                onMounted(() => {
+                    if (!userInfo.is_admin) {
+                        alert('您没有权限访问此页面');
+                        window.location.href = '/portal/index.html';
+                        return;
+                    }
+                    loadSummary();
+                    loadRecords();
+                });
+                
+                return {
+                    loading,
+                    records,
+                    selectedRecords,
+                    selectAll,
+                    filters,
+                    pagination,
+                    statistics,
+                    toast,
+                    loadRecords,
+                    resetFilters,
+                    goPage,
+                    isSelected,
+                    toggleSelect,
+                    toggleSelectAll,
+                    clearSelection,
+                    confirmSingle,
+                    batchConfirm,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

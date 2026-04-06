@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全局用户信息展示 - 演示页面</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/water/components/UserHeader.css">
+    <script src="/water/components/UserHeader.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #F3F4F6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .demo-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1F2937;
+        }
+
+        .demo-content {
+            color: #6B7280;
+            line-height: 1.6;
+        }
+
+        .demo-code {
+            background: #1F2937;
+            color: #F3F4F6;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #2563EB;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1D4ED8;
+        }
+
+        .btn-secondary {
+            background: #6B7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4B5563;
+        }
+
+        .btn-danger {
+            background: #DC2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #B91C1C;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #10B981;
+        }
+
+        .status-offline {
+            background: #6B7280;
+        }
+
+        [v-cloak] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- 全局用户信息Header -->
+        <user-header></user-header>
+
+        <div class="container">
+            <div class="demo-section">
+                <h1 class="demo-title">🎯 全局用户信息展示 - 功能演示</h1>
+                <div class="demo-content">
+                    <p>这是一个演示页面，展示全局用户信息展示功能如何工作。请按照以下步骤体验：</p>
+                    <ol>
+                        <li>点击"模拟登录"按钮模拟用户登录</li>
+                        <li>查看右上角的用户信息展示</li>
+                        <li>点击用户信息查看下拉菜单</li>
+                        <li>点击"模拟退出"清除用户信息</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="demo-section">
+                <h2 class="demo-title">📊 当前状态</h2>
+                <div class="demo-content">
+                    <p>
+                        <span class="status-indicator" :class="isLoggedIn ? 'status-online' : 'status-offline'"></span>
+                        <strong>登录状态:</strong> {{ isLoggedIn ? '已登录' : '未登录' }}
+                    </p>
+                    <p v-if="userInfo">
+                        <strong>用户信息:</strong><br>
+                        姓名: {{ userInfo.name }}<br>
+                        部门: {{ userInfo.department }}<br>
+                        角色: {{ userInfo.role === 'super_admin' ? '超级管理员' : userInfo.role === 'admin' ? '管理员' : '普通用户' }}
+                    </p>
+                    <p v-else>
+                        <strong>用户信息:</strong> 暂未登录
+                    </p>
+                </div>
+            </div>
+
+            <div class="demo-section">
+                <h2 class="demo-title">🔧 操作面板</h2>
+                <div class="demo-content">
+                    <button v-if="!isLoggedIn" @click="simulateLogin" class="btn btn-primary">
+                        模拟登录
+                    </button>
+                    <button v-if="isLoggedIn" @click="simulateLogout" class="btn btn-danger">
+                        模拟退出
+                    </button>
+                    <button @click="simulateAdminLogin" class="btn btn-secondary">
+                        模拟管理员登录
+                    </button>
+                </div>
+            </div>
+
+            <div class="demo-section">
+                <h2 class="demo-title">📝 功能说明</h2>
+                <div class="demo-content">
+                    <h3>核心功能</h3>
+                    <ul>
+                        <li>✅ 所有页面右上角统一显示用户信息</li>
+                        <li>✅ 点击用户信息显示下拉菜单</li>
+                        <li>✅ 下拉菜单提供常用操作（返回首页、管理后台、我的余额、修改密码、退出登录）</li>
+                        <li>✅ 跨页面自动同步用户状态</li>
+                        <li>✅ 响应式设计，适配移动端</li>
+                    </ul>
+
+                    <h3>技术特点</h3>
+                    <ul>
+                        <li>🔧 使用localStorage存储用户状态</li>
+                        <li>🔧 使用storage事件实现跨页面同步</li>
+                        <li>🔧 Vue 3组件化设计</li>
+                        <li>🔧 响应式CSS布局</li>
+                        <li>🔧 下拉菜单交互</li>
+                    </ul>
+
+                    <h3>用户体验</h3>
+                    <ul>
+                        <li>🎯 统一的用户体验</li>
+                        <li>🎯 便捷的操作入口</li>
+                        <li>🎯 直观的状态显示</li>
+                        <li>🎯 流畅的交互动画</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="demo-section">
+                <h2 class="demo-title">💻 代码示例</h2>
+                <div class="demo-code">
+                    &lt;!-- 在页面中引入组件 --&gt;
+                    &lt;script src="/water/components/UserHeader.js"&gt;&lt;/script&gt;
+                    &lt;link rel="stylesheet" href="/water/components/UserHeader.css"&gt;
+
+                    &lt;!-- 在Vue应用中注册组件 --&gt;
+                    const { createApp } = Vue;
+                    const UserHeader = window.UserHeader;
+
+                    createApp({
+                        components: {
+                            'user-header': UserHeader
+                        }
+                    });
+
+                    &lt;!-- 在模板中使用组件 --&gt;
+                    &lt;user-header&gt;&lt;/user-header&gt;
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+        
+        const app = createApp({
+            components: {
+                'user-header': window.UserHeader
+            },
+            setup() {
+                const userInfo = ref(null);
+                
+                const isLoggedIn = computed(() => !!userInfo.value);
+                
+                const loadUserInfo = () => {
+                    try {
+                        const stored = localStorage.getItem('userInfo');
+                        if (stored) {
+                            userInfo.value = JSON.parse(stored);
+                        }
+                    } catch (e) {
+                        console.error('加载用户信息失败:', e);
+                    }
+                };
+                
+                const simulateLogin = () => {
+                    const mockUser = {
+                        id: 1,
+                        name: '张三',
+                        department: '技术部',
+                        role: 'staff',
+                        avatar: '👤',
+                        is_admin: false
+                    };
+                    
+                    localStorage.setItem('userInfo', JSON.stringify(mockUser));
+                    localStorage.setItem('token', 'mock-token-' + Date.now());
+                    userInfo.value = mockUser;
+                    
+                    alert('模拟登录成功！');
+                };
+                
+                const simulateAdminLogin = () => {
+                    const mockAdmin = {
+                        id: 1,
+                        name: '管理员',
+                        department: '技术部',
+                        role: 'admin',
+                        avatar: '👤',
+                        is_admin: true
+                    };
+                    
+                    localStorage.setItem('userInfo', JSON.stringify(mockAdmin));
+                    localStorage.setItem('token', 'mock-admin-token-' + Date.now());
+                    userInfo.value = mockAdmin;
+                    
+                    alert('模拟管理员登录成功！');
+                };
+                
+                const simulateLogout = () => {
+                    localStorage.removeItem('userInfo');
+                    localStorage.removeItem('token');
+                    userInfo.value = null;
+                    
+                    alert('模拟退出成功！');
+                };
+                
+                // 监听storage变化
+                window.addEventListener('storage', (event) => {
+                    if (event.key === 'userInfo') {
+                        loadUserInfo();
+                    }
+                });
+                
+                // 初始加载
+                loadUserInfo();
+                
+                return {
+                    userInfo,
+                    isLoggedIn,
+                    simulateLogin,
+                    simulateLogout,
+                    simulateAdminLogin
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

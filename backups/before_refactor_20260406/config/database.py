@@ -1,0 +1,121 @@
+"""
+统一数据库管理
+所有数据库连接统一管理，避免重复创建
+"""
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
+import os
+
+from config.settings import settings
+
+
+class DatabaseManager:
+    """数据库管理器（单例模式）"""
+
+    _instance = None
+    _main_engine = None
+    _meeting_engine = None
+    _main_session_factory = None
+    _meeting_session_factory = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        """初始化数据库连接"""
+        if self._main_engine is None:
+            self._init_main_database()
+        if self._meeting_engine is None:
+            self._init_meeting_database()
+
+    def _init_main_database(self):
+        """初始化主数据库"""
+        if settings._is_sqlite:
+            self._main_engine = create_engine(
+                settings.DATABASE_URL,
+                connect_args={"check_same_thread": False},
+                echo=settings.DEBUG,
+            )
+        else:
+            self._main_engine = create_engine(
+                settings.DATABASE_URL,
+                pool_size=settings.DATABASE_POOL_SIZE,
+                max_overflow=settings.DATABASE_MAX_OVERFLOW,
+                pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
+                echo=settings.DEBUG,
+            )
+        self._main_session_factory = sessionmaker(
+            autocommit=False, autoflush=False, bind=self._main_engine
+        )
+
+    def _init_meeting_database(self):
+        """初始化会议室数据库"""
+        if not settings.MEETING_DATABASE_URL:
+            return
+
+        meeting_db_path = settings.MEETING_DATABASE_URL.replace("sqlite:///", "")
+        if not os.path.exists(meeting_db_path):
+            return
+
+        self._meeting_engine = create_engine(
+            settings.MEETING_DATABASE_URL,
+            connect_args={"check_same_thread": False},
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+            echo=settings.DEBUG,
+        )
+        self._meeting_session_factory = sessionmaker(
+            autocommit=False, autoflush=False, bind=self._meeting_engine
+        )
+
+    def get_main_session(self) -> Generator[Session, None, None]:
+        """获取主数据库会话"""
+        if not self._main_session_factory:
+            raise RuntimeError("Main database not initialized")
+
+        session = self._main_session_factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    def get_meeting_session(self) -> Generator[Session, None, None]:
+        """获取会议室数据库会话"""
+        if not self._meeting_session_factory:
+            raise RuntimeError("Meeting database not initialized or not found")
+
+        session = self._meeting_session_factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    @property
+    def main_engine(self):
+        """获取主数据库引擎"""
+        return self._main_engine
+
+    @property
+    def meeting_engine(self):
+        """获取会议室数据库引擎"""
+        return self._meeting_engine
+
+
+# 全局数据库管理器实例
+db_manager = DatabaseManager()
+
+
+# 便捷函数：获取数据库会话
+def get_db() -> Generator[Session, None, None]:
+    """获取主数据库会话（依赖注入）"""
+    yield from db_manager.get_main_session()
+
+
+def get_meeting_db() -> Generator[Session, None, None]:
+    """获取会议室数据库会话（依赖注入）"""
+    return db_manager.get_meeting_session()

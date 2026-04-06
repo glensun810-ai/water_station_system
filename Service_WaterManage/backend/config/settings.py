@@ -91,6 +91,10 @@ class Settings:
         self.PROMOTION_DEFAULT_TRIGGER_QTY: int = 10
         self.PROMOTION_DEFAULT_GIFT_QTY: int = 1
 
+        # 服务器配置
+        self.HOST: str = "0.0.0.0"
+        self.PORT: int = int(os.getenv("PORT", "8000"))
+
     def _get_secret_key(self) -> str:
         """获取密钥"""
         secret_key = os.getenv("SECRET_KEY")

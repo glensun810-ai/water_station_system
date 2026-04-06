@@ -9,6 +9,8 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/water/components/UserHeader.css">
+    <script src="/water/components/UserHeader.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -352,8 +354,12 @@
     </style>
 </head>
 <body>
-    <div id="app" v-cloak class="portal-container">
-        <header class="header-nav">
+    <div id="app" v-cloak>
+        <!-- 全局用户信息Header -->
+        <user-header v-if="userInfo && userInfo.id"></user-header>
+
+        <!-- 原有的header-nav（仅在未登录时显示） -->
+        <header class="header-nav" v-if="!userInfo || !userInfo.id">
             <div class="header-content">
                 <div class="header-logo">
                     <span class="header-logo-icon">🏢</span>
@@ -371,7 +377,7 @@
                         <div class="user-dept">{{ userInfo.department || '部门' }}</div>
                     </div>
                     <div class="user-avatar">👤</div>
-                    <a v-if="userInfo.is_admin" href="/frontend/admin.html" class="logout-btn" style="background: #FCD34D; color: #78350F; border-color: #F59E0B; text-decoration: none;">
+                    <a v-if="userInfo.is_admin" href="/water/admin.html" class="logout-btn" style="background: #FCD34D; color: #78350F; border-color: #F59E0B; text-decoration: none;">
                         进入管理后台
                     </a>
                     <button @click="handleLogout" class="logout-btn">退出</button>
@@ -437,13 +443,13 @@
                         <span>服务导航</span>
                     </h2>
                     <div class="services-grid">
-                        <div class="service-card" @click="navigateTo('/frontend/index.html')">
+                        <div class="service-card" @click="navigateTo('/water/index.html')">
                             <div class="service-icon">💧</div>
                             <div class="service-name">水站服务</div>
                             <div class="service-desc">饮用水订购与管理</div>
                             <div class="service-actions">
-                                <a href="/frontend/index.html" class="service-btn service-btn-primary" @click.stop>领水</a>
-                                <a href="/frontend/index.html?tab=records" class="service-btn service-btn-secondary" @click.stop>查看记录</a>
+                                <a href="/water/index.html" class="service-btn service-btn-primary" @click.stop>领水</a>
+                                <a href="/water/index.html?tab=records" class="service-btn service-btn-secondary" @click.stop>查看记录</a>
                             </div>
                         </div>
                         
@@ -477,52 +483,44 @@
                         <span>管理中心</span>
                     </h2>
                     <div class="stats-grid">
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-users.html')">
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/water/admin.html')">
                             <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">用户管理</span>
-                                <span class="text-2xl">👥</span>
+                                <span class="text-secondary text-sm">水站管理</span>
+                                <span class="text-2xl">💧</span>
                             </div>
-                            <div class="text-sm text-tertiary">管理用户账户和权限</div>
+                            <div class="text-sm text-tertiary">用户、结算、预付、产品</div>
                         </div>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-settlements.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">结算管理</span>
-                                <span class="text-2xl">💰</span>
-                            </div>
-                            <div class="text-sm text-tertiary">办公室费用结算</div>
-                        </div>
-                        
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-prepaid.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">预付管理</span>
-                                <span class="text-2xl">💳</span>
-                            </div>
-                            <div class="text-sm text-tertiary">预付订单和套餐</div>
-                        </div>
-                        
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-meeting.html')">
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/meeting-frontend/admin.html')">
                             <div class="flex items-center justify-between mb-sm">
                                 <span class="text-secondary text-sm">会议室管理</span>
                                 <span class="text-2xl">📅</span>
                             </div>
-                            <div class="text-sm text-tertiary">会议室预约管理</div>
+                            <div class="text-sm text-tertiary">会议室、预约、审批、结算</div>
                         </div>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin-dining.html')">
+                        <div class="card" style="cursor: pointer; transition: all 0.2s; opacity: 0.7;" @click="navigateTo('/portal/admin/dining.html')">
                             <div class="flex items-center justify-between mb-sm">
                                 <span class="text-secondary text-sm">餐厅管理</span>
                                 <span class="text-2xl">🍽️</span>
                             </div>
-                            <div class="text-sm text-tertiary">VIP餐厅管理</div>
+                            <div class="text-sm text-tertiary">包间、套餐、预约</div>
                         </div>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/frontend/admin.html')">
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/water/admin.html?tab=dashboard')">
                             <div class="flex items-center justify-between mb-sm">
                                 <span class="text-secondary text-sm">数据概览</span>
                                 <span class="text-2xl">📊</span>
                             </div>
-                            <div class="text-sm text-tertiary">查看完整数据报表</div>
+                            <div class="text-sm text-tertiary">完整数据报表</div>
+                        </div>
+                        
+                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/portal/settlement.html')">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">结算管理</span>
+                                <span class="text-2xl">💰</span>
+                            </div>
+                            <div class="text-sm text-tertiary">统一结算汇总</div>
                         </div>
                     </div>
                 </section>
@@ -540,8 +538,8 @@
                             </div>
                             <div class="text-sm text-secondary mb-md">选择办公室后即可快速领水</div>
                             <div style="display: flex; gap: var(--spacing-sm);">
-                                <a href="/frontend/index.html" class="btn btn-primary btn-lg" style="flex: 1;">立即领水</a>
-                                <a href="/frontend/index.html?tab=records" class="btn btn-outline btn-lg" style="flex: 1;">领水记录</a>
+                                <a href="/water/index.html" class="btn btn-primary btn-lg" style="flex: 1;">立即领水</a>
+                                <a href="/water/index.html?tab=records" class="btn btn-outline btn-lg" style="flex: 1;">领水记录</a>
                             </div>
                         </div>
                         
@@ -595,10 +593,10 @@
                     <div style="font-size: var(--font-size-sm); opacity: 0.8;">{{ userInfo.department || '部门' }}</div>
                 </div>
                 <div style="padding: var(--spacing-md);">
-                    <a href="/frontend/index.html?tab=records" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">领水记录</a>
+                    <a href="/water/index.html?tab=records" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">领水记录</a>
                     <a href="/meeting-frontend/my_bookings.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">预约记录</a>
-                    <a href="/frontend/user-balance.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">我的余额</a>
-                    <a v-if="userInfo.is_admin" href="/frontend/admin.html" class="btn btn-warning btn-md" style="width: 100%; margin-bottom: var(--spacing-sm); background: #FCD34D; color: #78350F; border-color: #F59E0B;">进入管理后台</a>
+                    <a href="/portal/settlement.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">我的余额</a>
+                    <a v-if="userInfo.is_admin" href="/water/admin.html" class="btn btn-warning btn-md" style="width: 100%; margin-bottom: var(--spacing-sm); background: #FCD34D; color: #78350F; border-color: #F59E0B;">进入管理后台</a>
                     <button @click="handleLogout" class="btn btn-danger btn-md" style="width: 100%;">退出登录</button>
                 </div>
             </div>
@@ -608,7 +606,10 @@
     <script>
         const { createApp, ref, onMounted } = Vue;
         
-        createApp({
+        const app = createApp({
+            components: {
+                'user-header': UserHeader
+            },
             setup() {
                 const loading = ref(true);
                 const showMobileMenu = ref(false);
@@ -625,6 +626,16 @@
                 const unsettledAmount = ref(0);
                 const freeHours = ref(0);
                 const couponCount = ref(0);
+                
+                // 获取API基础地址
+                const getApiBase = () => {
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                    return `${protocol}//${hostname}:${port}/api`;
+                };
+                
+                const API_BASE = getApiBase();
                 
                 const loadUserData = async () => {
                     try {
@@ -657,9 +668,9 @@
                         }
                         
                         const [balanceRes, settlementRes, freeHoursRes] = await Promise.all([
-                            fetch('/api/unified/user/' + userInfo.value.id + '/balance').catch(() => ({ ok: false })),
-                            fetch('/api/unified/settlement/summary?user_id=' + userInfo.value.id).catch(() => ({ ok: false })),
-                            fetch('/api/meeting/user/' + userInfo.value.id + '/free-hours').catch(() => ({ ok: false }))
+                            fetch(`${API_BASE}/unified/user/${userInfo.value.id}/balance`).catch(() => ({ ok: false })),
+                            fetch(`${API_BASE}/unified/settlement/summary?user_id=${userInfo.value.id}`).catch(() => ({ ok: false })),
+                            fetch(`${API_BASE}/meeting/user/${userInfo.value.id}/free-hours`).catch(() => ({ ok: false }))
                         ]);
                         
                         if (balanceRes.ok) {
