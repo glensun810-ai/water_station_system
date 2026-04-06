@@ -343,6 +343,71 @@
             .main-content {
                 padding-bottom: calc(80px + env(safe-area-inset-bottom));
             }
+            
+            /* 管理中心移动端适配 */
+            .admin-service-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .admin-service-card .card-footer {
+                text-align: center;
+            }
+        }
+        
+        /* 管理中心样式 */
+        .admin-service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .admin-service-card {
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-base);
+        }
+        
+        .admin-service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
+        }
+        
+        .stat-item:hover {
+            background: var(--bg-hover);
+        }
+        
+        .alert-badge {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: color var(--transition-fast);
+        }
+        
+        .link-btn:hover {
+            color: var(--primary-hover);
         }
         
         .loading-container {
@@ -469,45 +534,263 @@
                         <span>⚙️</span>
                         <span>管理中心</span>
                     </h2>
-                    <div class="stats-grid">
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/water/admin.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">水站管理</span>
-                                <span class="text-2xl">💧</span>
+                    
+                    <!-- 今日数据概览卡片 -->
+                    <div class="card" style="margin-bottom: var(--spacing-lg);">
+                        <div class="flex items-center justify-between mb-md">
+                            <span class="text-secondary text-sm">今日数据概览</span>
+                            <span class="text-xs text-tertiary">{{ currentTime }}</span>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                            <div class="stat-item">
+                                <div class="text-2xl mb-xs">📋</div>
+                                <div class="text-3xl font-bold text-primary mb-xs">{{ todayOrders }}</div>
+                                <div class="text-xs text-tertiary">今日订单</div>
                             </div>
-                            <div class="text-sm text-tertiary">用户、结算、预付、产品</div>
+                            <div class="stat-item">
+                                <div class="text-2xl mb-xs">⏰</div>
+                                <div class="text-3xl font-bold text-warning mb-xs">{{ pendingTasks }}</div>
+                                <div class="text-xs text-tertiary">待处理任务</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="text-2xl mb-xs">💰</div>
+                                <div class="text-3xl font-bold text-success mb-xs">¥{{ todayIncome.toFixed(2) }}</div>
+                                <div class="text-xs text-tertiary">今日收入</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="text-2xl mb-xs">⚠️</div>
+                                <div class="text-3xl font-bold text-danger mb-xs">{{ alertsCount }}</div>
+                                <div class="text-xs text-tertiary">异常告警</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 服务管理卡片网格 -->
+                    <div class="admin-service-grid">
+                        <!-- 水站管理卡片 -->
+                        <div class="admin-service-card card">
+                            <div class="card-header">
+                                <div class="flex items-center justify-between mb-md">
+                                    <div class="flex items-center gap-md">
+                                        <span class="service-icon" style="font-size: 32px;">💧</span>
+                                        <div>
+                                            <div class="font-bold text-primary">水站管理</div>
+                                            <div class="text-sm text-secondary">用户、结算、预付、产品</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="today-stats" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-secondary">今日领水：<span class="font-bold text-primary">{{ waterTodayCount }}次</span></span>
+                                        <span class="text-sm text-secondary">待结算：<span class="font-bold text-warning">¥{{ waterPendingAmount.toFixed(2) }}</span></span>
+                                    </div>
+                                    <div v-if="waterAlerts > 0" class="alert-badge" style="margin-top: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-sm); background: var(--danger-light); color: var(--danger); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
+                                        ⚠️ 库存预警 {{ waterAlerts }} 个
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="quick-actions" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                <a href="/water/admin.html" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    记录管理
+                                </a>
+                                <a href="/water/admin.html?tab=settlement" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    结算管理
+                                </a>
+                                <a href="/water/admin.html?tab=products" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    产品管理
+                                </a>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/water/admin.html" class="link-btn" style="color: var(--primary); font-size: var(--font-size-sm); font-weight: 500;">
+                                    进入完整管理后台 →
+                                </a>
+                            </div>
                         </div>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/meeting-frontend/admin.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">会议室管理</span>
-                                <span class="text-2xl">📅</span>
+                        <!-- 会议室管理卡片 -->
+                        <div class="admin-service-card card">
+                            <div class="card-header">
+                                <div class="flex items-center justify-between mb-md">
+                                    <div class="flex items-center gap-md">
+                                        <span class="service-icon" style="font-size: 32px;">📅</span>
+                                        <div>
+                                            <div class="font-bold text-primary">会议室管理</div>
+                                            <div class="text-sm text-secondary">会议室、预约、审批、结算</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="today-stats" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-secondary">今日预约：<span class="font-bold text-primary">{{ meetingTodayBookings }}次</span></span>
+                                        <span class="text-sm text-secondary">待审批：<span class="font-bold text-warning">{{ meetingPendingApprovals }}项</span></span>
+                                    </div>
+                                    <div v-if="meetingAlerts > 0" class="alert-badge" style="margin-top: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-sm); background: var(--danger-light); color: var(--danger); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
+                                        ⚠️ 异常预约 {{ meetingAlerts }} 个
+                                    </div>
+                                </div>
                             </div>
-                            <div class="text-sm text-tertiary">会议室、预约、审批、结算</div>
+                            <div class="quick-actions" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                <a href="/meeting-frontend/admin.html" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    预约管理
+                                </a>
+                                <a href="/meeting-frontend/admin.html?tab=approvals" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    审批中心
+                                </a>
+                                <a href="/meeting-frontend/admin.html?tab=rooms" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    会议室管理
+                                </a>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/meeting-frontend/admin.html" class="link-btn" style="color: var(--primary); font-size: var(--font-size-sm); font-weight: 500;">
+                                    进入完整管理后台 →
+                                </a>
+                            </div>
                         </div>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s; opacity: 0.7;" @click="navigateTo('/portal/admin/dining.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">餐厅管理</span>
-                                <span class="text-2xl">🍽️</span>
+                        <!-- 用餐管理卡片（灰显） -->
+                        <div class="admin-service-card card" style="opacity: 0.6;">
+                            <div class="card-header">
+                                <div class="flex items-center justify-between mb-md">
+                                    <div class="flex items-center gap-md">
+                                        <span class="service-icon" style="font-size: 32px;">🍽️</span>
+                                        <div>
+                                            <div class="font-bold text-primary">用餐管理</div>
+                                            <div class="text-sm text-secondary">包间、套餐、预约</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="badge" style="background: var(--warning-light); color: var(--warning-dark); padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 500; display: inline-block;">
+                                    即将上线
+                                </div>
                             </div>
-                            <div class="text-sm text-tertiary">包间、套餐、预约</div>
                         </div>
+                    </div>
+                    
+                    <!-- 系统管理section（仅超管可见） -->
+                    <div v-if="userInfo.role === '超级管理员' || userInfo.role === 'super_admin'" style="margin-top: var(--spacing-xl);">
+                        <h3 class="section-title" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-lg);">
+                            <span>🏢</span>
+                            <span>系统管理</span>
+                        </h3>
                         
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/water/admin.html?tab=dashboard')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">数据概览</span>
-                                <span class="text-2xl">📊</span>
+                        <div class="admin-service-grid">
+                            <!-- 办公室管理卡片 -->
+                            <div class="admin-service-card card">
+                                <div class="card-header">
+                                    <div class="flex items-center justify-between mb-md">
+                                        <div class="flex items-center gap-md">
+                                            <span class="service-icon" style="font-size: 32px;">🏢</span>
+                                            <div>
+                                                <div class="font-bold text-primary">办公室管理</div>
+                                                <div class="text-sm text-secondary">办公室配置、用户分配</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="today-stats" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-secondary">办公室：<span class="font-bold text-primary">{{ officeCount }}个</span></span>
+                                            <span class="text-sm text-secondary">用户：<span class="font-bold text-success">{{ totalUsers }}人</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="quick-actions" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                    <a href="/portal/admin/offices.html" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        办公室列表
+                                    </a>
+                                    <a href="/portal/admin/offices.html?action=add" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        新增办公室
+                                    </a>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="/portal/admin/offices.html" class="link-btn" style="color: var(--primary); font-size: var(--font-size-sm); font-weight: 500;">
+                                        进入办公室管理 →
+                                    </a>
+                                </div>
                             </div>
-                            <div class="text-sm text-tertiary">完整数据报表</div>
+                            
+                            <!-- 用户管理卡片 -->
+                            <div class="admin-service-card card">
+                                <div class="card-header">
+                                    <div class="flex items-center justify-between mb-md">
+                                        <div class="flex items-center gap-md">
+                                            <span class="service-icon" style="font-size: 32px;">👥</span>
+                                            <div>
+                                                <div class="font-bold text-primary">用户管理</div>
+                                                <div class="text-sm text-secondary">用户查看、角色分配</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="today-stats" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-secondary">管理员：<span class="font-bold text-warning">{{ adminCount }}人</span></span>
+                                            <span class="text-sm text-secondary">普通用户：<span class="font-bold text-primary">{{ staffCount }}人</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="quick-actions" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                    <a href="/portal/admin/users.html" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        用户列表
+                                    </a>
+                                    <a href="/portal/admin/users.html?role=admin" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        管理员列表
+                                    </a>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="/portal/admin/users.html" class="link-btn" style="color: var(--primary); font-size: var(--font-size-sm); font-weight: 500;">
+                                        进入用户管理 →
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- 结算管理卡片 -->
+                            <div class="admin-service-card card">
+                                <div class="card-header">
+                                    <div class="flex items-center justify-between mb-md">
+                                        <div class="flex items-center gap-md">
+                                            <span class="service-icon" style="font-size: 32px;">💰</span>
+                                            <div>
+                                                <div class="font-bold text-primary">结算管理</div>
+                                                <div class="text-sm text-secondary">统一结算、财务审批</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="today-stats" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-secondary">待结算：<span class="font-bold text-danger">¥{{ pendingSettlement.toFixed(2) }}</span></span>
+                                            <span class="text-sm text-secondary">已申请：<span class="font-bold text-warning">¥{{ appliedSettlement.toFixed(2) }}</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="quick-actions" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                    <a href="/portal/admin/settlements.html?status=pending" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        待结算
+                                    </a>
+                                    <a href="/portal/admin/settlements.html?status=applied" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        已申请
+                                    </a>
+                                    <a href="/portal/admin/settlements.html" class="btn btn-outline btn-sm" style="flex: 1;">
+                                        结算历史
+                                    </a>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="/portal/admin/settlements.html" class="link-btn" style="color: var(--primary); font-size: var(--font-size-sm); font-weight: 500;">
+                                        进入结算管理 →
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div class="card" style="cursor: pointer; transition: all 0.2s;" @click="navigateTo('/portal/settlement.html')">
-                            <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">结算管理</span>
-                                <span class="text-2xl">💰</span>
+                    </div>
+                    
+                    <!-- 统一管理入口 -->
+                    <div class="card" style="margin-top: var(--spacing-lg);">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-primary mb-xs">⚙️ 统一管理后台</div>
+                                <div class="text-sm text-secondary">所有服务的完整管理功能、数据报表、系统设置</div>
                             </div>
-                            <div class="text-sm text-tertiary">统一结算汇总</div>
+                            <a href="/portal/admin/index.html" class="btn btn-primary btn-lg">
+                                进入统一管理后台
+                            </a>
                         </div>
                     </div>
                 </section>
@@ -591,7 +874,7 @@
     </div>
     
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, onMounted, onBeforeUnmount } = Vue;
         
         const app = createApp({
             components: {
@@ -614,6 +897,29 @@
                 const freeHours = ref(0);
                 const couponCount = ref(0);
                 
+                // 管理中心数据
+                const todayOrders = ref(0);
+                const pendingTasks = ref(0);
+                const todayIncome = ref(0);
+                const alertsCount = ref(0);
+                const currentTime = ref('');
+                
+                const waterTodayCount = ref(0);
+                const waterPendingAmount = ref(0);
+                const waterAlerts = ref(0);
+                
+                const meetingTodayBookings = ref(0);
+                const meetingPendingApprovals = ref(0);
+                const meetingAlerts = ref(0);
+                
+                // 系统管理数据
+                const officeCount = ref(0);
+                const totalUsers = ref(0);
+                const adminCount = ref(0);
+                const staffCount = ref(0);
+                const pendingSettlement = ref(0);
+                const appliedSettlement = ref(0);
+                
                 // 获取API基础地址
                 const getApiBase = () => {
                     const protocol = window.location.protocol;
@@ -634,8 +940,9 @@
                             const parsed = JSON.parse(storedUserInfo);
                             userInfo.value = {
                                 ...parsed,
-                                is_admin: parsed.role === 'admin' || parsed.role === 'super_admin'
+                                is_admin: parsed.role === '超级管理员' || parsed.role === 'admin' || parsed.role === 'super_admin' || parsed.is_admin === true
                             };
+                            console.log('用户信息:', userInfo.value);
                         }
                         
                         // 如果没有用户信息，尝试从token获取
@@ -654,25 +961,30 @@
                             }
                         }
                         
-                        const [balanceRes, settlementRes, freeHoursRes] = await Promise.all([
-                            fetch(`${API_BASE}/unified/user/${userInfo.value.id}/balance`).catch(() => ({ ok: false })),
-                            fetch(`${API_BASE}/unified/settlement/summary?user_id=${userInfo.value.id}`).catch(() => ({ ok: false })),
-                            fetch(`${API_BASE}/meeting/user/${userInfo.value.id}/free-hours`).catch(() => ({ ok: false }))
-                        ]);
-                        
-                        if (balanceRes.ok) {
-                            const balanceData = await balanceRes.json();
-                            userBalance.value = balanceData.balance_prepaid || 0;
-                        }
-                        
-                        if (settlementRes.ok) {
-                            const settlementData = await settlementRes.json();
-                            unsettledAmount.value = settlementData.total_unsettled || 0;
-                        }
-                        
-                        if (freeHoursRes.ok) {
-                            const freeHoursData = await freeHoursRes.json();
-                            freeHours.value = freeHoursData.free_hours || 5;
+                        // 加载用户数据（API可能失败，但不影响页面显示）
+                        try {
+                            const [balanceRes, settlementRes, freeHoursRes] = await Promise.all([
+                                fetch(`${API_BASE}/unified/user/${userInfo.value.id}/balance`).catch(() => ({ ok: false })),
+                                fetch(`${API_BASE}/unified/settlement/summary?user_id=${userInfo.value.id}`).catch(() => ({ ok: false })),
+                                fetch(`${API_BASE}/meeting/user/${userInfo.value.id}/free-hours`).catch(() => ({ ok: false }))
+                            ]);
+                            
+                            if (balanceRes && balanceRes.ok) {
+                                const balanceData = await balanceRes.json();
+                                userBalance.value = balanceData.balance_prepaid || 0;
+                            }
+                            
+                            if (settlementRes && settlementRes.ok) {
+                                const settlementData = await settlementRes.json();
+                                unsettledAmount.value = settlementData.total_unsettled || 0;
+                            }
+                            
+                            if (freeHoursRes && freeHoursRes.ok) {
+                                const freeHoursData = await freeHoursRes.json();
+                                freeHours.value = freeHoursData.free_hours || 5;
+                            }
+                        } catch (error) {
+                            console.log('加载用户数据失败（不影响页面显示）:', error);
                         }
                         
                         couponCount.value = 3;
@@ -696,8 +1008,83 @@
                     }
                 };
                 
+                // 加载管理中心数据
+                const loadAdminStats = async () => {
+                    try {
+                        // 加载水站今日数据
+                        const waterRes = await fetch(`${API_BASE}/water/stats/today`).catch(() => ({ ok: false }));
+                        if (waterRes.ok) {
+                            const waterData = await waterRes.json();
+                            waterTodayCount.value = waterData.pickup_count || 0;
+                            waterPendingAmount.value = waterData.pending_amount || 0;
+                            waterAlerts.value = waterData.alerts || 0;
+                        }
+                        
+                        // 加载会议室今日数据
+                        const meetingRes = await fetch(`${API_BASE}/meeting/stats/today`).catch(() => ({ ok: false }));
+                        if (meetingRes.ok) {
+                            const meetingData = await meetingRes.json();
+                            meetingTodayBookings.value = meetingData.booking_count || 0;
+                            meetingPendingApprovals.value = meetingData.pending_approvals || 0;
+                            meetingAlerts.value = meetingData.alerts || 0;
+                        }
+                        
+                        // 计算汇总数据
+                        todayOrders.value = waterTodayCount.value + meetingTodayBookings.value;
+                        pendingTasks.value = meetingPendingApprovals.value;
+                        alertsCount.value = waterAlerts.value + meetingAlerts.value;
+                        
+                        // 更新时间
+                        currentTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                        
+                        // 加载系统管理数据（仅超管）
+                        if (userInfo.value.role === '超级管理员' || userInfo.value.role === 'super_admin') {
+                            // 办公室统计
+                            const officesRes = await fetch(`${API_BASE}/offices`).catch(() => ({ ok: false }));
+                            if (officesRes.ok) {
+                                const officesData = await officesRes.json();
+                                officeCount.value = officesData.length || 0;
+                                totalUsers.value = officesData.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                            }
+                            
+                            // 用户统计
+                            const usersRes = await fetch(`${API_BASE}/users`).catch(() => ({ ok: false }));
+                            if (usersRes.ok) {
+                                const usersData = await usersRes.json();
+                                adminCount.value = usersData.filter(u => u.role === 'super_admin' || u.role === 'admin').length || 0;
+                                staffCount.value = usersData.filter(u => u.role === 'staff').length || 0;
+                            }
+                            
+                            // 结算统计
+                            const settlementRes = await fetch(`${API_BASE}/settlements/summary`).catch(() => ({ ok: false }));
+                            if (settlementRes.ok) {
+                                const settlementData = await settlementRes.json();
+                                pendingSettlement.value = settlementData.total?.pending_amount || 0;
+                                appliedSettlement.value = settlementData.total?.applied_amount || 0;
+                            }
+                        }
+                        
+                    } catch (error) {
+                        console.error('加载管理数据失败:', error);
+                    }
+                };
+                
+                let refreshTimer = null;
+                
                 onMounted(() => {
                     loadUserData();
+                    
+                    // 如果是管理员，加载管理中心数据并定时刷新
+                    if (userInfo.value.is_admin) {
+                        loadAdminStats();
+                        refreshTimer = setInterval(loadAdminStats, 60000); // 每60秒刷新一次
+                    }
+                });
+                
+                onBeforeUnmount(() => {
+                    if (refreshTimer) {
+                        clearInterval(refreshTimer);
+                    }
                 });
                 
                 return {
@@ -709,7 +1096,24 @@
                     freeHours,
                     couponCount,
                     navigateTo,
-                    handleLogout
+                    handleLogout,
+                    todayOrders,
+                    pendingTasks,
+                    todayIncome,
+                    alertsCount,
+                    currentTime,
+                    waterTodayCount,
+                    waterPendingAmount,
+                    waterAlerts,
+                    meetingTodayBookings,
+                    meetingPendingApprovals,
+                    meetingAlerts,
+                    officeCount,
+                    totalUsers,
+                    adminCount,
+                    staffCount,
+                    pendingSettlement,
+                    appliedSettlement
                 };
             }
         }).mount('#app');

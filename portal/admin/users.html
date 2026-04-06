@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .search-input,
+        .filter-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .filter-box {
+            min-width: 200px;
+        }
+        
+        .data-table {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        
+        thead {
+            background: var(--bg-secondary);
+        }
+        
+        th {
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .badge-primary {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+        
+        .badge-warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: var(--spacing-md);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+            
+            .toolbar {
+                flex-direction: column;
+            }
+            
+            .search-box,
+            .filter-box {
+                max-width: 100%;
+            }
+            
+            table {
+                font-size: var(--font-size-xs);
+            }
+            
+            th, td {
+                padding: var(--spacing-sm);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '用户管理', icon: '👥', url: '/portal/admin/users.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">👥 用户管理</h1>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ totalUsers }}</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--warning);">{{ adminCount }}</div>
+                    <div class="stat-label">管理员数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--success);">{{ staffCount }}</div>
+                    <div class="stat-label">普通员工</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--danger);">{{ activeUsers }}</div>
+                    <div class="stat-label">活跃用户</div>
+                </div>
+            </div>
+            
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <input 
+                        v-model="searchText"
+                        type="text" 
+                        class="search-input" 
+                        placeholder="搜索用户名、办公室..."
+                    >
+                </div>
+                <div class="filter-box">
+                    <select v-model="filterOffice" class="filter-select">
+                        <option value="">全部办公室</option>
+                        <option v-for="office in offices" :key="office.id" :value="office.id">
+                            {{ office.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="filter-box">
+                    <select v-model="filterRole" class="filter-select">
+                        <option value="">全部角色</option>
+                        <option value="super_admin">超级管理员</option>
+                        <option value="admin">管理员</option>
+                        <option value="staff">普通员工</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 用户列表表格 -->
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>办公室</th>
+                            <th>角色</th>
+                            <th>邮箱</th>
+                            <th>余额</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="user in filteredUsers" :key="user.id">
+                            <td>{{ user.id }}</td>
+                            <td><strong>{{ user.name || user.username }}</strong></td>
+                            <td>{{ user.office_name || '未分配' }}</td>
+                            <td>
+                                <span :class="getRoleBadgeClass(user.role)">
+                                    {{ getRoleLabel(user.role) }}
+                                </span>
+                            </td>
+                            <td>{{ user.email || '-' }}</td>
+                            <td>¥{{ (user.balance || 0).toFixed(2) }}</td>
+                            <td>
+                                <span :class="user.is_active ? 'badge badge-success' : 'badge badge-danger'">
+                                    {{ user.is_active ? '启用' : '停用' }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(user.created_at) }}</td>
+                            <td>
+                                <div class="action-btns">
+                                    <button @click="editUser(user)" class="btn btn-sm btn-outline">编辑</button>
+                                    <button @click="viewRecords(user)" class="btn btn-sm btn-outline">记录</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div v-if="filteredUsers.length === 0" style="text-align: center; padding: var(--spacing-2xl); color: var(--text-tertiary);">
+                暂无数据
+            </div>
+        </div>
+        
+        <!-- 编辑用户模态框 -->
+        <div v-if="showEditModal" class="modal-overlay" @click="closeModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">编辑用户</h3>
+                    <button @click="closeModal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input v-model="editForm.username" type="text" class="form-input" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">姓名</label>
+                        <input v-model="editForm.name" type="text" class="form-input" placeholder="用户姓名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">邮箱</label>
+                        <input v-model="editForm.email" type="email" class="form-input" placeholder="邮箱地址">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">办公室 *</label>
+                        <select v-model="editForm.office_id" class="form-select">
+                            <option :value="null">未分配</option>
+                            <option v-for="office in offices" :key="office.id" :value="office.id">
+                                {{ office.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">角色 *</label>
+                        <select v-model="editForm.role" class="form-select">
+                            <option value="super_admin">超级管理员</option>
+                            <option value="admin">管理员</option>
+                            <option value="staff">普通员工</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select v-model="editForm.is_active" class="form-select">
+                            <option :value="true">启用</option>
+                            <option :value="false">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeModal" class="btn btn-secondary">取消</button>
+                    <button @click="saveUser" class="btn btn-primary">保存</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户记录模态框 -->
+        <div v-if="showRecordsModal" class="modal-overlay" @click="closeRecordsModal">
+            <div class="modal" @click.stop style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">用户使用记录 - {{ selectedUser?.name }}</h3>
+                    <button @click="closeRecordsModal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="userRecords.length === 0" style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">
+                        暂无使用记录
+                    </div>
+                    <div v-else style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: var(--bg-secondary); position: sticky; top: 0;">
+                                <tr>
+                                    <th style="padding: 8px; text-align: left;">类型</th>
+                                    <th style="padding: 8px; text-align: left;">金额</th>
+                                    <th style="padding: 8px; text-align: left;">状态</th>
+                                    <th style="padding: 8px; text-align: left;">时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="record in userRecords" :key="record.id" style="border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 8px;">
+                                        {{ record.type === 'water' ? '💧 水站' : '📅 会议室' }}
+                                    </td>
+                                    <td style="padding: 8px;">¥{{ record.amount.toFixed(2) }}</td>
+                                    <td style="padding: 8px;">
+                                        <span :class="getStatusBadgeClass(record.status)">
+                                            {{ getStatusLabel(record.status) }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 8px; font-size: 12px;">
+                                        {{ formatDate(record.created_at) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeRecordsModal" class="btn btn-primary">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const users = ref([]);
+                const offices = ref([]);
+                const searchText = ref('');
+                const filterOffice = ref('');
+                const filterRole = ref('');
+                const showEditModal = ref(false);
+                const showRecordsModal = ref(false);
+                const selectedUser = ref(null);
+                const userRecords = ref([]);
+                
+                const editForm = ref({
+                    id: null,
+                    username: '',
+                    name: '',
+                    email: '',
+                    office_id: null,
+                    role: 'staff',
+                    is_active: true
+                });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
+                
+                // 统计数据
+                const totalUsers = computed(() => users.value.length);
+                const adminCount = computed(() => users.value.filter(u => u.role === 'super_admin' || u.role === 'admin').length);
+                const staffCount = computed(() => users.value.filter(u => u.role === 'staff').length);
+                const activeUsers = computed(() => users.value.filter(u => u.is_active).length);
+                
+                // 过滤后的用户列表
+                const filteredUsers = computed(() => {
+                    let result = users.value;
+                    
+                    if (searchText.value) {
+                        const search = searchText.value.toLowerCase();
+                        result = result.filter(user => 
+                            (user.name || '').toLowerCase().includes(search) ||
+                            (user.username || '').toLowerCase().includes(search) ||
+                            (user.office_name || '').toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    if (filterOffice.value) {
+                        result = result.filter(user => user.office_id === parseInt(filterOffice.value));
+                    }
+                    
+                    if (filterRole.value) {
+                        result = result.filter(user => user.role === filterRole.value);
+                    }
+                    
+                    return result;
+                });
+                
+                // 加载用户列表
+                const loadUsers = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/users`);
+                        if (response.ok) {
+                            users.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载用户失败:', error);
+                    }
+                };
+                
+                // 加载办公室列表
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices`);
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                    }
+                };
+                
+                // 编辑用户
+                const editUser = (user) => {
+                    selectedUser.value = user;
+                    editForm.value = {
+                        id: user.id,
+                        username: user.username,
+                        name: user.name || user.username,
+                        email: user.email || '',
+                        office_id: user.office_id,
+                        role: user.role,
+                        is_active: user.is_active
+                    };
+                    showEditModal.value = true;
+                };
+                
+                // 保存用户
+                const saveUser = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/users/${editForm.value.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: editForm.value.name,
+                                email: editForm.value.email,
+                                office_id: editForm.value.office_id,
+                                role: editForm.value.role,
+                                is_active: editForm.value.is_active
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            await loadUsers();
+                            closeModal();
+                            alert('保存成功！');
+                        } else {
+                            const error = await response.json();
+                            alert('保存失败: ' + (error.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('保存用户失败:', error);
+                        alert('保存失败，请重试');
+                    }
+                };
+                
+                // 查看用户记录
+                const viewRecords = async (user) => {
+                    selectedUser.value = user;
+                    showRecordsModal.value = true;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/users/${user.id}/records`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            userRecords.value = data.records || [];
+                        }
+                    } catch (error) {
+                        console.error('加载用户记录失败:', error);
+                        userRecords.value = [];
+                    }
+                };
+                
+                // 关闭模态框
+                const closeModal = () => {
+                    showEditModal.value = false;
+                    selectedUser.value = null;
+                };
+                
+                const closeRecordsModal = () => {
+                    showRecordsModal.value = false;
+                    selectedUser.value = null;
+                    userRecords.value = [];
+                };
+                
+                // 工具函数
+                const getRoleLabel = (role) => {
+                    const labels = {
+                        'super_admin': '超级管理员',
+                        'admin': '管理员',
+                        'staff': '普通员工'
+                    };
+                    return labels[role] || '未知';
+                };
+                
+                const getRoleBadgeClass = (role) => {
+                    const classes = {
+                        'super_admin': 'badge badge-primary',
+                        'admin': 'badge badge-warning',
+                        'staff': 'badge badge-success'
+                    };
+                    return classes[role] || 'badge';
+                };
+                
+                const getStatusLabel = (status) => {
+                    const labels = {
+                        'pending': '待结算',
+                        'applied': '已申请',
+                        'settled': '已结算'
+                    };
+                    return labels[status] || status;
+                };
+                
+                const getStatusBadgeClass = (status) => {
+                    const classes = {
+                        'pending': 'badge badge-danger',
+                        'applied': 'badge badge-warning',
+                        'settled': 'badge badge-success'
+                    };
+                    return classes[status] || 'badge';
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                };
+                
+                onMounted(() => {
+                    loadUsers();
+                    loadOffices();
+                });
+                
+                return {
+                    users,
+                    offices,
+                    searchText,
+                    filterOffice,
+                    filterRole,
+                    filteredUsers,
+                    showEditModal,
+                    showRecordsModal,
+                    selectedUser,
+                    userRecords,
+                    editForm,
+                    totalUsers,
+                    adminCount,
+                    staffCount,
+                    activeUsers,
+                    editUser,
+                    saveUser,
+                    viewRecords,
+                    closeModal,
+                    closeRecordsModal,
+                    getRoleLabel,
+                    getRoleBadgeClass,
+                    getStatusLabel,
+                    getStatusBadgeClass,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

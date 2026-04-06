@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>办公室管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        /* 统计卡片区域 */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .stat-card.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .stat-card-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stat-card-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-card-icon {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            font-size: var(--font-size-lg);
+            opacity: 0.3;
+        }
+        
+        .stat-card.active .stat-card-icon {
+            opacity: 1;
+            color: var(--primary);
+        }
+        
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-left: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+            transition: all var(--transition-fast);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .search-wrapper {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-md);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .batch-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--primary-light);
+            border-radius: var(--radius-md);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        /* 数据表格 */
+        .data-table {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: var(--bg-secondary);
+        }
+        
+        th {
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: color var(--transition-fast);
+        }
+        
+        th.sortable:hover {
+            color: var(--primary);
+        }
+        
+        th.sortable.active {
+            color: var(--primary);
+        }
+        
+        .sort-icon {
+            margin-left: var(--spacing-xs);
+            opacity: 0.4;
+        }
+        
+        th.sortable.active .sort-icon {
+            opacity: 1;
+        }
+        
+        th.checkbox-col {
+            width: 40px;
+        }
+        
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+        }
+        
+        tbody tr {
+            transition: background var(--transition-fast);
+        }
+        
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        tbody tr.selected {
+            background: var(--primary-light);
+        }
+        
+        /* Badge样式 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            user-select: none;
+            white-space: nowrap;
+        }
+        
+        .badge:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+        
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+        }
+        
+        .badge-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        
+        .badge-warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .badge-info {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .badge .toggle-icon {
+            font-size: 10px;
+            opacity: 0.5;
+        }
+        
+        /* 可点击链接 */
+        .clickable-link {
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .clickable-link:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+        
+        .clickable-link .link-icon {
+            font-size: 12px;
+        }
+        
+        /* 操作按钮 */
+        .action-cell {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .btn-edit {
+            padding: 6px 12px;
+            background: var(--primary);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            white-space: nowrap;
+        }
+        
+        .btn-edit:hover {
+            background: var(--primary-hover);
+        }
+        
+        .action-dropdown {
+            position: relative;
+        }
+        
+        .dropdown-toggle {
+            padding: 6px 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+            transition: background var(--transition-fast);
+            color: var(--text-secondary);
+        }
+        
+        .dropdown-toggle:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 4px);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 180px;
+            z-index: 100;
+            overflow: hidden;
+        }
+        
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            text-align: left;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-hover);
+        }
+        
+        .dropdown-item.danger {
+            color: var(--danger);
+        }
+        
+        .dropdown-item.danger:hover {
+            background: var(--danger-light);
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-light);
+            margin: 4px 0;
+        }
+        
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 90%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-lg {
+            max-width: 720px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-secondary);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-hint {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        /* 用户列表 */
+        .user-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+            transition: background var(--transition-fast);
+        }
+        
+        .user-item:hover {
+            background: var(--bg-hover);
+        }
+        
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-full);
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-base);
+            color: var(--text-tertiary);
+        }
+        
+        .user-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .user-meta {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+        
+        /* 统计详情弹窗 */
+        .stats-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .stat-detail-card {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+        }
+        
+        .stat-detail-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-detail-value {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .utilization-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin-top: var(--spacing-md);
+        }
+        
+        .utilization-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width var(--transition-slow);
+        }
+        
+        .utilization-fill.high {
+            background: var(--success);
+        }
+        
+        .utilization-fill.medium {
+            background: var(--warning);
+        }
+        
+        .utilization-fill.low {
+            background: var(--danger);
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.5;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-md);
+            }
+            
+            .stats-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .filter-group {
+                flex-wrap: wrap;
+            }
+            
+            .batch-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: var(--spacing-sm);
+            }
+            
+            .action-cell {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            
+            .stats-detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '办公室管理', icon: '🏢', url: '/portal/admin/offices.html'}]"></global-header>
+        
+        <div class="page-container">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1 class="page-title">🏢 办公室管理</h1>
+                <div style="display: flex; gap: var(--spacing-md);">
+                    <button @click="exportData" class="btn btn-secondary" title="导出数据">
+                        📥 导出
+                    </button>
+                    <button @click="showAddModal = true" class="btn btn-primary">
+                        ✚ 新增办公室
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-section">
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'all' }"
+                    @click="setFilter('all')"
+                >
+                    <div class="stat-card-label">
+                        <span>🏢</span>
+                        <span>全部办公室</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.total }}</div>
+                    <div class="stat-card-icon">📊</div>
+                </div>
+                
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'active' }"
+                    @click="setFilter('active')"
+                >
+                    <div class="stat-card-label">
+                        <span>✓</span>
+                        <span>已启用</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.active }}</div>
+                    <div class="stat-card-icon" style="color: var(--success);">●</div>
+                </div>
+                
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'inactive' }"
+                    @click="setFilter('inactive')"
+                >
+                    <div class="stat-card-label">
+                        <span>✕</span>
+                        <span>已停用</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.inactive }}</div>
+                    <div class="stat-card-icon" style="color: var(--danger);">●</div>
+                </div>
+                
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'common' }"
+                    @click="setFilter('common')"
+                >
+                    <div class="stat-card-label">
+                        <span>★</span>
+                        <span>常用</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.common }}</div>
+                    <div class="stat-card-icon" style="color: var(--warning);">★</div>
+                </div>
+                
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'no_admin' }"
+                    @click="setFilter('no_admin')"
+                >
+                    <div class="stat-card-label">
+                        <span>⚠</span>
+                        <span>无管理员</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.noAdmin }}</div>
+                    <div class="stat-card-icon" style="color: var(--warning);">⚠</div>
+                </div>
+                
+                <div 
+                    class="stat-card" 
+                    :class="{ active: activeFilter === 'has_users' }"
+                    @click="setFilter('has_users')"
+                >
+                    <div class="stat-card-label">
+                        <span>👥</span>
+                        <span>有用户</span>
+                    </div>
+                    <div class="stat-card-value">{{ stats.hasUsers }}</div>
+                    <div class="stat-card-icon">👥</div>
+                </div>
+            </div>
+            
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <div class="search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input 
+                            v-model="searchText"
+                            type="text" 
+                            class="search-input" 
+                            placeholder="搜索办公室名称、门号、负责人..."
+                            @input="handleSearch"
+                        >
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <select v-model="statusFilter" class="filter-select" @change="applyFilters">
+                        <option value="">全部状态</option>
+                        <option value="active">启用</option>
+                        <option value="inactive">停用</option>
+                    </select>
+                    
+                    <select v-model="commonFilter" class="filter-select" @change="applyFilters">
+                        <option value="">全部类型</option>
+                        <option value="common">常用</option>
+                        <option value="uncommon">不常用</option>
+                    </select>
+                    
+                    <select v-model="adminFilter" class="filter-select" @change="applyFilters">
+                        <option value="">管理员状态</option>
+                        <option value="has_admin">已设置</option>
+                        <option value="no_admin">未设置</option>
+                    </select>
+                </div>
+                
+                <div v-if="selectedIds.length > 0" class="batch-actions">
+                    <span class="batch-label">已选 {{ selectedIds.length }} 个</span>
+                    <button @click="batchSetActive(1)" class="btn btn-sm btn-outline">批量启用</button>
+                    <button @click="batchSetActive(0)" class="btn btn-sm btn-outline">批量停用</button>
+                    <button @click="batchSetCommon(1)" class="btn btn-sm btn-outline">设为常用</button>
+                    <button @click="batchSetCommon(0)" class="btn btn-sm btn-outline">取消常用</button>
+                    <button @click="batchDelete" class="btn btn-sm btn-danger">批量删除</button>
+                    <button @click="selectedIds = []" class="btn btn-sm btn-secondary">取消选择</button>
+                </div>
+            </div>
+            
+            <!-- 数据表格 -->
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-col">
+                                <input 
+                                    type="checkbox" 
+                                    @change="toggleSelectAll"
+                                    :checked="isAllSelected"
+                                    :indeterminate.prop="isPartialSelected"
+                                >
+                            </th>
+                            <th class="sortable" :class="{ active: sortField === 'id' }" @click="toggleSort('id')">
+                                ID
+                                <span class="sort-icon">{{ sortField === 'id' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th class="sortable" :class="{ active: sortField === 'name' }" @click="toggleSort('name')">
+                                办公室名称
+                                <span class="sort-icon">{{ sortField === 'name' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th class="sortable" :class="{ active: sortField === 'room_number' }" @click="toggleSort('room_number')">
+                                门号
+                                <span class="sort-icon">{{ sortField === 'room_number' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th>负责人</th>
+                            <th class="sortable" :class="{ active: sortField === 'super_admin_name' }" @click="toggleSort('super_admin_name')">
+                                办公室管理员
+                                <span class="sort-icon">{{ sortField === 'super_admin_name' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th class="sortable" :class="{ active: sortField === 'water_user_count' }" @click="toggleSort('water_user_count')">
+                                配置人数
+                                <span class="sort-icon">{{ sortField === 'water_user_count' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th class="sortable" :class="{ active: sortField === 'user_count' }" @click="toggleSort('user_count')">
+                                实际人数
+                                <span class="sort-icon">{{ sortField === 'user_count' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                            </th>
+                            <th>常用</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr 
+                            v-for="office in filteredOffices" 
+                            :key="office.id"
+                            :class="{ selected: selectedIds.includes(office.id) }"
+                        >
+                            <td class="checkbox-col">
+                                <input 
+                                    type="checkbox" 
+                                    :value="office.id"
+                                    v-model="selectedIds"
+                                >
+                            </td>
+                            <td>{{ office.id }}</td>
+                            <td>
+                                <strong style="color: var(--text-primary);">{{ office.name }}</strong>
+                                <div v-if="office.description" style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 2px;">
+                                    {{ office.description }}
+                                </div>
+                            </td>
+                            <td>{{ office.room_number || '—' }}</td>
+                            <td>{{ office.leader_name || '—' }}</td>
+                            <td>
+                                <span v-if="office.super_admin_name" class="badge badge-info">
+                                    {{ office.super_admin_name }}
+                                </span>
+                                <span v-else style="color: var(--text-tertiary); font-size: var(--font-size-xs);">未设置</span>
+                            </td>
+                            <td>{{ office.water_user_count || 0 }}</td>
+                            <td>
+                                <span @click="showUserList(office)" class="clickable-link">
+                                    {{ office.user_count || 0 }}
+                                    <span class="link-icon">👤</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span 
+                                    @click="toggleCommon(office)"
+                                    :class="office.is_common ? 'badge badge-warning' : 'badge badge-secondary'"
+                                    title="点击切换"
+                                >
+                                    {{ office.is_common ? '常用' : '不常用' }}
+                                    <span class="toggle-icon">⇄</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span 
+                                    @click="toggleActive(office)"
+                                    :class="office.is_active ? 'badge badge-success' : 'badge badge-danger'"
+                                    title="点击切换"
+                                >
+                                    {{ office.is_active ? '启用' : '停用' }}
+                                    <span class="toggle-icon">⇄</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-cell">
+                                    <button @click="editOffice(office)" class="btn-edit">
+                                        编辑
+                                    </button>
+                                    <div class="action-dropdown">
+                                        <button @click="toggleDropdown(office.id)" class="dropdown-toggle">
+                                            更多 ▾
+                                        </button>
+                                        <div v-if="activeDropdown === office.id" class="dropdown-menu" @click.stop>
+                                            <button @click="setAdmin(office)" class="dropdown-item">
+                                                <span>👤</span>
+                                                <span>设置管理员</span>
+                                            </button>
+                                            <button @click="showOfficeStats(office)" class="dropdown-item">
+                                                <span>📊</span>
+                                                <span>查看统计</span>
+                                            </button>
+                                            <div class="dropdown-divider"></div>
+                                            <button @click="deleteOffice(office)" class="dropdown-item danger">
+                                                <span>🗑</span>
+                                                <span>删除办公室</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredOffices.length === 0">
+                            <td colspan="11">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🏢</div>
+                                    <div>暂无符合条件的办公室</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 新增/编辑办公室模态框 -->
+        <div v-if="showAddModal || showEditModal" class="modal-overlay" @click="closeModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ showEditModal ? '编辑办公室' : '新增办公室' }}</h3>
+                    <button @click="closeModal" class="modal-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">办公室名称 *</label>
+                        <input v-model="form.name" type="text" class="form-input" placeholder="例如：总部大楼3层办公室">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">门号</label>
+                        <input v-model="form.room_number" type="text" class="form-input" placeholder="例如：305">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">负责人</label>
+                        <input v-model="form.leader_name" type="text" class="form-input" placeholder="负责人姓名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">办公室管理员</label>
+                        <select v-model="form.super_admin_id" class="form-input">
+                            <option :value="null">— 不设置 —</option>
+                            <option v-for="admin in adminUsers" :key="admin.id" :value="admin.id">
+                                {{ admin.name }} {{ admin.department ? `(${admin.department})` : '' }}
+                            </option>
+                        </select>
+                        <div class="form-hint">
+                            办公室管理员可审核该办公室的新用户注册、批量管理用户
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">配置人数</label>
+                        <input v-model="form.water_user_count" type="number" class="form-input" placeholder="计划使用服务的人数" min="0">
+                        <div class="form-hint">用于后续用户容量规划与资源分配</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注说明</label>
+                        <textarea v-model="form.description" class="form-input" rows="3" placeholder="备注说明"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeModal" class="btn btn-secondary">取消</button>
+                    <button @click="saveOffice" class="btn btn-primary" :disabled="!form.name">
+                        {{ showEditModal ? '保存更改' : '创建办公室' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户列表模态框 -->
+        <div v-if="showUserModal" class="modal-overlay" @click="showUserModal = false">
+            <div class="modal modal-lg" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">👥 {{ currentOffice?.name }} — 用户列表</h3>
+                    <button @click="showUserModal = false" class="modal-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text-tertiary);">
+                        该办公室共有 {{ officeUsers.length }} 位用户
+                    </div>
+                    <div class="user-list">
+                        <div v-for="user in officeUsers" :key="user.id" class="user-item">
+                            <div class="user-info">
+                                <div class="user-avatar">👤</div>
+                                <div>
+                                    <div class="user-name">{{ user.name }}</div>
+                                    <div class="user-meta">
+                                        {{ getRoleName(user.role) }} · {{ user.department || '未分配部门' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="officeUsers.length === 0" class="empty-state">
+                            <div class="empty-icon">👤</div>
+                            <div>该办公室暂无用户</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 统计信息模态框 -->
+        <div v-if="showStatsModal" class="modal-overlay" @click="showStatsModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">📊 {{ currentOffice?.name }} — 详细统计</h3>
+                    <button @click="showStatsModal = false" class="modal-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="stats-detail-grid">
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">门号</div>
+                            <div class="stat-detail-value">{{ currentOffice?.room_number || '未设置' }}</div>
+                        </div>
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">负责人</div>
+                            <div class="stat-detail-value">{{ currentOffice?.leader_name || '未设置' }}</div>
+                        </div>
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">办公室管理员</div>
+                            <div class="stat-detail-value">{{ currentOffice?.super_admin_name || '未设置' }}</div>
+                        </div>
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">配置人数</div>
+                            <div class="stat-detail-value">{{ currentOffice?.water_user_count || 0 }} 人</div>
+                        </div>
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">实际人数</div>
+                            <div class="stat-detail-value">{{ currentOffice?.user_count || 0 }} 人</div>
+                        </div>
+                        <div class="stat-detail-card">
+                            <div class="stat-detail-label">使用状态</div>
+                            <div class="stat-detail-value">
+                                <span :style="{ color: utilizationColor }">{{ utilizationRate }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                            人数利用率
+                        </div>
+                        <div class="utilization-bar">
+                            <div 
+                                class="utilization-fill" 
+                                :class="utilizationClass"
+                                :style="{ width: utilizationRate + '%' }"
+                            ></div>
+                        </div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-sm);">
+                            {{ utilizationRate >= 80 ? '利用率良好' : (utilizationRate >= 50 ? '利用率适中' : '利用率较低，建议增加用户') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const offices = ref([]);
+                const adminUsers = ref([]);
+                const searchText = ref('');
+                const selectedIds = ref([]);
+                const activeDropdown = ref(null);
+                
+                const statusFilter = ref('');
+                const commonFilter = ref('');
+                const adminFilter = ref('');
+                const activeFilter = ref('all');
+                
+                const sortField = ref('id');
+                const sortOrder = ref('asc');
+                
+                const showAddModal = ref(false);
+                const showEditModal = ref(false);
+                const showUserModal = ref(false);
+                const showStatsModal = ref(false);
+                const editingOffice = ref(null);
+                const currentOffice = ref(null);
+                const officeUsers = ref([]);
+                
+                const form = ref({
+                    name: '',
+                    room_number: '',
+                    leader_name: '',
+                    water_user_count: 0,
+                    description: '',
+                    super_admin_id: null
+                });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
+                
+                const stats = computed(() => {
+                    const total = offices.value.length;
+                    const active = offices.value.filter(o => o.is_active).length;
+                    const inactive = offices.value.filter(o => !o.is_active).length;
+                    const common = offices.value.filter(o => o.is_common).length;
+                    const noAdmin = offices.value.filter(o => !o.super_admin_id).length;
+                    const hasUsers = offices.value.filter(o => o.user_count > 0).length;
+                    return { total, active, inactive, common, noAdmin, hasUsers };
+                });
+                
+                const filteredOffices = computed(() => {
+                    let result = offices.value;
+                    
+                    if (searchText.value) {
+                        const search = searchText.value.toLowerCase();
+                        result = result.filter(office => 
+                            office.name.toLowerCase().includes(search) ||
+                            (office.room_number && office.room_number.toLowerCase().includes(search)) ||
+                            (office.leader_name && office.leader_name.toLowerCase().includes(search))
+                        );
+                    }
+                    
+                    if (activeFilter.value === 'active') {
+                        result = result.filter(o => o.is_active);
+                    } else if (activeFilter.value === 'inactive') {
+                        result = result.filter(o => !o.is_active);
+                    } else if (activeFilter.value === 'common') {
+                        result = result.filter(o => o.is_common);
+                    } else if (activeFilter.value === 'no_admin') {
+                        result = result.filter(o => !o.super_admin_id);
+                    } else if (activeFilter.value === 'has_users') {
+                        result = result.filter(o => o.user_count > 0);
+                    }
+                    
+                    if (statusFilter.value === 'active') {
+                        result = result.filter(o => o.is_active);
+                    } else if (statusFilter.value === 'inactive') {
+                        result = result.filter(o => !o.is_active);
+                    }
+                    
+                    if (commonFilter.value === 'common') {
+                        result = result.filter(o => o.is_common);
+                    } else if (commonFilter.value === 'uncommon') {
+                        result = result.filter(o => !o.is_common);
+                    }
+                    
+                    if (adminFilter.value === 'has_admin') {
+                        result = result.filter(o => o.super_admin_id);
+                    } else if (adminFilter.value === 'no_admin') {
+                        result = result.filter(o => !o.super_admin_id);
+                    }
+                    
+                    result = result.sort((a, b) => {
+                        let aVal, bVal;
+                        
+                        if (sortField.value === 'id') {
+                            aVal = a.id;
+                            bVal = b.id;
+                        } else if (sortField.value === 'name') {
+                            aVal = a.name || '';
+                            bVal = b.name || '';
+                        } else if (sortField.value === 'room_number') {
+                            aVal = a.room_number || '';
+                            bVal = b.room_number || '';
+                        } else if (sortField.value === 'super_admin_name') {
+                            aVal = a.super_admin_name || '';
+                            bVal = b.super_admin_name || '';
+                        } else if (sortField.value === 'water_user_count') {
+                            aVal = a.water_user_count || 0;
+                            bVal = b.water_user_count || 0;
+                        } else if (sortField.value === 'user_count') {
+                            aVal = a.user_count || 0;
+                            bVal = b.user_count || 0;
+                        }
+                        
+                        if (typeof aVal === 'string') {
+                            aVal = aVal.toLowerCase();
+                            bVal = bVal.toLowerCase();
+                        }
+                        
+                        if (sortOrder.value === 'asc') {
+                            return aVal < bVal ? -1 : (aVal > bVal ? 1 : 0);
+                        } else {
+                            return aVal > bVal ? -1 : (aVal < bVal ? 1 : 0);
+                        }
+                    });
+                    
+                    return result;
+                });
+                
+                const isAllSelected = computed(() => {
+                    return filteredOffices.value.length > 0 && 
+                           selectedIds.value.length === filteredOffices.value.length;
+                });
+                
+                const isPartialSelected = computed(() => {
+                    return selectedIds.value.length > 0 && 
+                           selectedIds.value.length < filteredOffices.value.length;
+                });
+                
+                const utilizationRate = computed(() => {
+                    if (!currentOffice.value) return 0;
+                    const configured = currentOffice.value.water_user_count || 0;
+                    const actual = currentOffice.value.user_count || 0;
+                    if (configured === 0) return actual > 0 ? 100 : 0;
+                    return Math.min(100, Math.round((actual / configured) * 100));
+                });
+                
+                const utilizationClass = computed(() => {
+                    if (utilizationRate.value >= 80) return 'high';
+                    if (utilizationRate.value >= 50) return 'medium';
+                    return 'low';
+                });
+                
+                const utilizationColor = computed(() => {
+                    if (utilizationRate.value >= 80) return 'var(--success)';
+                    if (utilizationRate.value >= 50) return 'var(--warning)';
+                    return 'var(--danger)';
+                });
+                
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices`);
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                    }
+                };
+                
+                const loadAdminUsers = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin-users`);
+                        if (response.ok) {
+                            adminUsers.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载管理员列表失败:', error);
+                    }
+                };
+                
+                const setFilter = (filter) => {
+                    activeFilter.value = filter;
+                    statusFilter.value = '';
+                    commonFilter.value = '';
+                    adminFilter.value = '';
+                };
+                
+                const applyFilters = () => {
+                    activeFilter.value = 'all';
+                };
+                
+                const toggleSort = (field) => {
+                    if (sortField.value === field) {
+                        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortField.value = field;
+                        sortOrder.value = 'asc';
+                    }
+                };
+                
+                const toggleSelectAll = (e) => {
+                    if (e.target.checked) {
+                        selectedIds.value = filteredOffices.value.map(o => o.id);
+                    } else {
+                        selectedIds.value = [];
+                    }
+                };
+                
+                const toggleDropdown = (officeId) => {
+                    activeDropdown.value = activeDropdown.value === officeId ? null : officeId;
+                };
+                
+                const toggleCommon = async (office) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_common: office.is_common ? 0 : 1 })
+                        });
+                        
+                        if (response.ok) {
+                            office.is_common = office.is_common ? 0 : 1;
+                        }
+                    } catch (error) {
+                        console.error('切换常用状态失败:', error);
+                    }
+                };
+                
+                const toggleActive = async (office) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: office.is_active ? 0 : 1 })
+                        });
+                        
+                        if (response.ok) {
+                            office.is_active = office.is_active ? 0 : 1;
+                        }
+                    } catch (error) {
+                        console.error('切换状态失败:', error);
+                    }
+                };
+                
+                const batchSetActive = async (isActive) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/batch-active`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ office_ids: selectedIds.value, is_active: isActive })
+                        });
+                        
+                        if (response.ok) {
+                            await loadOffices();
+                            selectedIds.value = [];
+                        }
+                    } catch (error) {
+                        console.error('批量操作失败:', error);
+                    }
+                };
+                
+                const batchSetCommon = async (isCommon) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/batch-common`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ office_ids: selectedIds.value, is_common: isCommon })
+                        });
+                        
+                        if (response.ok) {
+                            await loadOffices();
+                            selectedIds.value = [];
+                        }
+                    } catch (error) {
+                        console.error('批量操作失败:', error);
+                    }
+                };
+                
+                const batchDelete = async () => {
+                    if (!confirm(`确定要删除选中的 ${selectedIds.value.length} 个办公室吗？\n此操作不可恢复。`)) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/batch-delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedIds.value)
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.errors && result.errors.length > 0) {
+                                alert(result.errors.join('\n'));
+                            }
+                            await loadOffices();
+                            selectedIds.value = [];
+                        }
+                    } catch (error) {
+                        console.error('批量删除失败:', error);
+                    }
+                };
+                
+                const editOffice = (office) => {
+                    editingOffice.value = office;
+                    form.value = {
+                        name: office.name,
+                        room_number: office.room_number || '',
+                        leader_name: office.leader_name || '',
+                        water_user_count: office.water_user_count || 0,
+                        description: office.description || '',
+                        super_admin_id: office.super_admin_id || null
+                    };
+                    showEditModal.value = true;
+                    activeDropdown.value = null;
+                };
+                
+                const setAdmin = (office) => {
+                    editOffice(office);
+                };
+                
+                const saveOffice = async () => {
+                    try {
+                        const url = showEditModal.value 
+                            ? `${API_BASE}/offices/${editingOffice.value.id}`
+                            : `${API_BASE}/offices`;
+                        
+                        const response = await fetch(url, {
+                            method: showEditModal.value ? 'PUT' : 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(form.value)
+                        });
+                        
+                        if (response.ok) {
+                            await loadOffices();
+                            closeModal();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '保存失败，请重试');
+                        }
+                    } catch (error) {
+                        console.error('保存办公室失败:', error);
+                        alert('保存失败，请重试');
+                    }
+                };
+                
+                const deleteOffice = async (office) => {
+                    activeDropdown.value = null;
+                    
+                    if (!confirm(`确定要删除办公室「${office.name}」吗？\n注意：办公室下有用户或账户时无法删除`)) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            await loadOffices();
+                        } else {
+                            const data = await response.json();
+                            if (data.requires_confirmation) {
+                                if (confirm(data.message + '\n\n是否强制删除所有关联数据？')) {
+                                    await fetch(`${API_BASE}/offices/${office.id}?force=true`, {
+                                        method: 'DELETE'
+                                    });
+                                    await loadOffices();
+                                }
+                            } else {
+                                alert(data.detail || '删除失败');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('删除办公室失败:', error);
+                        alert('删除失败，请重试');
+                    }
+                };
+                
+                const showUserList = async (office) => {
+                    currentOffice.value = office;
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/${office.id}/users`);
+                        if (response.ok) {
+                            const users = await response.json();
+                            officeUsers.value = users.filter(u => u.department === office.name);
+                            showUserModal.value = true;
+                        }
+                    } catch (error) {
+                        console.error('获取用户列表失败:', error);
+                    }
+                };
+                
+                const showOfficeStats = (office) => {
+                    currentOffice.value = office;
+                    showStatsModal.value = true;
+                    activeDropdown.value = null;
+                };
+                
+                const getRoleName = (role) => {
+                    if (role === 'super_admin') return '超级管理员';
+                    if (role === 'admin') return '管理员';
+                    return '普通用户';
+                };
+                
+                const exportData = () => {
+                    const data = filteredOffices.value.map(o => ({
+                        'ID': o.id,
+                        '办公室名称': o.name,
+                        '门号': o.room_number || '',
+                        '负责人': o.leader_name || '',
+                        '办公室管理员': o.super_admin_name || '',
+                        '配置人数': o.water_user_count || 0,
+                        '实际人数': o.user_count || 0,
+                        '常用': o.is_common ? '是' : '否',
+                        '状态': o.is_active ? '启用' : '停用',
+                        '备注': o.description || ''
+                    }));
+                    
+                    const headers = Object.keys(data[0] || {});
+                    const csvContent = [
+                        headers.join(','),
+                        ...data.map(row => headers.map(h => `"${row[h]}"`).join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `办公室列表_${new Date().toISOString().slice(0,10)}.csv`;
+                    link.click();
+                };
+                
+                const closeModal = () => {
+                    showAddModal.value = false;
+                    showEditModal.value = false;
+                    editingOffice.value = null;
+                    form.value = {
+                        name: '',
+                        room_number: '',
+                        leader_name: '',
+                        water_user_count: 0,
+                        description: '',
+                        super_admin_id: null
+                    };
+                };
+                
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.action-dropdown')) {
+                        activeDropdown.value = null;
+                    }
+                });
+                
+                onMounted(() => {
+                    loadOffices();
+                    loadAdminUsers();
+                });
+                
+                return {
+                    offices,
+                    adminUsers,
+                    searchText,
+                    selectedIds,
+                    activeDropdown,
+                    stats,
+                    filteredOffices,
+                    isAllSelected,
+                    isPartialSelected,
+                    activeFilter,
+                    statusFilter,
+                    commonFilter,
+                    adminFilter,
+                    sortField,
+                    sortOrder,
+                    showAddModal,
+                    showEditModal,
+                    showUserModal,
+                    showStatsModal,
+                    currentOffice,
+                    officeUsers,
+                    utilizationRate,
+                    utilizationClass,
+                    utilizationColor,
+                    form,
+                    setFilter,
+                    applyFilters,
+                    toggleSort,
+                    toggleSelectAll,
+                    toggleDropdown,
+                    toggleCommon,
+                    toggleActive,
+                    batchSetActive,
+                    batchSetCommon,
+                    batchDelete,
+                    editOffice,
+                    setAdmin,
+                    saveOffice,
+                    deleteOffice,
+                    showUserList,
+                    showOfficeStats,
+                    getRoleName,
+                    exportData,
+                    closeModal
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

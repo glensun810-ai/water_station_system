@@ -111,28 +111,166 @@
             text-align: center;
         }
         
-        .footer-text {
-            text-align: center;
-            padding: 20px 30px;
-            background: #F9FAFB;
-            color: #6B7280;
-            font-size: 13px;
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+.footer-text {
+                text-align: center;
+                padding: 20px 30px;
+                background: #F9FAFB;
+                color: #6B7280;
+                font-size: 13px;
+            }
+            
+            .loading-spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border: 2px solid #ffffff;
+                border-top-color: transparent;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin-right: 8px;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            /* 办公室选择对话框样式 */
+            .office-selection-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            }
+            
+            .office-selection-dialog {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 90%;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .dialog-header {
+                padding: 24px;
+                text-align: center;
+                border-bottom: 1px solid #E5E7EB;
+            }
+            
+            .dialog-title {
+                font-size: 20px;
+                font-weight: 700;
+                margin: 0 0 8px 0;
+            }
+            
+            .dialog-subtitle {
+                font-size: 14px;
+                color: #6B7280;
+                margin: 0;
+            }
+            
+            .dialog-body {
+                padding: 24px;
+                overflow-y: auto;
+                max-height: 400px;
+            }
+            
+            .office-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .office-item {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 16px;
+                border: 2px solid #E5E7EB;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .office-item:hover {
+                border-color: #3B82F6;
+                background: #F9FAFB;
+            }
+            
+            .office-item.office-selected {
+                border-color: #2563EB;
+                background: #EFF6FF;
+            }
+            
+            .office-icon {
+                font-size: 32px;
+            }
+            
+            .office-info {
+                flex: 1;
+            }
+            
+            .office-name {
+                font-weight: 600;
+                font-size: 16px;
+                margin-bottom: 4px;
+            }
+            
+            .office-location {
+                font-size: 13px;
+                color: #6B7280;
+            }
+            
+            .office-check {
+                width: 24px;
+                height: 24px;
+                background: #2563EB;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            
+            .dialog-footer {
+                padding: 24px;
+                border-top: 1px solid #E5E7EB;
+            }
+            
+            .btn {
+                padding: 12px 24px;
+                border-radius: 8px;
+                border: none;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            
+            .btn-primary {
+                background: #2563EB;
+                color: white;
+            }
+            
+            .btn-primary:hover:not(:disabled) {
+                background: #1D4ED8;
+            }
     </style>
 </head>
 <body>
@@ -195,6 +333,48 @@
                 © 2026 企业服务管理平台 v2.0
             </div>
         </div>
+        
+        <!-- 办公室选择对话框 -->
+        <div v-if="showOfficeSelection" class="office-selection-overlay">
+            <div class="office-selection-dialog">
+                <div class="dialog-header">
+                    <h3 class="dialog-title">选择您的办公室</h3>
+                    <p class="dialog-subtitle">首次登录，请选择您所在的办公室</p>
+                </div>
+                <div class="dialog-body">
+                    <div v-if="loadingOffices" style="text-align: center; padding: 40px;">
+                        <div class="loading-spinner"></div>
+                        <div style="margin-top: 10px; color: #666;">加载办公室列表...</div>
+                    </div>
+                    <div v-else class="office-list">
+                        <div 
+                            v-for="office in offices" 
+                            :key="office.id"
+                            class="office-item"
+                            :class="{ 'office-selected': selectedOfficeId === office.id }"
+                            @click="selectedOfficeId = office.id"
+                        >
+                            <div class="office-icon">🏢</div>
+                            <div class="office-info">
+                                <div class="office-name">{{ office.name }}</div>
+                                <div class="office-location">{{ office.location }}</div>
+                            </div>
+                            <div v-if="selectedOfficeId === office.id" class="office-check">✓</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dialog-footer">
+                    <button 
+                        @click="confirmOffice" 
+                        class="btn btn-primary"
+                        :disabled="!selectedOfficeId"
+                        style="width: 100%;"
+                    >
+                        确认选择
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -206,7 +386,13 @@
                     username: '',
                     password: '',
                     loading: false,
-                    errorMessage: ''
+                    errorMessage: '',
+                    showOfficeSelection: false,
+                    offices: [],
+                    selectedOfficeId: null,
+                    loadingOffices: false,
+                    tempToken: null,
+                    tempUserInfo: null
                 };
             },
             methods: {
@@ -245,16 +431,28 @@ async handleLogin() {
                         
                         if (response.ok) {
                             localStorage.setItem('token', data.access_token);
-                            localStorage.setItem('userInfo', JSON.stringify({
-                                id: data.user_info.user_id,
-                                name: data.user_info.username,
-                                role: data.user_info.role_name,
-                                department: data.user_info.email || '',
-                                avatar: '👤',
-                                is_admin: data.user_info.role_id === 1
-                            }));
                             
-window.location.href = '/portal/index.html';
+                            // 检查用户是否已设置办公室
+                            const storedOffices = localStorage.getItem('user_offices');
+                            if (!storedOffices && !data.user_info.office_id) {
+                                // 首次登录，需要选择办公室
+                                this.showOfficeSelection = true;
+                                this.loadOffices();
+                                this.tempToken = data.access_token;
+                                this.tempUserInfo = data.user_info;
+                            } else {
+                                // 已有办公室，直接登录
+                                localStorage.setItem('userInfo', JSON.stringify({
+                                    id: data.user_info.user_id,
+                                    name: data.user_info.username,
+                                    role: data.user_info.role_name,
+                                    department: data.user_info.email || '',
+                                    avatar: '👤',
+                                    is_admin: data.user_info.role_id === 1
+                                }));
+                                
+                                window.location.href = '/portal/index.html';
+                            }
                          } else {
                              this.errorMessage = data.detail || data.message || '登录失败，请检查用户名和密码';
                          }
@@ -263,6 +461,56 @@ window.location.href = '/portal/index.html';
                         this.errorMessage = '网络错误，请稍后重试';
                     } finally {
                         this.loading = false;
+                    }
+                },
+                async loadOffices() {
+                    this.loadingOffices = true;
+                    try {
+                        const protocol = window.location.protocol;
+                        const hostname = window.location.hostname;
+                        const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                        const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                        
+                        const response = await fetch(`${API_BASE}/offices?is_active=true`);
+                        if (response.ok) {
+                            this.offices = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                        this.errorMessage = '加载办公室列表失败，请刷新重试';
+                    } finally {
+                        this.loadingOffices = false;
+                    }
+                },
+                async confirmOffice() {
+                    if (!this.selectedOfficeId) {
+                        alert('请选择一个办公室');
+                        return;
+                    }
+                    
+                    try {
+                        // 保存用户信息和办公室
+                        localStorage.setItem('userInfo', JSON.stringify({
+                            id: this.tempUserInfo.user_id,
+                            name: this.tempUserInfo.username,
+                            role: this.tempUserInfo.role_name,
+                            department: this.tempUserInfo.email || '',
+                            avatar: '👤',
+                            is_admin: this.tempUserInfo.role_id === 1
+                        }));
+                        
+                        // 保存用户办公室
+                        const selectedOffice = this.offices.find(o => o.id === this.selectedOfficeId);
+                        localStorage.setItem('user_offices', JSON.stringify({
+                            offices: [selectedOffice],
+                            selectedOfficeId: this.selectedOfficeId
+                        }));
+                        
+                        // 跳转到首页
+                        window.location.href = '/portal/index.html';
+                    } catch (error) {
+                        console.error('保存办公室信息失败:', error);
+                        alert('保存失败，请重试');
                     }
                 },
                 mounted() {

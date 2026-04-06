@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .stat-card.stat-danger {
+            border-left-color: var(--danger);
+        }
+        
+        .stat-card.stat-warning {
+            border-left-color: var(--warning);
+        }
+        
+        .stat-card.stat-success {
+            border-left-color: var(--success);
+        }
+        
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+        
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all var(--transition-fast);
+        }
+        
+        .tab:hover {
+            color: var(--primary);
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        
+        .search-input,
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .filter-box {
+            min-width: 200px;
+        }
+        
+        .data-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .data-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .record-info {
+            flex: 1;
+        }
+        
+        .record-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .record-office {
+            font-weight: 600;
+            font-size: var(--font-size-base);
+        }
+        
+        .record-service {
+            font-size: var(--font-size-sm);
+        }
+        
+        .record-meta {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .record-amount {
+            text-align: right;
+        }
+        
+        .amount-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .amount-status {
+            font-size: var(--font-size-xs);
+        }
+        
+        .checkbox-item {
+            margin-right: var(--spacing-md);
+        }
+        
+        .checkbox-item input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .batch-actions {
+            position: fixed;
+            bottom: var(--spacing-xl);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            z-index: 100;
+        }
+        
+        .selected-count {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+            }
+            
+            .filter-box {
+                width: 100%;
+            }
+            
+            .data-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .record-amount {
+                text-align: left;
+                margin-top: var(--spacing-sm);
+            }
+            
+            .batch-actions {
+                left: var(--spacing-md);
+                right: var(--spacing-md);
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '结算管理', icon: '💰', url: '/portal/admin/settlements.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">💰 结算管理</h1>
+                <p class="page-subtitle">统一管理水站和会议室的结算流程</p>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card stat-danger">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value" style="color: var(--danger);">¥{{ summary.total.pending_amount.toFixed(2) }}</div>
+                    <div class="stat-label">待结算 ({{ summary.total.pending_count }}笔)</div>
+                </div>
+                <div class="stat-card stat-warning">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-value" style="color: var(--warning);">¥{{ summary.total.applied_amount.toFixed(2) }}</div>
+                    <div class="stat-label">已申请 ({{ summary.total.applied_count }}笔)</div>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" style="color: var(--success);">¥{{ summary.total.settled_amount.toFixed(2) }}</div>
+                    <div class="stat-label">已结算 ({{ summary.total.settled_count }}笔)</div>
+                </div>
+            </div>
+            
+            <!-- Tab切换 -->
+            <div class="tabs">
+                <button :class="['tab', { active: activeTab === 'pending' }]" @click="activeTab = 'pending'">
+                    待结算 ({{ summary.total.pending_count }})
+                </button>
+                <button :class="['tab', { active: activeTab === 'applied' }]" @click="activeTab = 'applied'">
+                    已申请 ({{ summary.total.applied_count }})
+                </button>
+                <button :class="['tab', { active: activeTab === 'settled' }]" @click="activeTab = 'settled'">
+                    已结算 ({{ summary.total.settled_count }})
+                </button>
+            </div>
+            
+            <!-- 工具栏 -->
+            <div class="toolbar" v-if="activeTab !== 'settled'">
+                <input 
+                    v-model="searchText"
+                    type="text" 
+                    class="search-input"
+                    style="flex: 1; max-width: 400px;"
+                    placeholder="搜索办公室..."
+                >
+                <div class="filter-box">
+                    <select v-model="filterService" class="filter-select">
+                        <option value="">全部服务</option>
+                        <option value="water">水站服务</option>
+                        <option value="meeting">会议室服务</option>
+                    </select>
+                </div>
+                <button v-if="activeTab === 'pending' && selectedRecords.length > 0" 
+                        @click="batchApply" 
+                        class="btn btn-primary">
+                    批量申请结算 ({{ selectedRecords.length }})
+                </button>
+                <button v-if="activeTab === 'applied' && selectedRecords.length > 0" 
+                        @click="batchConfirm" 
+                        class="btn btn-success">
+                    批量确认结算 ({{ selectedRecords.length }})
+                </button>
+            </div>
+            
+            <!-- 数据列表 -->
+            <div v-if="filteredRecords.length === 0" class="empty-state">
+                <div class="empty-icon">📭</div>
+                <div>暂无{{ activeTab === 'pending' ? '待结算' : activeTab === 'applied' ? '已申请' : '已结算' }}记录</div>
+            </div>
+            
+            <div v-else>
+                <div v-for="record in filteredRecords" :key="record.id" class="data-card">
+                    <div style="display: flex; align-items: center;">
+                        <div v-if="activeTab !== 'settled'" class="checkbox-item">
+                            <input 
+                                type="checkbox" 
+                                :value="record.id"
+                                v-model="selectedRecords"
+                            >
+                        </div>
+                        <div class="record-info">
+                            <div class="record-header">
+                                <span class="record-office">{{ record.office_name }}</span>
+                                <span class="record-service">
+                                    {{ record.service_type === 'water' ? '💧 水站服务' : '📅 会议室服务' }}
+                                </span>
+                            </div>
+                            <div class="record-meta">
+                                记录ID: {{ record.record_id }} | 创建时间: {{ formatDate(record.created_at) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="record-amount">
+                        <div class="amount-value" :style="{ color: activeTab === 'pending' ? 'var(--danger)' : activeTab === 'applied' ? 'var(--warning)' : 'var(--success)' }">
+                            ¥{{ record.amount.toFixed(2) }}
+                        </div>
+                        <div class="amount-status">
+                            <span :class="['badge', activeTab === 'pending' ? 'badge-danger' : activeTab === 'applied' ? 'badge-warning' : 'badge-success']">
+                                {{ activeTab === 'pending' ? '待结算' : activeTab === 'applied' ? '已申请' : '已结算' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 批量操作提示 -->
+        <div v-if="selectedRecords.length > 0" class="batch-actions">
+            <span class="selected-count">已选择 {{ selectedRecords.length }} 项</span>
+            <button v-if="activeTab === 'pending'" @click="batchApply" class="btn btn-primary btn-sm">
+                批量申请结算
+            </button>
+            <button v-if="activeTab === 'applied'" @click="batchConfirm" class="btn btn-success btn-sm">
+                批量确认结算
+            </button>
+            <button @click="selectedRecords = []" class="btn btn-secondary btn-sm">
+                取消选择
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const activeTab = ref('pending');
+                const records = ref([]);
+                const searchText = ref('');
+                const filterService = ref('');
+                const selectedRecords = ref([]);
+                
+                const summary = ref({
+                    water: {
+                        pending_amount: 0,
+                        pending_count: 0,
+                        applied_amount: 0,
+                        applied_count: 0,
+                        settled_amount: 0,
+                        settled_count: 0
+                    },
+                    meeting: { ... },
+                    total: {
+                        pending_amount: 0,
+                        pending_count: 0,
+                        applied_amount: 0,
+                        applied_count: 0,
+                        settled_amount: 0,
+                        settled_count: 0
+                    }
+                });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
+                
+                // 过滤后的记录
+                const filteredRecords = computed(() => {
+                    let result = records.value;
+                    
+                    if (searchText.value) {
+                        const search = searchText.value.toLowerCase();
+                        result = result.filter(record => 
+                            record.office_name.toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    if (filterService.value) {
+                        result = result.filter(record => record.service_type === filterService.value);
+                    }
+                    
+                    return result;
+                });
+                
+                // 加载结算概览
+                const loadSummary = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/settlements/summary`);
+                        if (response.ok) {
+                            summary.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载结算概览失败:', error);
+                    }
+                };
+                
+                // 加载记录列表
+                const loadRecords = async () => {
+                    try {
+                        let url = `${API_BASE}/settlements/`;
+                        
+                        if (activeTab.value === 'pending') {
+                            url += 'pending';
+                        } else {
+                            // 其他状态的记录从各自的API获取
+                            url += 'pending'; // 暂时都从pending获取
+                        }
+                        
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            records.value = data.records || [];
+                        }
+                    } catch (error) {
+                        console.error('加载记录失败:', error);
+                        records.value = [];
+                    }
+                };
+                
+                // 批量申请结算
+                const batchApply = async () => {
+                    if (!confirm(`确定要申请结算${selectedRecords.value.length}条记录吗？`)) {
+                        return;
+                    }
+                    
+                    try {
+                        const waterRecords = selectedRecords.value.filter(id => id.startsWith('water_'));
+                        const meetingRecords = selectedRecords.value.filter(id => id.startsWith('meeting_'));
+                        
+                        if (waterRecords.length > 0) {
+                            await fetch(`${API_BASE}/settlements/apply`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    office_id: 0,
+                                    service_type: 'water',
+                                    record_ids: waterRecords.map(id => parseInt(id.replace('water_', '')))
+                                })
+                            });
+                        }
+                        
+                        if (meetingRecords.length > 0) {
+                            await fetch(`${API_BASE}/settlements/apply`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    office_id: 0,
+                                    service_type: 'meeting',
+                                    record_ids: meetingRecords.map(id => parseInt(id.replace('meeting_', '')))
+                                })
+                            });
+                        }
+                        
+                        alert('申请成功！');
+                        selectedRecords.value = [];
+                        await loadSummary();
+                        await loadRecords();
+                    } catch (error) {
+                        console.error('申请结算失败:', error);
+                        alert('申请失败，请重试');
+                    }
+                };
+                
+                // 批量确认结算
+                const batchConfirm = async () => {
+                    if (!confirm(`确定要确认结算${selectedRecords.value.length}条记录吗？`)) {
+                        return;
+                    }
+                    
+                    alert('确认结算功能开发中...');
+                };
+                
+                // 格式化日期
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                };
+                
+                // 监听tab切换
+                watch(activeTab, () => {
+                    selectedRecords.value = [];
+                    loadRecords();
+                });
+                
+                onMounted(() => {
+                    loadSummary();
+                    loadRecords();
+                });
+                
+                return {
+                    activeTab,
+                    records,
+                    searchText,
+                    filterService,
+                    selectedRecords,
+                    summary,
+                    filteredRecords,
+                    batchApply,
+                    batchConfirm,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

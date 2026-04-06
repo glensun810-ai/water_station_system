@@ -197,6 +197,10 @@ from api_coupon import router as legacy_coupon_router
 from api_services import router as legacy_services_router
 from api_dining import router as legacy_dining_router
 from api_migration import router as legacy_migration_router
+from api_dashboard_water import router as water_dashboard_router
+from api_dashboard_meeting import router as meeting_dashboard_router
+from api_user_management import router as user_management_router
+from api_settlement_management import router as settlement_management_router
 
 app.include_router(legacy_office_router)
 app.include_router(legacy_unified_router)
@@ -212,6 +216,14 @@ app.include_router(legacy_coupon_router)
 app.include_router(legacy_services_router)
 app.include_router(legacy_dining_router)
 app.include_router(legacy_migration_router)
+
+# Dashboard统计路由
+app.include_router(water_dashboard_router)
+app.include_router(meeting_dashboard_router)
+
+# 系统管理路由
+app.include_router(user_management_router)
+app.include_router(settlement_management_router)
 
 # ==================== 健康检查 ====================
 
