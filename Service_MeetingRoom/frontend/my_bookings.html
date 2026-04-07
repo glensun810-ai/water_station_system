@@ -1028,10 +1028,19 @@
                     showDetailModal: false,
                     selectedBooking: null,
                     
-                    API_BASE: localStorage.getItem('API_BASE') || 
-                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                            ? 'http://localhost:8000/api/meeting' 
-                            : '/api/meeting')
+                    // API配置 - 动态适配端口
+                    API_BASE: (() => {
+                        const hostname = window.location.hostname;
+                        const protocol = window.location.protocol;
+                        const currentPort = window.location.port;
+                        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+                        
+                        if (isLocalhost) {
+                            return `${protocol}//${hostname}:${currentPort}/api/meeting`;
+                        } else {
+                            return `${protocol}//${hostname}/api/meeting`;
+                        }
+                    })()
                 };
             },
             
