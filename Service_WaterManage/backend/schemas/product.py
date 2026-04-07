@@ -21,6 +21,7 @@ class ProductBase(BaseModel):
     barcode: Optional[str] = None
     promo_threshold: int = 10
     promo_gift: int = 1
+    stock_alert: int = 10
 
 
 class ProductCreate(ProductBase):
@@ -45,6 +46,7 @@ class ProductUpdate(BaseModel):
     barcode: Optional[str] = None
     promo_threshold: Optional[int] = None
     promo_gift: Optional[int] = None
+    stock_alert: Optional[int] = None
     is_active: Optional[int] = None
 
 
@@ -53,6 +55,7 @@ class ProductResponse(ProductBase):
 
     id: int
     stock: int
+    stock_alert: int = 10
     is_active: int
     is_protected: int = 0
     category_name: Optional[str] = None

@@ -143,6 +143,36 @@ def update_product(
     return ProductResponse.model_validate(product)
 
 
+@router.put("/{product_id}/stock")
+def update_product_stock(
+    product_id: int, stock_update: dict, db: Session = Depends(get_db)
+):
+    """
+    更新产品库存
+
+    Args:
+        product_id: 产品ID
+        stock_update: 库存更新数据 {"stock": 100}
+
+    Returns:
+        更新成功消息
+    """
+    product = db.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="产品不存在")
+
+    stock = stock_update.get("stock")
+    if stock is None or stock < 0:
+        raise HTTPException(status_code=400, detail="请提供有效的库存数量")
+
+    product.stock = stock
+    db.commit()
+    db.refresh(product)
+
+    return {"message": "库存已更新", "product_id": product_id, "stock": product.stock}
+
+
 @router.delete("/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     """

@@ -36,6 +36,7 @@ class Product(Base):
     unit = Column(String, default="unit")
     price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
+    stock_alert = Column(Integer, default=10)  # 库存预警阈值
     cost_price = Column(Float, nullable=True)  # 成本价
     image_url = Column(String, nullable=True)  # 产品图片URL
     description = Column(String, nullable=True)  # 产品描述

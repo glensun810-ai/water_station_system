@@ -25,7 +25,6 @@ class MeetingRoomBase(BaseModel):
     member_price_per_hour: float = 0.0
     free_hours_per_month: int = 0
     is_active: bool = True
-    description: Optional[str] = None
 
     @field_validator("name")
     def name_must_not_be_empty(cls, v):
@@ -59,7 +58,6 @@ class MeetingRoomUpdate(BaseModel):
     member_price_per_hour: Optional[float] = None
     free_hours_per_month: Optional[int] = None
     is_active: Optional[bool] = None
-    description: Optional[str] = None
 
 
 class MeetingRoomResponse(MeetingRoomBase):
@@ -79,28 +77,42 @@ class MeetingBookingBase(BaseModel):
     user_phone: Optional[str] = None
     department: Optional[str] = None
     booking_date: date
-    start_time: time
-    end_time: time
+    start_time: str
+    end_time: str
     meeting_title: Optional[str] = None
     attendees_count: int = 1
-    notes: Optional[str] = None
 
 
 class MeetingBookingCreate(MeetingBookingBase):
     pass
 
 
-class MeetingBookingResponse(MeetingBookingBase):
+class MeetingBookingResponse(BaseModel):
     id: int
     booking_no: str
-    duration_hours: Optional[float] = None
+    room_id: int
+    room_name: Optional[str] = None
+    user_type: str = "external"
+    office_id: Optional[int] = None
+    user_id: Optional[int] = None
+    user_name: str
+    user_phone: Optional[str] = None
+    department: Optional[str] = None
+    booking_date: date
+    start_time: str
+    end_time: str
+    duration: Optional[float] = None
+    meeting_title: Optional[str] = None
+    attendees_count: int = 1
+    status: str
     total_fee: float = 0.0
     actual_fee: float = 0.0
-    status: str
     payment_status: str
+    payment_method: Optional[str] = None
+    cancel_reason: Optional[str] = None
+    cancelled_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    room_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -218,18 +230,21 @@ def get_bookings(
 def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db)):
     """创建预约"""
     import random
-    import string
+    from datetime import datetime as dt
 
     # 检查会议室是否存在
     room = db.query(MeetingRoom).filter(MeetingRoom.id == booking.room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="会议室不存在")
 
-    # 检查时间冲突
-    start_datetime = datetime.combine(booking.booking_date, booking.start_time)
-    end_datetime = datetime.combine(booking.booking_date, booking.end_time)
+    # 检查时间格式并解析
+    try:
+        start_time_obj = dt.strptime(booking.start_time, "%H:%M").time()
+        end_time_obj = dt.strptime(booking.end_time, "%H:%M").time()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="时间格式错误，请使用 HH:MM 格式")
 
-    if start_datetime >= end_datetime:
+    if start_time_obj >= end_time_obj:
         raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
 
     # 检查该时间段是否有冲突
@@ -246,14 +261,19 @@ def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db))
     )
 
     for existing in conflicting:
-        existing_start = datetime.combine(existing.booking_date, existing.start_time)
-        existing_end = datetime.combine(existing.booking_date, existing.end_time)
+        try:
+            existing_start = dt.strptime(existing.start_time, "%H:%M").time()
+            existing_end = dt.strptime(existing.end_time, "%H:%M").time()
+        except ValueError:
+            continue
 
-        if not (end_datetime <= existing_start or start_datetime >= existing_end):
+        if not (end_time_obj <= existing_start or start_time_obj >= existing_end):
             raise HTTPException(status_code=400, detail="该时间段已被预约")
 
     # 计算时长和费用
-    duration = (end_datetime - start_datetime).total_seconds() / 3600
+    start_dt = dt.combine(booking.booking_date, start_time_obj)
+    end_dt = dt.combine(booking.booking_date, end_time_obj)
+    duration = (end_dt - start_dt).total_seconds() / 3600
     price = room.price_per_hour
 
     # 生成预约号
@@ -261,22 +281,20 @@ def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db))
         f"MB{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
     )
 
-    db_booking = MeetingBooking(
-        **booking.model_dump(),
-        booking_no=booking_no,
-        duration_hours=duration,
-        total_fee=duration * price,
-        actual_fee=duration * price,
-        status=BookingStatus.pending.value,
-    )
+    # 构建booking数据
+    booking_data = booking.model_dump()
+    booking_data["booking_no"] = booking_no
+    booking_data["duration"] = duration
+    booking_data["total_fee"] = duration * price
+    booking_data["actual_fee"] = duration * price
+    booking_data["status"] = BookingStatus.pending.value
+    booking_data["room_name"] = room.name
+
+    db_booking = MeetingBooking(**booking_data)
 
     db.add(db_booking)
     db.commit()
     db.refresh(db_booking)
-
-    # 填充会议室名称
-    if db_booking.room:
-        db_booking.room_name = db_booking.room.name
 
     return db_booking
 
@@ -308,7 +326,7 @@ def cancel_booking(
 
     booking.status = BookingStatus.cancelled.value
     booking.cancelled_at = datetime.now()
-    booking.cancelled_reason = reason
+    booking.cancel_reason = reason
 
     db.commit()
     return {"message": "预约已取消"}

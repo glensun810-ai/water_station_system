@@ -1250,15 +1250,14 @@
                         // 并行加载办公室和产品数据
                         const [officesRes, productsRes] = await Promise.all([
                             fetch(API_BASE + '/offices?is_active=1'),
-                            fetch(API_BASE + '/packages')
+                            fetch(API_BASE + '/products?is_active=1')
                         ]);
                         if (officesRes.ok) this.offices = await officesRes.json();
                         if (productsRes.ok) { 
-                            const packagesData = await packagesRes.json();
-                            // 从套餐中提取产品
-                            if (packagesData && packagesData.length > 0) {
-                                // 假设套餐数据结构
-                                this.products = packagesData;
+                            const productsData = await productsRes.json();
+                            // 加载产品数据
+                            if (productsData && productsData.length > 0) {
+                                this.products = productsData;
                                 this.products.forEach(p => this.cart[p.id] = 0);
                             }
                         }

@@ -569,9 +569,9 @@
                             <span>📦</span>
                             <span>产品管理</span>
                         </button>
-                        <button class="quick-action-btn" @click="goToModule('water-offices')">
-                            <span>🏢</span>
-                            <span>办公室管理</span>
+                        <button class="quick-action-btn" @click="goToModule('water-accounts')">
+                            <span>💰</span>
+                            <span>预付账户</span>
                         </button>
                     </div>
                 </div>
@@ -922,31 +922,6 @@
                     </div>
                 </div>
                 
-                <!-- 办公室管理 -->
-                <div v-if="currentModule === 'water-offices' && !isLoading">
-                    <div class="card">
-                        <div class="flex items-center justify-between mb-lg">
-                            <div class="font-bold text-lg">办公室管理</div>
-                            <button class="btn btn-primary btn-sm">添加办公室</button>
-                        </div>
-                        
-                        <div v-if="offices.length === 0" class="text-center p-xl text-secondary">
-                            暂无办公室数据
-                        </div>
-                        
-                        <div v-else class="grid grid-cols-2 gap-md">
-                            <div v-for="office in offices" :key="office.id" class="card">
-                                <div class="flex items-center gap-md mb-sm">
-                                    <div class="text-2xl">🏢</div>
-                                    <div class="font-semibold">{{ office.name }}</div>
-                                </div>
-                                <div class="text-sm text-secondary">联系人: {{ office.contact_person || '未设置' }}</div>
-                                <div class="text-sm text-secondary">电话: {{ office.phone || '未设置' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- 会议室Dashboard -->
                 <div v-if="currentModule === 'meeting-dashboard' && !isLoading">
                     <div class="dashboard-grid">
@@ -1090,14 +1065,14 @@
                 </div>
                 
                 <!-- 其他模块提示 -->
-                <div v-if="['meeting-approvals', 'meeting-finance', 'meeting-reports', 'water-users', 'system-users', 'system-permissions', 'system-logs'].includes(currentModule) && !isLoading">
+                <div v-if="['meeting-approvals', 'meeting-finance', 'meeting-reports', 'system-users', 'system-permissions', 'system-logs'].includes(currentModule) && !isLoading">
                     <div class="card">
                         <div class="text-center p-xl">
                             <div class="text-4xl mb-md">🚧</div>
                             <div class="font-bold text-lg mb-sm">功能开发中</div>
                             <div class="text-secondary mb-lg">该模块正在开发完善中，请稍后再试</div>
                             <div class="mt-lg">
-                                <a v-if="currentModule.startsWith('water')" href="/water/admin.html" class="btn btn-primary">
+                                <a v-if="currentModule.startsWith('water')" href="/portal/admin/water/dashboard.html" class="btn btn-primary">
                                     查看完整版水站管理后台
                                 </a>
                                 <a v-else href="/meeting/admin.html" class="btn btn-primary">
@@ -1235,13 +1210,11 @@
                 });
                 
                 const waterMenuItems = ref([
-                    { id: 'water-dashboard', icon: '📊', label: '概览' },
+                    { id: 'water-dashboard', icon: '📊', label: '工作台', url: '/portal/admin/water/dashboard.html' },
                     { id: 'water-pickups', icon: '💧', label: '领水记录', url: '/portal/admin/water/pickups.html' },
                     { id: 'water-settlement', icon: '💳', label: '结算管理', url: '/portal/admin/water/settlement.html' },
                     { id: 'water-products', icon: '📦', label: '产品管理', url: '/portal/admin/water/products.html' },
-                    { id: 'water-accounts', icon: '💰', label: '预付账户', url: '/portal/admin/water/accounts.html' },
-                    { id: 'water-offices', icon: '🏢', label: '办公室管理', url: '/portal/admin/offices.html' },
-                    { id: 'water-users', icon: '👥', label: '用户管理', url: '/portal/admin/users.html' }
+                    { id: 'water-accounts', icon: '💰', label: '预付账户', url: '/portal/admin/water/accounts.html' }
                 ]);
                 
                 const meetingMenuItems = ref([
@@ -1500,8 +1473,6 @@
                         await loadOfficeSettlements();
                     } else if (item.id === 'water-products') {
                         await loadProducts();
-                    } else if (item.id === 'water-offices') {
-                        await loadOffices();
                     } else if (item.id === 'meeting-rooms') {
                         await loadRooms();
                     } else if (item.id === 'meeting-bookings') {

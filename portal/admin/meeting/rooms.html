@@ -467,8 +467,8 @@
             setup() {
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
-                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                const MEETING_PORT = '8001';
+                const API_BASE = `${protocol}//${hostname}:${MEETING_PORT}/api/meeting`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -513,7 +513,7 @@
                 
                 const loadRooms = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/meeting-rooms`);
+                        const res = await fetch(`${API_BASE}/rooms`);
                         if (res.ok) rooms.value = await res.json();
                     } catch (e) {
                         console.error('加载会议室失败:', e);
@@ -580,13 +580,13 @@
                         
                         let res;
                         if (editingRoom.value) {
-                            res = await fetch(`${API_BASE}/meeting-rooms/${editingRoom.value.id}`, {
+                            res = await fetch(`${API_BASE}/rooms/${editingRoom.value.id}`, {
                                 method: 'PUT',
                                 headers,
                                 body: JSON.stringify(payload)
                             });
                         } else {
-                            res = await fetch(`${API_BASE}/meeting-rooms`, {
+                            res = await fetch(`${API_BASE}/rooms`, {
                                 method: 'POST',
                                 headers,
                                 body: JSON.stringify(payload)
@@ -609,7 +609,7 @@
                 const deleteRoom = (room) => {
                     if (!confirm(`确定要删除会议室 "${room.name}" 吗？`)) return;
                     
-                    fetch(`${API_BASE}/meeting-rooms/${room.id}`, { 
+                    fetch(`${API_BASE}/rooms/${room.id}`, { 
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                     })

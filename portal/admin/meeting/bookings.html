@@ -540,8 +540,8 @@
             setup() {
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
-                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                const MEETING_PORT = '8001';
+                const API_BASE = `${protocol}//${hostname}:${MEETING_PORT}/api/meeting`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -581,7 +581,7 @@
                 
                 const loadRooms = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/meeting-rooms`);
+                        const res = await fetch(`${API_BASE}/rooms`);
                         if (res.ok) rooms.value = await res.json();
                     } catch (e) {
                         console.error('加载会议室失败:', e);
@@ -590,7 +590,7 @@
                 
                 const loadBookings = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/meeting-bookings`);
+                        const res = await fetch(`${API_BASE}/bookings`);
                         if (res.ok) {
                             bookings.value = await res.json();
                         }
@@ -680,13 +680,20 @@
                     if (!confirm(`确认通过会议室 "${booking.room_name}" 的预约申请？`)) return;
                     
                     try {
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting-bookings/${booking.id}/approve`, {
+                        
+                        const res = await fetch(`${API_BASE}/approval/approve`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
-                            }
+                            },
+                            body: JSON.stringify({
+                                approval_id: booking.id,
+                                approver_id: userInfo.id || 0,
+                                approver_name: userInfo.name || userInfo.username || '管理员'
+                            })
                         });
                         
                         if (res.ok) {
@@ -694,7 +701,7 @@
                             loadBookings();
                         } else {
                             const err = await res.json();
-                            alert(err.detail || '操作失败');
+                            alert('操作失败: ' + (err.detail || e.message));
                         }
                     } catch (e) {
                         alert('操作失败: ' + e.message);
@@ -706,13 +713,12 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting-bookings/${booking.id}/reject`, {
-                            method: 'POST',
+                        const res = await fetch(`${API_BASE}/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason || '')}`, {
+                            method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ reason })
+                            }
                         });
                         
                         if (res.ok) {
@@ -732,8 +738,8 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting-bookings/${booking.id}/cancel`, {
-                            method: 'POST',
+                        const res = await fetch(`${API_BASE}/bookings/${booking.id}/cancel`, {
+                            method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`

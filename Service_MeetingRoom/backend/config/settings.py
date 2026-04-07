@@ -13,10 +13,16 @@ class MeetingSettings:
         self.APP_VERSION: str = "1.0.0"
         self.ENVIRONMENT: str = "development"
 
-        # 数据库配置
-        self.DATABASE_URL: str = os.getenv(
-            "MEETING_DATABASE_URL", "sqlite:///./meeting.db"
+        # 数据库配置 - 使用统一数据库waterms.db
+        # 默认使用Service_WaterManage下的waterms.db作为统一数据库
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         )
+        default_db_path = os.path.join(
+            project_root, "Service_WaterManage", "backend", "waterms.db"
+        )
+        default_db_url = f"sqlite:///{os.path.abspath(default_db_path)}"
+        self.DATABASE_URL: str = os.getenv("MEETING_DATABASE_URL", default_db_url)
 
         # CORS配置
         self.CORS_ALLOW_ORIGINS: List[str] = ["*"]

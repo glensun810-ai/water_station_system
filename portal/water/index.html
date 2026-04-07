@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>水站服务 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+        }
+        
+        .module-container {
+            padding: var(--spacing-lg);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .tab-nav {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: none;
+            background: none;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all var(--transition-fast);
+        }
+        
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .office-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: var(--spacing-sm);
+        }
+        
+        .office-item {
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .office-item:hover {
+            border-color: var(--primary);
+        }
+        
+        .office-item.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .office-name {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .office-room {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .product-list {
+            background: white;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+        .product-item .product-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-item .product-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .product-item .product-spec {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .product-item .product-promo {
+            font-size: 11px;
+            color: var(--info);
+            background: var(--info-light);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .product-item .product-promo .fa-gift {
+            margin-right: 4px;
+        }
+
+        .product-item .product-stock {
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .product-item .product-stock.low { color: var(--warning); }
+        .product-item .product-stock.empty { color: var(--danger); }
+        .product-item .product-stock.ok { color: var(--success); }
+
+        .product-item .product-stock .fa-box {
+            margin-right: 4px;
+        }
+
+        .product-item .stock-label {
+            font-weight: 500;
+        }
+
+        .product-item .product-price {
+            text-align: right;
+            margin-right: 12px;
+            min-width: 60px;
+        }
+
+        .product-item .product-price-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .product-item .product-price-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .product-item .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .product-item .qty-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.15s;
+        }
+
+        .product-item .qty-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .product-item .qty-btn-minus {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .product-item .qty-btn-minus:hover:not(:disabled) {
+            background: var(--border);
+        }
+
+        .product-item .qty-btn-plus {
+            background: var(--primary);
+            color: white;
+        }
+
+        .product-item .qty-btn-plus:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+
+        .product-item .qty-input {
+            width: 48px;
+            height: 36px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+            padding: var(--spacing-xs);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+
+        .product-item .qty-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .product-item .promo-gift {
+            font-size: 11px;
+            color: var(--success);
+            background: var(--success-light);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            margin-top: 6px;
+        }
+
+        .product-item .promo-gift .fa-check-circle {
+            margin-right: 4px;
+        }
+
+        @media (max-width: 480px) {
+            .product-item {
+                flex-wrap: wrap;
+                gap: var(--spacing-sm);
+                padding: 12px;
+            }
+
+            .product-item .product-info {
+                flex: 1 1 calc(100% - 130px);
+            }
+
+            .product-item .product-name {
+                font-size: 14px;
+            }
+
+            .product-item .product-price {
+                margin-right: 0;
+            }
+
+            .product-item .qty-control {
+                flex: 1 1 auto;
+                justify-content: flex-end;
+            }
+
+            .product-item .qty-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .product-item .qty-input {
+                width: 48px;
+                height: 40px;
+                font-size: 16px;
+            }
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+            display: block;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-md) var(--spacing-lg);
+            padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0));
+            z-index: 100;
+        }
+        
+        .bottom-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: var(--spacing-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .submit-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .submit-btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .stat-item {
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .stat-item:hover {
+            transform: scale(0.98);
+        }
+        
+        .stat-item.pending { background: var(--warning-light); }
+        .stat-item.applied { background: var(--info-light); }
+        .stat-item.settled { background: var(--success-light); }
+        .stat-item.all { background: var(--bg-secondary); }
+        
+        .stat-item.selected { box-shadow: 0 0 0 2px var(--primary); }
+        
+        .stat-value {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-xs);
+        }
+        
+        .stat-amount {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .record-item {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .record-office {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .record-time {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-pending { background: var(--warning-light); color: var(--warning-dark); }
+        .status-applied { background: var(--info-light); color: var(--info-dark); }
+        .status-settled { background: var(--success-light); color: var(--success-dark); }
+        
+        .record-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .record-product {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .record-amount {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .record-action {
+            margin-top: var(--spacing-sm);
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .action-btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+        }
+        
+        .action-btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .action-btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .date-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .date-filter-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+        
+        .date-filter-btn:hover {
+            background: var(--border);
+        }
+        
+        .date-filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-lg);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .office-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .office-list-item:hover {
+            border-color: var(--primary);
+        }
+        
+        .office-list-item.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .promo-gift {
+            background: var(--success-light);
+            color: var(--success-dark);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            margin-top: 4px;
+            display: inline-block;
+        }
+        
+        .gift-summary {
+            background: var(--success-light);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+            color: var(--success-dark);
+        }
+        
+        .admin-filter {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+                padding-bottom: 120px;
+            }
+            
+            .office-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <global-header :breadcrumbs="breadcrumbs"></global-header>
+            
+            <div class="module-container">
+                <div class="tab-nav">
+                    <button class="tab-btn" :class="{ active: activeTab === 'pickup' }" @click="activeTab = 'pickup'">
+                        领水登记
+                    </button>
+                    <button class="tab-btn" :class="{ active: activeTab === 'records' }" @click="activeTab = 'records'">
+                        我的记录
+                    </button>
+                    <button class="tab-btn" :class="{ active: activeTab === 'settings' }" @click="activeTab = 'settings'">
+                        办公室设置
+                    </button>
+                </div>
+                
+                <!-- 领水登记 -->
+                <div v-show="activeTab === 'pickup'">
+                    <div class="section-card">
+                        <div class="section-title">
+                            <span>1️⃣</span>
+                            <span>选择办公室</span>
+                        </div>
+                        <div class="office-grid">
+                            <div v-for="office in userOffices" 
+                                 :key="office.id" 
+                                 class="office-item"
+                                 :class="{ selected: form.officeId === office.id }"
+                                 @click="selectOffice(office)">
+                                <div class="office-name">{{ office.name }}</div>
+                                <div class="office-room">{{ office.room_number || '未设置房间号' }}</div>
+                            </div>
+                        </div>
+                        <div v-if="userOffices.length === 0" class="empty-state" style="padding: var(--spacing-lg);">
+                            <p>暂无可用办公室</p>
+                            <button class="submit-btn" @click="activeTab = 'settings'" style="margin-top: var(--spacing-md); width: auto;">
+                                去设置办公室
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="section-card" v-if="form.officeId">
+                        <div class="section-title">
+                            <span>2️⃣</span>
+                            <span>选择产品规格和数量</span>
+                        </div>
+                        <div class="product-list">
+                            <div v-for="product in products" :key="product.id" class="product-item">
+                                <div class="product-info">
+                                    <div class="product-name">{{ product.name }}</div>
+                                    <div class="product-spec">{{ product.specification }}</div>
+                                    <div v-if="product.promo_threshold && product.promo_gift" class="product-promo">
+                                        <i class="fas fa-gift fa-xs"></i> 买{{ product.promo_threshold }}赠{{ product.promo_gift }}
+                                    </div>
+                                    <div class="product-stock" :class="getStockClass(product.stock)">
+                                        <i class="fas fa-box" :class="getStockIconClass(product.stock)"></i>
+                                        库存: {{ product.stock }}{{ product.unit }}
+                                        <span v-if="product.stock === 0" class="stock-label">(已售罄)</span>
+                                        <span v-else-if="product.stock <= 10" class="stock-label">(库存紧张)</span>
+                                    </div>
+                                    <div v-if="cart[product.id] > 0 && product.promo_threshold && product.promo_gift" class="promo-gift">
+                                        <i class="fas fa-check-circle"></i> 即将获得 <strong>{{ calculatePromoGift(product, cart[product.id]) }}</strong> 赠送
+                                    </div>
+                                </div>
+                                <div class="product-price">
+                                    <div class="product-price-value">¥{{ product.price }}</div>
+                                    <div class="product-price-unit">/{{ product.unit }}</div>
+                                </div>
+                                <div class="qty-control">
+                                    <button class="qty-btn qty-btn-minus" @click="decreaseQty(product.id)" :disabled="!cart[product.id]">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" v-model.number="cart[product.id]" min="0" @change="validateQty(product.id)" class="qty-input">
+                                    <button class="qty-btn qty-btn-plus" @click="increaseQty(product.id)" :disabled="product.stock === 0">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-card" v-if="form.officeId && totalQty > 0">
+                        <div class="section-title">
+                            <span>3️⃣</span>
+                            <span>领取人和时间</span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">领取人</label>
+                                <input type="text" class="form-input" v-model="form.personName" placeholder="请输入姓名">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">领取时间</label>
+                                <input type="datetime-local" class="form-input" v-model="form.pickupTime">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="form.officeId" class="bottom-bar">
+                        <div v-if="totalGiftQty > 0" class="gift-summary">
+                            🎉 已优惠 <strong>{{ totalGiftQty }}</strong> 件
+                            <span style="float: right;">
+                                原价: ¥{{ originalAmount }} → 实付: ¥{{ totalAmount }}
+                            </span>
+                        </div>
+                        <div class="bottom-summary">
+                            <div>
+                                <span style="color: var(--text-secondary);">已选 </span>
+                                <span style="color: var(--primary); font-weight: 600;">{{ totalQty }}</span>
+                                <span style="color: var(--text-secondary);"> 件</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div v-if="totalGiftQty > 0" style="font-size: var(--font-size-xs); color: var(--text-secondary); text-decoration: line-through);">
+                                    ¥{{ originalAmount }}
+                                </div>
+                                <div style="font-size: var(--font-size-xl); font-weight: 700; color: var(--primary);">
+                                    ¥{{ totalAmount }}
+                                </div>
+                            </div>
+                        </div>
+                        <button class="submit-btn" @click="submitPickup" :disabled="!canSubmit">
+                            确认提交
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 我的记录 -->
+                <div v-show="activeTab === 'records'">
+                    <div class="section-card">
+                        <div class="section-title">
+                            <span>📋</span>
+                            <span>筛选条件</span>
+                        </div>
+                        
+                        <div class="admin-filter" v-if="isAdmin">
+                            <div class="form-group">
+                                <label class="form-label">办公室筛选</label>
+                                <select class="form-select" v-model="filterOfficeId">
+                                    <option value="">全部办公室</option>
+                                    <option v-for="office in allOffices" :key="office.id" :value="office.id">
+                                        {{ office.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-item all" :class="{ selected: recordStatusFilter === '' }" @click="recordStatusFilter = ''">
+                                <div class="stat-value">{{ recordStats.total.count }}</div>
+                                <div class="stat-label">全部</div>
+                            </div>
+                            <div class="stat-item pending" :class="{ selected: recordStatusFilter === 'pending' }" @click="recordStatusFilter = 'pending'">
+                                <div class="stat-value">{{ recordStats.pending.count }}</div>
+                                <div class="stat-label">待付款</div>
+                            </div>
+                            <div class="stat-item applied" :class="{ selected: recordStatusFilter === 'applied' }" @click="recordStatusFilter = 'applied'">
+                                <div class="stat-value">{{ recordStats.applied.count }}</div>
+                                <div class="stat-label">待确认</div>
+                            </div>
+                            <div class="stat-item settled" :class="{ selected: recordStatusFilter === 'settled' }" @click="recordStatusFilter = 'settled'">
+                                <div class="stat-value">{{ recordStats.settled.count }}</div>
+                                <div class="stat-label">已结清</div>
+                            </div>
+                        </div>
+                        
+                        <div class="date-filters">
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === 'today' }" @click="setDateFilter('today')">今天</button>
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === 'yesterday' }" @click="setDateFilter('yesterday')">昨天</button>
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === '3days' }" @click="setDateFilter('3days')">3天</button>
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === '7days' }" @click="setDateFilter('7days')">1周</button>
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === '30days' }" @click="setDateFilter('30days')">1月</button>
+                            <button class="date-filter-btn" :class="{ active: dateQuickFilter === 'thisMonth' }" @click="setDateFilter('thisMonth')">本月</button>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" class="form-input" v-model="dateFrom" placeholder="开始日期">
+                            </div>
+                            <div class="form-group">
+                                <input type="date" class="form-input" v-model="dateTo" placeholder="结束日期">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="filteredRecords.length > 0">
+                        <div v-for="record in filteredRecords" :key="record.id" class="record-item">
+                            <div class="record-header">
+                                <div>
+                                    <div class="record-office">{{ record.office_name }}</div>
+                                    <div class="record-time">{{ formatDateTime(record.pickup_time) }}</div>
+                                </div>
+                                <span class="status-badge" :class="'status-' + record.settlement_status">
+                                    {{ getStatusText(record.settlement_status) }}
+                                </span>
+                            </div>
+                            <div class="record-body">
+                                <div class="record-product">
+                                    {{ record.product_name }} × {{ record.quantity }}
+                                </div>
+                                <div class="record-amount">
+                                    ¥{{ record.total_amount.toFixed(2) }}
+                                </div>
+                            </div>
+                            <div class="record-action">
+                                <button v-if="record.settlement_status === 'pending'" class="action-btn action-btn-primary" @click="markAsPaid(record.id)">
+                                    去付款
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>暂无记录</p>
+                    </div>
+                </div>
+                
+                <!-- 办公室设置 -->
+                <div v-show="activeTab === 'settings'">
+                    <div class="section-card">
+                        <div class="section-title">
+                            <span>🏢</span>
+                            <span>我的办公室</span>
+                        </div>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                            选择您所属的办公室（可多选），并设置其中一个为默认办公室。
+                        </p>
+                        
+                        <div>
+                            <div v-for="office in allOffices" :key="office.id" 
+                                 class="office-list-item"
+                                 :class="{ selected: isOfficeSelected(office.id) }"
+                                 @click="toggleOffice(office)">
+                                <div>
+                                    <div style="font-weight: 600;">{{ office.name }}</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">{{ office.room_number || '未设置房间号' }}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                                    <span v-if="isOfficeSelected(office.id)" 
+                                          style="font-size: var(--font-size-xs); padding: 2px 8px; background: var(--primary-light); color: var(--primary); border-radius: var(--radius-sm);">
+                                        {{ getOfficeDefaultText(office.id) }}
+                                    </span>
+                                    <button v-if="isOfficeSelected(office.id)" 
+                                            class="action-btn action-btn-secondary"
+                                            @click.stop="setAsDefault(office.id)">
+                                        {{ isDefaultOffice(office.id) ? '默认' : '设为默认' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="submit-btn" @click="saveOffices" style="margin-top: var(--spacing-lg);">
+                            保存设置
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 成功提示 -->
+            <div v-if="showSuccess" class="modal-overlay" @click="showSuccess = false">
+                <div class="modal" @click.stop>
+                    <div class="modal-header">
+                        <h3 class="modal-title">✅ 提交成功</h3>
+                        <button class="modal-close" @click="showSuccess = false">&times;</button>
+                    </div>
+                    <div class="modal-body" style="text-align: center;">
+                        <p>{{ successMessage }}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="submit-btn" @click="showSuccess = false; resetForm();">确定</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 错误提示 -->
+            <div v-if="errorMessage" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); z-index: 3000;">
+                {{ errorMessage }}
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const breadcrumbs = [
+                    { text: '首页', url: '/portal/index.html' },
+                    { text: '水站服务', icon: '💧' }
+                ];
+                
+                const activeTab = ref(localStorage.getItem('waterActiveTab') || 'pickup');
+                const isAdmin = ref(false);
+                const userInfo = ref(null);
+                
+                const products = ref([]);
+                const allOffices = ref([]);
+                const userOffices = ref([]);
+                const form = ref({
+                    officeId: '',
+                    personName: '',
+                    pickupTime: ''
+                });
+                const cart = ref({});
+                
+                const records = ref([]);
+                const recordStatusFilter = ref('');
+                const dateQuickFilter = ref('');
+                const dateFrom = ref('');
+                const dateTo = ref('');
+                const filterOfficeId = ref('');
+                
+                const showSuccess = ref(false);
+                const successMessage = ref('');
+                const errorMessage = ref('');
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    userInfo.value = JSON.parse(userInfoStr);
+                    isAdmin.value = userInfo.value.role === 'admin' || userInfo.value.role === 'super_admin';
+                    
+                    return true;
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/offices?is_active=1`);
+                        if (res.ok) {
+                            allOffices.value = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('加载办公室失败:', e);
+                    }
+                };
+                
+                const loadProducts = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/products?active_only=true`);
+                        if (res.ok) {
+                            products.value = await res.json();
+                            products.value.forEach(p => {
+                                if (!(p.id in cart.value)) {
+                                    cart.value[p.id] = 0;
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('加载产品失败:', e);
+                    }
+                };
+                
+                const loadUserOffices = () => {
+                    const stored = localStorage.getItem('user_offices');
+                    if (stored) {
+                        userOffices.value = JSON.parse(stored);
+                    }
+                    if (userOffices.value.length > 0) {
+                        const defaultOffice = userOffices.value.find(o => o.is_default) || userOffices.value[0];
+                        if (defaultOffice && !form.value.officeId) {
+                            form.value.officeId = defaultOffice.id;
+                            form.value.personName = defaultOffice.leader_name || defaultOffice.manager_name || userInfo.value?.name || '';
+                        }
+                    }
+                };
+                
+                const loadRecords = async () => {
+                    try {
+                        let url = `${API_BASE}/user/office-pickups?limit=500`;
+                        
+                        if (isAdmin.value && filterOfficeId.value) {
+                            url += `&office_id=${filterOfficeId.value}`;
+                        }
+                        
+                        const res = await fetch(url);
+                        if (res.ok) {
+                            let data = await res.json();
+                            
+                            if (!isAdmin.value) {
+                                const userOfficeIds = userOffices.value.map(o => o.id);
+                                data = data.filter(r => userOfficeIds.includes(r.office_id));
+                            }
+                            
+                            records.value = data;
+                        }
+                    } catch (e) {
+                        console.error('加载记录失败:', e);
+                    }
+                };
+                
+                const selectOffice = (office) => {
+                    form.value.officeId = office.id;
+                    form.value.personName = office.leader_name || office.manager_name || userInfo.value?.name || '';
+                };
+                
+                const increaseQty = (productId) => {
+                    cart.value[productId] = (cart.value[productId] || 0) + 1;
+                };
+                
+                const decreaseQty = (productId) => {
+                    if (cart.value[productId] > 0) {
+                        cart.value[productId]--;
+                    }
+                };
+                
+                const calculatePromoGift = (product, quantity) => {
+                    if (!product.promo_threshold || !product.promo_gift || quantity < product.promo_threshold) {
+                        return 0;
+                    }
+                    const cycle = product.promo_threshold + product.promo_gift;
+                    const cycles = Math.floor(quantity / cycle);
+                    const remainder = quantity % cycle;
+                    let gift = cycles * product.promo_gift;
+                    if (remainder > product.promo_threshold) {
+                        gift += Math.min(remainder - product.promo_threshold, product.promo_gift);
+                    }
+                    return gift;
+                };
+                
+                const getStockClass = (stock) => {
+                    if (stock === 0) return 'empty';
+                    if (stock <= 10) return 'low';
+                    return 'ok';
+                };
+                
+                const getStockIconClass = (stock) => {
+                    if (stock === 0) return 'text-red-500';
+                    if (stock <= 10) return 'text-amber-500';
+                    return 'text-green-500';
+                };
+                
+                const validateQty = (productId) => {
+                    const qty = cart.value[productId];
+                    const product = products.value.find(p => p.id === productId);
+                    if (product && qty > product.stock) {
+                        cart.value[productId] = product.stock;
+                    }
+                    if (qty < 0 || !qty) {
+                        cart.value[productId] = 0;
+                    }
+                };
+                
+                const getStatusText = (status) => {
+                    const map = {
+                        pending: '待付款',
+                        applied: '付款待确认',
+                        settled: '已结清'
+                    };
+                    return map[status] || status;
+                };
+                
+                const formatDateTime = (dt) => {
+                    if (!dt) return '-';
+                    const date = new Date(dt);
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                };
+                
+                const setDateFilter = (type) => {
+                    dateQuickFilter.value = type;
+                    const today = new Date();
+                    today.setHours(23, 59, 59, 999);
+                    
+                    let start = new Date();
+                    start.setHours(0, 0, 0, 0);
+                    let end = new Date();
+                    end.setHours(23, 59, 59, 999);
+                    
+                    switch (type) {
+                        case 'today':
+                            break;
+                        case 'yesterday':
+                            start.setDate(start.getDate() - 1);
+                            end.setDate(end.getDate() - 1);
+                            break;
+                        case '3days':
+                            start.setDate(start.getDate() - 2);
+                            break;
+                        case '7days':
+                            start.setDate(start.getDate() - 6);
+                            break;
+                        case '30days':
+                            start.setDate(start.getDate() - 29);
+                            break;
+                        case 'thisMonth':
+                            start = new Date(today.getFullYear(), today.getMonth(), 1);
+                            break;
+                    }
+                    
+                    dateFrom.value = start.toISOString().slice(0, 10);
+                    dateTo.value = end.toISOString().slice(0, 10);
+                };
+                
+                const isOfficeSelected = (officeId) => {
+                    return userOffices.value.some(o => o.id === officeId);
+                };
+                
+                const isDefaultOffice = (officeId) => {
+                    const office = userOffices.value.find(o => o.id === officeId);
+                    return office && office.is_default;
+                };
+                
+                const getOfficeDefaultText = (officeId) => {
+                    return isDefaultOffice(officeId) ? '默认' : '';
+                };
+                
+                const toggleOffice = (office) => {
+                    const idx = userOffices.value.findIndex(o => o.id === office.id);
+                    if (idx > -1) {
+                        if (userOffices.value.length > 1) {
+                            userOffices.value.splice(idx, 1);
+                        } else {
+                            showError('至少需要保留一个办公室');
+                        }
+                    } else {
+                        userOffices.value.push({
+                            id: office.id,
+                            name: office.name,
+                            room_number: office.room_number,
+                            leader_name: office.leader_name || office.manager_name || '',
+                            is_default: userOffices.value.length === 0
+                        });
+                    }
+                };
+                
+                const setAsDefault = (officeId) => {
+                    userOffices.value.forEach(o => {
+                        o.is_default = o.id === officeId;
+                    });
+                };
+                
+                const saveOffices = () => {
+                    if (userOffices.value.length === 0) {
+                        showError('请至少选择一个办公室');
+                        return;
+                    }
+                    
+                    if (!userOffices.value.some(o => o.is_default)) {
+                        userOffices.value[0].is_default = true;
+                    }
+                    
+                    localStorage.setItem('user_offices', JSON.stringify(userOffices.value));
+                    
+                    const defaultOffice = userOffices.value.find(o => o.is_default);
+                    if (defaultOffice) {
+                        form.value.officeId = defaultOffice.id;
+                        form.value.personName = defaultOffice.leader_name || defaultOffice.manager_name || userInfo.value?.name || '';
+                    }
+                    
+                    successMessage.value = '办公室设置已保存';
+                    showSuccess.value = true;
+                    loadRecords();
+                };
+                
+                const submitPickup = async () => {
+                    if (!canSubmit.value) return;
+                    
+                    const items = Object.entries(cart.value).filter(([k, v]) => v > 0);
+                    if (items.length === 0) {
+                        showError('请选择产品数量');
+                        return;
+                    }
+                    
+                    try {
+                        for (const [productId, qty] of items) {
+                            const res = await fetch(`${API_BASE}/user/office-pickup`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    office_id: form.value.officeId,
+                                    product_id: parseInt(productId),
+                                    quantity: qty,
+                                    pickup_person: form.value.personName || '匿名',
+                                    pickup_time: form.value.pickupTime || null
+                                })
+                            });
+                            
+                            if (!res.ok) {
+                                const e = await res.json();
+                                showError(e.detail || '提交失败');
+                                return;
+                            }
+                        }
+                        
+                        successMessage.value = '领水记录提交成功！';
+                        showSuccess.value = true;
+                        resetForm();
+                    } catch (e) {
+                        showError('网络错误，请重试');
+                    }
+                };
+                
+                const resetForm = () => {
+                    products.value.forEach(p => {
+                        cart.value[p.id] = 0;
+                    });
+                    form.value.personName = userInfo.value?.name || '';
+                    
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                    form.value.pickupTime = now.toISOString().slice(0, 16);
+                };
+                
+                const markAsPaid = async (recordId) => {
+                    if (!confirm('确认已付款？')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/user/office-pickup/${recordId}/pay`, { method: 'POST' });
+                        if (res.ok) {
+                            loadRecords();
+                        } else {
+                            const e = await res.json();
+                            showError(e.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        showError('网络错误');
+                    }
+                };
+                
+                const showError = (msg) => {
+                    errorMessage.value = msg;
+                    setTimeout(() => { errorMessage.value = ''; }, 3000);
+                };
+                
+                const totalQty = computed(() => {
+                    return Object.values(cart.value).reduce((sum, v) => sum + (v || 0), 0);
+                });
+                
+                const totalGiftQty = computed(() => {
+                    return products.value.reduce((sum, p) => {
+                        return sum + calculatePromoGift(p, cart.value[p.id] || 0);
+                    }, 0);
+                });
+                
+                const originalAmount = computed(() => {
+                    return products.value.reduce((sum, p) => {
+                        return sum + (cart.value[p.id] || 0) * p.price;
+                    }, 0).toFixed(2);
+                });
+                
+                const totalAmount = computed(() => {
+                    const discount = products.value.reduce((sum, p) => {
+                        const qty = cart.value[p.id] || 0;
+                        const gift = calculatePromoGift(p, qty);
+                        return sum + gift * p.price;
+                    }, 0);
+                    return (parseFloat(originalAmount.value) - discount).toFixed(2);
+                });
+                
+                const canSubmit = computed(() => {
+                    return form.value.officeId && totalQty.value > 0 && form.value.personName;
+                });
+                
+                const recordStats = computed(() => {
+                    const pending = records.value.filter(r => r.settlement_status === 'pending');
+                    const applied = records.value.filter(r => r.settlement_status === 'applied');
+                    const settled = records.value.filter(r => r.settlement_status === 'settled');
+                    return {
+                        pending: {
+                            count: pending.length,
+                            amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        },
+                        applied: {
+                            count: applied.length,
+                            amount: applied.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        },
+                        settled: {
+                            count: settled.length,
+                            amount: settled.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        },
+                        total: {
+                            count: records.value.length,
+                            amount: records.value.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        }
+                    };
+                });
+                
+                const filteredRecords = computed(() => {
+                    let result = records.value;
+                    
+                    if (recordStatusFilter.value) {
+                        result = result.filter(r => r.settlement_status === recordStatusFilter.value);
+                    }
+                    
+                    if (dateFrom.value) {
+                        const from = new Date(dateFrom.value);
+                        from.setHours(0, 0, 0, 0);
+                        result = result.filter(r => new Date(r.pickup_time) >= from);
+                    }
+                    
+                    if (dateTo.value) {
+                        const to = new Date(dateTo.value);
+                        to.setHours(23, 59, 59, 999);
+                        result = result.filter(r => new Date(r.pickup_time) <= to);
+                    }
+                    
+                    return result.sort((a, b) => new Date(b.pickup_time) - new Date(a.pickup_time));
+                });
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await Promise.all([loadOffices(), loadProducts()]);
+                    loadUserOffices();
+                    
+                    if (activeTab.value === 'records') {
+                        loadRecords();
+                    }
+                    
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                    form.value.pickupTime = now.toISOString().slice(0, 16);
+                    form.value.personName = userInfo.value?.name || '';
+                    
+                    loading.value = false;
+                });
+                
+                watch(activeTab, (newVal) => {
+                    localStorage.setItem('waterActiveTab', newVal);
+                    if (newVal === 'records') {
+                        loadRecords();
+                    }
+                });
+                
+                watch(filterOfficeId, () => {
+                    loadRecords();
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    breadcrumbs,
+                    activeTab,
+                    isAdmin,
+                    products,
+                    allOffices,
+                    userOffices,
+                    form,
+                    cart,
+                    records,
+                    recordStatusFilter,
+                    dateQuickFilter,
+                    dateFrom,
+                    dateTo,
+                    filterOfficeId,
+                    showSuccess,
+                    successMessage,
+                    errorMessage,
+                    totalQty,
+                    totalGiftQty,
+                    originalAmount,
+                    totalAmount,
+                    canSubmit,
+                    recordStats,
+                    filteredRecords,
+                    selectOffice,
+                    increaseQty,
+                    decreaseQty,
+                    calculatePromoGift,
+                    getStockClass,
+                    getStockIconClass,
+                    validateQty,
+                    getStatusText,
+                    formatDateTime,
+                    setDateFilter,
+                    isOfficeSelected,
+                    isDefaultOffice,
+                    getOfficeDefaultText,
+                    toggleOffice,
+                    setAsDefault,
+                    saveOffices,
+                    submitPickup,
+                    resetForm,
+                    markAsPaid
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

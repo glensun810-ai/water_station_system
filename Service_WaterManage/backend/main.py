@@ -215,6 +215,11 @@ app.include_router(user_auth_router)
 # 后续逐步迁移到 core/ 和 services/ 目录
 
 from api_office import router as legacy_office_router
+from api.water import router as water_router
+from api.products import (
+    router as products_router,
+    category_router as product_categories_router,
+)
 from api_unified import router as legacy_unified_router
 from api_unified_settlement import router as legacy_unified_settlement_router
 from api_unified_order import router as legacy_unified_order_router
@@ -240,6 +245,9 @@ from api_refund import router as refund_router
 from api_invoice import router as invoice_router
 
 app.include_router(legacy_office_router)
+app.include_router(water_router)
+app.include_router(products_router)
+app.include_router(product_categories_router)
 app.include_router(legacy_unified_router)
 app.include_router(legacy_unified_settlement_router)
 app.include_router(legacy_unified_order_router)

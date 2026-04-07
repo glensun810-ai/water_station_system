@@ -20,7 +20,6 @@ class MeetingRoom(Base, TimestampMixin):
     member_price_per_hour = Column(Float, default=0.0)
     free_hours_per_month = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    description = Column(Text)
 
     # 关系
     bookings = relationship("MeetingBooking", back_populates="room")

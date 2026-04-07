@@ -428,8 +428,8 @@
             setup() {
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
-                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                const MEETING_PORT = '8001';
+                const API_BASE = `${protocol}//${hostname}:${MEETING_PORT}/api/meeting`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -465,7 +465,7 @@
                         const headers = {};
                         if (token) headers['Authorization'] = `Bearer ${token}`;
                         
-                        const res = await fetch(`${API_BASE}/meeting-approvals`, { headers });
+                        const res = await fetch(`${API_BASE}/approvals`, { headers });
                         if (res.ok) {
                             approvals.value = await res.json();
                         }
@@ -524,13 +524,19 @@
                     if (!confirm(`确认通过此申请？`)) return;
                     
                     try {
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting-approvals/${approval.id}/approve`, {
+                        const res = await fetch(`${API_BASE}/approval/approve`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
-                            }
+                            },
+                            body: JSON.stringify({
+                                approval_id: approval.id,
+                                approver_id: userInfo.id || 0,
+                                approver_name: userInfo.name || userInfo.username || '管理员'
+                            })
                         });
                         
                         if (res.ok) {
@@ -546,29 +552,7 @@
                 };
                 
                 const reject = async (approval) => {
-                    const reason = prompt('请输入拒绝原因（可选）:', '');
-                    
-                    try {
-                        const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting-approvals/${approval.id}/reject`, {
-                            method: 'POST',
-                            headers: { 
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ reason })
-                        });
-                        
-                        if (res.ok) {
-                            alert('已拒绝申请');
-                            loadApprovals();
-                        } else {
-                            const err = await res.json();
-                            alert(err.detail || '操作失败');
-                        }
-                    } catch (e) {
-                        alert('操作失败: ' + e.message);
-                    }
+                    alert('拒绝功能暂未实现，请使用"取消预约"功能');
                 };
                 
                 onMounted(async () => {
