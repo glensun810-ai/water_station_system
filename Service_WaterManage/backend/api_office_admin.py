@@ -116,9 +116,7 @@ def get_office_admins(office_id: int, db: Session = Depends(get_db)):
                     "is_primary": row.is_primary,
                     "role_type": row.role_type,
                     "role_type_name": role_type_name,
-                    "created_at": row.created_at.isoformat()
-                    if row.created_at
-                    else None,
+                    "created_at": str(row.created_at) if row.created_at else None,
                 }
             )
 
@@ -171,9 +169,7 @@ def get_user_managed_offices(user_id: int, db: Session = Depends(get_db)):
                     "is_primary": row.is_primary,
                     "role_type": row.role_type,
                     "role_type_name": role_type_name,
-                    "created_at": row.created_at.isoformat()
-                    if row.created_at
-                    else None,
+                    "created_at": str(row.created_at) if row.created_at else None,
                 }
             )
 
