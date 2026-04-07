@@ -1289,41 +1289,48 @@
                 });
                 
                 const checkAuth = async () => {
+                    // 检查token是否存在
                     if (!token.value) {
                         window.location.href = '/portal/admin/login.html';
                         return false;
                     }
-                    try {
-                        const res = await fetch(`${API_BASE}/api/user/info`, {
-                            headers: { 'Authorization': `Bearer ${token.value}` }
-                        });
-                        if (!res.ok) {
-                            localStorage.removeItem('token');
-                            window.location.href = '/portal/admin/login.html';
-                            return false;
+                    
+                    // 从localStorage读取用户信息（登录时已保存）
+                    const storedUserInfo = localStorage.getItem('userInfo');
+                    if (storedUserInfo) {
+                        try {
+                            const userData = JSON.parse(storedUserInfo);
+                            currentUser.value = {
+                                id: userData.id,
+                                name: userData.name,
+                                role: userData.role,
+                                roleLabel: getRoleLabel(userData.role),
+                                department: userData.department,
+                                is_admin: userData.is_admin
+                            };
+                            console.log('管理后台：已从localStorage读取用户信息', currentUser.value);
+                            return true;
+                        } catch (err) {
+                            console.error('解析用户信息失败:', err);
                         }
-                        const userData = await res.json();
-                        currentUser.value = {
-                            id: userData.id,
-                            name: userData.name || userData.username,
-                            role: userData.role,
-                            roleLabel: getRoleLabel(userData.role)
-                        };
-                        return true;
-                    } catch (err) {
-                        console.error('Auth check failed:', err);
-                        localStorage.removeItem('token');
-                        window.location.href = '/portal/admin/login.html';
-                        return false;
                     }
+                    
+                    // 如果localStorage没有userInfo，直接跳转登录（不尝试API验证）
+                    // 因为登录时已经保存了userInfo，如果没有说明登录状态异常
+                    console.error('管理后台：localStorage中没有userInfo，跳转登录');
+                    localStorage.removeItem('token');
+                    window.location.href = '/portal/admin/login.html';
+                    return false;
                 };
                 
                 const getRoleLabel = (role) => {
                     const labels = {
                         'super_admin': '超级管理员',
-                        'water_admin': '水站管理员',
-                        'meeting_admin': '会议室管理员',
-                        'finance_admin': '财务管理员'
+                        'admin': '系统管理员',
+                        'office_admin': '办公室管理员',
+                        'user': '普通用户',
+                        '超级管理员': '超级管理员',
+                        '管理员': '系统管理员'
                     };
                     return labels[role] || '管理员';
                 };
