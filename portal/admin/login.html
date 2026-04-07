@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2563EB">
-    <title>管理后台登录 - AI产业集群空间服务</title>
+    <title>登录 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
@@ -543,9 +543,9 @@
                     <span class="mdi mdi-home"></span>
                     <span>首页</span>
                 </button>
-                <div class="logo">👑</div>
-                <h1>管理后台</h1>
-                <p>Administration Portal</p>
+                <div class="logo">🏢</div>
+                <h1>欢迎回来</h1>
+                <p>登录AI产业集群空间服务平台</p>
             </div>
             
             <div class="login-body">
@@ -729,6 +729,8 @@
             
             <div class="footer-links">
                 <a href="/portal/index.html">返回首页</a>
+                <span style="color: var(--text-tertiary); margin: 0 8px;">|</span>
+                <a href="/portal/login.html" style="color: var(--text-secondary);">用户登录入口</a>
             </div>
         </div>
     </div>
@@ -880,21 +882,16 @@
                         const data = await response.json();
                         
                         if (response.ok) {
-                            if (!['super_admin', 'admin'].includes(data.user_info.role)) {
-                                errorMessage.value = '权限不足，仅限管理员登录';
-                                loading.value = false;
-                                return;
-                            }
-                            
                             localStorage.setItem('token', data.access_token);
                             
                             const userInfo = {
                                 id: data.user_info.user_id,
                                 name: data.user_info.username,
-                                role: data.user_info.role_name,
+                                role: data.user_info.role,
+                                roleName: data.user_info.role_name,
                                 department: data.user_info.department || '',
                                 avatar: getAvatarEmoji(data.user_info.role),
-                                is_admin: true
+                                is_admin: ['super_admin', 'admin', 'office_admin'].includes(data.user_info.role)
                             };
                             localStorage.setItem('userInfo', JSON.stringify(userInfo));
                             
@@ -925,7 +922,10 @@
                             }
                             
                             saveAccountsToStorage();
-                            window.location.href = '/portal/admin/index.html';
+                            
+                            // 智能跳转逻辑
+                            const redirectUrl = getRedirectUrl(userInfo.role);
+                            window.location.href = redirectUrl;
                         } else {
                             errorMessage.value = data.detail || '登录失败，请检查用户名和密码';
                         }
@@ -954,21 +954,16 @@
                         const data = await response.json();
                         
                         if (response.ok) {
-                            if (!['super_admin', 'admin'].includes(data.user_info.role)) {
-                                errorMessage.value = '权限不足，仅限管理员登录';
-                                loading.value = false;
-                                return;
-                            }
-                            
                             localStorage.setItem('token', data.access_token);
                             
                             const userInfo = {
                                 id: data.user_info.user_id,
                                 name: data.user_info.username,
-                                role: data.user_info.role_name,
+                                role: data.user_info.role,
+                                roleName: data.user_info.role_name,
                                 department: data.user_info.department || '',
                                 avatar: quickLoginAccount.value.avatar,
-                                is_admin: true
+                                is_admin: ['super_admin', 'admin', 'office_admin'].includes(data.user_info.role)
                             };
                             localStorage.setItem('userInfo', JSON.stringify(userInfo));
                             
@@ -978,7 +973,9 @@
                                 saveAccountsToStorage();
                             }
                             
-                            window.location.href = '/portal/admin/index.html';
+                            // 智能跳转逻辑
+                            const redirectUrl = getRedirectUrl(userInfo.role);
+                            window.location.href = redirectUrl;
                         } else {
                             errorMessage.value = data.detail || '登录失败';
                             quickLoginAccount.value.hasPassword = false;
@@ -1009,6 +1006,27 @@
                     return avatars[role] || '👤';
                 };
                 
+                // 智能跳转逻辑（上下文感知）
+                const getRedirectUrl = (role) => {
+                    // 优先级1: 检查是否有redirect参数（从其他页面跳转过来）
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirect = urlParams.get('redirect');
+                    if (redirect) {
+                        return redirect;
+                    }
+                    
+                    // 优先级2: 检查是否有保存的来源页面
+                    const savedRedirect = sessionStorage.getItem('login_redirect');
+                    if (savedRedirect) {
+                        sessionStorage.removeItem('login_redirect');
+                        return savedRedirect;
+                    }
+                    
+                    // 优先级3: 根据角色跳转默认页面（统一首页）
+                    // 所有角色都跳转到统一首页，在首页根据角色显示不同内容
+                    return '/portal/index.html';
+                };
+                
                 const goHome = () => {
                     window.location.href = '/portal/index.html';
                 };
@@ -1016,12 +1034,17 @@
                 onMounted(() => {
                     loadSavedAccounts();
                     
+                    // 如果已登录，直接跳转
                     const token = localStorage.getItem('token');
                     if (token) {
                         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-                        if (userInfo.is_admin) {
-                            window.location.href = '/portal/admin/index.html';
-                        }
+                        const redirectUrl = getRedirectUrl(userInfo.role);
+                        window.location.href = redirectUrl;
+                    }
+                    
+                    // 保存来源页面（用于登录后返回）
+                    if (document.referrer && !document.referrer.includes('/admin/login.html')) {
+                        sessionStorage.setItem('login_redirect', document.referrer);
                     }
                 });
                 

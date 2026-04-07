@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员套餐测试 - AI产业集群空间服务</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 10px;
+        }
+        
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .plan-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .plan-price {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2563EB;
+            margin: 20px 0;
+        }
+        
+        .error {
+            color: #EF4444;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6B7280;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">会员套餐测试页面</h1>
+                <p v-if="!loading && !error">找到 {{ plans.length }} 个套餐</p>
+            </div>
+            
+            <div v-if="loading" class="loading">
+                加载中...
+            </div>
+            
+            <div v-else-if="error" class="error">
+                {{ error }}
+            </div>
+            
+            <div v-else class="plans-grid">
+                <div v-for="plan in plans" :key="plan.id" class="plan-card">
+                    <h3 class="plan-name">{{ plan.name }}</h3>
+                    <p>{{ plan.description }}</p>
+                    <div class="plan-price">¥{{ plan.price }}</div>
+                    <p>有效期: {{ plan.duration_months }}个月</p>
+                    <ul>
+                        <li v-for="feature in plan.features" :key="feature">{{ feature }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const plans = ref([]);
+                const loading = ref(true);
+                const error = ref(null);
+                
+                const loadPlans = async () => {
+                    try {
+                        console.log('开始加载套餐数据...');
+                        loading.value = true;
+                        
+                        const response = await fetch('/api/membership/plans?is_active=true');
+                        console.log('API响应状态:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error('API请求失败: ' + response.status);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('API返回数据:', data);
+                        
+                        plans.value = data.plans || [];
+                        console.log('套餐数量:', plans.value.length);
+                        
+                    } catch (err) {
+                        console.error('加载失败:', err);
+                        error.value = err.message || '加载失败';
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                onMounted(() => {
+                    console.log('页面已挂载，开始加载数据...');
+                    loadPlans();
+                });
+                
+                return {
+                    plans,
+                    loading,
+                    error
+                };
+            }
+        }).mount('#app');
+        
+        console.log('Vue应用已创建');
+    </script>
+</body>
+</html>

@@ -18,6 +18,10 @@ from models.settlement import OfficeSettlement
 from models.config import SystemConfig
 from models.promotion import Promotion, PromotionConfig
 from models.reservation import ReservationPickup
+from models.membership_plan import MembershipPlan
+from models.payment_order import PaymentOrder
+from models.refund_record import RefundRecord
+from models.invoice import Invoice
 
 __all__ = [
     "Base",
@@ -42,4 +46,8 @@ __all__ = [
     "Promotion",
     "PromotionConfig",
     "ReservationPickup",
+    "MembershipPlan",
+    "PaymentOrder",
+    "RefundRecord",
+    "Invoice",
 ]

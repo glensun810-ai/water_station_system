@@ -166,7 +166,7 @@ const GlobalHeader = {
             </div>
 
             <div class="header-right" v-else>
-                <a href="/Service_WaterManage/frontend/login.html" class="login-btn">
+                <a href="/portal/admin/login.html" class="login-btn">
                     登录
                 </a>
             </div>
@@ -202,14 +202,17 @@ const GlobalHeader = {
         // 是否是超级管理员或系统管理员
         isSuperOrAdmin() {
             return this.userInfo?.role === '超级管理员' || 
-                   (this.userInfo?.role === '管理员' && this.userInfo?.is_admin);
+                   this.userInfo?.role === 'super_admin' ||
+                   this.userInfo?.role === '管理员' || 
+                   (this.userInfo?.role === 'admin' && this.userInfo?.is_admin);
         },
         
         // 是否是办公室管理员
         isOfficeAdmin() {
-            return this.userInfo?.role?.includes('管理员') && 
-                   this.managedOffices.length > 0 &&
-                   !this.isSuperOrAdmin;
+            return (this.userInfo?.role === 'office_admin' || 
+                    this.userInfo?.role?.includes('办公室管理员')) &&
+                    this.managedOffices.length > 0 &&
+                    !this.isSuperOrAdmin;
         },
         
         // 是否是内部用户
@@ -228,14 +231,16 @@ const GlobalHeader = {
         
         // 管理员徽章文本
         adminBadgeText() {
-            if (this.userInfo?.role === '超级管理员') return '超管';
-            if (this.userInfo?.role === '管理员') return '管理员';
+            if (this.userInfo?.role === '超级管理员' || this.userInfo?.role === 'super_admin') return '超管';
+            if (this.userInfo?.role === '管理员' || this.userInfo?.role === 'admin') return '管理员';
+            if (this.userInfo?.role === 'office_admin') return '办管';
             return '管理';
         },
         
         // 用户角色标签
         userRoleLabel() {
-            if (this.isSuperOrAdmin) return this.userInfo.role;
+            if (this.userInfo?.role === 'super_admin' || this.userInfo?.role === '超级管理员') return '超级管理员';
+            if (this.userInfo?.role === 'admin' || this.userInfo?.role === '管理员') return '系统管理员';
             if (this.isOfficeAdmin) return '办公室管理员';
             if (this.isInternalUser) return `${this.userInfo.department} · 内部用户`;
             if (this.isExternalUser) return '外部用户';
@@ -425,8 +430,9 @@ const GlobalHeader = {
             if (confirm('确定要退出登录吗？')) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('userInfo');
+                localStorage.removeItem('user_id');
                 localStorage.removeItem('current_office_id');
-                window.location.href = '/portal/index.html';
+                window.location.href = '/portal/admin/login.html';
             }
         }
     }

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申请发票 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .order-info {
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-xl);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .order-info-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .order-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-base);
+        }
+        
+        .order-info-label {
+            color: var(--text-secondary);
+        }
+        
+        .order-info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .form-section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        .form-radio-group {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+        
+        .form-radio-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .form-radio {
+            width: 18px;
+            height: 18px;
+            margin-right: var(--spacing-sm);
+            accent-color: var(--primary);
+        }
+        
+        .form-radio-label {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+        }
+        
+        .company-fields {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .form-hint {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .submit-button {
+            width: 100%;
+            padding: var(--spacing-lg);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: var(--spacing-xl);
+        }
+        
+        .submit-button:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .submit-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+        }
+        
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: var(--spacing-xl);
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            color: var(--primary-dark);
+        }
+        
+        .error-message {
+            color: var(--error);
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-xs);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header 
+            :user-info="userInfo"
+            :current-office="currentOffice"
+            @office-change="handleOfficeChange"
+        ></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">申请发票</h1>
+            </div>
+            
+            <div class="form-card">
+                <div class="order-info">
+                    <h3 class="order-info-title">订单信息</h3>
+                    <div class="order-info-row">
+                        <span class="order-info-label">订单号</span>
+                        <span class="order-info-value">{{ order?.order_no }}</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">套餐</span>
+                        <span class="order-info-value">{{ planName }}</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">金额</span>
+                        <span class="order-info-value">¥{{ order?.amount }}</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="form-section-title">发票信息</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">发票类型</label>
+                        <div class="form-radio-group">
+                            <div class="form-radio-item">
+                                <input 
+                                    type="radio" 
+                                    class="form-radio"
+                                    value="individual"
+                                    v-model="invoiceType"
+                                >
+                                <span class="form-radio-label">个人</span>
+                            </div>
+                            <div class="form-radio-item">
+                                <input 
+                                    type="radio" 
+                                    class="form-radio"
+                                    value="company"
+                                    v-model="invoiceType"
+                                >
+                                <span class="form-radio-label">企业</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">发票抬头 *</label>
+                        <input 
+                            type="text"
+                            class="form-input"
+                            v-model="invoiceTitle"
+                            placeholder="请输入发票抬头"
+                        >
+                        <div v-if="errors.title" class="error-message">{{ errors.title }}</div>
+                    </div>
+                    
+                    <div v-if="invoiceType === 'company'" class="company-fields">
+                        <div class="form-group">
+                            <label class="form-label">税号 *</label>
+                            <input 
+                                type="text"
+                                class="form-input"
+                                v-model="taxNo"
+                                placeholder="请输入企业税号"
+                            >
+                            <div class="form-hint">企业发票必须填写税号</div>
+                            <div v-if="errors.taxNo" class="error-message">{{ errors.taxNo }}</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">地址</label>
+                            <input 
+                                type="text"
+                                class="form-input"
+                                v-model="address"
+                                placeholder="请输入企业地址（可选）"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">电话</label>
+                            <input 
+                                type="text"
+                                class="form-input"
+                                v-model="phone"
+                                placeholder="请输入企业电话（可选）"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">开户银行</label>
+                            <input 
+                                type="text"
+                                class="form-input"
+                                v-model="bankName"
+                                placeholder="请输入开户银行（可选）"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">银行账号</label>
+                            <input 
+                                type="text"
+                                class="form-input"
+                                v-model="bankAccount"
+                                placeholder="请输入银行账号（可选）"
+                            >
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">接收邮箱 *</label>
+                        <input 
+                            type="email"
+                            class="form-input"
+                            v-model="email"
+                            placeholder="发票将发送到此邮箱"
+                        >
+                        <div class="form-hint">电子发票将发送到此邮箱</div>
+                        <div v-if="errors.email" class="error-message">{{ errors.email }}</div>
+                    </div>
+                    
+                    <button 
+                        class="submit-button"
+                        @click="submitInvoice"
+                        :disabled="isSubmitting"
+                    >
+                        {{ isSubmitting ? '提交中...' : '提交申请' }}
+                    </button>
+                    
+                    <a href="/portal/orders.html" class="back-link">返回订单列表</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+        
+        createApp({
+            components: {
+                GlobalHeader
+            },
+            setup() {
+                const userInfo = ref(null);
+                const currentOffice = ref(null);
+                const order = ref(null);
+                const planName = ref('');
+                const invoiceType = ref('individual');
+                const invoiceTitle = ref('');
+                const taxNo = ref('');
+                const address = ref('');
+                const phone = ref('');
+                const bankName = ref('');
+                const bankAccount = ref('');
+                const email = ref('');
+                const isSubmitting = ref(false);
+                const errors = ref({});
+                
+                const loadUserInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            window.location.href = '/portal/register.html';
+                            return;
+                        }
+                        
+                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            userInfo.value = data;
+                            email.value = data.email || '';
+                        }
+                    } catch (err) {
+                        console.error('加载用户信息失败:', err);
+                    }
+                };
+                
+                const loadOrderInfo = async () => {
+                    try {
+                        const savedOrder = localStorage.getItem('order_for_invoice');
+                        if (!savedOrder) {
+                            window.location.href = '/portal/orders.html';
+                            return;
+                        }
+                        
+                        order.value = JSON.parse(savedOrder);
+                        
+                        const response = await fetch(`/api/membership/plans/${order.value.plan_id}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            planName.value = data.name;
+                        }
+                    } catch (err) {
+                        console.error('加载订单信息失败:', err);
+                    }
+                };
+                
+                const validateForm = () => {
+                    errors.value = {};
+                    
+                    if (!invoiceTitle.value) {
+                        errors.value.title = '请输入发票抬头';
+                    }
+                    
+                    if (invoiceType.value === 'company' && !taxNo.value) {
+                        errors.value.taxNo = '企业发票必须填写税号';
+                    }
+                    
+                    if (!email.value) {
+                        errors.value.email = '请输入接收邮箱';
+                    } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email.value)) {
+                        errors.value.email = '邮箱格式不正确';
+                    }
+                    
+                    return Object.keys(errors.value).length === 0;
+                };
+                
+                const submitInvoice = async () => {
+                    try {
+                        if (!validateForm()) {
+                            return;
+                        }
+                        
+                        isSubmitting.value = true;
+                        
+                        const userId = localStorage.getItem('user_id');
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch('/api/invoices', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                order_no: order.value.order_no,
+                                invoice_type: invoiceType.value,
+                                title: invoiceTitle.value,
+                                tax_no: taxNo.value,
+                                address: address.value,
+                                phone: phone.value,
+                                bank_name: bankName.value,
+                                bank_account: bankAccount.value,
+                                email: email.value
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            alert('发票申请已提交');
+                            localStorage.removeItem('order_for_invoice');
+                            window.location.href = '/portal/invoices.html';
+                        } else {
+                            const data = await response.json();
+                            alert(data.detail || '申请发票失败');
+                        }
+                    } catch (err) {
+                        alert('申请发票失败');
+                        console.error(err);
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                };
+                
+                const handleOfficeChange = (office) => {
+                    currentOffice.value = office;
+                    localStorage.setItem('current_office', JSON.stringify(office));
+                };
+                
+                onMounted(async () => {
+                    await loadUserInfo();
+                    await loadOrderInfo();
+                    
+                    const savedOffice = localStorage.getItem('current_office');
+                    if (savedOffice) {
+                        currentOffice.value = JSON.parse(savedOffice);
+                    }
+                });
+                
+                return {
+                    userInfo,
+                    currentOffice,
+                    order,
+                    planName,
+                    invoiceType,
+                    invoiceTitle,
+                    taxNo,
+                    address,
+                    phone,
+                    bankName,
+                    bankAccount,
+                    email,
+                    isSubmitting,
+                    errors,
+                    submitInvoice,
+                    handleOfficeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

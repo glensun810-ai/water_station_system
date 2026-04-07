@@ -39,8 +39,11 @@ class ChangePasswordRequest(BaseModel):
 class UserRegister(BaseModel):
     name: str
     password: str
+    user_type: str = "internal"  # 'internal' or 'external'
     department: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -142,12 +145,19 @@ def user_register(
     """
     用户注册
 
+    内部用户：
     - name: 用户名（唯一）
     - password: 密码（至少6位）
-    - department: 所属办公室（可选）
-    - email: 邮箱（可选）
+    - user_type: 'internal'（默认）
+    - department: 所属办公室（可选，由管理员分配）
 
-    新注册用户默认角色为普通用户(user)，需要管理员审核后才能激活
+    外部用户：
+    - name: 用户名（唯一）
+    - password: 密码（至少6位）
+    - user_type: 'external'
+    - phone: 手机号（必填）
+    - email: 邮箱（可选）
+    - company: 公司名称（可选）
     """
     user_agent = request.headers.get("user-agent", "")
     client_host = request.client.host if request.client else "127.0.0.1"
@@ -174,6 +184,41 @@ def user_register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="密码长度至少为6位"
         )
+
+    # 验证user_type
+    if register_data.user_type not in ["internal", "external"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户类型必须是 'internal' 或 'external'",
+        )
+
+    # 外部用户验证
+    if register_data.user_type == "external":
+        # 必须提供手机号
+        if not register_data.phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="外部用户必须提供手机号",
+            )
+
+        # 验证手机号格式
+        if not re.match(r"^1[3-9]\d{9}$", register_data.phone):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号格式不正确",
+            )
+
+        # 检查手机号是否已存在
+        phone_check = text("SELECT id FROM users WHERE phone = :phone")
+        existing_phone = db.execute(
+            phone_check, {"phone": register_data.phone}
+        ).fetchone()
+
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="该手机号已被注册",
+            )
 
     # 检查用户名是否已存在
     check_query = text("SELECT id FROM users WHERE name = :name")
@@ -229,10 +274,15 @@ def user_register(
     # 创建用户
     password_hash = pwd_context.hash(register_data.password)
 
+    # 外部用户直接激活，内部用户需要管理员审核
+    is_active = 1 if register_data.user_type == "external" else 0
+
     try:
         insert_query = text("""
-            INSERT INTO users (name, password_hash, department, role, is_active, balance_credit, created_at)
-            VALUES (:name, :password_hash, :department, 'user', 0, 0, :created_at)
+            INSERT INTO users (name, password_hash, department, role, is_active, balance_credit, 
+                             user_type, phone, email, company, created_at)
+            VALUES (:name, :password_hash, :department, 'user', :is_active, 0, 
+                   :user_type, :phone, :email, :company, :created_at)
         """)
 
         db.execute(
@@ -240,7 +290,14 @@ def user_register(
             {
                 "name": register_data.name,
                 "password_hash": password_hash,
-                "department": register_data.department or "",
+                "department": register_data.department
+                if register_data.user_type == "internal"
+                else "",
+                "is_active": is_active,
+                "user_type": register_data.user_type,
+                "phone": register_data.phone or None,
+                "email": register_data.email or None,
+                "company": register_data.company or None,
                 "created_at": datetime.now().isoformat(),
             },
         )
@@ -249,6 +306,15 @@ def user_register(
         # 获取新创建的用户ID
         user_query = text("SELECT id FROM users WHERE name = :name")
         new_user = db.execute(user_query, {"name": register_data.name}).fetchone()
+
+        user_type_text = (
+            "外部用户" if register_data.user_type == "external" else "内部用户"
+        )
+        message = (
+            "注册成功"
+            if register_data.user_type == "external"
+            else "注册成功，请等待管理员审核激活"
+        )
 
         # 记录注册成功日志
         db.execute(
@@ -274,10 +340,11 @@ def user_register(
         db.commit()
 
         return {
-            "message": "注册成功，请等待管理员审核激活",
+            "message": message,
             "user_id": new_user.id,
             "username": register_data.name,
-            "status": "pending_activation",
+            "user_type": register_data.user_type,
+            "status": "active" if is_active else "pending_activation",
         }
 
     except Exception as e:
@@ -286,6 +353,7 @@ def user_register(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"注册失败: {str(e)}",
         )
+
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -316,7 +384,8 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
     try:
         # 查询用户
         query = text("""
-            SELECT id, name, department, role, password_hash, is_active, balance_credit
+            SELECT id, name, department, role, password_hash, is_active, balance_credit,
+                   user_type, phone, email
             FROM users
             WHERE name = :name
         """)
@@ -402,6 +471,9 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
                 "role_name": get_role_display_name(user.role, user.department),
                 "is_active": user.is_active,
                 "balance_credit": user.balance_credit or 0,
+                "user_type": user.user_type or "internal",
+                "phone": user.phone,
+                "email": user.email,
             },
         )
 

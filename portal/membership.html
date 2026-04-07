@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-subtitle {
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+        }
+        
+        .membership-status-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-xl);
+            text-align: center;
+        }
+        
+        .membership-badge {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        .membership-level {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .membership-expire {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .membership-plans {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .plan-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .plan-card.recommended {
+            border: 2px solid var(--primary);
+        }
+        
+        .plan-card.recommended::before {
+            content: '推荐';
+            position: absolute;
+            top: 16px;
+            right: -32px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 40px;
+            font-size: 12px;
+            font-weight: 600;
+            transform: rotate(45deg);
+        }
+        
+        .plan-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .plan-name {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .plan-price {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .plan-price span {
+            font-size: var(--font-size-base);
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+        
+        .plan-savings {
+            font-size: var(--font-size-sm);
+            color: var(--success);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 var(--spacing-xl) 0;
+        }
+        
+        .plan-features li {
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .plan-features li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 600;
+        }
+        
+        .subscribe-btn {
+            width: 100%;
+            padding: var(--spacing-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .subscribe-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .subscribe-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .referral-section {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .referral-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-primary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .referral-code-box {
+            background: var(--bg-primary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .referral-code {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .copy-btn {
+            padding: var(--spacing-sm) var(--spacing-xl);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .share-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .share-btn {
+            flex: 1;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .share-btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .membership-plans {
+                grid-template-columns: 1fr;
+            }
+            
+            .referral-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .share-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">👑 会员中心</h1>
+                <p class="page-subtitle">开通会员，享受专属权益</p>
+            </div>
+            
+            <!-- 当前会员状态 -->
+            <div class="membership-status-card">
+                <div class="membership-badge">{{ membershipIcon }}</div>
+                <div class="membership-level">{{ membershipLevel }}</div>
+                <div class="membership-expire">{{ membershipExpireText }}</div>
+            </div>
+            
+            <!-- 会员套餐 -->
+            <h2 class="section-title">💎 选择会员套餐</h2>
+            <div class="membership-plans">
+                <!-- 月度会员 -->
+                <div class="plan-card">
+                    <div class="plan-icon">🥈</div>
+                    <div class="plan-name">月度会员</div>
+                    <div class="plan-price">¥99<span>/月</span></div>
+                    <ul class="plan-features">
+                        <li>会议室预约 8折优惠</li>
+                        <li>免费会议室时长 2小时/月</li>
+                        <li>优先预约权</li>
+                        <li>专属客服支持</li>
+                    </ul>
+                    <button 
+                        class="subscribe-btn"
+                        @click="subscribePlan('monthly')"
+                        :disabled="loading || membership.type === 'monthly'"
+                    >
+                        {{ membership.type === 'monthly' ? '当前套餐' : '立即开通' }}
+                    </button>
+                </div>
+                
+                <!-- 年度会员 -->
+                <div class="plan-card recommended">
+                    <div class="plan-icon">🥇</div>
+                    <div class="plan-name">年度会员</div>
+                    <div class="plan-price">¥999<span>/年</span></div>
+                    <div class="plan-savings">节省 ¥188</div>
+                    <ul class="plan-features">
+                        <li>会议室预约 7折优惠</li>
+                        <li>免费会议室时长 5小时/月</li>
+                        <li>最高优先级预约</li>
+                        <li>专属客服 + VIP休息室</li>
+                        <li>赠送价值¥200优惠券包</li>
+                    </ul>
+                    <button 
+                        class="subscribe-btn"
+                        @click="subscribePlan('yearly')"
+                        :disabled="loading || membership.type === 'yearly'"
+                    >
+                        {{ membership.type === 'yearly' ? '当前套餐' : '立即开通' }}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 邀请好友 -->
+            <div class="referral-section">
+                <h2 class="section-title">
+                    <span>🎁</span>
+                    <span>邀请好友</span>
+                </h2>
+                
+                <div class="referral-stats">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ referralStats.invited }}</div>
+                        <div class="stat-label">已邀请人数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ referralStats.rewards }}</div>
+                        <div class="stat-label">获得奖励</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">¥{{ referralStats.earnings }}</div>
+                        <div class="stat-label">累计收益</div>
+                    </div>
+                </div>
+                
+                <div class="referral-code-box">
+                    <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">我的邀请码</div>
+                    <div class="referral-code">{{ referralCode || '加载中...' }}</div>
+                    <button class="copy-btn" @click="copyReferralCode">复制邀请码</button>
+                </div>
+                
+                <div class="share-buttons">
+                    <button class="share-btn" @click="shareToWeChat">
+                        <span>💬</span>
+                        <span>分享到微信</span>
+                    </button>
+                    <button class="share-btn" @click="shareLink">
+                        <span>🔗</span>
+                        <span>复制链接</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="loading" class="loading-spinner">
+            <div class="spinner"></div>
+            <div>加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const userInfo = ref(null);
+                const membership = ref({
+                    type: 'none',
+                    expireDate: null
+                });
+                const referralCode = ref('');
+                const referralStats = ref({
+                    invited: 0,
+                    rewards: 0,
+                    earnings: 0
+                });
+                
+                const membershipIcon = computed(() => {
+                    const icons = {
+                        'none': '👤',
+                        'monthly': '🥈',
+                        'yearly': '🥇'
+                    };
+                    return icons[membership.value.type] || '👤';
+                });
+                
+                const membershipLevel = computed(() => {
+                    const levels = {
+                        'none': '普通用户',
+                        'monthly': '月度会员',
+                        'yearly': '年度会员'
+                    };
+                    return levels[membership.value.type] || '普通用户';
+                });
+                
+                const membershipExpireText = computed(() => {
+                    if (membership.value.type === 'none') {
+                        return '暂未开通会员';
+                    }
+                    return `有效期至：${membership.value.expireDate || '未知'}`;
+                });
+                
+                const getAPIBase = () => {
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                    return `${protocol}//${hostname}:${port}/api`;
+                };
+                
+                const loadUserData = async () => {
+                    try {
+                        const storedUserInfo = localStorage.getItem('userInfo');
+                        if (!storedUserInfo) {
+                            window.location.href = './admin/login.html';
+                            return;
+                        }
+                        
+                        userInfo.value = JSON.parse(storedUserInfo);
+                        
+                        // 加载会员信息
+                        const token = localStorage.getItem('token');
+                        if (token) {
+                            const response = await fetch(`${getAPIBase()}/user/me`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                const userData = await response.json();
+                                // TODO: 从后端加载会员信息
+                            }
+                        }
+                        
+                        // 生成邀请码（临时）
+                        referralCode.value = generateReferralCode(userInfo.value.id);
+                        
+                    } catch (error) {
+                        console.error('加载用户数据失败:', error);
+                    }
+                };
+                
+                const generateReferralCode = (userId) => {
+                    // 临时生成邀请码
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                    let code = '';
+                    for (let i = 0; i < 6; i++) {
+                        code += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    return code;
+                };
+                
+                const subscribePlan = async (planType) => {
+                    alert(`即将开通${planType === 'monthly' ? '月度' : '年度'}会员\n\n功能开发中，敬请期待！`);
+                };
+                
+                const copyReferralCode = () => {
+                    if (referralCode.value) {
+                        navigator.clipboard.writeText(referralCode.value);
+                        alert('邀请码已复制！');
+                    }
+                };
+                
+                const shareToWeChat = () => {
+                    alert('分享到微信功能开发中');
+                };
+                
+                const shareLink = () => {
+                    const link = `${window.location.origin}/portal/register.html?ref=${referralCode.value}`;
+                    navigator.clipboard.writeText(link);
+                    alert('邀请链接已复制！');
+                };
+                
+                onMounted(() => {
+                    loadUserData();
+                });
+                
+                return {
+                    loading,
+                    userInfo,
+                    membership,
+                    referralCode,
+                    referralStats,
+                    membershipIcon,
+                    membershipLevel,
+                    membershipExpireText,
+                    subscribePlan,
+                    copyReferralCode,
+                    shareToWeChat,
+                    shareLink
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+            <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .payment-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .order-info {
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-xl);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .order-info-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .order-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-base);
+        }
+        
+        .order-info-label {
+            color: var(--text-secondary);
+        }
+        
+        .order-info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .order-amount {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .payment-methods {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .payment-methods-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .payment-method-item {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .payment-method-item:hover {
+            border-color: var(--primary);
+            background: var(--bg-light);
+        }
+        
+        .payment-method-item.selected {
+            border-color: var(--primary);
+            background: linear-gradient(to right, #EFF6FF, white);
+        }
+        
+        .payment-method-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: var(--spacing-md);
+        }
+        
+        .payment-method-name {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .payment-method-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .pay-button {
+            width: 100%;
+            padding: var(--spacing-lg);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .pay-button:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .pay-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+        }
+        
+        .paying-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .paying-dialog {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-2xl);
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .paying-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .paying-status {
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .paying-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: var(--spacing-lg) auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .cancel-button {
+            background: var(--bg-light);
+            color: var(--text-secondary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            margin-top: var(--spacing-md);
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: var(--spacing-lg);
+            color: var(--error);
+        }
+        
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: var(--spacing-xl);
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            color: var(--primary-dark);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">支付订单</h1>
+            </div>
+            
+            <div v-if="error" class="error-message">
+                {{ error }}
+                <a href="/portal/membership-plans.html" class="back-link">返回套餐选择</a>
+            </div>
+            
+            <div v-else class="payment-card">
+                <div class="order-info">
+                    <h2 class="order-info-title">订单信息</h2>
+                    <div class="order-info-row">
+                        <span class="order-info-label">套餐名称</span>
+                        <span class="order-info-value">{{ plan?.name }}</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">有效期</span>
+                        <span class="order-info-value">{{ plan?.duration_months }}个月</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">订单号</span>
+                        <span class="order-info-value">{{ orderNo }}</span>
+                    </div>
+                    <div class="order-info-row">
+                        <span class="order-info-label">应付金额</span>
+                        <span class="order-amount">¥{{ plan?.price }}</span>
+                    </div>
+                </div>
+                
+                <div class="payment-methods">
+                    <h2 class="payment-methods-title">选择支付方式</h2>
+                    
+                    <div 
+                        class="payment-method-item"
+                        :class="{ selected: paymentMethod === 'alipay' }"
+                        @click="paymentMethod = 'alipay'"
+                    >
+                        <svg class="payment-method-icon" viewBox="0 0 40 40">
+                            <rect width="40" height="40" fill="#1677FF" rx="4"/>
+                            <path d="M30 20c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10z" fill="white"/>
+                        </svg>
+                        <div>
+                            <div class="payment-method-name">支付宝</div>
+                            <div class="payment-method-desc">推荐使用支付宝支付</div>
+                        </div>
+                    </div>
+                    
+                    <div 
+                        class="payment-method-item"
+                        :class="{ selected: paymentMethod === 'wechat' }"
+                        @click="paymentMethod = 'wechat'"
+                    >
+                        <svg class="payment-method-icon" viewBox="0 0 40 40">
+                            <rect width="40" height="40" fill="#09BB07" rx="4"/>
+                            <path d="M20 10c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z" fill="white"/>
+                        </svg>
+                        <div>
+                            <div class="payment-method-name">微信支付</div>
+                            <div class="payment-method-desc">使用微信扫码支付</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button 
+                    class="pay-button"
+                    @click="startPayment"
+                    :disabled="!paymentMethod || isPaying"
+                >
+                    {{ isPaying ? '正在支付...' : '立即支付' }}
+                </button>
+                
+                <a href="/portal/membership-plans.html" class="back-link">返回套餐选择</a>
+            </div>
+            
+            <div v-if="isPaying" class="paying-overlay">
+                <div class="paying-dialog">
+                    <h3 class="paying-title">正在支付</h3>
+                    <div class="paying-spinner"></div>
+                    <div class="paying-status">请在浏览器中完成支付</div>
+                    <div class="paying-status">支付完成后将自动跳转...</div>
+                    <button class="cancel-button" @click="cancelPayment">取消支付</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+        
+        createApp({
+            setup() {
+                const userInfo = ref(null);
+                const plan = ref(null);
+                const orderNo = ref(null);
+                const paymentMethod = ref('alipay');
+                const isPaying = ref(false);
+                const error = ref(null);
+                let statusCheckTimer = null;
+                
+                const loadUserInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            error.value = '请先登录';
+                            window.location.href = '/portal/register.html';
+                            return;
+                        }
+                        
+                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            userInfo.value = data;
+                        }
+                    } catch (err) {
+                        console.error('加载用户信息失败:', err);
+                    }
+                };
+                
+                const createOrder = async () => {
+                    try {
+                        const savedPlan = localStorage.getItem('selected_plan');
+                        if (!savedPlan) {
+                            error.value = '未选择套餐';
+                            return;
+                        }
+                        
+                        plan.value = JSON.parse(savedPlan);
+                        
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        const response = await fetch('/api/payment/orders', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                plan_id: plan.value.id,
+                                payment_method: paymentMethod.value
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const data = await response.json();
+                            throw new Error(data.detail || '创建订单失败');
+                        }
+                        
+                        const data = await response.json();
+                        orderNo.value = data.order_no;
+                    } catch (err) {
+                        error.value = err.message;
+                        console.error('创建订单失败:', err);
+                    }
+                };
+                
+                const startPayment = async () => {
+                    try {
+                        isPaying.value = true;
+                        
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        const response = await fetch(`/api/payment/alipay/create?order_no=${orderNo.value}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            const data = await response.json();
+                            throw new Error(data.detail || '发起支付失败');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.pay_url) {
+                            window.open(data.pay_url, '_blank');
+                            startStatusCheck();
+                        } else {
+                            throw new Error(data.message || '支付失败');
+                        }
+                    } catch (err) {
+                        isPaying.value = false;
+                        alert(err.message);
+                        console.error('支付失败:', err);
+                    }
+                };
+                
+                const startStatusCheck = () => {
+                    statusCheckTimer = setInterval(async () => {
+                        try {
+                            const token = localStorage.getItem('token');
+                            const userId = localStorage.getItem('user_id');
+                            
+                            const response = await fetch(`/api/payment/orders/${orderNo.value}/status`, {
+                                headers: {
+                                    'X-User-Id': userId,
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (!response.ok) return;
+                            
+                            const data = await response.json();
+                            
+                            if (data.status === 'paid') {
+                                clearInterval(statusCheckTimer);
+                                localStorage.removeItem('selected_plan');
+                                alert('支付成功！会员已开通');
+                                window.location.href = '/portal/membership.html';
+                            } else if (data.status === 'cancelled') {
+                                clearInterval(statusCheckTimer);
+                                isPaying.value = false;
+                                error.value = '订单已取消';
+                            }
+                        } catch (err) {
+                            console.error('查询状态失败:', err);
+                        }
+                    }, 3000);
+                };
+                
+                const cancelPayment = async () => {
+                    try {
+                        if (statusCheckTimer) {
+                            clearInterval(statusCheckTimer);
+                        }
+                        
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        await fetch(`/api/payment/orders/${orderNo.value}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        localStorage.removeItem('selected_plan');
+                        window.location.href = '/portal/membership-plans.html';
+                    } catch (err) {
+                        console.error('取消支付失败:', err);
+                        window.location.href = '/portal/membership-plans.html';
+                    }
+                };
+                
+                const handleOfficeChange = (office) => {
+                    currentOffice.value = office;
+                    localStorage.setItem('current_office', JSON.stringify(office));
+                };
+                
+                onMounted(async () => {
+                    await loadUserInfo();
+                    if (!error.value) {
+                        await createOrder();
+                    }
+                    
+                    const savedOffice = localStorage.getItem('current_office');
+                    });
+                
+                return {
+                    userInfo,
+                    plan,
+                    orderNo,
+                    paymentMethod,
+                    isPaying,
+                    error,
+                    startPayment,
+                    cancelPayment,
+                    handleOfficeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

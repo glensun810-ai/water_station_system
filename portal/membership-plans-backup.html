@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员套餐 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--spacing-3xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .page-subtitle {
+            font-size: var(--font-size-lg);
+            color: var(--text-secondary);
+        }
+        
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .plan-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .plan-card.recommended {
+            border: 2px solid var(--primary);
+            background: linear-gradient(to bottom, #EFF6FF, white);
+        }
+        
+        .plan-card.recommended::before {
+            content: '推荐';
+            position: absolute;
+            top: 20px;
+            right: -35px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 40px;
+            font-size: 12px;
+            font-weight: 600;
+            transform: rotate(45deg);
+        }
+        
+        .plan-name {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .plan-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .plan-price {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .current-price {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .current-price .unit {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .original-price {
+            font-size: var(--font-size-base);
+            color: var(--text-muted);
+            text-decoration: line-through;
+            margin-left: var(--spacing-sm);
+        }
+        
+        .plan-duration {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .plan-features {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+        
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+            margin-right: var(--spacing-sm);
+        }
+        
+        .buy-button {
+            width: 100%;
+            padding: var(--spacing-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .buy-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .buy-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+        }
+        
+        .faq-section {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            margin-top: var(--spacing-3xl);
+        }
+        
+        .faq-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .faq-item {
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+        
+        .faq-question {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .faq-answer {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--error);
+            background: white;
+            border-radius: var(--radius-lg);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header 
+            :user-info="userInfo"
+            :current-office="currentOffice"
+            @office-change="handleOfficeChange"
+        ></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">选择会员套餐</h1>
+                <p class="page-subtitle">享受更多权益，提升您的使用体验</p>
+            </div>
+            
+            <div v-if="loading" class="loading-spinner">
+                加载中...
+            </div>
+            
+            <div v-else-if="error" class="error-message">
+                {{ error }}
+            </div>
+            
+            <div v-else class="plans-grid">
+                <div 
+                    v-for="(plan, index) in plans" 
+                    :key="plan.id"
+                    class="plan-card"
+                    :class="{ recommended: index === 1 }"
+                >
+                    <div class="plan-name">{{ plan.name }}</div>
+                    <div class="plan-description">{{ plan.description }}</div>
+                    
+                    <div class="plan-price">
+                        <span class="current-price">
+                            <span class="unit">¥</span>{{ plan.price }}
+                        </span>
+                        <span v-if="plan.original_price" class="original-price">
+                            ¥{{ plan.original_price }}
+                        </span>
+                    </div>
+                    
+                    <div class="plan-duration">{{ plan.duration_months }}个月有效期</div>
+                    
+                    <div class="plan-features">
+                        <div 
+                            v-for="feature in plan.features" 
+                            :key="feature"
+                            class="feature-item"
+                        >
+                            <svg class="feature-icon" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {{ feature }}
+                        </div>
+                    </div>
+                    
+                    <button 
+                        class="buy-button"
+                        @click="selectPlan(plan)"
+                        :disabled="!isLoggedIn"
+                    >
+                        {{ isLoggedIn ? '立即购买' : '请先登录' }}
+                    </button>
+                </div>
+            </div>
+            
+            <div class="faq-section">
+                <h2 class="faq-title">常见问题</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">如何购买会员？</div>
+                    <div class="faq-answer">选择套餐后点击"立即购买"，支持支付宝和微信支付。支付成功后立即生效。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">可以退款吗？</div>
+                    <div class="faq-answer">支持按比例退款。已使用的天数将按比例扣除费用，剩余费用将退还。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">发票如何开具？</div>
+                    <div class="faq-answer">支付成功后可在订单详情中申请发票，支持个人和企业发票，电子发票将发送至您的邮箱。</div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question">会员权益何时生效？</div>
+                    <div class="faq-answer">支付成功后立即生效，有效期从支付成功时间开始计算。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+        
+        createApp({
+            components: {
+                GlobalHeader
+            },
+            setup() {
+                const userInfo = ref(null);
+                const currentOffice = ref(null);
+                const plans = ref([]);
+                const loading = ref(true);
+                const error = ref(null);
+                
+                const isLoggedIn = computed(() => userInfo.value && userInfo.value.id);
+                
+                const loadUserInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            return;
+                        }
+                        
+                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            userInfo.value = data;
+                        }
+                    } catch (err) {
+                        console.error('加载用户信息失败:', err);
+                    }
+                };
+                
+                const loadPlans = async () => {
+                    try {
+                        loading.value = true;
+                        error.value = null;
+                        
+                        const response = await fetch('/api/membership/plans?is_active=true');
+                        
+                        if (!response.ok) {
+                            throw new Error('获取套餐失败');
+                        }
+                        
+                        const data = await response.json();
+                        plans.value = data.plans || [];
+                    } catch (err) {
+                        error.value = err.message || '加载失败，请刷新页面重试';
+                        console.error('加载套餐失败:', err);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const selectPlan = (plan) => {
+                    if (!isLoggedIn.value) {
+                        alert('请先登录');
+                        window.location.href = '/portal/register.html';
+                        return;
+                    }
+                    
+                    localStorage.setItem('selected_plan', JSON.stringify(plan));
+                    window.location.href = '/portal/payment.html';
+                };
+                
+                const handleOfficeChange = (office) => {
+                    currentOffice.value = office;
+                    localStorage.setItem('current_office', JSON.stringify(office));
+                };
+                
+                onMounted(async () => {
+                    await loadUserInfo();
+                    await loadPlans();
+                    
+                    const savedOffice = localStorage.getItem('current_office');
+                    if (savedOffice) {
+                        currentOffice.value = JSON.parse(savedOffice);
+                    }
+                });
+                
+                return {
+                    userInfo,
+                    currentOffice,
+                    plans,
+                    loading,
+                    error,
+                    isLoggedIn,
+                    selectPlan,
+                    handleOfficeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -234,6 +234,10 @@ from api_user_management import router as user_management_router
 from api_settlement_management import router as settlement_management_router
 from api_office_admin import router as office_admin_router
 from api_login_logs import router as login_logs_router
+from api_membership_plan import router as membership_plan_router
+from api_payment import router as payment_router
+from api_refund import router as refund_router
+from api_invoice import router as invoice_router
 
 app.include_router(legacy_office_router)
 app.include_router(legacy_unified_router)
@@ -259,6 +263,12 @@ app.include_router(user_management_router)
 app.include_router(settlement_management_router)
 app.include_router(office_admin_router)
 app.include_router(login_logs_router)
+
+# 会员支付路由
+app.include_router(membership_plan_router)
+app.include_router(payment_router)
+app.include_router(refund_router)
+app.include_router(invoice_router)
 
 # ==================== 健康检查 ====================
 

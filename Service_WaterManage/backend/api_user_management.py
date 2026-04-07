@@ -65,6 +65,18 @@ def get_user_stats(db: Session = Depends(get_db)):
         active = db.query(main.User).filter(main.User.is_active == 1).count()
         inactive = db.query(main.User).filter(main.User.is_active == 0).count()
 
+        # 新增：按用户类型统计
+        internal_users = (
+            db.query(main.User)
+            .filter(getattr(main.User, "user_type", "internal") == "internal")
+            .count()
+        )
+        external_users = (
+            db.query(main.User)
+            .filter(getattr(main.User, "user_type", "internal") == "external")
+            .count()
+        )
+
         return {
             "total": total,
             "super_admins": super_admins,
@@ -73,6 +85,8 @@ def get_user_stats(db: Session = Depends(get_db)):
             "users": users,
             "active": active,
             "inactive": inactive,
+            "internal_users": internal_users,
+            "external_users": external_users,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取统计数据失败: {str(e)}")
@@ -155,12 +169,13 @@ def list_users(
     skip: int = 0,
     limit: int = 200,
     role: Optional[str] = None,
+    user_type: Optional[str] = None,
     department: Optional[str] = None,
     is_active: Optional[int] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """获取用户列表"""
+    """获取用户列表（包含user_type和详细信息）"""
     try:
         import main
 
@@ -168,6 +183,14 @@ def list_users(
 
         if role:
             query = query.filter(main.User.role == role)
+
+        if user_type:
+            # 使用 hasattr 和 getattr 安全访问 user_type 字段
+            if hasattr(main.User, "user_type"):
+                query = query.filter(main.User.user_type == user_type)
+            else:
+                # 如果字段不存在，跳过筛选
+                pass
 
         if department:
             query = query.filter(main.User.department == department)
@@ -181,6 +204,8 @@ def list_users(
                 or_(
                     main.User.name.like(search_pattern),
                     main.User.department.like(search_pattern),
+                    main.User.phone.like(search_pattern),
+                    main.User.email.like(search_pattern),
                 )
             )
 
@@ -192,6 +217,10 @@ def list_users(
             {
                 "id": u.id,
                 "name": u.name,
+                "user_type": getattr(u, "user_type", "internal"),
+                "phone": getattr(u, "phone", None),
+                "email": getattr(u, "email", None),
+                "company": getattr(u, "company", None),
                 "department": u.department,
                 "role": u.role,
                 "is_active": u.is_active,
@@ -452,6 +481,77 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"删除用户失败: {str(e)}")
+
+
+@router.post("/{user_id}/activate")
+def activate_user(user_id: int, db: Session = Depends(get_db)):
+    """
+    激活用户
+
+    用于激活待激活状态的内部用户
+    """
+    try:
+        import main
+
+        user = db.query(main.User).filter(main.User.id == user_id).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+
+        if user.is_active == 1:
+            raise HTTPException(status_code=400, detail="用户已经是激活状态")
+
+        # 激活用户
+        user.is_active = 1
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "用户已激活",
+            "user_id": user.id,
+            "name": user.name,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"激活用户失败: {str(e)}")
+
+
+@router.post("/batch/activate")
+def batch_activate_users(user_ids: List[int], db: Session = Depends(get_db)):
+    """
+    批量激活用户
+    """
+    try:
+        import main
+
+        if not user_ids:
+            raise HTTPException(status_code=400, detail="请选择要激活的用户")
+
+        users = (
+            db.query(main.User)
+            .filter(main.User.id.in_(user_ids), main.User.is_active == 0)
+            .all()
+        )
+
+        activated_count = 0
+        for user in users:
+            user.is_active = 1
+            activated_count += 1
+
+        db.commit()
+
+        return {
+            "success": True,
+            "activated_count": activated_count,
+            "message": f"成功激活 {activated_count} 个用户",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量激活失败: {str(e)}")
 
 
 @router.post("/batch")

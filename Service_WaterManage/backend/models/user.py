@@ -35,6 +35,12 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)
     balance_credit = Column(Float, default=0)
     is_active = Column(Integer, default=1)
+    user_type = Column(
+        String(20), default="internal", comment="用户类型：internal/external"
+    )
+    phone = Column(String(20), nullable=True, comment="手机号")
+    email = Column(String(100), nullable=True, comment="邮箱")
+    company = Column(String(100), nullable=True, comment="公司名称")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

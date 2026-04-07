@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 功能测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        h1 {
+            color: #2563EB;
+            border-bottom: 2px solid #2563EB;
+            padding-bottom: 10px;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #1F2937;
+            margin-top: 0;
+        }
+        
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .test-item.pass {
+            background: #D1FAE5;
+            color: #059669;
+        }
+        
+        .test-item.fail {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+        
+        .test-item.pending {
+            background: #FEF3C7;
+            color: #D97706;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2563EB;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #1D4ED8;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #F3F4F6;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phase 3 会员支付系统功能测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 服务状态测试</h2>
+        <div id="service-test" class="test-item pending">测试中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. API接口测试</h2>
+        <div id="api-test" class="test-item pending">测试中...</div>
+        <div id="api-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 页面访问测试</h2>
+        <div id="page-test" class="test-item pending">测试中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 功能页面链接</h2>
+        <div>
+            <a href="/portal/membership-plans.html" class="btn" target="_blank">会员套餐</a>
+            <a href="/portal/payment.html" class="btn" target="_blank">支付页面</a>
+            <a href="/portal/orders.html" class="btn" target="_blank">订单管理</a>
+            <a href="/portal/invoices.html" class="btn" target="_blank">发票管理</a>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. 测试总结</h2>
+        <div id="summary"></div>
+    </div>
+    
+    <script>
+        // 测试服务状态
+        async function testService() {
+            const el = document.getElementById('service-test');
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    el.className = 'test-item pass';
+                    el.textContent = '✓ 服务运行正常 - ' + data.service + ' v' + data.version;
+                    return true;
+                } else {
+                    el.className = 'test-item fail';
+                    el.textContent = '✗ 服务响应异常 - HTTP ' + response.status;
+                    return false;
+                }
+            } catch (error) {
+                el.className = 'test-item fail';
+                el.textContent = '✗ 无法连接服务 - ' + error.message;
+                return false;
+            }
+        }
+        
+        // 测试API
+        async function testAPI() {
+            const el = document.getElementById('api-test');
+            const resultEl = document.getElementById('api-result');
+            
+            try {
+                const response = await fetch('/api/membership/plans');
+                const data = await response.json();
+                
+                if (data.plans && data.plans.length > 0) {
+                    el.className = 'test-item pass';
+                    el.textContent = '✓ API正常 - 返回 ' + data.total + ' 个套餐';
+                    
+                    resultEl.textContent = JSON.stringify(data.plans[0], null, 2);
+                    return true;
+                } else {
+                    el.className = 'test-item fail';
+                    el.textContent = '✗ API返回数据为空';
+                    return false;
+                }
+            } catch (error) {
+                el.className = 'test-item fail';
+                el.textContent = '✗ API调用失败 - ' + error.message;
+                return false;
+            }
+        }
+        
+        // 测试页面
+        async function testPages() {
+            const el = document.getElementById('page-test');
+            const pages = [
+                '/portal/membership-plans.html',
+                '/portal/payment.html',
+                '/portal/orders.html',
+                '/portal/invoices.html'
+            ];
+            
+            let passCount = 0;
+            
+            for (const page of pages) {
+                try {
+                    const response = await fetch(page);
+                    if (response.ok) {
+                        passCount++;
+                    }
+                } catch (error) {
+                    console.error('Page test failed:', page, error);
+                }
+            }
+            
+            if (passCount === pages.length) {
+                el.className = 'test-item pass';
+                el.textContent = '✓ 所有页面可访问 - ' + passCount + '/' + pages.length;
+                return true;
+            } else {
+                el.className = 'test-item fail';
+                el.textContent = '⚠ 部分页面异常 - ' + passCount + '/' + pages.length;
+                return false;
+            }
+        }
+        
+        // 运行所有测试
+        async function runAllTests() {
+            const results = [];
+            
+            results.push(await testService());
+            results.push(await testAPI());
+            results.push(await testPages());
+            
+            const summaryEl = document.getElementById('summary');
+            const passCount = results.filter(r => r).length;
+            const totalCount = results.length;
+            
+            if (passCount === totalCount) {
+                summaryEl.innerHTML = '<div class="test-item pass">✓ 所有测试通过！(' + passCount + '/' + totalCount + ')</div>';
+            } else {
+                summaryEl.innerHTML = '<div class="test-item fail">⚠ 部分测试失败 (' + passCount + '/' + totalCount + ')</div>';
+            }
+        }
+        
+        // 页面加载后运行测试
+        window.addEventListener('load', runAllTests);
+    </script>
+</body>
+</html>

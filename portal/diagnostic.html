@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诊断页面</title>
+</head>
+<body>
+    <h1>页面诊断</h1>
+    <div id="diagnostics"></div>
+    
+    <script>
+        const diagnostics = document.getElementById('diagnostics');
+        
+        // 检查Vue.js
+        function checkVue() {
+            if (typeof Vue !== 'undefined') {
+                return '✓ Vue.js 已加载 (版本: ' + Vue.version + ')';
+            } else {
+                return '✗ Vue.js 未加载';
+            }
+        }
+        
+        // 检查CSS变量
+        function checkCSS() {
+            const testEl = document.createElement('div');
+            testEl.style.display = 'none';
+            document.body.appendChild(testEl);
+            const primary = getComputedStyle(testEl).getPropertyValue('--primary');
+            document.body.removeChild(testEl);
+            return primary ? '✓ CSS变量已定义' : '✗ CSS变量未定义';
+        }
+        
+        // 检查API
+        async function checkAPI() {
+            try {
+                const response = await fetch('/api/membership/plans');
+                const data = await response.json();
+                return '✓ API可访问 (套餐数: ' + data.total + ')';
+            } catch (error) {
+                return '✗ API访问失败: ' + error.message;
+            }
+        }
+        
+        // 运行诊断
+        async function runDiagnostics() {
+            const results = [];
+            
+            results.push('Vue.js: ' + checkVue());
+            results.push('CSS: ' + checkCSS());
+            results.push('API: ' + await checkAPI());
+            
+            diagnostics.innerHTML = '<pre>' + results.join('\n') + '</pre>';
+        }
+        
+        // 页面加载后运行
+        window.addEventListener('load', runDiagnostics);
+    </script>
+</body>
+</html>

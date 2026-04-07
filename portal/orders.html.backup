@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的订单 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            margin-bottom: var(--spacing-2xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .tab-item {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-item:hover {
+            border-color: var(--primary);
+        }
+        
+        .tab-item.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .orders-list {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .order-item {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .order-no {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .order-status {
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .order-status.pending {
+            background: #FFF4E5;
+            color: #FF9500;
+        }
+        
+        .order-status.paid {
+            background: #E5F9FF;
+            color: #0095FF;
+        }
+        
+        .order-status.refunded {
+            background: #FFE5E5;
+            color: #FF3B30;
+        }
+        
+        .order-status.cancelled {
+            background: var(--bg-light);
+            color: var(--text-muted);
+        }
+        
+        .order-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .order-info-item {
+            font-size: var(--font-size-sm);
+        }
+        
+        .order-info-label {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .order-info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .order-amount {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .order-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+        
+        .action-button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .action-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .action-button.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .action-button.primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .modal-dialog {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .modal-content {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+        }
+        
+        .form-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .modal-button {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            cursor: pointer;
+        }
+        
+        .modal-button.cancel {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        
+        .modal-button.confirm {
+            background: var(--primary);
+            border: none;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header 
+            :user-info="userInfo"
+            :current-office="currentOffice"
+            @office-change="handleOfficeChange"
+        ></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">我的订单</h1>
+            </div>
+            
+            <div class="tabs">
+                <div 
+                    v-for="tab in tabs"
+                    :key="tab.value"
+                    class="tab-item"
+                    :class="{ active: currentTab === tab.value }"
+                    @click="changeTab(tab.value)"
+                >
+                    {{ tab.label }}
+                </div>
+            </div>
+            
+            <div v-if="loading" class="loading-spinner">
+                加载中...
+            </div>
+            
+            <div v-else-if="orders.length === 0" class="empty-state">
+                暂无订单记录
+            </div>
+            
+            <div v-else class="orders-list">
+                <div v-for="order in orders" :key="order.id" class="order-item">
+                    <div class="order-header">
+                        <span class="order-no">订单号: {{ order.order_no }}</span>
+                        <span class="order-status" :class="order.status">
+                            {{ getStatusText(order.status) }}
+                        </span>
+                    </div>
+                    
+                    <div class="order-content">
+                        <div class="order-info-item">
+                            <div class="order-info-label">套餐</div>
+                            <div class="order-info-value">{{ getPlanName(order.plan_id) }}</div>
+                        </div>
+                        
+                        <div class="order-info-item">
+                            <div class="order-info-label">金额</div>
+                            <div class="order-amount">¥{{ order.amount }}</div>
+                        </div>
+                        
+                        <div class="order-info-item">
+                            <div class="order-info-label">创建时间</div>
+                            <div class="order-info-value">{{ formatDate(order.created_at) }}</div>
+                        </div>
+                        
+                        <div v-if="order.paid_at" class="order-info-item">
+                            <div class="order-info-label">支付时间</div>
+                            <div class="order-info-value">{{ formatDate(order.paid_at) }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <button v-if="order.status === 'pending'" class="action-button primary" @click="payOrder(order)">
+                            继续支付
+                        </button>
+                        <button v-if="order.status === 'pending'" class="action-button" @click="cancelOrder(order)">
+                            取消订单
+                        </button>
+                        <button v-if="order.status === 'paid'" class="action-button" @click="applyInvoice(order)">
+                            申请发票
+                        </button>
+                        <button v-if="order.status === 'paid'" class="action-button" @click="applyRefund(order)">
+                            申请退款
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showRefundModal" class="modal-overlay">
+                <div class="modal-dialog">
+                    <h3 class="modal-title">申请退款</h3>
+                    <div class="modal-content">
+                        <div class="form-group">
+                            <label class="form-label">退款原因</label>
+                            <textarea 
+                                class="form-input form-textarea"
+                                v-model="refundReason"
+                                placeholder="请输入退款原因"
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">预计退款金额</label>
+                            <div class="order-amount">按比例计算，具体金额待审核</div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modal-button cancel" @click="closeRefundModal">取消</button>
+                        <button class="modal-button confirm" @click="submitRefund">提交申请</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                GlobalHeader
+            },
+            setup() {
+                const userInfo = ref(null);
+                const currentOffice = ref(null);
+                const orders = ref([]);
+                const plans = ref({});
+                const loading = ref(true);
+                const currentTab = ref('all');
+                const showRefundModal = ref(false);
+                const refundReason = ref('');
+                const selectedOrder = ref(null);
+                
+                const tabs = [
+                    { label: '全部', value: 'all' },
+                    { label: '待支付', value: 'pending' },
+                    { label: '已支付', value: 'paid' },
+                    { label: '已退款', value: 'refunded' }
+                ];
+                
+                const loadUserInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            window.location.href = '/portal/register.html';
+                            return;
+                        }
+                        
+                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            userInfo.value = data;
+                        }
+                    } catch (err) {
+                        console.error('加载用户信息失败:', err);
+                    }
+                };
+                
+                const loadPlans = async () => {
+                    try {
+                        const response = await fetch('/api/membership/plans');
+                        if (response.ok) {
+                            const data = await response.json();
+                            data.plans.forEach(plan => {
+                                plans.value[plan.id] = plan.name;
+                            });
+                        }
+                    } catch (err) {
+                        console.error('加载套餐失败:', err);
+                    }
+                };
+                
+                const loadOrders = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        const userId = localStorage.getItem('user_id');
+                        const token = localStorage.getItem('token');
+                        
+                        const url = currentTab.value === 'all' 
+                            ? `/api/payment/orders/user/${userId}`
+                            : `/api/payment/orders/user/${userId}?status=${currentTab.value}`;
+                        
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            orders.value = data.orders || [];
+                        }
+                    } catch (err) {
+                        console.error('加载订单失败:', err);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const changeTab = (tab) => {
+                    currentTab.value = tab;
+                    loadOrders();
+                };
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        pending: '待支付',
+                        paid: '已支付',
+                        refunded: '已退款',
+                        cancelled: '已取消'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const getPlanName = (planId) => {
+                    return plans.value[planId] || '未知套餐';
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN');
+                };
+                
+                const payOrder = (order) => {
+                    localStorage.setItem('selected_plan', JSON.stringify({ id: order.plan_id }));
+                    window.location.href = '/portal/payment.html';
+                };
+                
+                const cancelOrder = async (order) => {
+                    try {
+                        const userId = localStorage.getItem('user_id');
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch(`/api/payment/orders/${order.order_no}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            alert('订单已取消');
+                            loadOrders();
+                        }
+                    } catch (err) {
+                        alert('取消订单失败');
+                        console.error(err);
+                    }
+                };
+                
+                const applyInvoice = (order) => {
+                    localStorage.setItem('order_for_invoice', JSON.stringify(order));
+                    window.location.href = '/portal/invoice-apply.html';
+                };
+                
+                const applyRefund = (order) => {
+                    selectedOrder.value = order;
+                    refundReason.value = '';
+                    showRefundModal.value = true;
+                };
+                
+                const closeRefundModal = () => {
+                    showRefundModal.value = false;
+                    selectedOrder.value = null;
+                };
+                
+                const submitRefund = async () => {
+                    try {
+                        if (!refundReason.value) {
+                            alert('请输入退款原因');
+                            return;
+                        }
+                        
+                        const userId = localStorage.getItem('user_id');
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch('/api/payment/refund', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                order_no: selectedOrder.value.order_no,
+                                reason: refundReason.value
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            alert(`退款申请已提交，退款金额: ¥${data.refund_amount}`);
+                            closeRefundModal();
+                            loadOrders();
+                        } else {
+                            const data = await response.json();
+                            alert(data.detail || '申请退款失败');
+                        }
+                    } catch (err) {
+                        alert('申请退款失败');
+                        console.error(err);
+                    }
+                };
+                
+                const handleOfficeChange = (office) => {
+                    currentOffice.value = office;
+                    localStorage.setItem('current_office', JSON.stringify(office));
+                };
+                
+                onMounted(async () => {
+                    await loadUserInfo();
+                    await loadPlans();
+                    await loadOrders();
+                    
+                    const savedOffice = localStorage.getItem('current_office');
+                    if (savedOffice) {
+                        currentOffice.value = JSON.parse(savedOffice);
+                    }
+                });
+                
+                return {
+                    userInfo,
+                    currentOffice,
+                    orders,
+                    plans,
+                    loading,
+                    currentTab,
+                    tabs,
+                    showRefundModal,
+                    refundReason,
+                    selectedOrder,
+                    changeTab,
+                    getStatusText,
+                    getPlanName,
+                    formatDate,
+                    payOrder,
+                    cancelOrder,
+                    applyInvoice,
+                    applyRefund,
+                    closeRefundModal,
+                    submitRefund,
+                    handleOfficeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

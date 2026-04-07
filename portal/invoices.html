@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的发票 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+            <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            margin-bottom: var(--spacing-2xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .invoices-list {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .invoice-item {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .invoice-item:last-child {
+            border-bottom: none;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .invoice-no {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .invoice-status {
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .invoice-status.pending {
+            background: #FFF4E5;
+            color: #FF9500;
+        }
+        
+        .invoice-status.issued {
+            background: #E5F9FF;
+            color: #0095FF;
+        }
+        
+        .invoice-status.sent {
+            background: #E5F3FF;
+            color: #3B82F6;
+        }
+        
+        .invoice-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .invoice-info-item {
+            font-size: var(--font-size-sm);
+        }
+        
+        .invoice-info-label {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .invoice-info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .invoice-amount {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .invoice-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+        
+        .action-button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .action-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .action-button.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .action-button.primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .invoice-detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .invoice-detail-dialog {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .invoice-detail-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .invoice-detail-content {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .invoice-detail-row {
+            display: flex;
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-base);
+        }
+        
+        .invoice-detail-label {
+            color: var(--text-secondary);
+            width: 120px;
+        }
+        
+        .invoice-detail-value {
+            color: var(--text-primary);
+            flex: 1;
+        }
+        
+        .invoice-detail-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .modal-button {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            cursor: pointer;
+        }
+        
+        .modal-button.cancel {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        
+        .modal-button.confirm {
+            background: var(--primary);
+            border: none;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">我的发票</h1>
+            </div>
+            
+            <div v-if="loading" class="loading-spinner">
+                加载中...
+            </div>
+            
+            <div v-else-if="invoices.length === 0" class="empty-state">
+                暂无发票记录
+            </div>
+            
+            <div v-else class="invoices-list">
+                <div v-for="invoice in invoices" :key="invoice.id" class="invoice-item">
+                    <div class="invoice-header">
+                        <span class="invoice-no">发票号: {{ invoice.invoice_no }}</span>
+                        <span class="invoice-status" :class="invoice.status">
+                            {{ getStatusText(invoice.status) }}
+                        </span>
+                    </div>
+                    
+                    <div class="invoice-content">
+                        <div class="invoice-info-item">
+                            <div class="invoice-info-label">发票类型</div>
+                            <div class="invoice-info-value">{{ invoice.invoice_type === 'individual' ? '个人' : '企业' }}</div>
+                        </div>
+                        
+                        <div class="invoice-info-item">
+                            <div class="invoice-info-label">发票抬头</div>
+                            <div class="invoice-info-value">{{ invoice.title }}</div>
+                        </div>
+                        
+                        <div class="invoice-info-item">
+                            <div class="invoice-info-label">金额</div>
+                            <div class="invoice-amount">¥{{ invoice.amount }}</div>
+                        </div>
+                        
+                        <div class="invoice-info-item">
+                            <div class="invoice-info-label">申请时间</div>
+                            <div class="invoice-info-value">{{ formatDate(invoice.created_at) }}</div>
+                        </div>
+                        
+                        <div v-if="invoice.issued_at" class="invoice-info-item">
+                            <div class="invoice-info-label">开具时间</div>
+                            <div class="invoice-info-value">{{ formatDate(invoice.issued_at) }}</div>
+                        </div>
+                        
+                        <div class="invoice-info-item">
+                            <div class="invoice-info-label">接收邮箱</div>
+                            <div class="invoice-info-value">{{ invoice.email }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-actions">
+                        <button class="action-button" @click="showDetail(invoice)">
+                            查看详情
+                        </button>
+                        <button 
+                            v-if="invoice.status === 'issued' || invoice.status === 'sent'" 
+                            class="action-button primary" 
+                            @click="downloadInvoice(invoice)"
+                        >
+                            下载发票
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showDetailModal" class="invoice-detail-modal">
+                <div class="invoice-detail-dialog">
+                    <h3 class="invoice-detail-title">发票详情</h3>
+                    
+                    <div class="invoice-detail-content">
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">发票号</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.invoice_no }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">发票类型</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.invoice_type === 'individual' ? '个人' : '企业' }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">发票抬头</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.title }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.tax_no" class="invoice-detail-row">
+                            <span class="invoice-detail-label">税号</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.tax_no }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.address" class="invoice-detail-row">
+                            <span class="invoice-detail-label">地址</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.address }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.phone" class="invoice-detail-row">
+                            <span class="invoice-detail-label">电话</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.phone }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.bank_name" class="invoice-detail-row">
+                            <span class="invoice-detail-label">开户银行</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.bank_name }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.bank_account" class="invoice-detail-row">
+                            <span class="invoice-detail-label">银行账号</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.bank_account }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">金额</span>
+                            <span class="invoice-detail-value" style="color: var(--primary); font-weight: 700;">¥{{ selectedInvoice?.amount }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">状态</span>
+                            <span class="invoice-detail-value">{{ getStatusText(selectedInvoice?.status) }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">接收邮箱</span>
+                            <span class="invoice-detail-value">{{ selectedInvoice?.email }}</span>
+                        </div>
+                        
+                        <div class="invoice-detail-row">
+                            <span class="invoice-detail-label">申请时间</span>
+                            <span class="invoice-detail-value">{{ formatDate(selectedInvoice?.created_at) }}</span>
+                        </div>
+                        
+                        <div v-if="selectedInvoice?.issued_at" class="invoice-detail-row">
+                            <span class="invoice-detail-label">开具时间</span>
+                            <span class="invoice-detail-value">{{ formatDate(selectedInvoice?.issued_at) }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-detail-actions">
+                        <button class="modal-button cancel" @click="closeDetailModal">关闭</button>
+                        <button 
+                            v-if="selectedInvoice?.status === 'issued' || selectedInvoice?.status === 'sent'" 
+                            class="modal-button confirm" 
+                            @click="downloadInvoice(selectedInvoice)"
+                        >
+                            下载发票
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const userInfo = ref(null);
+                const invoices = ref([]);
+                const loading = ref(true);
+                const showDetailModal = ref(false);
+                const selectedInvoice = ref(null);
+                
+                const loadUserInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            window.location.href = '/portal/register.html';
+                            return;
+                        }
+                        
+                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            userInfo.value = data;
+                        }
+                    } catch (err) {
+                        console.error('加载用户信息失败:', err);
+                    }
+                };
+                
+                const loadInvoices = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        const userId = localStorage.getItem('user_id');
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch(`/api/invoices/user/${userId}`, {
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            invoices.value = data.invoices || [];
+                        }
+                    } catch (err) {
+                        console.error('加载发票失败:', err);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        pending: '待开具',
+                        issued: '已开具',
+                        sent: '已发送'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN');
+                };
+                
+                const showDetail = (invoice) => {
+                    selectedInvoice.value = invoice;
+                    showDetailModal.value = true;
+                };
+                
+                const closeDetailModal = () => {
+                    showDetailModal.value = false;
+                    selectedInvoice.value = null;
+                };
+                
+                const downloadInvoice = async (invoice) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        const response = await fetch(`/api/invoices/${invoice.invoice_no}/download`, {
+                            headers: {
+                                'X-User-Id': userId,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            const data = await response.json();
+                            alert(data.detail || '下载发票失败');
+                            return;
+                        }
+                        
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${invoice.invoice_no}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        
+                        closeDetailModal();
+                    } catch (err) {
+                        alert('下载发票失败');
+                        console.error(err);
+                    }
+                };
+                
+                const handleOfficeChange = (office) => {
+                    currentOffice.value = office;
+                    localStorage.setItem('current_office', JSON.stringify(office));
+                };
+                
+                onMounted(async () => {
+                    await loadUserInfo();
+                    await loadInvoices();
+                    
+                    const savedOffice = localStorage.getItem('current_office');
+                    });
+                
+                return {
+                    userInfo,
+                    invoices,
+                    loading,
+                    showDetailModal,
+                    selectedInvoice,
+                    getStatusText,
+                    formatDate,
+                    showDetail,
+                    closeDetailModal,
+                    downloadInvoice,
+                    handleOfficeChange
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

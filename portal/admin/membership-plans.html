@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1E293B">
+    <title>会员套餐管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            opacity: 0.8;
+        }
+        
+        .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
+        .stat-icon.success { background: var(--success-light); color: var(--success); }
+        .stat-icon.warning { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.danger { background: var(--danger-light); color: var(--danger); }
+        
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-left: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .plan-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            transition: all var(--transition-base);
+            position: relative;
+            border: 2px solid transparent;
+        }
+        
+        .plan-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+        }
+        
+        .plan-card.featured {
+            border-color: var(--primary);
+        }
+        
+        .plan-card.disabled {
+            opacity: 0.6;
+        }
+        
+        .plan-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+        }
+        
+        .plan-badge.inactive {
+            background: var(--text-tertiary);
+        }
+        
+        .plan-header {
+            padding: var(--spacing-xl);
+            text-align: center;
+            background: linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%);
+            position: relative;
+        }
+        
+        .plan-card.featured .plan-header {
+            background: linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%);
+        }
+        
+        .plan-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-xl);
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .plan-name {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .plan-duration {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .plan-price-section {
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--border-light);
+            text-align: center;
+        }
+        
+        .price-display {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .price-symbol {
+            font-size: var(--font-size-lg);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .price-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .price-period {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .original-price {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            text-decoration: line-through;
+            margin-top: var(--spacing-xs);
+        }
+        
+        .plan-features {
+            padding: var(--spacing-xl);
+        }
+        
+        .features-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+        
+        .feature-check {
+            width: 20px;
+            height: 20px;
+            border-radius: var(--radius-full);
+            background: var(--success-light);
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .plan-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: center;
+        }
+        
+        .plan-action-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            border: none;
+        }
+        
+        .plan-action-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .plan-action-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+        
+        .plan-action-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        
+        .plan-action-btn.secondary:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .plan-action-btn.danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .plan-action-btn.danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .plan-meta {
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .sort-order {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .sort-badge {
+            padding: 2px 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-xl);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-section-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-label.required::after {
+            content: '*';
+            color: var(--danger);
+            margin-left: var(--spacing-xs);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .form-hint {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .feature-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .feature-input-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .feature-input-row .form-input {
+            flex: 1;
+        }
+        
+        .feature-remove-btn {
+            padding: var(--spacing-sm);
+            background: var(--danger-light);
+            color: var(--danger);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+        }
+        
+        .feature-remove-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .add-feature-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .add-feature-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .toggle-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .toggle-option {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+            text-align: center;
+        }
+        
+        .toggle-option:hover {
+            border-color: var(--primary);
+        }
+        
+        .toggle-option.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .icon-selector {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .icon-option {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all var(--transition-fast);
+        }
+        
+        .icon-option:hover {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .icon-option.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            opacity: 0.5;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .empty-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .empty-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .toast {
+            position: fixed;
+            top: var(--spacing-xl);
+            right: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success { background: var(--success-light); color: var(--success-dark); }
+        .toast.error { background: var(--danger-light); color: var(--danger-dark); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .delete-confirm-modal {
+            max-width: 400px;
+        }
+        
+        .delete-confirm-body {
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+        
+        .delete-confirm-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-full);
+            background: var(--danger-light);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        .delete-confirm-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .delete-confirm-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .preview-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-md);
+        }
+        
+        .preview-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .preview-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-md);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .icon-selector {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .modal-overlay {
+                padding: 0;
+                align-items: flex-end;
+            }
+            
+            .modal {
+                max-width: 100%;
+                border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '管理后台', icon: '⚙', url: '/portal/admin/index.html'}, {text: '会员套餐管理', icon: '👑', url: '/portal/admin/membership-plans.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span>👑</span>
+                    <span>会员套餐管理</span>
+                </h1>
+                <div class="header-actions">
+                    <button @click="exportData" class="btn btn-outline">
+                        <span>📥</span>
+                        <span>导出</span>
+                    </button>
+                    <button @click="showCreateModal" class="btn btn-primary">
+                        <span>✚</span>
+                        <span>新增套餐</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">全部套餐</div>
+                        <div class="stat-value">{{ stats.total }}</div>
+                    </div>
+                    <div class="stat-icon primary">📋</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">已启用</div>
+                        <div class="stat-value">{{ stats.active }}</div>
+                    </div>
+                    <div class="stat-icon success">✓</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">已停用</div>
+                        <div class="stat-value">{{ stats.inactive }}</div>
+                    </div>
+                    <div class="stat-icon warning">○</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">推荐套餐</div>
+                        <div class="stat-value">{{ stats.featured }}</div>
+                    </div>
+                    <div class="stat-icon primary">★</div>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input v-model="searchText" type="text" class="search-input" placeholder="搜索套餐名称...">
+                </div>
+                
+                <select v-model="statusFilter" class="filter-select">
+                    <option value="">全部状态</option>
+                    <option value="active">已启用</option>
+                    <option value="inactive">已停用</option>
+                </select>
+                
+                <button v-if="statusFilter || searchText" @click="clearFilters" class="btn btn-outline btn-sm">
+                    清空筛选
+                </button>
+            </div>
+            
+            <div v-if="filteredPlans.length === 0 && !loading" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div class="empty-title">暂无会员套餐</div>
+                <div class="empty-desc">点击上方「新增套餐」按钮创建第一个会员套餐</div>
+                <button @click="showCreateModal" class="btn btn-primary">
+                    <span>✚</span>
+                    <span>新增套餐</span>
+                </button>
+            </div>
+            
+            <div v-else class="plans-grid">
+                <div 
+                    v-for="(plan, index) in filteredPlans" 
+                    :key="plan.id"
+                    :class="['plan-card', { featured: index === 0 && plan.is_active, disabled: !plan.is_active }]"
+                >
+                    <div :class="['plan-badge', { inactive: !plan.is_active }]">
+                        {{ plan.is_active ? '已启用' : '已停用' }}
+                    </div>
+                    
+                    <div class="plan-header">
+                        <div class="plan-icon">{{ plan.icon || '👑' }}</div>
+                        <div class="plan-name">{{ plan.name }}</div>
+                        <div class="plan-duration">{{ plan.duration_months }}个月有效期</div>
+                    </div>
+                    
+                    <div class="plan-price-section">
+                        <div class="price-display">
+                            <span class="price-symbol">¥</span>
+                            <span class="price-value">{{ plan.price }}</span>
+                        </div>
+                        <div v-if="plan.original_price" class="original-price">
+                            原价 ¥{{ plan.original_price }}
+                        </div>
+                        <div v-if="plan.original_price && plan.original_price > plan.price" class="price-period">
+                            省 ¥{{ (plan.original_price - plan.price).toFixed(2) }}
+                        </div>
+                    </div>
+                    
+                    <div class="plan-features">
+                        <div class="features-title">套餐权益</div>
+                        <div class="feature-list">
+                            <div v-for="(feature, fIndex) in (plan.features || [])" :key="fIndex" class="feature-item">
+                                <div class="feature-check">✓</div>
+                                <span>{{ feature }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plan-footer">
+                        <button @click="editPlan(plan)" class="plan-action-btn primary">
+                            <span>✎</span>
+                            <span>编辑</span>
+                        </button>
+                        <button @click="toggleStatus(plan)" class="plan-action-btn secondary">
+                            <span>{{ plan.is_active ? '○' : '✓' }}</span>
+                            <span>{{ plan.is_active ? '停用' : '启用' }}</span>
+                        </button>
+                        <button @click="confirmDelete(plan)" class="plan-action-btn danger">
+                            <span>🗑</span>
+                            <span>删除</span>
+                        </button>
+                    </div>
+                    
+                    <div class="plan-meta">
+                        <div class="sort-order">
+                            <span>排序:</span>
+                            <span class="sort-badge">{{ plan.sort_order }}</span>
+                        </div>
+                        <div>
+                            创建于 {{ formatDate(plan.created_at) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>{{ isEdit ? '✎' : '✚' }}</span>
+                        <span>{{ isEdit ? '编辑套餐' : '新增套餐' }}</span>
+                    </h3>
+                    <button @click="closeModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <span>📋</span>
+                            <span>基本信息</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label required">套餐名称</label>
+                            <input v-model="form.name" type="text" class="form-input" placeholder="如：月度会员、年度会员">
+                            <div class="form-hint">建议使用简洁明了的名称</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">套餐图标</label>
+                            <div class="icon-selector">
+                                <div 
+                                    v-for="icon in availableIcons" 
+                                    :key="icon"
+                                    :class="['icon-option', { selected: form.icon === icon }]"
+                                    @click="form.icon = icon"
+                                >
+                                    {{ icon }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">套餐描述</label>
+                            <textarea v-model="form.description" class="form-input" rows="3" placeholder="简要描述套餐特点"></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">有效期（月）</label>
+                                <input v-model.number="form.duration_months" type="number" class="form-input" min="1" placeholder="如：12">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">排序权重</label>
+                                <input v-model.number="form.sort_order" type="number" class="form-input" min="0" placeholder="数字越小排序越靠前">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <span>💰</span>
+                            <span>价格设置</span>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">售价（元）</label>
+                                <input v-model.number="form.price" type="number" class="form-input" min="0" step="0.01" placeholder="如：99">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">原价（元）</label>
+                                <input v-model.number="form.original_price" type="number" class="form-input" min="0" step="0.01" placeholder="用于展示优惠">
+                            </div>
+                        </div>
+                        
+                        <div v-if="form.original_price && form.original_price > form.price" class="form-hint" style="color: var(--success);">
+                            ✓ 用户可节省 ¥{{ (form.original_price - form.price).toFixed(2) }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <span>✓</span>
+                            <span>套餐权益</span>
+                        </div>
+                        
+                        <div class="feature-inputs">
+                            <div v-for="(feature, index) in form.features" :key="index" class="feature-input-row">
+                                <input v-model="form.features[index]" type="text" class="form-input" placeholder="如：会议室预约8折优惠">
+                                <button @click="removeFeature(index)" class="feature-remove-btn">×</button>
+                            </div>
+                        </div>
+                        
+                        <button @click="addFeature" class="add-feature-btn" style="margin-top: var(--spacing-md);">
+                            <span>✚</span>
+                            <span>添加权益</span>
+                        </button>
+                        <div class="form-hint">清晰描述用户可获得的权益</div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <span>⚙</span>
+                            <span>状态设置</span>
+                        </div>
+                        
+                        <div class="toggle-group">
+                            <div :class="['toggle-option', { active: form.is_active }]" @click="form.is_active = true">
+                                <span>✓ 已启用</span>
+                            </div>
+                            <div :class="['toggle-option', { active: !form.is_active }]" @click="form.is_active = false">
+                                <span>○ 已停用</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="form.name || form.price" class="preview-section">
+                        <div class="preview-title">预览效果</div>
+                        <div class="preview-card">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                                <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    {{ form.icon || '👑' }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--text-primary);">{{ form.name || '套餐名称' }}</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ form.duration_months || 0 }}个月有效期</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-md); display: flex; align-items: baseline; gap: var(--spacing-xs);">
+                                <span style="font-size: var(--font-size-lg); color: var(--primary); font-weight: 600;">¥</span>
+                                <span style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--primary);">{{ form.price || 0 }}</span>
+                                <span v-if="form.original_price && form.original_price > form.price" style="font-size: var(--font-size-sm); color: var(--text-tertiary); text-decoration: line-through; margin-left: var(--spacing-sm);">¥{{ form.original_price }}</span>
+                            </div>
+                            <div v-if="form.features && form.features.length > 0" style="margin-top: var(--spacing-md);">
+                                <div v-for="(feature, index) in form.features" :key="index" style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-xs);">
+                                    ✓ {{ feature }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeModal" class="btn btn-outline">取消</button>
+                    <button @click="savePlan" class="btn btn-primary" :disabled="!isFormValid || submitting">
+                        <span v-if="submitting">保存中...</span>
+                        <span v-else>{{ isEdit ? '保存更改' : '创建套餐' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
+            <div class="modal delete-confirm-modal" @click.stop>
+                <div class="delete-confirm-body">
+                    <div class="delete-confirm-icon">🗑</div>
+                    <div class="delete-confirm-title">确认删除套餐</div>
+                    <div class="delete-confirm-desc">
+                        确定要删除「{{ deletingPlan?.name }}」吗？<br>
+                        此操作不可恢复，已有会员不受影响。
+                    </div>
+                </div>
+                <div class="modal-footer" style="justify-content: center;">
+                    <button @click="showDeleteConfirm = false" class="btn btn-outline">取消</button>
+                    <button @click="deletePlan" class="btn btn-danger" :disabled="deleting">
+                        <span v-if="deleting">删除中...</span>
+                        <span v-else>确认删除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="toast.show" :class="['toast', toast.type]">
+            <span>{{ toast.icon }}</span>
+            <span>{{ toast.message }}</span>
+        </div>
+        
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const plans = ref([]);
+                const loading = ref(true);
+                const searchText = ref('');
+                const statusFilter = ref('');
+                
+                const showModal = ref(false);
+                const showDeleteConfirm = ref(false);
+                const isEdit = ref(false);
+                const editingPlan = ref(null);
+                const deletingPlan = ref(null);
+                const submitting = ref(false);
+                const deleting = ref(false);
+                
+                const availableIcons = ['👑', '🥇', '🥈', '🥉', '⭐', '💎', '🌟', '🎯', '💪', '🚀', '✨', '🔥'];
+                
+                const form = ref({
+                    name: '',
+                    description: '',
+                    price: 0,
+                    original_price: null,
+                    duration_months: 1,
+                    features: [''],
+                    is_active: true,
+                    sort_order: 0,
+                    icon: '👑'
+                });
+                
+                const toast = ref({ show: false, type: 'success', message: '', icon: '✓' });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
+                
+                const stats = computed(() => {
+                    const total = plans.value.length;
+                    const active = plans.value.filter(p => p.is_active).length;
+                    const inactive = plans.value.filter(p => !p.is_active).length;
+                    const featured = plans.value.filter(p => p.is_active && p.sort_order === 0).length;
+                    return { total, active, inactive, featured };
+                });
+                
+                const filteredPlans = computed(() => {
+                    let result = [...plans.value];
+                    
+                    if (searchText.value) {
+                        const search = searchText.value.toLowerCase();
+                        result = result.filter(p => 
+                            (p.name || '').toLowerCase().includes(search) ||
+                            (p.description || '').toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    if (statusFilter.value === 'active') {
+                        result = result.filter(p => p.is_active);
+                    } else if (statusFilter.value === 'inactive') {
+                        result = result.filter(p => !p.is_active);
+                    }
+                    
+                    result.sort((a, b) => a.sort_order - b.sort_order);
+                    
+                    return result;
+                });
+                
+                const isFormValid = computed(() => {
+                    return form.value.name && 
+                           form.value.price >= 0 && 
+                           form.value.duration_months >= 1 &&
+                           form.value.features.some(f => f && f.trim());
+                });
+                
+                const showToast = (type, message) => {
+                    const icons = { success: '✓', error: '×' };
+                    toast.value = { show: true, type, message, icon: icons[type] };
+                    setTimeout(() => toast.value.show = false, 3000);
+                };
+                
+                const loadPlans = async () => {
+                    try {
+                        loading.value = true;
+                        const response = await fetch(`${API_BASE}/membership/plans`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            plans.value = data.plans || [];
+                        }
+                    } catch (e) {
+                        console.error('加载套餐失败:', e);
+                        showToast('error', '加载套餐失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const showCreateModal = () => {
+                    isEdit.value = false;
+                    editingPlan.value = null;
+                    form.value = {
+                        name: '',
+                        description: '',
+                        price: 0,
+                        original_price: null,
+                        duration_months: 1,
+                        features: [''],
+                        is_active: true,
+                        sort_order: plans.value.length,
+                        icon: '👑'
+                    };
+                    showModal.value = true;
+                };
+                
+                const editPlan = (plan) => {
+                    isEdit.value = true;
+                    editingPlan.value = plan;
+                    form.value = {
+                        name: plan.name,
+                        description: plan.description || '',
+                        price: plan.price,
+                        original_price: plan.original_price,
+                        duration_months: plan.duration_months,
+                        features: plan.features && plan.features.length > 0 ? [...plan.features] : [''],
+                        is_active: plan.is_active,
+                        sort_order: plan.sort_order,
+                        icon: plan.icon || '👑'
+                    };
+                    showModal.value = true;
+                };
+                
+                const closeModal = () => {
+                    showModal.value = false;
+                    submitting.value = false;
+                };
+                
+                const addFeature = () => {
+                    form.value.features.push('');
+                };
+                
+                const removeFeature = (index) => {
+                    if (form.value.features.length > 1) {
+                        form.value.features.splice(index, 1);
+                    }
+                };
+                
+                const savePlan = async () => {
+                    if (!isFormValid.value) return;
+                    
+                    try {
+                        submitting.value = true;
+                        
+                        const validFeatures = form.value.features.filter(f => f && f.trim());
+                        
+                        const payload = {
+                            name: form.value.name,
+                            description: form.value.description,
+                            price: form.value.price,
+                            original_price: form.value.original_price || null,
+                            duration_months: form.value.duration_months,
+                            features: validFeatures,
+                            is_active: form.value.is_active,
+                            sort_order: form.value.sort_order,
+                            icon: form.value.icon
+                        };
+                        
+                        const url = isEdit.value 
+                            ? `${API_BASE}/admin/membership/plans/${editingPlan.value.id}`
+                            : `${API_BASE}/admin/membership/plans`;
+                        
+                        const method = isEdit.value ? 'PUT' : 'POST';
+                        
+                        const response = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (response.ok) {
+                            showToast('success', isEdit.value ? '套餐已更新' : '套餐已创建');
+                            closeModal();
+                            await loadPlans();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        console.error('保存套餐失败:', e);
+                        showToast('error', '保存失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                const toggleStatus = async (plan) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/membership/plans/${plan.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: !plan.is_active })
+                        });
+                        
+                        if (response.ok) {
+                            plan.is_active = !plan.is_active;
+                            showToast('success', plan.is_active ? '套餐已启用' : '套餐已停用');
+                        } else {
+                            showToast('error', '操作失败');
+                        }
+                    } catch (e) {
+                        showToast('error', '操作失败');
+                    }
+                };
+                
+                const confirmDelete = (plan) => {
+                    deletingPlan.value = plan;
+                    showDeleteConfirm.value = true;
+                };
+                
+                const deletePlan = async () => {
+                    if (!deletingPlan.value) return;
+                    
+                    try {
+                        deleting.value = true;
+                        
+                        const response = await fetch(`${API_BASE}/admin/membership/plans/${deletingPlan.value.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            plans.value = plans.value.filter(p => p.id !== deletingPlan.value.id);
+                            showToast('success', '套餐已删除');
+                            showDeleteConfirm.value = false;
+                            deletingPlan.value = null;
+                        } else {
+                            showToast('error', '删除失败');
+                        }
+                    } catch (e) {
+                        showToast('error', '删除失败');
+                    } finally {
+                        deleting.value = false;
+                    }
+                };
+                
+                const clearFilters = () => {
+                    searchText.value = '';
+                    statusFilter.value = '';
+                };
+                
+                const exportData = () => {
+                    const data = filteredPlans.value.map(p => ({
+                        ID: p.id,
+                        名称: p.name,
+                        描述: p.description,
+                        价格: p.price,
+                        原价: p.original_price,
+                        有效期月数: p.duration_months,
+                        权益: (p.features || []).join(';'),
+                        状态: p.is_active ? '启用' : '停用',
+                        排序: p.sort_order,
+                        创建时间: formatDate(p.created_at)
+                    }));
+                    
+                    const csv = [
+                        Object.keys(data[0]).join(','),
+                        ...data.map(row => Object.values(row).map(v => `"${v}"`).join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `会员套餐_${new Date().toISOString().slice(0, 10)}.csv`;
+                    link.click();
+                    
+                    showToast('success', '导出成功');
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN');
+                };
+                
+                onMounted(() => {
+                    loadPlans();
+                    
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            if (showModal.value) closeModal();
+                            if (showDeleteConfirm.value) showDeleteConfirm.value = false;
+                        }
+                    });
+                });
+                
+                return {
+                    plans,
+                    loading,
+                    searchText,
+                    statusFilter,
+                    stats,
+                    filteredPlans,
+                    showModal,
+                    showDeleteConfirm,
+                    isEdit,
+                    form,
+                    submitting,
+                    deleting,
+                    deletingPlan,
+                    toast,
+                    availableIcons,
+                    isFormValid,
+                    showCreateModal,
+                    editPlan,
+                    closeModal,
+                    addFeature,
+                    removeFeature,
+                    savePlan,
+                    toggleStatus,
+                    confirmDelete,
+                    deletePlan,
+                    clearFilters,
+                    exportData,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
