@@ -8,6 +8,8 @@
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -283,8 +285,20 @@
         }
         
         .action-btns {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: var(--spacing-xs);
+            min-width: 240px;
+        }
+        
+        .action-btns .btn {
+            justify-content: center;
+            min-width: 50px;
+        }
+        
+        .btn-placeholder {
+            visibility: hidden;
+            min-width: 50px;
         }
         
         .btn {
@@ -512,18 +526,8 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <div v-if="loading" class="loading-overlay">
-            <div class="loading-spinner"></div>
-        </div>
-        
-        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
-            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
-            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
-            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
-        </div>
-        
-        <template v-else>
-            <div class="module-container">
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '领水记录', icon: '📋', url: '/portal/admin/water/pickups.html'}]"></global-header>
+        <div class="module-container">
                 <div class="module-header">
                     <h1 class="module-title">
                         <span>🚰</span>
@@ -691,12 +695,12 @@
                                             {{ getStatusText(pickup.settlement_status) }}
                                         </span>
                                     </td>
-                                    <td>
+<td>
                                         <div class="action-btns">
-                                            <button class="btn btn-secondary btn-sm" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'">
+                                            <button class="btn btn-primary btn-sm" @click="confirmSinglePickup(pickup.id)" v-show="pickup.settlement_status === 'applied'">
                                                 确认
                                             </button>
-                                            <button class="btn btn-secondary btn-sm" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'">
+                                            <button class="btn btn-secondary btn-sm" @click="sendRemindForPickup(pickup)" v-show="pickup.settlement_status === 'pending'">
                                                 提醒
                                             </button>
                                             <button class="btn btn-secondary btn-sm" @click="editPickup(pickup)">
@@ -791,6 +795,7 @@
         const { createApp, ref, computed, onMounted } = Vue;
         
         createApp({
+            components: { 'global-header': GlobalHeader },
             setup() {
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
