@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>领水记录管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        
+        .filter-select, .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 140px;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .quick-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            flex-wrap: wrap;
+        }
+        
+        .quick-btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .quick-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .quick-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .tab-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+        
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: none;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        
+        .tab-btn:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn .count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: var(--radius-full);
+            background: var(--bg-secondary);
+            font-size: var(--font-size-xs);
+            margin-left: var(--spacing-xs);
+        }
+        
+        .tab-btn.active .count {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        
+        .table-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        td {
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .checkbox-cell {
+            width: 40px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-applied {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .status-settled {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-lg);
+        }
+        
+        .pagination button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            cursor: pointer;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination .page-info {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-select, .filter-input {
+                width: 100%;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>🚰</span>
+                        <span>领水记录管理</span>
+                    </h1>
+                    <div class="action-btns">
+                        <button class="btn btn-secondary" @click="exportFilteredPickups">
+                            📥 导出筛选结果
+                        </button>
+                        <button class="btn btn-secondary" @click="exportAllPickups">
+                            📥 导出全部
+                        </button>
+                        <button class="btn btn-primary" @click="showPickupModal = true">
+                            ➕ 新增记录
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">📊</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ pickupStats.total }}</div>
+                            <div class="stat-label">总记录数</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ pickupStats.pending }}</div>
+                            <div class="stat-label">待付款</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ pickupStats.applied }}</div>
+                            <div class="stat-label">待确认</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">💰</div>
+                        <div class="stat-info">
+                            <div class="stat-value">¥{{ pickupStats.totalAmount.toFixed(2) }}</div>
+                            <div class="stat-label">待结算金额</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <div class="tab-filters">
+                        <button class="tab-btn" :class="{ active: officePickupFilter.status === '' }" @click="filterByStatus('')">
+                            全部 <span class="count">{{ pickupStats.total }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: officePickupFilter.status === 'pending' }" @click="filterByStatus('pending')">
+                            待付款 <span class="count">{{ pickupStats.pending }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: officePickupFilter.status === 'applied' }" @click="filterByStatus('applied')">
+                            待确认 <span class="count">{{ pickupStats.applied }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: officePickupFilter.status === 'settled' }" @click="filterByStatus('settled')">
+                            已结清 <span class="count">{{ pickupStats.settled }}</span>
+                        </button>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <span class="filter-label">快速筛选:</span>
+                            <div class="quick-filters">
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === 'today' }" @click="setDateFilter('today')">今天</button>
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === 'yesterday' }" @click="setDateFilter('yesterday')">昨天</button>
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === '3days' }" @click="setDateFilter('3days')">3天</button>
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === '7days' }" @click="setDateFilter('7days')">本周</button>
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === '30days' }" @click="setDateFilter('30days')">本月</button>
+                                <button class="quick-btn" :class="{ active: officePickupFilter.quickDate === 'thisMonth' }" @click="setDateFilter('thisMonth')">本月</button>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">日期:</span>
+                            <input type="date" class="filter-input" v-model="officePickupFilter.dateFrom" @change="filterOfficePickups">
+                            <span>-</span>
+                            <input type="date" class="filter-input" v-model="officePickupFilter.dateTo" @change="filterOfficePickups">
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">办公室:</span>
+                            <select class="filter-select" v-model="officePickupFilter.officeId" @change="filterOfficePickups">
+                                <option value="">全部</option>
+                                <option v-for="office in offices" :key="office.id" :value="office.id">
+                                    {{ office.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">产品:</span>
+                            <select class="filter-select" v-model="officePickupFilter.productId" @change="filterOfficePickups">
+                                <option value="">全部</option>
+                                <option v-for="product in products" :key="product.id" :value="product.id">
+                                    {{ product.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">搜索:</span>
+                            <input type="text" class="filter-input" v-model="officePickupFilter.searchPerson" placeholder="领取人姓名" @input="filterOfficePickups">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" @click="resetOfficePickupFilter">重置</button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">
+                            共 {{ filteredPickups.length }} 条记录
+                            <template v-if="selectedPickups.length > 0">
+                                ，已选择 {{ selectedPickups.length }} 条
+                            </template>
+                        </div>
+                        <div class="table-actions" v-if="selectedPickups.length > 0">
+                            <button class="btn btn-primary btn-sm" @click="batchConfirmPickups" v-if="selectedAppliedCount > 0">
+                                批量确认 ({{ selectedAppliedCount }})
+                            </button>
+                            <button class="btn btn-secondary btn-sm" @click="batchRemindPickups" v-if="selectedPendingCount > 0">
+                                批量提醒 ({{ selectedPendingCount }})
+                            </button>
+                            <button class="btn btn-danger btn-sm" @click="batchDeletePickups">
+                                删除 ({{ selectedPickups.length }})
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input type="checkbox" @change="toggleAllPickups" :checked="allPickupsSelected">
+                                </th>
+                                <th>领取时间</th>
+                                <th>办公室</th>
+                                <th>产品</th>
+                                <th>规格</th>
+                                <th>数量</th>
+                                <th>单价</th>
+                                <th>金额</th>
+                                <th>领取人</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="paginatedPickups.length > 0">
+                                <tr v-for="pickup in paginatedPickups" :key="pickup.id">
+                                    <td class="checkbox-cell">
+                                        <input type="checkbox" :value="pickup.id" v-model="selectedPickups" @change="updateSelectAll">
+                                    </td>
+                                    <td>{{ formatDate(pickup.pickup_time) }}</td>
+                                    <td>{{ pickup.office_name || '-' }}</td>
+                                    <td>{{ pickup.product_name || '-' }}</td>
+                                    <td>{{ pickup.specification || '-' }}</td>
+                                    <td>{{ pickup.quantity }}</td>
+                                    <td>¥{{ (pickup.unit_price || 0).toFixed(2) }}</td>
+                                    <td>¥{{ (pickup.total_amount || 0).toFixed(2) }}</td>
+                                    <td>{{ pickup.pickup_person || '-' }}</td>
+                                    <td>
+                                        <span class="status-badge" :class="'status-' + pickup.settlement_status">
+                                            {{ getStatusText(pickup.settlement_status) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="action-btns">
+                                            <button class="btn btn-secondary btn-sm" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'">
+                                                确认
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'">
+                                                提醒
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" @click="editPickup(pickup)">
+                                                编辑
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" @click="deleteSinglePickup(pickup.id)">
+                                                删除
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr v-else>
+                                <td colspan="11">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📭</div>
+                                        <p>暂无领水记录</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="pagination" v-if="totalPages > 1">
+                        <button @click="currentPage = 1" :disabled="currentPage === 1">首页</button>
+                        <button @click="currentPage--" :disabled="currentPage === 1">上一页</button>
+                        <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                        <button @click="currentPage++" :disabled="currentPage === totalPages">下一页</button>
+                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages">尾页</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showPickupModal" class="modal-overlay" @click.self="showPickupModal = false">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ editingPickup ? '编辑领水记录' : '新增领水记录' }}</h3>
+                        <button class="modal-close" @click="showPickupModal = false">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">办公室 *</label>
+                            <select class="form-select" v-model="pickupForm.office_id">
+                                <option value="">请选择办公室</option>
+                                <option v-for="office in offices" :key="office.id" :value="office.id">
+                                    {{ office.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">产品 *</label>
+                            <select class="form-select" v-model="pickupForm.product_id" @change="onProductSelect">
+                                <option value="">请选择产品</option>
+                                <option v-for="product in products" :key="product.id" :value="product.id">
+                                    {{ product.name }} ({{ product.specification }})
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">数量 *</label>
+                            <input type="number" class="form-input" v-model.number="pickupForm.quantity" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">领取人 *</label>
+                            <input type="text" class="form-input" v-model="pickupForm.pickup_person" placeholder="请输入领取人姓名">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">领取时间 *</label>
+                            <input type="datetime-local" class="form-input" v-model="pickupForm.pickup_time">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">备注</label>
+                            <textarea class="form-textarea" v-model="pickupForm.note" rows="3" placeholder="可选备注"></textarea>
+                        </div>
+                        <div class="form-group" v-if="pickupForm.total">
+                            <label class="form-label">金额</label>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--primary);">
+                                ¥{{ pickupForm.total.toFixed(2) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showPickupModal = false">取消</button>
+                        <button class="btn btn-primary" @click="savePickup">保存</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                const user = ref(null);
+                
+                const officePickups = ref([]);
+                const officePickupsLoading = ref(false);
+                const selectedPickups = ref([]);
+                const offices = ref([]);
+                const products = ref([]);
+                
+                const officePickupFilter = ref({
+                    officeId: '',
+                    status: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    productId: '',
+                    searchPerson: '',
+                    quickDate: ''
+                });
+                
+                const showPickupModal = ref(false);
+                const editingPickup = ref(null);
+                const pickupForm = ref({
+                    office_id: '',
+                    product_id: '',
+                    quantity: 1,
+                    pickup_person: '',
+                    pickup_time: '',
+                    note: ''
+                });
+                
+                const currentPage = ref(1);
+                const pageSize = 20;
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    user.value = JSON.parse(userInfoStr);
+                    
+                    if (user.value.role !== 'admin' && user.value.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/offices`, { headers });
+                        if (res.ok) offices.value = await res.json();
+                    } catch (e) {
+                        console.error('加载办公室失败:', e);
+                    }
+                };
+                
+                const loadProducts = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/products`);
+                        if (res.ok) products.value = await res.json();
+                    } catch (e) {
+                        console.error('加载产品失败:', e);
+                    }
+                };
+                
+                const loadOfficePickups = async () => {
+                    officePickupsLoading.value = true;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Cache-Control': 'no-cache' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/office-pickups?limit=10000`, { headers });
+                        if (res.ok) {
+                            officePickups.value = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('加载领水记录失败:', e);
+                    } finally {
+                        officePickupsLoading.value = false;
+                    }
+                };
+                
+                const filteredPickups = computed(() => {
+                    let result = officePickups.value || [];
+                    
+                    if (officePickupFilter.value.status) {
+                        result = result.filter(p => p.settlement_status === officePickupFilter.value.status);
+                    }
+                    
+                    if (officePickupFilter.value.officeId) {
+                        result = result.filter(p => p.office_id === parseInt(officePickupFilter.value.officeId));
+                    }
+                    
+                    if (officePickupFilter.value.productId) {
+                        result = result.filter(p => p.product_id === parseInt(officePickupFilter.value.productId));
+                    }
+                    
+                    if (officePickupFilter.value.searchPerson) {
+                        const q = officePickupFilter.value.searchPerson.toLowerCase();
+                        result = result.filter(p => p.pickup_person && p.pickup_person.toLowerCase().includes(q));
+                    }
+                    
+                    if (officePickupFilter.value.dateFrom) {
+                        const from = new Date(officePickupFilter.value.dateFrom);
+                        from.setHours(0, 0, 0, 0);
+                        result = result.filter(p => new Date(p.pickup_time) >= from);
+                    }
+                    
+                    if (officePickupFilter.value.dateTo) {
+                        const to = new Date(officePickupFilter.value.dateTo);
+                        to.setHours(23, 59, 59, 999);
+                        result = result.filter(p => new Date(p.pickup_time) <= to);
+                    }
+                    
+                    return result.sort((a, b) => new Date(b.pickup_time) - new Date(a.pickup_time));
+                });
+                
+                const pickupStats = computed(() => {
+                    const pickups = officePickups.value || [];
+                    return {
+                        total: pickups.length,
+                        pending: pickups.filter(p => p.settlement_status === 'pending').length,
+                        applied: pickups.filter(p => p.settlement_status === 'applied').length,
+                        settled: pickups.filter(p => p.settlement_status === 'settled').length,
+                        totalAmount: pickups
+                            .filter(p => p.settlement_status !== 'settled')
+                            .reduce((sum, p) => sum + (p.total_amount || 0), 0)
+                    };
+                });
+                
+                const totalPages = computed(() => Math.ceil(filteredPickups.value.length / pageSize));
+                
+                const paginatedPickups = computed(() => {
+                    const start = (currentPage.value - 1) * pageSize;
+                    return filteredPickups.value.slice(start, start + pageSize);
+                });
+                
+                const allPickupsSelected = computed(() => {
+                    const pending = filteredPickups.value.filter(p => p.settlement_status !== 'settled');
+                    return pending.length > 0 && pending.every(p => selectedPickups.value.includes(p.id));
+                });
+                
+                const selectedPendingCount = computed(() => {
+                    return filteredPickups.value.filter(p => 
+                        selectedPickups.value.includes(p.id) && p.settlement_status === 'pending'
+                    ).length;
+                });
+                
+                const selectedAppliedCount = computed(() => {
+                    return filteredPickups.value.filter(p => 
+                        selectedPickups.value.includes(p.id) && p.settlement_status === 'applied'
+                    ).length;
+                });
+                
+                const toggleAllPickups = () => {
+                    const pending = filteredPickups.value.filter(p => p.settlement_status !== 'settled');
+                    if (allPickupsSelected.value) {
+                        selectedPickups.value = [];
+                    } else {
+                        selectedPickups.value = pending.map(p => p.id);
+                    }
+                };
+                
+                const updateSelectAll = () => {
+                    // auto update
+                };
+                
+                const filterByStatus = (status) => {
+                    officePickupFilter.value.status = status;
+                    selectedPickups.value = [];
+                    currentPage.value = 1;
+                };
+                
+                const setDateFilter = (type) => {
+                    const today = new Date();
+                    today.setHours(23, 59, 59, 999);
+                    let startDate = new Date();
+                    startDate.setHours(0, 0, 0, 0);
+                    let endDate = new Date();
+                    endDate.setHours(23, 59, 59, 999);
+                    
+                    switch(type) {
+                        case 'today':
+                            startDate = new Date(today);
+                            endDate = new Date(today);
+                            break;
+                        case 'yesterday':
+                            startDate.setDate(startDate.getDate() - 1);
+                            endDate.setDate(endDate.getDate() - 1);
+                            break;
+                        case '3days':
+                            startDate.setDate(startDate.getDate() - 2);
+                            break;
+                        case '7days':
+                            startDate.setDate(startDate.getDate() - 6);
+                            break;
+                        case '30days':
+                            startDate.setDate(startDate.getDate() - 29);
+                            break;
+                        case 'thisMonth':
+                            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                            break;
+                    }
+                    
+                    officePickupFilter.value.dateFrom = startDate.toISOString().slice(0, 10);
+                    officePickupFilter.value.dateTo = endDate.toISOString().slice(0, 10);
+                    officePickupFilter.value.quickDate = type;
+                    currentPage.value = 1;
+                };
+                
+                const filterOfficePickups = () => {
+                    officePickupFilter.value.quickDate = '';
+                    currentPage.value = 1;
+                };
+                
+                const resetOfficePickupFilter = () => {
+                    officePickupFilter.value = {
+                        officeId: '',
+                        status: '',
+                        dateFrom: '',
+                        dateTo: '',
+                        productId: '',
+                        searchPerson: '',
+                        quickDate: ''
+                    };
+                    selectedPickups.value = [];
+                    currentPage.value = 1;
+                };
+                
+                const getStatusText = (status) => {
+                    const map = { pending: '待付款', applied: '待确认', settled: '已结清' };
+                    return map[status] || status;
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                const onProductSelect = () => {
+                    const product = products.value.find(p => p.id === pickupForm.value.product_id);
+                    if (product) {
+                        pickupForm.value.total = product.price * pickupForm.value.quantity;
+                    }
+                };
+                
+                const editPickup = (pickup) => {
+                    editingPickup.value = pickup;
+                    pickupForm.value = {
+                        office_id: pickup.office_id,
+                        product_id: pickup.product_id,
+                        quantity: pickup.quantity,
+                        pickup_person: pickup.pickup_person,
+                        pickup_time: pickup.pickup_time ? new Date(pickup.pickup_time).toISOString().slice(0, 16) : '',
+                        note: pickup.note || ''
+                    };
+                    showPickupModal.value = true;
+                };
+                
+                const savePickup = async () => {
+                    if (!pickupForm.value.office_id || !pickupForm.value.product_id || 
+                        !pickupForm.value.quantity || !pickupForm.value.pickup_person || !pickupForm.value.pickup_time) {
+                        alert('请填写必填项');
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const payload = {
+                            ...pickupForm.value,
+                            pickup_time: new Date(pickupForm.value.pickup_time).toISOString()
+                        };
+                        
+                        let res;
+                        if (editingPickup.value) {
+                            res = await fetch(`${API_BASE}/office-pickup/${editingPickup.value.id}`, {
+                                method: 'PUT',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        } else {
+                            res = await fetch(`${API_BASE}/office-pickups`, {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            alert(editingPickup.value ? '更新成功' : '创建成功');
+                            showPickupModal.value = false;
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                const confirmSinglePickup = async (id) => {
+                    if (!confirm('确认已收到该款项？')) return;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        const res = await fetch(`${API_BASE}/office-pickup/${id}/confirm`, { 
+                            method: 'POST',
+                            headers
+                        });
+                        if (res.ok) {
+                            alert('已确认收款');
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '确认失败');
+                        }
+                    } catch (e) {
+                        alert('确认失败: ' + e.message);
+                    }
+                };
+                
+                const sendRemindForPickup = async (pickup) => {
+                    if (!confirm(`确定向 ${pickup.pickup_person || '该用户'} 发送付款提醒？`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/office-pickup/${pickup.id}/remind`, { 
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        if (res.ok) {
+                            alert('已发送付款提醒');
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '发送失败');
+                        }
+                    } catch (e) {
+                        alert('发送失败: ' + e.message);
+                    }
+                };
+                
+                const deleteSinglePickup = (id) => {
+                    if (!confirm('确定要删除这条领水记录吗？此操作不可恢复。')) return;
+                    executeDelete('pickup', id);
+                };
+                
+                const batchConfirmPickups = async () => {
+                    if (selectedAppliedCount.value === 0) return;
+                    if (!confirm(`确认已收到选中的 ${selectedAppliedCount.value} 条记录的款项？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const res = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(selectedPickups.value)
+                        });
+                        
+                        if (res.ok) {
+                            alert('批量确认收款成功');
+                            selectedPickups.value = [];
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '批量确认失败');
+                        }
+                    } catch (e) {
+                        alert('批量确认失败: ' + e.message);
+                    }
+                };
+                
+                const batchRemindPickups = async () => {
+                    if (selectedPendingCount.value === 0) return;
+                    if (!confirm(`确定向选中的 ${selectedPendingCount.value} 条记录的用户发送付款提醒？`)) return;
+                    
+                    try {
+                        for (const id of selectedPickups.value) {
+                            const p = officePickups.value.find(x => x.id === id);
+                            if (p && p.settlement_status === 'pending') {
+                                await fetch(`${API_BASE}/office-pickup/${id}/remind`, { 
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                            }
+                        }
+                        alert('批量提醒发送成功');
+                        selectedPickups.value = [];
+                    } catch (e) {
+                        alert('批量提醒失败: ' + e.message);
+                    }
+                };
+                
+                const batchDeletePickups = async () => {
+                    if (selectedPickups.value.length === 0) return;
+                    if (!confirm(`确定要删除选中的 ${selectedPickups.value.length} 条领水记录吗？此操作不可恢复。`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const res = await fetch(`${API_BASE}/office-pickups/batch-delete`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({ pickup_ids: selectedPickups.value })
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || `已删除 ${data.deleted_count} 条记录`);
+                            selectedPickups.value = [];
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '批量删除失败');
+                        }
+                    } catch (e) {
+                        alert('批量删除失败: ' + e.message);
+                    }
+                };
+                
+                const executeDelete = async (type, id) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Authorization': `Bearer ${token}` };
+                        
+                        const res = await fetch(`${API_BASE}/office-pickup/${id}`, {
+                            method: 'DELETE',
+                            headers
+                        });
+                        
+                        if (res.ok) {
+                            alert('删除成功');
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '删除失败');
+                        }
+                    } catch (e) {
+                        alert('删除失败: ' + e.message);
+                    }
+                };
+                
+                const exportPickups = (data, filename) => {
+                    let csv = '序号,时间,办公室,产品,规格,数量,单价,金额,领取人,状态\n';
+                    data.forEach((p, i) => {
+                        csv += `${i+1},${p.pickup_time},${p.office_name || ''},${p.product_name || ''},${p.specification || ''},${p.quantity},${p.unit_price},${p.total_amount},${p.pickup_person || ''},${getStatusText(p.settlement_status)}\n`;
+                    });
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                };
+                
+                const exportFilteredPickups = () => {
+                    if (filteredPickups.value.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+                    exportPickups(filteredPickups.value, `领水记录_筛选_${new Date().toISOString().slice(0,10)}.csv`);
+                };
+                
+                const exportAllPickups = () => {
+                    if (officePickups.value.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+                    exportPickups(officePickups.value, `领水记录_全部_${new Date().toISOString().slice(0,10)}.csv`);
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    try {
+                        await Promise.all([
+                            loadOffices(),
+                            loadProducts(),
+                            loadOfficePickups()
+                        ]);
+                    } catch (e) {
+                        console.error('加载数据失败:', e);
+                    }
+                    
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    officePickups,
+                    selectedPickups,
+                    offices,
+                    products,
+                    officePickupFilter,
+                    showPickupModal,
+                    editingPickup,
+                    pickupForm,
+                    currentPage,
+                    totalPages,
+                    filteredPickups,
+                    paginatedPickups,
+                    pickupStats,
+                    allPickupsSelected,
+                    selectedPendingCount,
+                    selectedAppliedCount,
+                    toggleAllPickups,
+                    updateSelectAll,
+                    filterByStatus,
+                    setDateFilter,
+                    filterOfficePickups,
+                    resetOfficePickupFilter,
+                    getStatusText,
+                    formatDate,
+                    onProductSelect,
+                    editPickup,
+                    savePickup,
+                    confirmSinglePickup,
+                    sendRemindForPickup,
+                    deleteSinglePickup,
+                    batchConfirmPickups,
+                    batchRemindPickups,
+                    batchDeletePickups,
+                    exportFilteredPickups,
+                    exportAllPickups
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

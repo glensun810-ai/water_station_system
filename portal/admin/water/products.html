@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>产品管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        
+        .filter-select, .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 140px;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: all var(--transition-base);
+        }
+        
+        .product-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .product-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .product-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .product-badge {
+            padding: 4px 8px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .badge-active {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .badge-inactive {
+            background: var(--text-tertiary);
+            color: white;
+        }
+        
+        .product-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .product-spec {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .product-price {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .product-stock {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .stock-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .stock-value {
+            font-weight: 600;
+            font-size: var(--font-size-lg);
+        }
+        
+        .stock-normal {
+            color: var(--success);
+        }
+        
+        .stock-warning {
+            color: var(--warning);
+        }
+        
+        .stock-critical {
+            color: var(--danger);
+        }
+        
+        .stock-bar {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .stock-bar-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width var(--transition-base);
+        }
+        
+        .stock-bar-normal {
+            background: var(--success);
+        }
+        
+        .stock-bar-warning {
+            background: var(--warning);
+        }
+        
+        .stock-bar-critical {
+            background: var(--danger);
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>📦</span>
+                        <span>产品管理</span>
+                    </h1>
+                    <button class="btn btn-primary" @click="openProductModal()">
+                        ➕ 添加产品
+                    </button>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">📦</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ productStats.total }}</div>
+                            <div class="stat-label">产品总数</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ productStats.active }}</div>
+                            <div class="stat-label">上架中</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ productStats.lowStock }}</div>
+                            <div class="stat-label">库存不足</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">🚫</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ productStats.outOfStock }}</div>
+                            <div class="stat-label">已售罄</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <span class="filter-label">产品分类:</span>
+                            <select class="filter-select" v-model="productCategoryFilter" @change="loadProducts">
+                                <option value="">全部</option>
+                                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                                    {{ cat.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">库存状态:</span>
+                            <select class="filter-select" v-model="inventoryAlertFilter">
+                                <option value="all">全部</option>
+                                <option value="out">已售罄</option>
+                                <option value="warning">库存不足</option>
+                                <option value="normal">库存正常</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" v-model="showInactive">
+                                <span style="font-size: var(--font-size-sm);">显示停用产品</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-if="filteredProducts.length > 0" class="product-grid">
+                    <div class="product-card" v-for="product in filteredProducts" :key="product.id">
+                        <div class="product-header">
+                            <span class="product-name">{{ product.name }}</span>
+                            <span class="product-badge" :class="product.is_active ? 'badge-active' : 'badge-inactive'">
+                                {{ product.is_active ? '上架' : '下架' }}
+                            </span>
+                        </div>
+                        <div class="product-body">
+                            <div class="product-spec">{{ product.specification }} · {{ product.unit }}</div>
+                            <div class="product-price">¥{{ (product.price || 0).toFixed(2) }}</div>
+                            
+                            <div class="product-stock">
+                                <span class="stock-label">库存</span>
+                                <span class="stock-value" :class="getStockClass(product)">
+                                    {{ product.stock || 0 }}
+                                </span>
+                            </div>
+                            <div class="stock-bar">
+                                <div class="stock-bar-fill" :class="getStockBarClass(product)" 
+                                    :style="{ width: getStockPercent(product) + '%' }"></div>
+                            </div>
+                            
+                            <div class="product-actions">
+                                <button class="btn btn-secondary" @click="openProductModal(product)">编辑</button>
+                                <button class="btn btn-secondary" @click="updateStockOne(product)">调库存</button>
+                                <button class="btn btn-danger" @click="deleteProduct(product)">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else class="table-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>暂无产品</p>
+                        <button class="btn btn-primary" @click="openProductModal()" style="margin-top: 16px;">
+                            添加第一个产品
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showProductModal" class="modal-overlay" @click.self="showProductModal = false">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ editingProduct ? '编辑产品' : '添加产品' }}</h3>
+                        <button class="modal-close" @click="showProductModal = false">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">产品名称 *</label>
+                            <input type="text" class="form-input" v-model="productForm.name" placeholder="请输入产品名称">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">规格 *</label>
+                                <input type="text" class="form-input" v-model="productForm.specification" placeholder="如: 18L">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">单位 *</label>
+                                <select class="form-select" v-model="productForm.unit">
+                                    <option value="桶">桶</option>
+                                    <option value="瓶">瓶</option>
+                                    <option value="箱">箱</option>
+                                    <option value="件">件</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">单价(元) *</label>
+                                <input type="number" class="form-input" v-model.number="productForm.price" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">库存</label>
+                                <input type="number" class="form-input" v-model.number="productForm.stock" min="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">成本价</label>
+                                <input type="number" class="form-input" v-model.number="productForm.cost_price" min="0" step="0.01" placeholder="选填">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">分类</label>
+                                <select class="form-select" v-model="productForm.category_id">
+                                    <option value="">请选择分类</option>
+                                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                                        {{ cat.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">促销阈值(买N赠1)</label>
+                                <input type="number" class="form-input" v-model.number="productForm.promo_threshold" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">状态</label>
+                                <select class="form-select" v-model="productForm.is_active">
+                                    <option :value="1">上架</option>
+                                    <option :value="0">下架</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">备注</label>
+                            <textarea class="form-textarea" v-model="productForm.description" rows="3" placeholder="可选备注"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showProductModal = false">取消</button>
+                        <button class="btn btn-primary" @click="saveProduct">保存</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const products = ref([]);
+                const categories = ref([]);
+                const productCategoryFilter = ref('');
+                const inventoryAlertFilter = ref('all');
+                const showInactive = ref(false);
+                
+                const showProductModal = ref(false);
+                const editingProduct = ref(null);
+                const productForm = ref({
+                    name: '',
+                    specification: '',
+                    price: 0,
+                    stock: 0,
+                    cost_price: null,
+                    unit: '桶',
+                    category_id: '',
+                    description: '',
+                    promo_threshold: 10,
+                    promo_gift: 1,
+                    is_active: 1
+                });
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadProducts = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/products`);
+                        if (res.ok) products.value = await res.json();
+                    } catch (e) {
+                        console.error('加载产品失败:', e);
+                    }
+                };
+                
+                const loadCategories = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/admin/product-categories`);
+                        if (res.ok) categories.value = await res.json();
+                    } catch (e) {
+                        console.error('加载分类失败:', e);
+                    }
+                };
+                
+                const filteredProducts = computed(() => {
+                    let result = products.value || [];
+                    
+                    if (productCategoryFilter.value) {
+                        result = result.filter(p => p.category_id === productCategoryFilter.value);
+                    }
+                    
+                    if (!showInactive.value) {
+                        result = result.filter(p => p.is_active === 1);
+                    }
+                    
+                    if (inventoryAlertFilter.value !== 'all') {
+                        if (inventoryAlertFilter.value === 'out') {
+                            result = result.filter(p => p.stock === 0);
+                        } else if (inventoryAlertFilter.value === 'warning') {
+                            result = result.filter(p => p.stock > 0 && p.stock <= (p.stock_alert || 10));
+                        } else if (inventoryAlertFilter.value === 'normal') {
+                            result = result.filter(p => p.stock > (p.stock_alert || 10));
+                        }
+                    }
+                    
+                    return result;
+                });
+                
+                const productStats = computed(() => {
+                    const all = products.value || [];
+                    const active = all.filter(p => p.is_active === 1);
+                    return {
+                        total: all.length,
+                        active: active.length,
+                        lowStock: all.filter(p => p.stock > 0 && p.stock <= 10).length,
+                        outOfStock: all.filter(p => p.stock === 0).length
+                    };
+                });
+                
+                const getStockClass = (product) => {
+                    if (product.stock === 0) return 'stock-critical';
+                    if (product.stock <= 10) return 'stock-warning';
+                    return 'stock-normal';
+                };
+                
+                const getStockBarClass = (product) => {
+                    if (product.stock === 0) return 'stock-bar-critical';
+                    if (product.stock <= 10) return 'stock-bar-warning';
+                    return 'stock-bar-normal';
+                };
+                
+                const getStockPercent = (product) => {
+                    const max = 100;
+                    return Math.min((product.stock / max) * 100, 100);
+                };
+                
+                const openProductModal = (product = null) => {
+                    editingProduct.value = product;
+                    if (product) {
+                        productForm.value = {
+                            id: product.id,
+                            name: product.name,
+                            specification: product.specification,
+                            price: product.price,
+                            stock: product.stock,
+                            cost_price: product.cost_price,
+                            unit: product.unit || '桶',
+                            category_id: product.category_id,
+                            description: product.description || '',
+                            promo_threshold: product.promo_threshold || 10,
+                            promo_gift: product.promo_gift || 1,
+                            is_active: product.is_active
+                        };
+                    } else {
+                        productForm.value = {
+                            name: '',
+                            specification: '',
+                            price: 0,
+                            stock: 0,
+                            cost_price: null,
+                            unit: '桶',
+                            category_id: '',
+                            description: '',
+                            promo_threshold: 10,
+                            promo_gift: 1,
+                            is_active: 1
+                        };
+                    }
+                    showProductModal.value = true;
+                };
+                
+                const saveProduct = async () => {
+                    if (!productForm.value.name || !productForm.value.specification) {
+                        alert('请填写产品名称和规格');
+                        return;
+                    }
+                    if (!productForm.value.price || productForm.value.price <= 0) {
+                        alert('请填写正确的单价');
+                        return;
+                    }
+                    
+                    try {
+                        const payload = { ...productForm.value };
+                        if (!payload.cost_price) delete payload.cost_price;
+                        if (!payload.category_id) delete payload.category_id;
+                        if (!payload.description) delete payload.description;
+                        
+                        let res;
+                        if (editingProduct.value) {
+                            res = await fetch(`${API_BASE}/products/${editingProduct.value.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        } else {
+                            res = await fetch(`${API_BASE}/products`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            alert(editingProduct.value ? '产品已更新' : '产品已添加');
+                            showProductModal.value = false;
+                            loadProducts();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '保存失败');
+                        }
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    }
+                };
+                
+                const deleteProduct = (product) => {
+                    if (!confirm(`确定要删除产品 "${product.name} (${product.specification})" 吗？`)) return;
+                    
+                    fetch(`${API_BASE}/products/${product.id}`, { method: 'DELETE' })
+                        .then(res => {
+                            if (res.ok) {
+                                alert('产品已删除');
+                                loadProducts();
+                            } else {
+                                return res.json().then(err => alert(err.detail || '删除失败'));
+                            }
+                        })
+                        .catch(e => alert('删除失败: ' + e.message));
+                };
+                
+                const updateStockOne = (product) => {
+                    const inputStock = prompt(`为"${product.name} (${product.specification})"输入库存数量:`, product.stock);
+                    if (!inputStock) return;
+                    
+                    const stock = parseInt(inputStock);
+                    if (isNaN(stock) || stock < 0) {
+                        alert('请输入有效的库存数量');
+                        return;
+                    }
+                    
+                    fetch(`${API_BASE}/products/${product.id}/stock`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ product_id: product.id, stock })
+                    })
+                        .then(res => {
+                            if (res.ok) {
+                                alert('库存已更新');
+                                loadProducts();
+                            } else {
+                                alert('更新失败');
+                            }
+                        })
+                        .catch(e => alert('更新失败: ' + e.message));
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await Promise.all([loadProducts(), loadCategories()]);
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    products,
+                    categories,
+                    productCategoryFilter,
+                    inventoryAlertFilter,
+                    showInactive,
+                    showProductModal,
+                    editingProduct,
+                    productForm,
+                    filteredProducts,
+                    productStats,
+                    getStockClass,
+                    getStockBarClass,
+                    getStockPercent,
+                    openProductModal,
+                    saveProduct,
+                    deleteProduct,
+                    updateStockOne,
+                    loadProducts
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

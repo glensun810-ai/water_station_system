@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>审批中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .approval-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .approval-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .approval-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .approval-type {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .approval-time {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .approval-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .approval-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .approval-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .approval-info-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .approval-info-value {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .approval-reason {
+            padding: var(--spacing-md);
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .approval-reason-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .approval-reason-text {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+        
+        .approval-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .tab-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: none;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            transition: all var(--transition-fast);
+        }
+        
+        .tab-btn:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn .count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: var(--radius-full);
+            background: var(--bg-secondary);
+            font-size: var(--font-size-xs);
+            margin-left: var(--spacing-xs);
+        }
+        
+        .tab-btn.active .count {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: var(--success-dark);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .approval-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>✅</span>
+                        <span>审批中心</span>
+                    </h1>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ pendingCount }}</div>
+                            <div class="stat-label">待审批</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ approvedCount }}</div>
+                            <div class="stat-label">已通过</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ rejectedCount }}</div>
+                            <div class="stat-label">已拒绝</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-filters">
+                    <button class="tab-btn" :class="{ active: currentTab === 'pending' }" @click="currentTab = 'pending'">
+                        待审批 <span class="count">{{ pendingCount }}</span>
+                    </button>
+                    <button class="tab-btn" :class="{ active: currentTab === 'approved' }" @click="currentTab = 'approved'">
+                        已通过 <span class="count">{{ approvedCount }}</span>
+                    </button>
+                    <button class="tab-btn" :class="{ active: currentTab === 'rejected' }" @click="currentTab = 'rejected'">
+                        已拒绝 <span class="count">{{ rejectedCount }}</span>
+                    </button>
+                </div>
+                
+                <div v-if="filteredApprovals.length > 0" class="approval-list">
+                    <div class="approval-card" v-for="approval in filteredApprovals" :key="approval.id">
+                        <div class="approval-header">
+                            <span class="approval-type">
+                                {{ getTypeText(approval.type || approval.resource_type) }}
+                            </span>
+                            <span class="approval-time">{{ formatTime(approval.created_at || approval.apply_time) }}</span>
+                        </div>
+                        <div class="approval-body">
+                            <div class="approval-info">
+                                <div class="approval-info-item">
+                                    <span class="approval-info-label">申请人</span>
+                                    <span class="approval-info-value">{{ approval.applicant_name || approval.user_name || approval.applicant || '未知' }}</span>
+                                </div>
+                                <div class="approval-info-item">
+                                    <span class="approval-info-label">所属部门</span>
+                                    <span class="approval-info-value">{{ approval.department || approval.office_name || '-' }}</span>
+                                </div>
+                                <div class="approval-info-item" v-if="approval.resource_name">
+                                    <span class="approval-info-label">关联资源</span>
+                                    <span class="approval-info-value">{{ approval.resource_name }}</span>
+                                </div>
+                                <div class="approval-info-item">
+                                    <span class="approval-info-label">申请时间</span>
+                                    <span class="approval-info-value">{{ formatDate(approval.created_at || approval.apply_time) }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="approval-reason" v-if="approval.reason || approval.description">
+                                <div class="approval-reason-label">申请理由</div>
+                                <div class="approval-reason-text">{{ approval.reason || approval.description }}</div>
+                            </div>
+                            
+                            <div class="approval-actions" v-if="currentTab === 'pending'">
+                                <button class="btn btn-success" @click="approve(approval)">
+                                    ✅ 通过
+                                </button>
+                                <button class="btn btn-danger" @click="reject(approval)">
+                                    ❌ 拒绝
+                                </button>
+                            </div>
+                            
+                            <div class="approval-actions" v-else>
+                                <span style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                    {{ currentTab === 'approved' ? '✅ 已通过' : '❌ 已拒绝' }}
+                                    <template v-if="approval.processed_at"> · {{ formatTime(approval.processed_at) }}</template>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>暂无{{ currentTab === 'pending' ? '待审批' : currentTab === 'approved' ? '已通过' : '已拒绝' }}的申请</p>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const approvals = ref([]);
+                const currentTab = ref('pending');
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadApprovals = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/meeting-approvals`, { headers });
+                        if (res.ok) {
+                            approvals.value = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('加载审批数据失败:', e);
+                    }
+                };
+                
+                const filteredApprovals = computed(() => {
+                    if (currentTab.value === 'pending') {
+                        return approvals.value.filter(a => a.status === 'pending' || a.status === 'submitted');
+                    } else if (currentTab.value === 'approved') {
+                        return approvals.value.filter(a => a.status === 'approved' || a.status === 'approved');
+                    } else {
+                        return approvals.value.filter(a => a.status === 'rejected' || a.status === 'rejected');
+                    }
+                });
+                
+                const pendingCount = computed(() => approvals.value.filter(a => a.status === 'pending' || a.status === 'submitted').length);
+                const approvedCount = computed(() => approvals.value.filter(a => a.status === 'approved').length);
+                const rejectedCount = computed(() => approvals.value.filter(a => a.status === 'rejected').length);
+                
+                const getTypeText = (type) => {
+                    const map = {
+                        'meeting_booking': '会议室预约',
+                        'booking': '会议室预约',
+                        'leave': '请假申请',
+                        'expense': '费用报销',
+                        'purchase': '采购申请',
+                        'default': '其他申请'
+                    };
+                    return map[type] || map.default;
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                };
+                
+                const formatTime = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    const now = new Date();
+                    const diff = now - date;
+                    
+                    if (diff < 60000) return '刚刚';
+                    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+                    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+                    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+                    
+                    return formatDate(dateStr);
+                };
+                
+                const approve = async (approval) => {
+                    if (!confirm(`确认通过此申请？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/meeting-approvals/${approval.id}/approve`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (res.ok) {
+                            alert('已通过申请');
+                            loadApprovals();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                const reject = async (approval) => {
+                    const reason = prompt('请输入拒绝原因（可选）:', '');
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/meeting-approvals/${approval.id}/reject`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ reason })
+                        });
+                        
+                        if (res.ok) {
+                            alert('已拒绝申请');
+                            loadApprovals();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await loadApprovals();
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    approvals,
+                    currentTab,
+                    filteredApprovals,
+                    pendingCount,
+                    approvedCount,
+                    rejectedCount,
+                    getTypeText,
+                    formatDate,
+                    formatTime,
+                    approve,
+                    reject
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

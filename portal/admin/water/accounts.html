@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>预付账户管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        
+        .filter-select, .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 140px;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        
+        .table-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        td {
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .account-card {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .account-info {
+            flex: 1;
+        }
+        
+        .account-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .account-room {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .progress-container {
+            width: 120px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width var(--transition-base);
+        }
+        
+        .progress-normal {
+            background: var(--success);
+        }
+        
+        .progress-warning {
+            background: var(--warning);
+        }
+        
+        .progress-critical {
+            background: var(--danger);
+        }
+        
+        .progress-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-normal {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-low {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-empty {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>💳</span>
+                        <span>预付账户管理</span>
+                    </h1>
+                    <button class="btn btn-primary" @click="openAccountModal()">
+                        ➕ 添加账户
+                    </button>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">📊</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ accountStats.total }}</div>
+                            <div class="stat-label">账户总数</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ accountStats.credit }}</div>
+                            <div class="stat-label">信用账户</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">💰</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ accountStats.prepaid }}</div>
+                            <div class="stat-label">预付账户</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ accountStats.totalRemaining }}</div>
+                            <div class="stat-label">剩余总量</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <span class="filter-label">办公室:</span>
+                            <select class="filter-select" v-model="accountFilter.officeId" @change="loadAccounts">
+                                <option value="">全部</option>
+                                <option v-for="office in offices" :key="office.id" :value="office.id">
+                                    {{ office.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">产品:</span>
+                            <select class="filter-select" v-model="accountFilter.productId" @change="loadAccounts">
+                                <option value="">全部</option>
+                                <option v-for="product in products" :key="product.id" :value="product.id">
+                                    {{ product.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">状态:</span>
+                            <select class="filter-select" v-model="accountFilter.status" @change="loadAccounts">
+                                <option value="">全部</option>
+                                <option value="normal">正常</option>
+                                <option value="low">不足</option>
+                                <option value="empty">耗尽</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">搜索:</span>
+                            <input type="text" class="filter-input" v-model="accountFilter.search" placeholder="办公室名称" @input="loadAccounts">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" @click="resetFilter">重置</button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">共 {{ filteredAccounts.length }} 个账户</div>
+                    </div>
+                    
+                    <table v-if="filteredAccounts.length > 0">
+                        <thead>
+                            <tr>
+                                <th>办公室</th>
+                                <th>产品</th>
+                                <th>规格</th>
+                                <th>预付量</th>
+                                <th>剩余量</th>
+                                <th>使用进度</th>
+                                <th>状态</th>
+                                <th>负责人</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="account in filteredAccounts" :key="account.id">
+                                <td>
+                                    <div class="account-card">
+                                        <div class="account-info">
+                                            <div class="account-name">{{ account.office_name }}</div>
+                                            <div class="account-room">{{ account.office_room_number || '' }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ account.product_name || '-' }}</td>
+                                <td>{{ account.product_specification || '-' }}</td>
+                                <td>{{ account.reserved_qty }}</td>
+                                <td>{{ account.remaining_qty }}</td>
+                                <td>
+                                    <div class="progress-container">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" :class="getProgressClass(account)" 
+                                                :style="{ width: getUsagePercent(account) + '%' }"></div>
+                                        </div>
+                                        <div class="progress-text">{{ getUsageRate(account) }}% 已用</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge" :class="'status-' + account.status">
+                                        {{ getStatusText(account.status) }}
+                                    </span>
+                                </td>
+                                <td>{{ account.reserved_person || '-' }}</td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn btn-secondary btn-sm" @click="rechargeAccount(account)">充值</button>
+                                        <button class="btn btn-secondary btn-sm" @click="openAccountModal(account)">编辑</button>
+                                        <button class="btn btn-danger btn-sm" @click="deleteAccount(account)">删除</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div v-else class="empty-state">
+                        <div class="empty-state-icon">💳</div>
+                        <p>暂无预付账户</p>
+                        <button class="btn btn-primary" @click="openAccountModal()" style="margin-top: 16px;">
+                            添加第一个账户
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showAccountModal" class="modal-overlay" @click.self="showAccountModal = false">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ editingAccount ? '编辑账户' : '添加账户' }}</h3>
+                        <button class="modal-close" @click="showAccountModal = false">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">办公室 *</label>
+                            <select class="form-select" v-model="accountForm.office_id">
+                                <option value="">请选择办公室</option>
+                                <option v-for="office in offices" :key="office.id" :value="office.id">
+                                    {{ office.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">产品 *</label>
+                            <select class="form-select" v-model="accountForm.product_id">
+                                <option value="">请选择产品</option>
+                                <option v-for="product in products" :key="product.id" :value="product.id">
+                                    {{ product.name }} ({{ product.specification }})
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">预付数量 *</label>
+                            <input type="number" class="form-input" v-model.number="accountForm.reserved_qty" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">负责人</label>
+                            <input type="text" class="form-input" v-model="accountForm.reserved_person" placeholder="可选">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">备注</label>
+                            <input type="text" class="form-input" v-model="accountForm.note" placeholder="可选备注">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showAccountModal = false">取消</button>
+                        <button class="btn btn-primary" @click="saveAccount">保存</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showRechargeModal" class="modal-overlay" @click.self="showRechargeModal = false">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">账户充值</h3>
+                        <button class="modal-close" @click="showRechargeModal = false">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin-bottom: var(--spacing-md);">
+                            <strong>{{ rechargeTarget.office_name }}</strong> - {{ rechargeTarget.product_name }}
+                        </p>
+                        <p style="margin-bottom: var(--spacing-md); color: var(--text-secondary);">
+                            当前剩余: <strong>{{ rechargeTarget.remaining_qty }}</strong> / {{ rechargeTarget.reserved_qty }}
+                        </p>
+                        <div class="form-group">
+                            <label class="form-label">充值数量 (正数) / 扣减数量 (负数)</label>
+                            <input type="number" class="form-input" v-model.number="rechargeQuantity" placeholder="输入数量">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showRechargeModal = false">取消</button>
+                        <button class="btn btn-primary" @click="processRecharge">确认充值</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const accounts = ref([]);
+                const offices = ref([]);
+                const products = ref([]);
+                
+                const accountFilter = ref({
+                    officeId: '',
+                    productId: '',
+                    status: '',
+                    search: ''
+                });
+                
+                const showAccountModal = ref(false);
+                const editingAccount = ref(null);
+                const accountForm = ref({
+                    office_id: '',
+                    product_id: '',
+                    reserved_qty: 10,
+                    remaining_qty: 10,
+                    reserved_person: '',
+                    note: ''
+                });
+                
+                const showRechargeModal = ref(false);
+                const rechargeTarget = ref({});
+                const rechargeQuantity = ref(0);
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadOffices = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/offices`, { headers });
+                        if (res.ok) offices.value = await res.json();
+                    } catch (e) {
+                        console.error('加载办公室失败:', e);
+                    }
+                };
+                
+                const loadProducts = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/products`);
+                        if (res.ok) products.value = await res.json();
+                    } catch (e) {
+                        console.error('加载产品失败:', e);
+                    }
+                };
+                
+                const loadAccounts = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const params = new URLSearchParams();
+                        if (accountFilter.value.officeId) params.append('office_id', accountFilter.value.officeId);
+                        if (accountFilter.value.productId) params.append('product_id', accountFilter.value.productId);
+                        if (accountFilter.value.status) params.append('status', accountFilter.value.status);
+                        if (accountFilter.value.search) params.append('search', accountFilter.value.search);
+                        
+                        const url = `${API_BASE}/office-accounts${params.toString() ? '?' + params.toString() : ''}`;
+                        const res = await fetch(url, { headers });
+                        if (res.ok) accounts.value = await res.json();
+                    } catch (e) {
+                        console.error('加载账户失败:', e);
+                    }
+                };
+                
+                const filteredAccounts = computed(() => {
+                    let result = accounts.value || [];
+                    
+                    if (accountFilter.value.status) {
+                        result = result.filter(a => a.status === accountFilter.value.status);
+                    }
+                    
+                    if (accountFilter.value.search) {
+                        const q = accountFilter.value.search.toLowerCase();
+                        result = result.filter(a => 
+                            (a.office_name && a.office_name.toLowerCase().includes(q)) ||
+                            (a.office_room_number && a.office_room_number.toLowerCase().includes(q))
+                        );
+                    }
+                    
+                    return result;
+                });
+                
+                const accountStats = computed(() => {
+                    const all = accounts.value || [];
+                    return {
+                        total: all.length,
+                        credit: all.filter(a => a.account_type === 'credit').length,
+                        prepaid: all.filter(a => a.account_type === 'prepaid').length,
+                        totalRemaining: all.reduce((sum, a) => sum + (a.remaining_qty || 0), 0),
+                        lowStock: all.filter(a => a.status === 'low').length,
+                        empty: all.filter(a => a.status === 'empty').length
+                    };
+                });
+                
+                const getUsageRate = (account) => {
+                    if (!account.reserved_qty || account.reserved_qty === 0) return 0;
+                    const used = account.reserved_qty - (account.remaining_qty || 0);
+                    return Math.round((used / account.reserved_qty) * 100);
+                };
+                
+                const getUsagePercent = (account) => {
+                    return Math.min(getUsageRate(account), 100);
+                };
+                
+                const getProgressClass = (account) => {
+                    const rate = getUsageRate(account);
+                    if (rate >= 80) return 'progress-critical';
+                    if (rate >= 50) return 'progress-warning';
+                    return 'progress-normal';
+                };
+                
+                const getStatusText = (status) => {
+                    const map = { normal: '正常', low: '不足', empty: '耗尽' };
+                    return map[status] || status;
+                };
+                
+                const openAccountModal = (account = null) => {
+                    editingAccount.value = account;
+                    if (account) {
+                        accountForm.value = {
+                            id: account.id,
+                            office_id: account.office_id,
+                            product_id: account.product_id,
+                            reserved_qty: account.reserved_qty,
+                            remaining_qty: account.remaining_qty,
+                            reserved_person: account.reserved_person || '',
+                            note: account.note || ''
+                        };
+                    } else {
+                        accountForm.value = {
+                            office_id: '',
+                            product_id: '',
+                            reserved_qty: 10,
+                            remaining_qty: 10,
+                            reserved_person: '',
+                            note: ''
+                        };
+                    }
+                    showAccountModal.value = true;
+                };
+                
+                const saveAccount = async () => {
+                    if (!accountForm.value.office_id || !accountForm.value.product_id || !accountForm.value.reserved_qty) {
+                        alert('请填写必填项');
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const office = offices.value.find(o => o.id === accountForm.value.office_id);
+                        const product = products.value.find(p => p.id === accountForm.value.product_id);
+                        
+                        const payload = {
+                            ...accountForm.value,
+                            office_name: office?.name || '',
+                            office_room_number: office?.room_number || '',
+                            product_name: product?.name || '',
+                            product_specification: product?.specification || ''
+                        };
+                        
+                        let res;
+                        if (editingAccount.value) {
+                            res = await fetch(`${API_BASE}/office-accounts/${editingAccount.value.id}`, {
+                                method: 'PUT',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        } else {
+                            res = await fetch(`${API_BASE}/office-accounts`, {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            alert(editingAccount.value ? '账户已更新' : '账户已创建');
+                            showAccountModal.value = false;
+                            loadAccounts();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '保存失败');
+                        }
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    }
+                };
+                
+                const deleteAccount = (account) => {
+                    if (!confirm(`确定要删除账户 "${account.office_name} - ${account.product_name}" 吗？`)) return;
+                    
+                    fetch(`${API_BASE}/office-accounts/${account.id}`, { 
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    })
+                        .then(res => {
+                            if (res.ok) {
+                                alert('账户已删除');
+                                loadAccounts();
+                            } else {
+                                return res.json().then(err => alert(err.detail || '删除失败'));
+                            }
+                        })
+                        .catch(e => alert('删除失败: ' + e.message));
+                };
+                
+                const rechargeAccount = (account) => {
+                    rechargeTarget.value = account;
+                    rechargeQuantity.value = 0;
+                    showRechargeModal.value = true;
+                };
+                
+                const processRecharge = async () => {
+                    if (rechargeQuantity.value === 0) {
+                        alert('请输入充值或扣减数量');
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const res = await fetch(`${API_BASE}/office-accounts/${rechargeTarget.value.id}/recharge`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({ quantity: rechargeQuantity.value })
+                        });
+                        
+                        if (res.ok) {
+                            alert('操作成功');
+                            showRechargeModal.value = false;
+                            loadAccounts();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '操作失败');
+                        }
+                    } catch (e) {
+                        alert('操作失败: ' + e.message);
+                    }
+                };
+                
+                const resetFilter = () => {
+                    accountFilter.value = { officeId: '', productId: '', status: '', search: '' };
+                    loadAccounts();
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await Promise.all([loadOffices(), loadProducts(), loadAccounts()]);
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    accounts,
+                    offices,
+                    products,
+                    accountFilter,
+                    showAccountModal,
+                    editingAccount,
+                    accountForm,
+                    showRechargeModal,
+                    rechargeTarget,
+                    rechargeQuantity,
+                    filteredAccounts,
+                    accountStats,
+                    getUsageRate,
+                    getUsagePercent,
+                    getProgressClass,
+                    getStatusText,
+                    openAccountModal,
+                    saveAccount,
+                    deleteAccount,
+                    rechargeAccount,
+                    processRecharge,
+                    resetFilter,
+                    loadAccounts
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1E293B">
+    <title>会议室管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .room-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: all var(--transition-base);
+        }
+        
+        .room-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .room-header {
+            padding: var(--spacing-lg);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+        
+        .room-name {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .room-location {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+        }
+        
+        .room-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .room-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .room-info-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .room-info-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .room-facilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .facility-tag {
+            padding: 4px 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .room-price {
+            padding: var(--spacing-md);
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .price-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .price-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .price-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .room-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .room-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>🏠</span>
+                        <span>会议室管理</span>
+                    </h1>
+                    <button class="btn btn-primary" @click="openRoomModal()">
+                        ➕ 添加会议室
+                    </button>
+                </div>
+                
+                <div v-if="rooms.length > 0" class="room-grid">
+                    <div class="room-card" v-for="room in rooms" :key="room.id">
+                        <div class="room-header">
+                            <div class="room-name">{{ room.name }}</div>
+                            <div class="room-location">📍 {{ room.location || room.floor || '位置未设置' }}</div>
+                        </div>
+                        <div class="room-body">
+                            <div class="room-info">
+                                <div class="room-info-item">
+                                    <span>👥</span>
+                                    <span>容量:</span>
+                                    <span class="room-info-value">{{ room.capacity || room.seats || 10 }}人</span>
+                                </div>
+                                <div class="room-info-item">
+                                    <span>📐</span>
+                                    <span>面积:</span>
+                                    <span class="room-info-value">{{ room.area || room.size || '--' }}㎡</span>
+                                </div>
+                            </div>
+                            
+                            <div class="room-facilities">
+                                <span class="facility-tag" v-for="facility in getFacilities(room)" :key="facility">
+                                    {{ facility }}
+                                </span>
+                            </div>
+                            
+                            <div class="room-price">
+                                <div class="price-row">
+                                    <span class="price-label">工作时段</span>
+                                    <span class="price-value">¥{{ room.weekday_price || room.hourly_rate || 0 }}/小时</span>
+                                </div>
+                                <div class="price-row">
+                                    <span class="price-label">休息时段</span>
+                                    <span class="price-value">¥{{ room.weekend_price || room.hourly_rate || 0 }}/小时</span>
+                                </div>
+                            </div>
+                            
+                            <div class="room-actions">
+                                <button class="btn btn-secondary btn-sm" @click="openRoomModal(room)">编辑</button>
+                                <button class="btn btn-danger btn-sm" @click="deleteRoom(room)">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">🏠</div>
+                    <p>暂无会议室</p>
+                    <button class="btn btn-primary" @click="openRoomModal()" style="margin-top: 16px;">
+                        添加第一个会议室
+                    </button>
+                </div>
+            </div>
+            
+            <div v-if="showRoomModal" class="modal-overlay" @click.self="showRoomModal = false">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ editingRoom ? '编辑会议室' : '添加会议室' }}</h3>
+                        <button class="modal-close" @click="showRoomModal = false">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">会议室名称 *</label>
+                            <input type="text" class="form-input" v-model="roomForm.name" placeholder="如: 1号会议室">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">位置/楼层</label>
+                                <input type="text" class="form-input" v-model="roomForm.location" placeholder="如: 3楼">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">容量(人数)</label>
+                                <input type="number" class="form-input" v-model.number="roomForm.capacity" min="1">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">工作时段单价(元/小时)</label>
+                                <input type="number" class="form-input" v-model.number="roomForm.weekday_price" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">休息时段单价(元/小时)</label>
+                                <input type="number" class="form-input" v-model.number="roomForm.weekend_price" min="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">设备配置</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <label v-for="facility in facilityOptions" :key="facility" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="checkbox" :value="facility" v-model="roomForm.facilities">
+                                    <span style="font-size: 14px;">{{ facility }}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-input" v-model="roomForm.description" rows="3" placeholder="会议室描述"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showRoomModal = false">取消</button>
+                        <button class="btn btn-primary" @click="saveRoom">保存</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const rooms = ref([]);
+                
+                const showRoomModal = ref(false);
+                const editingRoom = ref(null);
+                const roomForm = ref({
+                    name: '',
+                    location: '',
+                    capacity: 10,
+                    weekday_price: 0,
+                    weekend_price: 0,
+                    facilities: [],
+                    description: ''
+                });
+                
+                const facilityOptions = ['投影仪', '白板', '音响', '视频会议', '空调', '茶水间'];
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadRooms = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/meeting-rooms`);
+                        if (res.ok) rooms.value = await res.json();
+                    } catch (e) {
+                        console.error('加载会议室失败:', e);
+                    }
+                };
+                
+                const getFacilities = (room) => {
+                    const facilities = room.facilities || room.equipment || [];
+                    if (typeof facilities === 'string') {
+                        return facilities.split(',').map(f => f.trim()).filter(Boolean);
+                    }
+                    return Array.isArray(facilities) ? facilities : [];
+                };
+                
+                const openRoomModal = (room = null) => {
+                    editingRoom.value = room;
+                    if (room) {
+                        roomForm.value = {
+                            id: room.id,
+                            name: room.name,
+                            location: room.location || room.floor || '',
+                            capacity: room.capacity || room.seats || 10,
+                            weekday_price: room.weekday_price || room.hourly_rate || 0,
+                            weekend_price: room.weekend_price || room.hourly_rate || 0,
+                            facilities: getFacilities(room),
+                            description: room.description || ''
+                        };
+                    } else {
+                        roomForm.value = {
+                            name: '',
+                            location: '',
+                            capacity: 10,
+                            weekday_price: 0,
+                            weekend_price: 0,
+                            facilities: [],
+                            description: ''
+                        };
+                    }
+                    showRoomModal.value = true;
+                };
+                
+                const saveRoom = async () => {
+                    if (!roomForm.value.name) {
+                        alert('请输入会议室名称');
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const payload = {
+                            ...roomForm.value,
+                            seats: roomForm.value.capacity,
+                            hourly_rate: roomForm.value.weekday_price,
+                            equipment: roomForm.value.facilities.join(',')
+                        };
+                        if (editingRoom.value) {
+                            payload.id = editingRoom.value.id;
+                        }
+                        
+                        let res;
+                        if (editingRoom.value) {
+                            res = await fetch(`${API_BASE}/meeting-rooms/${editingRoom.value.id}`, {
+                                method: 'PUT',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        } else {
+                            res = await fetch(`${API_BASE}/meeting-rooms`, {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            alert(editingRoom.value ? '会议室已更新' : '会议室已添加');
+                            showRoomModal.value = false;
+                            loadRooms();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '保存失败');
+                        }
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    }
+                };
+                
+                const deleteRoom = (room) => {
+                    if (!confirm(`确定要删除会议室 "${room.name}" 吗？`)) return;
+                    
+                    fetch(`${API_BASE}/meeting-rooms/${room.id}`, { 
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    })
+                        .then(res => {
+                            if (res.ok) {
+                                alert('会议室已删除');
+                                loadRooms();
+                            } else {
+                                return res.json().then(err => alert(err.detail || '删除失败'));
+                            }
+                        })
+                        .catch(e => alert('删除失败: ' + e.message));
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await loadRooms();
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    rooms,
+                    showRoomModal,
+                    editingRoom,
+                    roomForm,
+                    facilityOptions,
+                    getFacilities,
+                    openRoomModal,
+                    saveRoom,
+                    deleteRoom
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
