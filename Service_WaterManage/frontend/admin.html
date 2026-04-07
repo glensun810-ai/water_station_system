@@ -4917,20 +4917,12 @@
                 // API基础地址配置
                 let API_BASE;
                 if (isLocalhost) {
-                    // 本地开发：如果访问的是8080端口（静态服务器），API应该在8000端口
-                    if (currentPort === '8080' || currentPort === '3000') {
-                        API_BASE = 'http://localhost:8000/api';
-                    } else if (currentPort === '8000') {
-                        // 如果已经在8000端口，使用当前端口
-                        API_BASE = `${protocol}//${hostname}:${currentPort}/api`;
-                    } else {
-                        // 其他情况，默认使用8000端口
-                        API_BASE = 'http://localhost:8000/api';
-                    }
-                } else {
-                    // 生产环境：使用当前域名和协议
-                    API_BASE = `${protocol}//${hostname}/api`;
-                }
+    // 本地开发：动态适配当前端口
+    API_BASE = `${protocol}//${hostname}:${currentPort}/api`;
+} else {
+    // 生产环境：使用当前域名和协议
+    API_BASE = `${protocol}//${hostname}/api`;
+}
                 
                 console.log('API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
                 const API_AVAILABLE = ref(true);

@@ -695,10 +695,14 @@ font-size: 16px;
                         <label class="block text-sm font-medium text-slate-700 mb-1">会议室 *</label>
                         <select v-model="bookingForm.room_id"
                                 class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="" disabled>请选择会议室</option>
                             <option v-for="room in rooms" :key="room.id" :value="room.id">
                                 {{ room.name }} ({{ room.capacity }}人) - ¥{{ room.price_per_hour }}/小时
                             </option>
                         </select>
+                        <div v-if="rooms.length === 0" class="text-xs text-red-500 mt-1">
+                            ⚠️ 未找到可用会议室，请检查会议室管理是否已添加会议室
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">用户类型 *</label>
@@ -869,7 +873,7 @@ font-size: 16px;
                 });
                 
                 const bookingForm = ref({
-                    room_id: null,
+                    room_id: '',
                     user_type: 'external',
                     office_id: null,
                     user_name: '',
@@ -1127,9 +1131,15 @@ font-size: 16px;
 
                 const loadRooms = async () => {
                     try {
+                        console.log('开始加载会议室，API地址:', `${API_BASE}/rooms?is_active=true`);
                         const response = await fetch(`${API_BASE}/rooms?is_active=true`);
+                        console.log('会议室API响应状态:', response.status);
                         if (response.ok) {
-                            rooms.value = await response.json();
+                            const data = await response.json();
+                            rooms.value = data;
+                            console.log('会议室数据加载成功，数量:', data.length, '数据:', data);
+                        } else {
+                            console.error('会议室API返回错误:', response.status, response.statusText);
                         }
                     } catch (error) {
                         console.error('加载会议室失败:', error);
@@ -1641,13 +1651,16 @@ font-size: 16px;
                     return null;
                 });
 
-                watch(() => bookingForm.value.room_id, () => {
-                    if (rooms.value.length > 0 && !bookingForm.value.room_id) {
-                        bookingForm.value.room_id = rooms.value[0].id;
+                watch(() => rooms.value, (newRooms) => {
+                    // 当会议室数据加载完成后，如果还没有选择会议室，自动选择第一个
+                    if (newRooms && newRooms.length > 0 && !bookingForm.value.room_id) {
+                        bookingForm.value.room_id = newRooms[0].id;
+                        console.log('自动选择第一个会议室:', newRooms[0].name);
                     }
-                });
+                }, { immediate: true });
 
                 onMounted(() => {
+                    console.log('页面加载完成，开始加载数据...');
                     loadBookings();
                     loadOffices();
                     loadRooms();
