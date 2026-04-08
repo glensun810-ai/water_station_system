@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>结算管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: calc(-1 * var(--spacing-sm) - 1px);
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .applications-table {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--error-dark);
+            border-color: var(--error-dark);
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            background: var(--background);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-applied {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-approved {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-settled {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-cancelled {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-light);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header></global-header>
+
+        <div class="module-container">
+            <div class="module-header">
+                <div class="module-title">
+                    <span>📋 结算管理</span>
+                </div>
+                <div class="module-actions">
+                    <button class="btn btn-primary" @click="openCreateModal">
+                        <span>➕ 创建申请单</span>
+                    </button>
+                    <button class="btn" @click="loadApplications">
+                        <span>🔄 刷新</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e3f2fd;">📝</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.applied.count }}</div>
+                        <div class="stat-label">待审核</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fff3e0;">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.approved.count }}</div>
+                        <div class="stat-label">已审核</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e8f5e9;">💰</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.settled.count }}</div>
+                        <div class="stat-label">已结清</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fce4ec;">💵</div>
+                    <div class="stat-info">
+                        <div class="stat-value">¥{{ statistics.applied.amount.toFixed(2) }}</div>
+                        <div class="stat-label">待收款金额</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="tab-filters">
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'applied' }"
+                        @click="currentTab = 'applied'"
+                    >
+                        待审核
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'approved' }"
+                        @click="currentTab = 'approved'"
+                    >
+                        已审核
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'settled' }"
+                        @click="currentTab = 'settled'"
+                    >
+                        已结清
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'all' }"
+                        @click="currentTab = 'all'"
+                    >
+                        全部
+                    </button>
+                </div>
+            </div>
+
+            <div class="applications-table">
+                <div class="table-header">
+                    <div class="table-title">结算申请单</div>
+                    <div class="table-actions">
+                        <button class="btn" @click="exportData">
+                            <span>📥 导出</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table v-if="loading">
+                        <tr>
+                            <td colspan="8" class="loading">加载中...</td>
+                        </tr>
+                    </table>
+                    <table v-else-if="filteredApplications.length === 0">
+                        <tr>
+                            <td colspan="8" class="empty-state">暂无数据</td>
+                        </tr>
+                    </table>
+                    <table v-else>
+                        <thead>
+                            <tr>
+                                <th>申请单号</th>
+                                <th>办公室</th>
+                                <th>记录数</th>
+                                <th>金额</th>
+                                <th>申请人</th>
+                                <th>状态</th>
+                                <th>申请时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="app in filteredApplications" :key="app.id">
+                                <td>{{ app.application_no }}</td>
+                                <td>{{ app.office_name }}</td>
+                                <td>{{ app.record_count }}</td>
+                                <td>¥{{ app.total_amount.toFixed(2) }}</td>
+                                <td>{{ app.applicant_name }}</td>
+                                <td>
+                                    <span
+                                        class="status-badge"
+                                        :class="getStatusClass(app.status)"
+                                    >
+                                        {{ getStatusText(app.status) }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(app.applied_at) }}</td>
+                                <td>
+                                    <button
+                                        class="action-btn"
+                                        @click="viewApplication(app)"
+                                        title="查看详情"
+                                    >
+                                        👁️
+                                    </button>
+                                    <button
+                                        v-if="app.status === 'applied'"
+                                        class="action-btn"
+                                        @click="approveApplication(app)"
+                                        title="审核通过"
+                                    >
+                                        ✅
+                                    </button>
+                                    <button
+                                        v-if="app.status === 'applied'"
+                                        class="action-btn btn-danger"
+                                        @click="rejectApplication(app)"
+                                        title="拒绝申请"
+                                    >
+                                        ❌
+                                    </button>
+                                    <button
+                                        v-if="['applied', 'approved'].includes(app.status)"
+                                        class="action-btn"
+                                        @click="confirmApplication(app)"
+                                        title="确认收款"
+                                    >
+                                        💰
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 创建申请单弹窗 -->
+        <div class="modal-overlay" v-if="showCreateModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">创建结算申请单</div>
+                    <button class="modal-close" @click="showCreateModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">办公室</label>
+                        <select class="form-input" v-model="newApplication.office_id">
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :key="office.id" :value="office.id">
+                                {{ office.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <textarea
+                            class="form-textarea"
+                            v-model="newApplication.note"
+                            placeholder="可选备注信息"
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showCreateModal = false">取消</button>
+                    <button class="btn btn-primary" @click="createApplication">创建</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查看详情弹窗 -->
+        <div class="modal-overlay" v-if="showDetailModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">申请单详情</div>
+                    <button class="modal-close" @click="showDetailModal = false">&times;</button>
+                </div>
+                <div class="modal-body" v-if="currentApplication">
+                    <div class="form-group">
+                        <label class="form-label">申请单号</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ currentApplication.application_no }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">办公室</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ currentApplication.office_name }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">申请人</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ currentApplication.applicant_name }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">记录数</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ currentApplication.record_count }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">金额</label>
+                        <div class="form-input" style="background: var(--background);">
+                            ¥{{ currentApplication.total_amount.toFixed(2) }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ getStatusText(currentApplication.status) }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <div class="form-input" style="background: var(--background);">
+                            {{ currentApplication.note || '无' }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">领水记录</label>
+                        <div v-if="currentApplicationPickups.length > 0" style="max-height: 200px; overflow-y: auto;">
+                            <table style="font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>产品名称</th>
+                                        <th>数量</th>
+                                        <th>金额</th>
+                                        <th>领水时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="pickup in currentApplicationPickups" :key="pickup.id">
+                                        <td>{{ pickup.product_name }}</td>
+                                        <td>{{ pickup.quantity }}</td>
+                                        <td>¥{{ pickup.total_amount.toFixed(2) }}</td>
+                                        <td>{{ formatDate(pickup.pickup_time) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="empty-state">暂无记录</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showDetailModal = false">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v3/settlements';
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            components: {
+                GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const applications = ref([]);
+                const offices = ref([]);
+                const statistics = ref({
+                    applied: { count: 0, amount: 0 },
+                    approved: { count: 0, amount: 0 },
+                    settled: { count: 0, amount: 0 },
+                    total_count: 0,
+                    total_amount: 0
+                });
+                const currentTab = ref('applied');
+                const showCreateModal = ref(false);
+                const showDetailModal = ref(false);
+                const currentApplication = ref(null);
+                const currentApplicationPickups = ref([]);
+                const newApplication = ref({
+                    office_id: '',
+                    note: ''
+                });
+
+                const filteredApplications = computed(() => {
+                    if (currentTab.value === 'all') {
+                        return applications.value;
+                    }
+                    return applications.value.filter(app => app.status === currentTab.value);
+                });
+
+                const getStatusClass = (status) => {
+                    const classes = {
+                        'applied': 'status-applied',
+                        'approved': 'status-approved',
+                        'settled': 'status-settled',
+                        'cancelled': 'status-cancelled'
+                    };
+                    return classes[status] || '';
+                };
+
+                const getStatusText = (status) => {
+                    const texts = {
+                        'applied': '待审核',
+                        'approved': '已审核',
+                        'settled': '已结清',
+                        'cancelled': '已取消'
+                    };
+                    return texts[status] || status;
+                };
+
+                const formatDate = (dateString) => {
+                    if (!dateString) return '-';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                const getAuthHeaders = () => {
+                    const token = localStorage.getItem('token');
+                    return {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    };
+                };
+
+                const loadApplications = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`${API_BASE}/applications`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            applications.value = data.data || [];
+                        } else {
+                            console.error('加载申请单失败:', response.statusText);
+                        }
+                    } catch (error) {
+                        console.error('加载申请单失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const loadStatistics = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/statistics`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            statistics.value = data;
+                        }
+                    } catch (error) {
+                        console.error('加载统计信息失败:', error);
+                    }
+                };
+
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch('/api/offices', {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室列表失败:', error);
+                    }
+                };
+
+                const viewApplication = async (application) => {
+                    currentApplication.value = application;
+                    showDetailModal.value = true;
+
+                    try {
+                        const response = await fetch(`${API_BASE}/applications/${application.id}`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            currentApplicationPickups.value = data.pickups || [];
+                        }
+                    } catch (error) {
+                        console.error('加载申请单详情失败:', error);
+                    }
+                };
+
+                const createApplication = async () => {
+                    if (!newApplication.value.office_id) {
+                        alert('请选择办公室');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE}/applications`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify(newApplication.value)
+                        });
+
+                        if (response.ok) {
+                            alert('申请单创建成功');
+                            showCreateModal.value = false;
+                            newApplication.value = { office_id: '', note: '' };
+                            loadApplications();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '创建失败');
+                        }
+                    } catch (error) {
+                        console.error('创建申请单失败:', error);
+                        alert('创建失败');
+                    }
+                };
+
+                const approveApplication = async (application) => {
+                    if (!confirm(`确定审核通过申请单 ${application.application_no} 吗？`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(
+                            `${API_BASE}/applications/${application.id}/approve`,
+                            {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            }
+                        );
+
+                        if (response.ok) {
+                            alert('审核通过成功');
+                            loadApplications();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '审核失败');
+                        }
+                    } catch (error) {
+                        console.error('审核失败:', error);
+                        alert('审核失败');
+                    }
+                };
+
+                const rejectApplication = async (application) => {
+                    const reason = prompt('请输入拒绝原因:');
+                    if (!reason) return;
+
+                    try {
+                        const response = await fetch(
+                            `${API_BASE}/applications/${application.id}/reject`,
+                            {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({ reason })
+                            }
+                        );
+
+                        if (response.ok) {
+                            alert('申请已拒绝');
+                            loadApplications();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '拒绝失败');
+                        }
+                    } catch (error) {
+                        console.error('拒绝失败:', error);
+                        alert('拒绝失败');
+                    }
+                };
+
+                const confirmApplication = async (application) => {
+                    if (!confirm(`确定确认收款申请单 ${application.application_no} 吗？\n金额: ¥${application.total_amount.toFixed(2)}`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(
+                            `${API_BASE}/applications/${application.id}/confirm`,
+                            {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            }
+                        );
+
+                        if (response.ok) {
+                            alert('确认收款成功');
+                            loadApplications();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '确认失败');
+                        }
+                    } catch (error) {
+                        console.error('确认失败:', error);
+                        alert('确认失败');
+                    }
+                };
+
+                const openCreateModal = () => {
+                    newApplication.value = { office_id: '', note: '' };
+                    showCreateModal.value = true;
+                };
+
+                const exportData = () => {
+                    if (filteredApplications.value.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+
+                    let csv = '申请单号,办公室,记录数,金额,申请人,状态,申请时间\n';
+                    filteredApplications.value.forEach(app => {
+                        csv += `${app.application_no},${app.office_name},${app.record_count},${app.total_amount.toFixed(2)},${app.applicant_name},${getStatusText(app.status)},${formatDate(app.applied_at)}\n`;
+                    });
+
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `结算申请单_${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+                };
+
+                onMounted(() => {
+                    loadApplications();
+                    loadStatistics();
+                    loadOffices();
+                });
+
+                return {
+                    loading,
+                    applications,
+                    offices,
+                    statistics,
+                    currentTab,
+                    showCreateModal,
+                    showDetailModal,
+                    currentApplication,
+                    currentApplicationPickups,
+                    newApplication,
+                    filteredApplications,
+                    getStatusClass,
+                    getStatusText,
+                    formatDate,
+                    loadApplications,
+                    viewApplication,
+                    createApplication,
+                    approveApplication,
+                    rejectApplication,
+                    confirmApplication,
+                    openCreateModal,
+                    exportData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

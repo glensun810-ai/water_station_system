@@ -15,6 +15,11 @@ from models.office import Office
 from models.pickup import OfficePickup
 from models.recharge import OfficeRecharge
 from models.settlement import OfficeSettlement
+from models.settlement_v2 import (
+    SettlementApplication,
+    SettlementItem,
+    MonthlySettlement,
+)
 from models.config import SystemConfig
 from models.promotion import Promotion, PromotionConfig
 from models.reservation import ReservationPickup
@@ -42,6 +47,9 @@ __all__ = [
     "OfficePickup",
     "OfficeRecharge",
     "OfficeSettlement",
+    "SettlementApplication",
+    "SettlementItem",
+    "MonthlySettlement",
     "SystemConfig",
     "Promotion",
     "PromotionConfig",

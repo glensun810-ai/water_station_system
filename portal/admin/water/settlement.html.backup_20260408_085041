@@ -455,46 +455,46 @@
                     <div class="stat-card">
                         <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⏳</div>
                         <div class="stat-info">
-                            <div class="stat-value">{{ settlementStats.pendingOfficeCount }}</div>
-                            <div class="stat-label">待付款办公室</div>
+                            <div class="stat-value">{{ settlementStats.pendingCount }}</div>
+                            <div class="stat-label">待付款</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">📝</div>
                         <div class="stat-info">
-                            <div class="stat-value">{{ settlementStats.appliedOfficeCount }}</div>
-                            <div class="stat-label">待确认办公室</div>
+                            <div class="stat-value">{{ settlementStats.appliedCount }}</div>
+                            <div class="stat-label">待确认</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
                         <div class="stat-info">
-                            <div class="stat-value">{{ settlementStats.fullySettledOfficeCount }}</div>
-                            <div class="stat-label">已结清办公室</div>
+                            <div class="stat-value">{{ settlementStats.confirmedCount }}</div>
+                            <div class="stat-label">已结清</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">💵</div>
                         <div class="stat-info">
-                            <div class="stat-value">¥{{ (settlementStats.pendingAmount + settlementStats.appliedAmount).toFixed(2) }}</div>
+                            <div class="stat-value">¥{{ settlementStats.totalPendingAmount.toFixed(2) }}</div>
                             <div class="stat-label">待结金额</div>
                         </div>
                     </div>
                 </div>
                 
-<div class="filter-section">
+                <div class="filter-section">
                     <div class="tab-filters">
                         <button class="tab-btn" :class="{ active: settlementTab === 'applied' }" @click="settlementTab = 'applied'">
-                            待确认 <span class="count">{{ settlementStats.appliedOfficeCount }}</span>
+                            待确认 <span class="count">{{ settlementStats.appliedCount }}</span>
                         </button>
                         <button class="tab-btn" :class="{ active: settlementTab === 'pending' }" @click="settlementTab = 'pending'">
-                            待付款 <span class="count">{{ settlementStats.pendingOfficeCount }}</span>
+                            待付款 <span class="count">{{ settlementStats.pendingCount }}</span>
                         </button>
                         <button class="tab-btn" :class="{ active: settlementTab === 'settled' }" @click="settlementTab = 'settled'">
-                            已结清 <span class="count">{{ settlementStats.fullySettledOfficeCount }}</span>
+                            已结清 <span class="count">{{ settlementStats.confirmedCount }}</span>
                         </button>
                         <button class="tab-btn" :class="{ active: settlementTab === 'all' }" @click="settlementTab = 'all'">
-                            全部 <span class="count">{{ officeSettlements.length }}</span>
+                            全部 <span class="count">{{ filteredOfficeSettlements.length }}</span>
                         </button>
                     </div>
                     
@@ -508,11 +508,8 @@
                                 <option value="all">全部</option>
                             </select>
                         </div>
-<button class="btn btn-secondary btn-sm" @click="batchConfirmAllSettlements" v-if="settlementStats.pendingOfficeCount > 0 || settlementStats.appliedOfficeCount > 0">
-                            批量确认
-                        </button>
-                        <button class="btn btn-secondary btn-sm" @click="sendReminderToUnsettled" v-if="settlementStats.pendingOfficeCount > 0">
-                            批量提醒
+                        <button class="btn btn-secondary btn-sm" @click="batchConfirmAllSettlements" v-if="settlementStats.pendingCount > 0 || settlementStats.appliedCount > 0">
+                            批量确认全部
                         </button>
                         <button class="btn btn-secondary btn-sm" @click="sendReminderToUnsettled" v-if="settlementStats.pendingCount > 0">
                             发送催款提醒
@@ -680,53 +677,23 @@
                         } else if (settlementTab.value === 'pending') {
                             return r.pending_count > 0;
                         } else if (settlementTab.value === 'applied') {
-                            return r.applied_count > 0;
+                            return r.applied_count > 0 || (r.pending_count > 0);
                         }
                         return true;
                     });
                 });
                 
-const settlementStats = computed(() => {
-    const records = officeSettlements.value;
-    
-    let pendingRecordCount = 0;
-    let appliedRecordCount = 0;
-    let settledRecordCount = 0;
-    let pendingAmount = 0;
-    let appliedAmount = 0;
-    let settledAmount = 0;
-    
-    records.forEach(r => {
-        if (r.pickups && Array.isArray(r.pickups)) {
-            r.pickups.forEach(p => {
-                if (p.settlement_status === 'pending') {
-                    pendingRecordCount++;
-                    pendingAmount += (p.total_amount || 0);
-                } else if (p.settlement_status === 'applied') {
-                    appliedRecordCount++;
-                    appliedAmount += (p.total_amount || 0);
-                } else if (p.settlement_status === 'settled') {
-                    settledRecordCount++;
-                    settledAmount += (p.total_amount || 0);
-                }
-            });
-        }
-    });
-    
-    return {
-        pendingRecordCount,
-        appliedRecordCount,
-        settledRecordCount,
-        pendingOfficeCount: records.filter(r => r.pending_count > 0).length,
-        appliedOfficeCount: records.filter(r => r.applied_count > 0).length,
-        fullySettledOfficeCount: records.filter(r => {
-            return r.confirmed_count > 0 && r.pending_count === 0 && r.applied_count === 0;
-        }).length,
-        pendingAmount,
-        appliedAmount,
-        settledAmount
-    };
-});
+                const settlementStats = computed(() => {
+                    const records = officeSettlements.value;
+                    return {
+                        pendingCount: records.filter(r => r.pending_count > 0).length,
+                        appliedCount: records.filter(r => r.applied_count > 0).length,
+                        confirmedCount: records.filter(r => {
+                            return r.confirmed_count > 0 && r.pending_count === 0 && r.applied_count === 0;
+                        }).length,
+                        totalPendingAmount: records.reduce((sum, r) => sum + (r.total_amount || 0), 0)
+                    };
+                });
                 
                 const toggleSettlementExpand = (record) => {
                     const id = record.id || record.office_id;
@@ -843,25 +810,12 @@ const settlementStats = computed(() => {
                 
                 const batchConfirmAllSettlements = async () => {
                     const stats = settlementStats.value;
-                    if (stats.appliedOfficeCount === 0) {
-                        alert('没有已申请待确认的记录');
+                    if (stats.pendingCount === 0 && stats.appliedCount === 0) {
+                        alert('没有待确认的记录');
                         return;
                     }
                     
-                    const appliedAmount = stats.appliedAmount;
-                    const appliedCount = stats.appliedRecordCount;
-                    
-                    const confirmed = confirm(
-`确认批量确认收款?
-
-涉及办公室: ${stats.appliedOfficeCount}个
-待确认记录: ${appliedCount}条
-总金额: ¥${appliedAmount.toFixed(2)}
-
-⚠️ 提示: 此操作将确认所有已申请待审核的记录,确认后不可撤销。`
-                    );
-                    
-                    if (!confirmed) return;
+                    if (!confirm(`确认所有待确认结算？`)) return;
                     
                     try {
                         const token = localStorage.getItem('token');
@@ -870,42 +824,32 @@ const settlementStats = computed(() => {
                             'Authorization': `Bearer ${token}`
                         };
                         
-                        let allAppliedPickupIds = [];
+                        let allPickupIds = [];
                         for (const o of officeSettlements.value) {
-                            if (o.applied_count > 0) {
-                                const appliedPickupIds = (o.pickups || [])
-                                    .filter(p => p.settlement_status === 'applied')
+                            if (o.pending_count > 0 || o.applied_count > 0) {
+                                const pickupIds = (o.pickups || [])
+                                    .filter(p => p.settlement_status === 'pending' || p.settlement_status === 'applied')
                                     .map(p => p.id);
-                                allAppliedPickupIds = allAppliedPickupIds.concat(appliedPickupIds);
+                                allPickupIds = allPickupIds.concat(pickupIds);
                             }
                         }
                         
-                        if (allAppliedPickupIds.length > 0) {
+                        if (allPickupIds.length > 0) {
                             const confirmRes = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
                                 method: 'POST',
                                 headers,
-                                body: JSON.stringify(allAppliedPickupIds)
+                                body: JSON.stringify(allPickupIds)
                             });
-
+                            
                             if (!confirmRes.ok) {
                                 const err = await confirmRes.json();
                                 alert(err.detail || '确认失败');
                                 return;
                             }
-
-                            const result = await confirmRes.json();
-                            alert(
-`批量确认收款成功!
-
-成功确认: ${allAppliedPickupIds.length}条记录
-总金额: ¥${appliedAmount.toFixed(2)}
-
-操作时间: ${new Date().toLocaleString('zh-CN')}
-操作人: ${JSON.parse(localStorage.getItem('userInfo') || '{}').name || '未知'}`
-                            );
-
-await loadOfficeSettlements();
                         }
+                        
+                        alert(`批量确认成功！共 ${allPickupIds.length} 条记录已结清`);
+                        loadOfficeSettlements();
                     } catch (e) {
                         alert('批量确认失败: ' + e.message);
                     }

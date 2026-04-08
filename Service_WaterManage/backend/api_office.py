@@ -11,6 +11,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
 from config.database import get_db
+from depends.auth import get_current_user
 from models.office import Office
 from models.account import OfficeAccount
 from models.recharge import OfficeRecharge
@@ -1323,19 +1324,85 @@ def batch_user_pay(pickup_ids: List[int], db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickups/batch-confirm")
-def batch_admin_confirm(pickup_ids: List[int], db: Session = Depends(get_db)):
-    """批量管理员确认收款 - 支持pending和applied两种状态"""
+def batch_admin_confirm(
+    pickup_ids: List[int],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    批量管理员确认收款
+
+    改进:
+    - 只确认applied状态的记录(已申请待审核)
+    - 不再确认pending状态记录,避免跳过申请环节
+    - 记录操作日志,提供审计追溯
+    """
+    from utils.settlement_logger import SettlementLogger
+
+    logger = SettlementLogger(db)
+
+    # 获取操作人信息
+    operator_id = getattr(current_user, "id", 0) if current_user else 0
+    operator_name = (
+        getattr(current_user, "name", "未知用户") if current_user else "未知用户"
+    )
+
+    # 查询要确认的记录
+    pickups = db.query(OfficePickup).filter(OfficePickup.id.in_(pickup_ids)).all()
+
     updated_count = 0
-    for pickup_id in pickup_ids:
-        pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
-        if pickup and pickup.settlement_status in ["pending", "applied"]:
+    applied_count = 0
+    skipped_pending_count = 0
+    skipped_other_count = 0
+
+    for pickup in pickups:
+        if pickup.settlement_status == "applied":
+            # 只确认已申请待审核的记录
+            old_status = pickup.settlement_status
             pickup.settlement_status = "settled"
             updated_count += 1
+            applied_count += 1
+
+            # 记录操作日志
+            logger.log_operation(
+                operation_type="batch_confirm",
+                target_type="pickup",
+                target_id=pickup.id,
+                operator_id=operator_id,
+                operator_name=operator_name,
+                operator_role="admin",
+                old_status=old_status,
+                new_status="settled",
+                operation_detail={
+                    "office_id": pickup.office_id,
+                    "amount": float(pickup.total_amount) if pickup.total_amount else 0,
+                },
+                note="批量确认收款",
+            )
+        elif pickup.settlement_status == "pending":
+            # 跳过pending状态记录,避免跳过申请环节
+            skipped_pending_count += 1
+        else:
+            # 跳过其他状态记录
+            skipped_other_count += 1
 
     db.commit()
+
+    # 构建返回消息
+    message_parts = []
+    if updated_count > 0:
+        message_parts.append(f"成功确认 {updated_count} 条已申请记录")
+    if skipped_pending_count > 0:
+        message_parts.append(f"跳过 {skipped_pending_count} 条待付款记录(需先申请结算)")
+    if skipped_other_count > 0:
+        message_parts.append(f"跳过 {skipped_other_count} 条其他状态记录")
+
     return {
         "updated_count": updated_count,
-        "message": f"成功确认 {updated_count} 条记录的收款",
+        "applied_count": applied_count,
+        "skipped_pending_count": skipped_pending_count,
+        "skipped_other_count": skipped_other_count,
+        "message": "，".join(message_parts) if message_parts else "没有需要确认的记录",
     }
 
 
@@ -1517,15 +1584,15 @@ def get_admin_office_settlements(
                 continue
             if status == "applied" and len(applied) == 0:
                 continue
-            if status == "confirmed" and len(confirmed) == 0:
+            if status == "settled" and len(confirmed) == 0:
                 continue
 
         total_amount = sum(p.total_amount or 0 for p in pickups)
         total_quantity = sum(p.quantity or 0 for p in pickups)
 
-        # 确定当前状态（优先级：confirmed > applied > pending）
+        # 确定当前状态（优先级：settled > applied > pending）
         current_status = (
-            "confirmed"
+            "settled"
             if confirmed
             else ("applied" if applied else ("pending" if pending else "pending"))
         )

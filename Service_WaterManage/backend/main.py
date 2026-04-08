@@ -184,11 +184,13 @@ from core.user.api import router as core_user_router
 from core.office.api import router as core_office_router
 from core.settlement.api import router as core_settlement_router
 from api_user_auth import router as user_auth_router
+from api_settlement_v3 import router as settlement_v3_router
 
 app.include_router(core_user_router)
 app.include_router(core_office_router)
 app.include_router(core_settlement_router)
 app.include_router(user_auth_router)
+app.include_router(settlement_v3_router)
 
 # ==================== 服务域路由 ====================
 

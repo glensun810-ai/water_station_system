@@ -12,6 +12,7 @@ import json
 from models.pickup import OfficePickup
 from models.settlement import OfficeSettlement
 from services.base import BaseService
+from utils.settlement_logger import SettlementLogger
 
 
 class SettlementService(BaseService[OfficePickup]):
@@ -23,6 +24,7 @@ class SettlementService(BaseService[OfficePickup]):
 
     def __init__(self, db: Session):
         super().__init__(OfficePickup, db)
+        self.logger = SettlementLogger(db)
 
     def apply_settlement(
         self,
@@ -52,6 +54,7 @@ class SettlementService(BaseService[OfficePickup]):
         updated_count = 0
         total_amount = 0.0
         failed_ids = []
+        successful_ids = []
 
         for pickup_id in pickup_ids:
             pickup = (
@@ -65,9 +68,23 @@ class SettlementService(BaseService[OfficePickup]):
             )
 
             if pickup:
+                old_status = pickup.settlement_status
                 pickup.settlement_status = "applied"
                 updated_count += 1
                 total_amount += pickup.total_amount or 0
+                successful_ids.append(pickup_id)
+
+                self.logger.log_operation(
+                    operation_type="apply",
+                    target_type="pickup",
+                    target_id=pickup_id,
+                    operator_id=applicant_id or 0,
+                    operator_name=applicant_name or "系统",
+                    old_status=old_status,
+                    new_status="applied",
+                    note=f"申请结算,金额: ¥{pickup.total_amount or 0:.2f}",
+                    operation_detail={"amount": pickup.total_amount or 0},
+                )
             else:
                 failed_ids.append(pickup_id)
 
@@ -107,13 +124,25 @@ class SettlementService(BaseService[OfficePickup]):
         if pickup.settlement_status not in ["pending", "applied"]:
             return {"success": False, "message": "该记录不可确认结算"}
 
+        old_status = pickup.settlement_status
         pickup.settlement_status = "settled"
 
-        # 记录确认信息（如果模型有这些字段）
         if hasattr(pickup, "confirmed_by") and confirmer_id:
             pickup.confirmed_by = confirmer_id
         if hasattr(pickup, "confirmed_at"):
             pickup.confirmed_at = datetime.now()
+
+        self.logger.log_operation(
+            operation_type="confirm",
+            target_type="pickup",
+            target_id=pickup_id,
+            operator_id=confirmer_id or 0,
+            operator_name=confirmer_name or "管理员",
+            old_status=old_status,
+            new_status="settled",
+            note=f"确认收款,金额: ¥{pickup.total_amount or 0:.2f}",
+            operation_detail={"amount": pickup.total_amount or 0},
+        )
 
         self.db.commit()
 
@@ -140,11 +169,22 @@ class SettlementService(BaseService[OfficePickup]):
         if pickup.settlement_status != "applied":
             return {"success": False, "message": "只能拒绝已申请的结算"}
 
+        old_status = pickup.settlement_status
         pickup.settlement_status = "pending"
 
-        # 记录拒绝原因（如果需要）
         if reason and hasattr(pickup, "note"):
             pickup.note = f"拒绝原因: {reason}"
+
+        self.logger.log_operation(
+            operation_type="reject",
+            target_type="pickup",
+            target_id=pickup_id,
+            operator_id=0,
+            operator_name="系统",
+            old_status=old_status,
+            new_status="pending",
+            note=f"拒绝结算: {reason}",
+        )
 
         self.db.commit()
 
@@ -178,6 +218,7 @@ class SettlementService(BaseService[OfficePickup]):
         updated_count = 0
         total_amount = 0.0
         failed_ids = []
+        successful_ids = []
 
         for pickup_id in pickup_ids:
             pickup = (
@@ -190,6 +231,7 @@ class SettlementService(BaseService[OfficePickup]):
             )
 
             if pickup:
+                old_status = pickup.settlement_status
                 pickup.settlement_status = "settled"
 
                 if hasattr(pickup, "confirmed_by") and confirmer_id:
@@ -199,8 +241,23 @@ class SettlementService(BaseService[OfficePickup]):
 
                 updated_count += 1
                 total_amount += pickup.total_amount or 0
+                successful_ids.append(pickup_id)
             else:
                 failed_ids.append(pickup_id)
+
+        if successful_ids:
+            self.logger.log_batch_operation(
+                operation_type="batch_confirm",
+                target_type="pickup",
+                target_ids=successful_ids,
+                operator_id=confirmer_id or 0,
+                operator_name=confirmer_name or "管理员",
+                note=f"批量确认收款,涉及{len(successful_ids)}条记录,总金额¥{round(total_amount, 2)}",
+                operation_detail={
+                    "count": len(successful_ids),
+                    "total_amount": round(total_amount, 2),
+                },
+            )
 
         self.db.commit()
 

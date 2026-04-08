@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>月度结算单 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: calc(-1 * var(--spacing-sm) - 1px);
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .settlements-table {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            background: var(--background);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-approved {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-settled {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-light);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header></global-header>
+
+        <div class="module-container">
+            <div class="module-header">
+                <div class="module-title">
+                    <span>📊 月度结算单</span>
+                </div>
+                <div class="module-actions">
+                    <button class="btn btn-primary" @click="openGenerateModal">
+                        <span>➕ 生成结算单</span>
+                    </button>
+                    <button class="btn" @click="loadSettlements">
+                        <span>🔄 刷新</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e3f2fd;">📝</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.pending.count }}</div>
+                        <div class="stat-label">待审核</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fff3e0;">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.approved.count }}</div>
+                        <div class="stat-label">已审核</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e8f5e9;">💰</div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ statistics.settled.count }}</div>
+                        <div class="stat-label">已结算</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fce4ec;">💵</div>
+                    <div class="stat-info">
+                        <div class="stat-value">¥{{ statistics.pending.amount.toFixed(2) }}</div>
+                        <div class="stat-label">待收款金额</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="tab-filters">
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'pending' }"
+                        @click="currentTab = 'pending'"
+                    >
+                        待审核
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'approved' }"
+                        @click="currentTab = 'approved'"
+                    >
+                        已审核
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'settled' }"
+                        @click="currentTab = 'settled'"
+                    >
+                        已结算
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ active: currentTab === 'all' }"
+                        @click="currentTab = 'all'"
+                    >
+                        全部
+                    </button>
+                </div>
+            </div>
+
+            <div class="settlements-table">
+                <div class="table-header">
+                    <div class="table-title">月度结算单</div>
+                </div>
+
+                <div class="table-container">
+                    <table v-if="loading">
+                        <tr>
+                            <td colspan="8" class="loading">加载中...</td>
+                        </tr>
+                    </table>
+                    <table v-else-if="filteredSettlements.length === 0">
+                        <tr>
+                            <td colspan="8" class="empty-state">暂无数据</td>
+                        </tr>
+                    </table>
+                    <table v-else>
+                        <thead>
+                            <tr>
+                                <th>结算单号</th>
+                                <th>办公室</th>
+                                <th>结算周期</th>
+                                <th>记录数</th>
+                                <th>金额</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="settlement in filteredSettlements" :key="settlement.id">
+                                <td>{{ settlement.settlement_no }}</td>
+                                <td>{{ settlement.office_name }}</td>
+                                <td>{{ settlement.settlement_period }}</td>
+                                <td>{{ settlement.record_count }}</td>
+                                <td>¥{{ settlement.total_amount.toFixed(2) }}</td>
+                                <td>
+                                    <span
+                                        class="status-badge"
+                                        :class="getStatusClass(settlement.status)"
+                                    >
+                                        {{ getStatusText(settlement.status) }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(settlement.created_at) }}</td>
+                                <td>
+                                    <button
+                                        v-if="settlement.status === 'pending'"
+                                        class="action-btn"
+                                        @click="approveSettlement(settlement)"
+                                        title="审核通过"
+                                    >
+                                        ✅
+                                    </button>
+                                    <button
+                                        v-if="settlement.status === 'approved'"
+                                        class="action-btn"
+                                        @click="settleSettlement(settlement)"
+                                        title="结算"
+                                    >
+                                        💰
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 生成结算单弹窗 -->
+        <div class="modal-overlay" v-if="showGenerateModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">生成月度结算单</div>
+                    <button class="modal-close" @click="showGenerateModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">办公室</label>
+                        <select class="form-select" v-model="newSettlement.office_id">
+                            <option value="">请选择办公室</option>
+                            <option v-for="office in offices" :key="office.id" :value="office.id">
+                                {{ office.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">结算周期</label>
+                        <select class="form-select" v-model="newSettlement.settlement_period">
+                            <option value="">请选择结算周期</option>
+                            <option v-for="period in availablePeriods" :key="period" :value="period">
+                                {{ period }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <textarea
+                            class="form-textarea"
+                            v-model="newSettlement.note"
+                            placeholder="可选备注信息"
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showGenerateModal = false">取消</button>
+                    <button class="btn btn-primary" @click="generateSettlement">生成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v3/settlements';
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            components: {
+                GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const settlements = ref([]);
+                const offices = ref([]);
+                const availablePeriods = ref([]);
+                const statistics = ref({
+                    pending: { count: 0, amount: 0 },
+                    approved: { count: 0, amount: 0 },
+                    settled: { count: 0, amount: 0 },
+                    total_count: 0,
+                    total_amount: 0
+                });
+                const currentTab = ref('pending');
+                const showGenerateModal = ref(false);
+                const newSettlement = ref({
+                    office_id: '',
+                    settlement_period: '',
+                    note: ''
+                });
+
+                const filteredSettlements = computed(() => {
+                    if (currentTab.value === 'all') {
+                        return settlements.value;
+                    }
+                    return settlements.value.filter(s => s.status === currentTab.value);
+                });
+
+                const getStatusClass = (status) => {
+                    const classes = {
+                        'pending': 'status-pending',
+                        'approved': 'status-approved',
+                        'settled': 'status-settled'
+                    };
+                    return classes[status] || '';
+                };
+
+                const getStatusText = (status) => {
+                    const texts = {
+                        'pending': '待审核',
+                        'approved': '已审核',
+                        'settled': '已结算'
+                    };
+                    return texts[status] || status;
+                };
+
+                const formatDate = (dateString) => {
+                    if (!dateString) return '-';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                const getAuthHeaders = () => {
+                    const token = localStorage.getItem('token');
+                    return {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    };
+                };
+
+                const loadSettlements = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`${API_BASE}/monthly-settlements`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            settlements.value = data.data || [];
+                        } else {
+                            console.error('加载结算单失败:', response.statusText);
+                        }
+                    } catch (error) {
+                        console.error('加载结算单失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const loadStatistics = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/monthly-settlements/statistics`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            statistics.value = data;
+                        }
+                    } catch (error) {
+                        console.error('加载统计信息失败:', error);
+                    }
+                };
+
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch('/api/offices', {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室列表失败:', error);
+                    }
+                };
+
+                const loadAvailablePeriods = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/monthly-settlements/available-periods`, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            availablePeriods.value = data.periods || [];
+                        }
+                    } catch (error) {
+                        console.error('加载可生成周期失败:', error);
+                    }
+                };
+
+                const generateSettlement = async () => {
+                    if (!newSettlement.value.office_id || !newSettlement.value.settlement_period) {
+                        alert('请选择办公室和结算周期');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE}/monthly-settlements`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify(newSettlement.value)
+                        });
+
+                        if (response.ok) {
+                            alert('月度结算单生成成功');
+                            showGenerateModal.value = false;
+                            newSettlement.value = { office_id: '', settlement_period: '', note: '' };
+                            loadSettlements();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '生成失败');
+                        }
+                    } catch (error) {
+                        console.error('生成结算单失败:', error);
+                        alert('生成失败');
+                    }
+                };
+
+                const approveSettlement = async (settlement) => {
+                    if (!confirm(`确定审核通过结算单 ${settlement.settlement_no} 吗？\n金额: ¥${settlement.total_amount.toFixed(2)}`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(
+                            `${API_BASE}/monthly-settlements/${settlement.id}/approve`,
+                            {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            }
+                        );
+
+                        if (response.ok) {
+                            alert('审核通过成功');
+                            loadSettlements();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '审核失败');
+                        }
+                    } catch (error) {
+                        console.error('审核失败:', error);
+                        alert('审核失败');
+                    }
+                };
+
+                const settleSettlement = async (settlement) => {
+                    if (!confirm(`确定结算 ${settlement.settlement_no} 吗？\n金额: ¥${settlement.total_amount.toFixed(2)}`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(
+                            `${API_BASE}/monthly-settlements/${settlement.id}/settle`,
+                            {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            }
+                        );
+
+                        if (response.ok) {
+                            alert('结算成功');
+                            loadSettlements();
+                            loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '结算失败');
+                        }
+                    } catch (error) {
+                        console.error('结算失败:', error);
+                        alert('结算失败');
+                    }
+                };
+
+                const openGenerateModal = () => {
+                    newSettlement.value = { office_id: '', settlement_period: '', note: '' };
+                    showGenerateModal.value = true;
+                    loadAvailablePeriods();
+                };
+
+                onMounted(() => {
+                    loadSettlements();
+                    loadStatistics();
+                    loadOffices();
+                });
+
+                return {
+                    loading,
+                    settlements,
+                    offices,
+                    availablePeriods,
+                    statistics,
+                    currentTab,
+                    showGenerateModal,
+                    newSettlement,
+                    filteredSettlements,
+                    getStatusClass,
+                    getStatusText,
+                    formatDate,
+                    loadSettlements,
+                    generateSettlement,
+                    approveSettlement,
+                    settleSettlement,
+                    openGenerateModal
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
