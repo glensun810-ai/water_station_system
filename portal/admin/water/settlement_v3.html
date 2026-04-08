@@ -353,13 +353,50 @@
             padding: var(--spacing-xl);
             color: var(--text-secondary);
         }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
         <global-header></global-header>
 
-        <div class="module-container">
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+
+        <template v-else>
+            <div class="module-container">
             <div class="module-header">
                 <div class="module-title">
                     <span>📋 结算管理</span>
@@ -641,6 +678,7 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 
     <script>
@@ -653,7 +691,8 @@
                 GlobalHeader
             },
             setup() {
-                const loading = ref(false);
+                const loading = ref(true);
+                const authError = ref('');
                 const applications = ref([]);
                 const offices = ref([]);
                 const statistics = ref({
@@ -672,6 +711,28 @@
                     office_id: '',
                     note: ''
                 });
+
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
 
                 const filteredApplications = computed(() => {
                     if (currentTab.value === 'all') {
@@ -925,7 +986,10 @@
                     link.click();
                 };
 
-                onMounted(() => {
+                onMounted(async () => {
+                    const authPassed = await checkAuth();
+                    if (!authPassed) return;
+                    
                     loadApplications();
                     loadStatistics();
                     loadOffices();
@@ -933,6 +997,7 @@
 
                 return {
                     loading,
+                    authError,
                     applications,
                     offices,
                     statistics,

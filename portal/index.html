@@ -724,7 +724,7 @@
                                 <a href="/portal/admin/water/pickups.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     领水记录
                                 </a>
-                                <a href="/portal/admin/water/settlement.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                <a href="/portal/admin/water/settlement_v3.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     结算管理
                                 </a>
                                 <a href="/portal/admin/water/products.html" class="btn btn-outline btn-sm" style="justify-content: center;">
@@ -889,9 +889,9 @@
                     <span class="bottom-nav-icon">🏠</span>
                     <span class="bottom-nav-label">首页</span>
                 </a>
-                <a href="/portal/water/index.html" class="bottom-nav-item">
+                <a :href="waterNavHref" class="bottom-nav-item">
                     <span class="bottom-nav-icon">💧</span>
-                    <span class="bottom-nav-label">水站</span>
+                    <span class="bottom-nav-label">{{ waterNavLabel }}</span>
                 </a>
                 <a href="/meeting-frontend/index.html" class="bottom-nav-item">
                     <span class="bottom-nav-icon">📅</span>
@@ -928,7 +928,7 @@
     </div>
     
     <script>
-        const { createApp, ref, onMounted, onBeforeUnmount } = Vue;
+        const { createApp, ref, computed, onMounted, onBeforeUnmount } = Vue;
         
         const app = createApp({
             components: {
@@ -967,6 +967,17 @@
                 const staffCount = ref(0);
                 const pendingSettlement = ref(0);
                 const appliedSettlement = ref(0);
+                
+                // 水站导航计算属性
+                const waterNavLabel = computed(() => {
+                    return userInfo.value && userInfo.value.is_admin ? '水站管理' : '水站';
+                });
+                
+                const waterNavHref = computed(() => {
+                    return userInfo.value && userInfo.value.is_admin 
+                        ? '/portal/admin/water/dashboard.html' 
+                        : '/portal/water/index.html';
+                });
                 
                 // 获取API基础地址
                 const getApiBase = () => {
