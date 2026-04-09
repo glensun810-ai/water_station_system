@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#1E293B">
     <title>领水记录管理 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="../../node_modules/vue/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
     <link rel="stylesheet" href="../../components/GlobalHeader.css">
     <script src="../../components/GlobalHeader.js"></script>
@@ -773,22 +773,22 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <GlobalHeader :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '领水记录', icon: '📋', url: '/portal/admin/water/pickups.html'}]"></GlobalHeader>
+        <GlobalHeader :breadcrumbs="[{text: 'AI产业集群空间服务', icon: '🏢', url: '/portal/index.html'}, {text: '水站管理', icon: '💧', url: '/water/admin.html'}, {text: '领水记录', icon: '📋', url: '/portal/admin/water/pickups.html'}]"></GlobalHeader>
         <div class="module-container">
                 <div class="module-header">
                     <h1 class="module-title">
                         <span>🚰</span>
                         <span>领水记录管理</span>
                     </h1>
+                    <p style="margin-top: 8px; font-size: var(--font-size-sm); color: var(--text-secondary);">
+                        审批和管理用户提交的领水申请记录
+                    </p>
                     <div class="action-btns">
                         <button class="btn btn-secondary" @click="exportFilteredPickups">
                             📥 导出筛选结果
                         </button>
                         <button class="btn btn-secondary" @click="exportAllPickups">
                             📥 导出全部
-                        </button>
-                        <button class="btn btn-primary" @click="showPickupModal = true">
-                            ➕ 新增记录
                         </button>
                     </div>
                 </div>
@@ -957,9 +957,6 @@
                                             <button class="btn btn-secondary btn-sm" @click="sendRemindForPickup(pickup)" v-show="pickup.settlement_status === 'pending'">
                                                 提醒
                                             </button>
-                                            <button class="btn btn-secondary btn-sm" @click="editPickup(pickup)">
-                                                编辑
-                                            </button>
                                             <button class="btn btn-danger btn-sm" @click="deleteSinglePickup(pickup.id)">
                                                 删除
                                             </button>
@@ -1046,12 +1043,6 @@
                                         提醒
                                     </button>
                                     <button 
-                                        class="btn btn-secondary btn-sm action-btn-sm" 
-                                        @click="editPickup(pickup)"
-                                    >
-                                        编辑
-                                    </button>
-                                    <button 
                                         class="btn btn-danger btn-sm action-btn-sm" 
                                         @click="deleteSinglePickup(pickup.id)"
                                     >
@@ -1065,82 +1056,22 @@
                             <p>暂无领水记录</p>
                         </div>
                     </div>
-                        <button @click="currentPage = 1" :disabled="currentPage === 1">首页</button>
-                        <button @click="currentPage--" :disabled="currentPage === 1">上一页</button>
-                        <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-                        <button @click="currentPage++" :disabled="currentPage === totalPages">下一页</button>
-                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages">尾页</button>
-                    </div>
+                </div>
+                
+                <div class="pagination">
+                    <button @click="currentPage = 1" :disabled="currentPage === 1">首页</button>
+                    <button @click="currentPage--" :disabled="currentPage === 1">上一页</button>
+                    <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                    <button @click="currentPage++" :disabled="currentPage === totalPages">下一页</button>
+                    <button @click="currentPage = totalPages" :disabled="currentPage === totalPages">尾页</button>
                 </div>
             </div>
-            
-            <div v-if="showPickupModal" class="modal-overlay" @click.self="showPickupModal = false">
-                <div class="modal">
-                    <div class="modal-header">
-                        <h3 class="modal-title">{{ editingPickup ? '编辑领水记录' : '新增领水记录' }}</h3>
-                        <button class="modal-close" @click="showPickupModal = false">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label class="form-label">办公室 *</label>
-                            <select class="form-select" v-model="pickupForm.office_id">
-                                <option value="">请选择办公室</option>
-                                <option v-for="office in offices" :key="office.id" :value="office.id">
-                                    {{ office.name }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">产品 *</label>
-                            <select class="form-select" v-model="pickupForm.product_id" @change="onProductSelect">
-                                <option value="">请选择产品</option>
-                                <option v-for="product in products" :key="product.id" :value="product.id">
-                                    {{ product.name }} ({{ product.specification }})
-                                </option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">数量 *</label>
-                            <input type="number" class="form-input" v-model.number="pickupForm.quantity" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">领取人 *</label>
-                            <input type="text" class="form-input" v-model="pickupForm.pickup_person" placeholder="请输入领取人姓名">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">领取时间 *</label>
-                            <input type="datetime-local" class="form-input" v-model="pickupForm.pickup_time" 
-                                   onfocus="this.showPicker && this.showPicker()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">备注</label>
-                            <textarea class="form-textarea" v-model="pickupForm.note" rows="3" placeholder="可选备注"></textarea>
-                        </div>
-                        <div class="form-group" v-if="pickupForm.total">
-                            <label class="form-label">金额</label>
-                            <div style="font-size: 20px; font-weight: 700; color: var(--primary);">
-                                ¥{{ pickupForm.total.toFixed(2) }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" @click="showPickupModal = false">取消</button>
-                        <button class="btn btn-primary" @click="savePickup">保存</button>
-                    </div>
-                </div>
-            </div>
-        </template>
+        </div>
     </div>
     
     <script>
-        // 确保GlobalHeader可用
-        if (typeof GlobalHeader === 'undefined') {
-            console.error('GlobalHeader component not loaded');
-            document.write('<div style="padding: 20px; text-align: center; color: red;">Error: GlobalHeader component failed to load. Please check your network connection.</div>');
-            throw new Error('GlobalHeader not loaded');
-        }
-        
-        const { createApp, ref, computed, onMounted } = Vue;
+        // 直接初始化，因为使用本地Vue文件，无需等待加载
+        const { createApp, ref, computed, onMounted, watch } = Vue;
         
         createApp({
             components: { GlobalHeader },
@@ -1159,6 +1090,17 @@
                 const selectedPickups = ref([]);
                 const offices = ref([]);
                 const products = ref([]);
+                const showPickupModal = ref(false);
+                const editingPickup = ref(null);
+                const pickupForm = ref({
+                    office_id: '',
+                    product_id: '',
+                    quantity: 1,
+                    pickup_person: '',
+                    pickup_time: '',
+                    note: '',
+                    total: 0
+                });
                 
                 const officePickupFilter = ref({
                     officeId: '',
@@ -1168,17 +1110,6 @@
                     productId: '',
                     searchPerson: '',
                     quickDate: ''
-                });
-                
-                const showPickupModal = ref(false);
-                const editingPickup = ref(null);
-                const pickupForm = ref({
-                    office_id: '',
-                    product_id: '',
-                    quantity: 1,
-                    pickup_person: '',
-                    pickup_time: '',
-                    note: ''
                 });
                 
                 const currentPage = ref(1);
@@ -1423,6 +1354,7 @@
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 pickupForm.value.pickup_time = now.toISOString().slice(0, 16);
                 
+                // 编辑领水记录（仅用于修正数据错误）
                 const editPickup = (pickup) => {
                     editingPickup.value = pickup;
                     pickupForm.value = {
@@ -1431,11 +1363,13 @@
                         quantity: pickup.quantity,
                         pickup_person: pickup.pickup_person,
                         pickup_time: pickup.pickup_time ? new Date(pickup.pickup_time).toISOString().slice(0, 16) : '',
-                        note: pickup.note || ''
+                        note: pickup.note || '',
+                        total: pickup.total_amount || 0
                     };
                     showPickupModal.value = true;
                 };
                 
+                // 保存编辑的领水记录
                 const savePickup = async () => {
                     if (!pickupForm.value.office_id || !pickupForm.value.product_id || 
                         !pickupForm.value.quantity || !pickupForm.value.pickup_person || !pickupForm.value.pickup_time) {
@@ -1455,23 +1389,20 @@
                             pickup_time: new Date(pickupForm.value.pickup_time).toISOString()
                         };
                         
-                        let res;
-                        if (editingPickup.value) {
-                            res = await fetch(`${API_BASE}/office-pickup/${editingPickup.value.id}`, {
-                                method: 'PUT',
-                                headers,
-                                body: JSON.stringify(payload)
-                            });
-                        } else {
-                            res = await fetch(`${API_BASE}/office-pickups`, {
-                                method: 'POST',
-                                headers,
-                                body: JSON.stringify(payload)
-                            });
+                        // 仅允许编辑现有记录
+                        if (!editingPickup.value) {
+                            alert('后台管理页面不支持新增记录，请通过用户端提交领水申请');
+                            return;
                         }
                         
+                        const res = await fetch(`${API_BASE}/office-pickup/${editingPickup.value.id}`, {
+                            method: 'PUT',
+                            headers,
+                            body: JSON.stringify(payload)
+                        });
+                        
                         if (res.ok) {
-                            alert(editingPickup.value ? '更新成功' : '创建成功');
+                            alert('更新成功');
                             showPickupModal.value = false;
                             loadOfficePickups();
                         } else {
@@ -1662,15 +1593,30 @@
                     exportPickups(officePickups.value, `领水记录_全部_${new Date().toISOString().slice(0,10)}.csv`);
                 };
                 
+        // 监听产品和数量变化，自动计算总价
+        watch([() => pickupForm.value.product_id, () => pickupForm.value.quantity], ([productId, quantity]) => {
+            const product = products.value.find(p => p.id === productId);
+            if (product && quantity) {
+                pickupForm.value.total = product.price * quantity;
+            } else {
+                pickupForm.value.total = 0;
+            }
+        });
+                
                 onMounted(async () => {
                     loading.value = true;
                     
                     // 添加全局错误处理
                     window.addEventListener('error', (e) => {
                         console.error('Uncaught error:', e.error);
-                        if (!loading.value && document.querySelectorAll('[v-cloak]').length > 0) {
-                            document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: red;">页面加载失败，请刷新重试</div>';
-                        }
+                        document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: red;">页面加载失败，请刷新重试<br>错误详情: ' + (e.error?.message || '未知错误') + '</div>';
+                    });
+                    
+                    // 添加未处理的Promise拒绝处理
+                    window.addEventListener('unhandledrejection', (e) => {
+                        console.error('Unhandled promise rejection:', e.reason);
+                        document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: red;">页面加载失败，请刷新重试<br>错误详情: ' + (e.reason?.message || '未知错误') + '</div>';
+                        e.preventDefault();
                     });
                     
                     const authPassed = await checkAuth();

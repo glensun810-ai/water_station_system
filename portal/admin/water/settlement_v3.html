@@ -6,7 +6,7 @@
     <meta name="theme-color" content="var(--text-primary)">
     <title>结算管理 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="../../node_modules/vue/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
     <link rel="stylesheet" href="../../components/GlobalHeader.css">
     <script src="../../components/GlobalHeader.js"></script>
@@ -383,7 +383,7 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header></global-header>
+        <GlobalHeader :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '结算管理', icon: '📋', url: '/portal/admin/water/settlement_v3.html'}]"></GlobalHeader>
 
         <div v-if="loading" class="loading-overlay">
             <div class="loading-spinner"></div>
@@ -682,8 +682,8 @@
     </div>
 
     <script>
-        const API_BASE = '/api/v3/settlements';
-
+        // 直接初始化，因为使用本地Vue文件，无需等待加载
+        
         const { createApp, ref, computed, onMounted } = Vue;
 
         createApp({
@@ -691,6 +691,10 @@
                 GlobalHeader
             },
             setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api/v3/settlements`;
                 const loading = ref(true);
                 const authError = ref('');
                 const applications = ref([]);
@@ -712,9 +716,27 @@
                     note: ''
                 });
 
+                // Safe localStorage wrapper to handle tracking prevention blocking
+                const safeLocalStorageGet = (key) => {
+                    try {
+                        return localStorage.getItem(key);
+                    } catch (e) {
+                        console.warn('localStorage access blocked:', e);
+                        return null;
+                    }
+                };
+
                 const checkAuth = async () => {
-                    const storedToken = localStorage.getItem('token');
-                    const userInfoStr = localStorage.getItem('userInfo');
+                    let storedToken, userInfoStr;
+                    try {
+                        storedToken = localStorage.getItem('token');
+                        userInfoStr = localStorage.getItem('userInfo');
+                    } catch (e) {
+                        console.warn('localStorage access blocked by tracking prevention:', e);
+                        authError.value = '浏览器阻止了本地存储访问，请检查隐私设置或尝试在无痕模式下访问';
+                        loading.value = false;
+                        return false;
+                    }
                     
                     if (!storedToken || !userInfoStr) {
                         authError.value = '请先登录';
@@ -774,10 +796,16 @@
                 };
 
                 const getAuthHeaders = () => {
-                    const token = localStorage.getItem('token');
+                    let token;
+                    try {
+                        token = localStorage.getItem('token');
+                    } catch (e) {
+                        console.warn('localStorage access blocked:', e);
+                        token = null;
+                    }
                     return {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': token ? `Bearer ${token}` : ''
                     };
                 };
 
@@ -987,6 +1015,19 @@
                 };
 
                 onMounted(async () => {
+                    // 添加全局错误处理
+                    window.addEventListener('error', (e) => {
+                        console.error('Uncaught error:', e.error);
+                        document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: red;">页面加载失败，请刷新重试<br>错误详情: ' + (e.error?.message || '未知错误') + '</div>';
+                    });
+                    
+                    // 添加未处理的Promise拒绝处理
+                    window.addEventListener('unhandledrejection', (e) => {
+                        console.error('Unhandled promise rejection:', e.reason);
+                        document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: red;">页面加载失败，请刷新重试<br>错误详情: ' + (e.reason?.message || '未知错误') + '</div>';
+                        e.preventDefault();
+                    });
+                    
                     const authPassed = await checkAuth();
                     if (!authPassed) return;
                     

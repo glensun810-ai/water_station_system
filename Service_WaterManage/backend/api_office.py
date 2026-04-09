@@ -11,7 +11,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
 from config.database import get_db
-from depends.auth import get_current_user
+from depends.auth import get_current_user, get_admin_user
 from models.office import Office
 from models.account import OfficeAccount
 from models.recharge import OfficeRecharge
@@ -1141,6 +1141,7 @@ def create_office_recharge(
 def get_office_pickups(
     office_id: Optional[int] = None,
     limit: int = 100,
+    current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
     _t: Optional[int] = None,  # 时间戳参数，用于防止缓存
 ):

@@ -32,8 +32,18 @@ def setup_static_files(app):
             name="water-admin",
         )
         print(f"✓ 水站管理目录已挂载: {FRONTEND_DIR}")
+
+    # 挂载 portal 目录
+    PORTAL_DIR = Path(__file__).parent.parent.parent / "portal"
+    if PORTAL_DIR.exists():
+        app.mount(
+            "/portal",
+            StaticFiles(directory=str(PORTAL_DIR), html=True),
+            name="portal",
+        )
+        print(f"✓ Portal目录已挂载: {PORTAL_DIR}")
     else:
-        print(f"⚠ 前端目录不存在: {FRONTEND_DIR}")
+        print(f"⚠ Portal目录不存在: {PORTAL_DIR}")
 
     MEETING_FRONTEND_DIR = (
         Path(__file__).parent.parent.parent / "Service_MeetingRoom" / "frontend"
