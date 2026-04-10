@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<!--
+  ⚠️ 此页面已废弃，请使用独立管理后台
+  admin-meeting.html → /meeting-frontend/admin.html
+  admin-dining.html → /dining-frontend/admin.html
+-->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <meta name="theme-color" content="#2563EB">
+    <title>会议室管理 - 水站管理后台</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+    
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="shared/css/design-tokens.css">
+    <link rel="stylesheet" href="shared/css/components.css">
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        body { font-family: var(--font-sans); background-color: var(--color-gray-50); min-height: 100vh; }
+        .page-container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-6); }
+        @media (max-width: 768px) { .page-container { padding: var(--spacing-4); } }
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-6); flex-wrap: wrap; gap: var(--spacing-4); }
+        .page-title { font-size: var(--text-2xl); font-weight: 700; color: var(--color-gray-900); }
+        .page-subtitle { font-size: var(--text-sm); color: var(--color-gray-500); margin-top: var(--spacing-1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-6); margin-bottom: var(--spacing-6); }
+        .tabs { display: flex; gap: var(--spacing-2); margin-bottom: var(--spacing-6); border-bottom: 2px solid var(--color-gray-200); padding-bottom: var(--spacing-2); overflow-x: auto; }
+        .tab { padding: var(--spacing-2) var(--spacing-4); border-radius: var(--radius-lg) var(--radius-lg) 0 0; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: none; background: none; font-size: var(--text-sm); font-weight: 500; color: var(--color-gray-600); }
+        .tab:hover { background-color: var(--color-gray-50); }
+        .tab.active { background-color: var(--color-primary-500); color: white; }
+        .toolbar { display: flex; align-items: center; gap: var(--spacing-4); margin-bottom: var(--spacing-6); flex-wrap: wrap; }
+        .toolbar-left { display: flex; align-items: center; gap: var(--spacing-4); flex: 1; flex-wrap: wrap; }
+        .toolbar-right { display: flex; align-items: center; gap: var(--spacing-3); }
+        
+        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-6); }
+        .room-card { background: white; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md); transition: transform 0.2s, box-shadow 0.2s; }
+        .room-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .room-card-image { width: 100%; height: 160px; background: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-primary-50) 100%); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--color-primary-500); }
+        .room-card-body { padding: var(--spacing-6); }
+        .room-card-title { font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--spacing-2); }
+        .room-card-info { font-size: var(--text-sm); color: var(--color-gray-600); margin-bottom: var(--spacing-3); }
+        .room-card-tags { display: flex; flex-wrap: wrap; gap: var(--spacing-2); margin-bottom: var(--spacing-4); }
+        .room-tag { padding: var(--spacing-1) var(--spacing-3); background-color: var(--color-gray-100); border-radius: var(--radius-full); font-size: var(--text-xs); color: var(--color-gray-700); }
+        .room-card-actions { display: flex; gap: var(--spacing-2); }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <i class="fas fa-door-open" style="color: var(--color-primary-500);"></i>
+                        会议室管理
+                    </h1>
+                    <p class="page-subtitle">管理会议室信息和预约</p>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-primary" @click="openCreateRoomModal">
+                        <i class="fas fa-plus"></i> 新建会议室
+                    </button>
+                    <a href="admin.html" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> 返回后台
+                    </a>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-icon primary"><i class="fas fa-door-closed"></i></div>
+                    <div class="stat-card-value">{{ stats.totalRooms }}</div>
+                    <div class="stat-card-label">会议室总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon success"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-card-value">{{ stats.activeRooms }}</div>
+                    <div class="stat-card-label">可用会议室</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon warning"><i class="fas fa-clock"></i></div>
+                    <div class="stat-card-value">{{ stats.pendingBookings }}</div>
+                    <div class="stat-card-label">待审批预约</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon info"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-card-value">{{ stats.todayBookings }}</div>
+                    <div class="stat-card-label">今日预约</div>
+                </div>
+            </div>
+
+            <!-- 标签页 -->
+            <div class="tabs" role="tablist">
+                <button class="tab" :class="{ active: activeTab === 'rooms' }" 
+                    @click="switchTab('rooms')" role="tab">会议室管理</button>
+                <button class="tab" :class="{ active: activeTab === 'bookings' }" 
+                    @click="switchTab('bookings')" role="tab">预约管理</button>
+            </div>
+
+            <!-- 会议室管理Tab -->
+            <div v-show="activeTab === 'rooms'">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <select class="form-select" v-model="roomStatus" @change="loadRooms">
+                            <option value="">全部状态</option>
+                            <option value="1">可用</option>
+                            <option value="0">不可用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="loading" class="loading-spinner"></div>
+                <div v-else class="room-grid">
+                    <div v-for="room in rooms" :key="room.id" class="room-card">
+                        <div class="room-card-image">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="room-card-body">
+                            <div class="room-card-title">{{ room.name }}</div>
+                            <div class="room-card-info">
+                                <div><i class="fas fa-user-friends"></i> 容纳 {{ room.capacity || 10 }} 人</div>
+                                <div><i class="fas fa-map-marker-alt"></i> {{ room.location || '-' }}</div>
+                                <div style="margin-top: 8px;">
+                                    <span :class="room.is_active ? 'status-badge active' : 'status-badge inactive'">
+                                        {{ room.is_active ? '可用' : '不可用' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="room-card-tags" v-if="room.equipment">
+                                <span v-for="eq in room.equipment.split(',')" :key="eq" class="room-tag">
+                                    {{ eq.trim() }}
+                                </span>
+                            </div>
+                            <div class="room-card-actions">
+                                <button class="btn btn-outline btn-sm" @click="editRoom(room)">
+                                    <i class="fas fa-edit"></i> 编辑
+                                </button>
+                                <button class="btn btn-ghost btn-sm" @click="toggleRoom(room)">
+                                    <i :class="room.is_active ? 'fas fa-ban' : 'fas fa-check'"></i>
+                                    {{ room.is_active ? '停用' : '启用' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="!loading && rooms.length === 0" class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-door-open"></i></div>
+                    <div class="empty-state-title">暂无会议室</div>
+                </div>
+            </div>
+
+            <!-- 预约管理Tab -->
+            <div v-show="activeTab === 'bookings'">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <input type="date" class="form-input" v-model="filterDate" 
+                            @change="loadBookings" style="width: auto;">
+                        <select class="form-select" v-model="bookingStatus" @change="loadBookings">
+                            <option value="">全部状态</option>
+                            <option value="pending">待审批</option>
+                            <option value="confirmed">已确认</option>
+                            <option value="cancelled">已取消</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="loading" class="loading-spinner"></div>
+                <div v-else class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>会议室</th>
+                                <th>预约人</th>
+                                <th>日期</th>
+                                <th>时间段</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th style="width: 120px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody v-if="bookings.length > 0">
+                            <tr v-for="booking in bookings" :key="booking.id">
+                                <td>{{ booking.room_name || '-' }}</td>
+                                <td>{{ booking.user_name || '-' }}</td>
+                                <td>{{ booking.booking_date }}</td>
+                                <td>{{ booking.start_time }} - {{ booking.end_time }}</td>
+                                <td>
+                                    <span :class="getBookingStatusClass(booking.status)">
+                                        {{ getBookingStatusText(booking.status) }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(booking.created_at) }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button v-if="booking.status === 'pending'" 
+                                            class="btn btn-ghost btn-sm" @click="confirmBooking(booking)" title="确认">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button v-if="booking.status === 'pending'" 
+                                            class="btn btn-ghost btn-sm" @click="cancelBooking(booking)" title="取消">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody v-else>
+                            <tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon"><i class="fas fa-calendar"></i></div><div class="empty-state-title">暂无预约</div></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/js/api-client.js"></script>
+    <script src="shared/js/auth.js"></script>
+    <script src="shared/js/utils.js"></script>
+    <script src="shared/components/toast.js"></script>
+    <script src="shared/components/modal.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    activeTab: 'rooms',
+                    rooms: [],
+                    bookings: [],
+                    stats: { totalRooms: 0, activeRooms: 0, pendingBookings: 0, todayBookings: 0 },
+                    roomStatus: '',
+                    bookingStatus: '',
+                    filterDate: ''
+                };
+            },
+
+            mounted() {
+                if (!Auth.requireAdmin()) return;
+                this.loadData();
+            },
+
+            methods: {
+                switchTab(tab) {
+                    this.activeTab = tab;
+                    this.loadData();
+                },
+
+                async loadData() {
+                    if (this.activeTab === 'rooms') await this.loadRooms();
+                    else if (this.activeTab === 'bookings') await this.loadBookings();
+                    await this.loadStats();
+                },
+
+                async loadRooms() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.roomStatus !== '') params.is_active = this.roomStatus;
+                        const response = await api.get('/meeting/rooms', params);
+                        this.rooms = response || [];
+                    } catch (error) {
+                        console.error('加载会议室失败:', error);
+                        Toast.error('加载会议室失败');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadBookings() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.bookingStatus) params.status = this.bookingStatus;
+                        if (this.filterDate) params.date = this.filterDate;
+                        const response = await api.get('/meeting/bookings', params);
+                        this.bookings = response || [];
+                    } catch (error) {
+                        console.error('加载预约失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadStats() {
+                    try {
+                        const rooms = await api.get('/meeting/rooms');
+                        const bookings = await api.get('/meeting/bookings');
+                        const today = new Date().toISOString().split('T')[0];
+                        
+                        this.stats = {
+                            totalRooms: rooms?.length || 0,
+                            activeRooms: rooms?.filter(r => r.is_active).length || 0,
+                            pendingBookings: bookings?.filter(b => b.status === 'pending').length || 0,
+                            todayBookings: bookings?.filter(b => b.booking_date === today).length || 0
+                        };
+                    } catch (error) {
+                        console.error('加载统计失败:', error);
+                    }
+                },
+
+                openCreateRoomModal() {
+                    Modal.form({
+                        id: 'create-room',
+                        title: '新建会议室',
+                        fields: [
+                            { name: 'name', label: '会议室名称', type: 'text', required: true, placeholder: '请输入会议室名称' },
+                            { name: 'capacity', label: '容纳人数', type: 'number', required: true, value: 10, min: 1 },
+                            { name: 'location', label: '位置', type: 'text', placeholder: '如：3楼301室' },
+                            { name: 'equipment', label: '设备（逗号分隔）', type: 'text', placeholder: '投影仪,白板,音响' },
+                            { name: 'hourly_rate', label: '时价（元/小时）', type: 'number', value: 0, min: 0, step: 0.01 }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post('/meeting/rooms', formData);
+                            Toast.success('会议室创建成功');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                editRoom(room) {
+                    Modal.form({
+                        id: 'edit-room',
+                        title: '编辑会议室',
+                        fields: [
+                            { name: 'name', label: '会议室名称', type: 'text', required: true, value: room.name },
+                            { name: 'capacity', label: '容纳人数', type: 'number', required: true, value: room.capacity, min: 1 },
+                            { name: 'location', label: '位置', type: 'text', value: room.location },
+                            { name: 'equipment', label: '设备', type: 'text', value: room.equipment },
+                            { name: 'hourly_rate', label: '时价', type: 'number', value: room.hourly_rate, min: 0, step: 0.01 }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.put(`/meeting/rooms/${room.id}`, formData);
+                            Toast.success('会议室更新成功');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                async toggleRoom(room) {
+                    const action = room.is_active ? '停用' : '启用';
+                    Modal.confirm({
+                        title: `${action}会议室`,
+                        message: `确定要${action}会议室 "${room.name}" 吗？`,
+                        type: 'warning',
+                        onConfirm: async () => {
+                            await api.put(`/meeting/rooms/${room.id}`, { is_active: room.is_active ? 0 : 1 });
+                            Toast.success(`会议室已${action}`);
+                            this.loadData();
+                        }
+                    });
+                },
+
+                async confirmBooking(booking) {
+                    Modal.confirm({
+                        title: '确认预约',
+                        message: `确定要确认此预约吗？`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            await api.put(`/meeting/bookings/${booking.id}/confirm`);
+                            Toast.success('预约已确认');
+                            this.loadBookings();
+                        }
+                    });
+                },
+
+                async cancelBooking(booking) {
+                    Modal.confirm({
+                        title: '取消预约',
+                        message: `确定要取消此预约吗？`,
+                        type: 'warning',
+                        onConfirm: async () => {
+                            await api.put(`/meeting/bookings/${booking.id}/cancel`);
+                            Toast.success('预约已取消');
+                            this.loadBookings();
+                        }
+                    });
+                },
+
+                getBookingStatusClass(status) {
+                    const classes = { 'pending': 'status-badge pending', 'confirmed': 'status-badge confirmed', 'cancelled': 'status-badge rejected' };
+                    return classes[status] || 'status-badge neutral';
+                },
+
+                getBookingStatusText(status) {
+                    const texts = { 'pending': '待审批', 'confirmed': '已确认', 'cancelled': '已取消' };
+                    return texts[status] || status;
+                },
+
+                formatDate(date) { return Utils.formatDateTime(date); }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

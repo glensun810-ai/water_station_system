@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563EB">
+    <title>用户管理 - 水站管理后台</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👥</text></svg>">
+    
+    <!-- Vue 3 -->
+    <script src="vue.global.js"></script>
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 共享组件库 -->
+    <link rel="stylesheet" href="shared/css/design-tokens.css">
+    <link rel="stylesheet" href="shared/css/components.css">
+    
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-gray-50);
+            min-height: 100vh;
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-6);
+        }
+
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-4);
+            }
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-6);
+            flex-wrap: wrap;
+            gap: var(--spacing-4);
+        }
+
+        .page-title {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--color-gray-900);
+        }
+
+        .page-subtitle {
+            font-size: var(--text-sm);
+            color: var(--color-gray-500);
+            margin-top: var(--spacing-1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-6);
+            margin-bottom: var(--spacing-6);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+            flex-wrap: wrap;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-left,
+            .toolbar-right {
+                width: 100%;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-group .form-select,
+            .filter-group .search-bar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <!-- 页面头部 -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <i class="fas fa-users" style="color: var(--color-primary-500);" aria-hidden="true"></i>
+                        用户管理
+                    </h1>
+                    <p class="page-subtitle">管理系统用户，支持批量操作和权限管理</p>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-primary" @click="openCreateModal" aria-label="新建用户">
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                        新建用户
+                    </button>
+                    <a href="admin.html" class="btn btn-outline" aria-label="返回管理后台">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                        返回后台
+                    </a>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid" role="region" aria-label="用户统计">
+                <div class="stat-card" role="article">
+                    <div class="stat-card-icon primary" aria-hidden="true">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.total }}</div>
+                    <div class="stat-card-label">总用户数</div>
+                </div>
+
+                <div class="stat-card" role="article">
+                    <div class="stat-card-icon success" aria-hidden="true">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.active }}</div>
+                    <div class="stat-card-label">活跃用户</div>
+                </div>
+
+                <div class="stat-card" role="article">
+                    <div class="stat-card-icon warning" aria-hidden="true">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.admins }}</div>
+                    <div class="stat-card-label">管理员</div>
+                </div>
+
+                <div class="stat-card" role="article">
+                    <div class="stat-card-icon error" aria-hidden="true">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <div class="stat-card-value">{{ stats.inactive }}</div>
+                    <div class="stat-card-label">已停用</div>
+                </div>
+            </div>
+
+            <!-- 批量操作栏 -->
+            <div v-if="selectedUsers.length > 0" class="action-bar" role="toolbar" aria-label="批量操作工具栏">
+                <span class="action-bar-count" aria-live="polite">
+                    已选择 {{ selectedUsers.length }} 项
+                </span>
+                <div class="action-bar-actions">
+                    <button class="btn btn-sm btn-success" @click="batchActivate" aria-label="批量激活">
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                        批量激活
+                    </button>
+                    <button class="btn btn-sm btn-warning" @click="batchDeactivate" aria-label="批量停用">
+                        <i class="fas fa-ban" aria-hidden="true"></i>
+                        批量停用
+                    </button>
+                    <button class="btn btn-sm btn-danger" @click="batchDelete" aria-label="批量删除">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                        批量删除
+                    </button>
+                </div>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="toolbar" role="search">
+                <div class="toolbar-left">
+                    <div class="search-bar" role="search">
+                        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                        <input type="search"
+                            class="form-input"
+                            v-model="searchKeyword"
+                            @keyup.enter="handleSearch"
+                            placeholder="搜索用户名、部门..."
+                            aria-label="搜索用户">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select class="form-select" v-model="filterDepartment" @change="loadUsers" aria-label="按部门筛选">
+                            <option value="">全部部门</option>
+                            <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+                        </select>
+
+                        <select class="form-select" v-model="filterRole" @change="loadUsers" aria-label="按角色筛选">
+                            <option value="">全部角色</option>
+                            <option value="staff">普通员工</option>
+                            <option value="admin">管理员</option>
+                            <option value="super_admin">超级管理员</option>
+                        </select>
+
+                        <select class="form-select" v-model="filterStatus" @change="loadUsers" aria-label="按状态筛选">
+                            <option value="">全部状态</option>
+                            <option value="1">活跃</option>
+                            <option value="0">已停用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="toolbar-right">
+                    <button class="btn btn-outline btn-sm" @click="resetFilters" aria-label="重置筛选">
+                        <i class="fas fa-redo" aria-hidden="true"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数据表格 -->
+            <div v-if="loading" class="loading-spinner" role="status" aria-label="加载中">
+                <span class="sr-only">正在加载用户数据...</span>
+            </div>
+
+            <div v-else class="table-container" role="region" aria-label="用户列表">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 2.5rem;" scope="col">
+                                <input type="checkbox"
+                                    v-model="selectAll"
+                                    @change="toggleSelectAll"
+                                    aria-label="全选">
+                            </th>
+                            <th scope="col">用户名</th>
+                            <th scope="col">部门</th>
+                            <th scope="col">角色</th>
+                            <th scope="col">余额</th>
+                            <th scope="col">状态</th>
+                            <th scope="col">创建时间</th>
+                            <th scope="col" style="width: 200px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody v-if="users.length > 0">
+                        <tr v-for="user in users" :key="user.id"
+                            :class="{ 'row-selected': isSelected(user.id) }">
+                            <td>
+                                <input type="checkbox"
+                                    :checked="isSelected(user.id)"
+                                    @change="toggleSelect(user.id)"
+                                    :aria-label="'选择用户 ' + user.name">
+                            </td>
+                            <td>
+                                <div style="font-weight: 500;">{{ user.name }}</div>
+                            </td>
+                            <td>{{ user.department || '-' }}</td>
+                            <td>
+                                <span :class="getRoleBadgeClass(user.role)">
+                                    {{ getRoleText(user.role) }}
+                                </span>
+                            </td>
+                            <td>{{ formatMoney(user.balance_credit) }}</td>
+                            <td>
+                                <span :class="getStatusBadgeClass(user.is_active)">
+                                    {{ user.is_active ? '活跃' : '已停用' }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(user.created_at) }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button class="btn btn-ghost btn-sm" @click="editUser(user)" aria-label="编辑用户">
+                                        <i class="fas fa-edit" aria-hidden="true"></i>
+                                    </button>
+                                    <button v-if="user.is_active"
+                                        class="btn btn-ghost btn-sm"
+                                        @click="deactivateUser(user)"
+                                        aria-label="停用用户">
+                                        <i class="fas fa-ban" aria-hidden="true"></i>
+                                    </button>
+                                    <button v-else
+                                        class="btn btn-ghost btn-sm"
+                                        @click="activateUser(user)"
+                                        aria-label="激活用户">
+                                        <i class="fas fa-check" aria-hidden="true"></i>
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm"
+                                        @click="resetPassword(user)"
+                                        aria-label="重置密码">
+                                        <i class="fas fa-key" aria-hidden="true"></i>
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm"
+                                        @click="confirmDelete(user)"
+                                        aria-label="删除用户">
+                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody v-else>
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">
+                                        <i class="fas fa-users-slash" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="empty-state-title">暂无用户数据</div>
+                                    <div class="empty-state-description">点击"新建用户"添加第一个用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            <div v-if="!loading && pagination.total > 0" class="pagination" role="navigation" aria-label="分页导航">
+                <button class="pagination-btn"
+                    @click="changePage(pagination.page - 1)"
+                    :disabled="pagination.page === 1"
+                    aria-label="上一页">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
+
+                <button v-for="p in displayPages"
+                    :key="p"
+                    class="pagination-btn"
+                    :class="{ active: p === pagination.page }"
+                    @click="changePage(p)"
+                    :aria-label="'第' + p + '页'"
+                    :aria-current="p === pagination.page ? 'page' : undefined">
+                    {{ p }}
+                </button>
+
+                <button class="pagination-btn"
+                    @click="changePage(pagination.page + 1)"
+                    :disabled="pagination.page >= totalPages"
+                    aria-label="下一页">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+
+                <span class="pagination-info" aria-live="polite">
+                    共 {{ pagination.total }} 条
+                </span>
+
+                <select class="form-select"
+                    style="width: auto; padding: 0.375rem 0.75rem;"
+                    v-model="pagination.limit"
+                    @change="changeLimit"
+                    aria-label="每页显示条数">
+                    <option :value="10">10条/页</option>
+                    <option :value="20">20条/页</option>
+                    <option :value="50">50条/页</option>
+                    <option :value="100">100条/页</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 共享组件库 -->
+    <script src="shared/js/api-client.js"></script>
+    <script src="shared/js/auth.js"></script>
+    <script src="shared/js/utils.js"></script>
+    <script src="shared/components/toast.js"></script>
+    <script src="shared/components/modal.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    users: [],
+                    selectedUsers: [],
+                    selectAll: false,
+                    searchKeyword: '',
+                    filterDepartment: '',
+                    filterRole: '',
+                    filterStatus: '',
+                    departments: [],
+                    stats: {
+                        total: 0,
+                        active: 0,
+                        admins: 0,
+                        inactive: 0
+                    },
+                    pagination: {
+                        page: 1,
+                        limit: 20,
+                        total: 0
+                    }
+                };
+            },
+
+            computed: {
+                totalPages() {
+                    return Math.ceil(this.pagination.total / this.pagination.limit);
+                },
+
+                displayPages() {
+                    const pages = [];
+                    const total = this.totalPages;
+                    const current = this.pagination.page;
+                    const maxDisplay = 5;
+
+                    let start = Math.max(1, current - Math.floor(maxDisplay / 2));
+                    let end = Math.min(total, start + maxDisplay - 1);
+
+                    if (end - start < maxDisplay - 1) {
+                        start = Math.max(1, end - maxDisplay + 1);
+                    }
+
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+
+                    return pages;
+                }
+            },
+
+            mounted() {
+                this.checkAuth();
+                this.loadDepartments();
+                this.loadUsers();
+                this.loadStats();
+            },
+
+            methods: {
+                checkAuth() {
+                    if (!Auth.requireAdmin()) {
+                        return;
+                    }
+                },
+
+                async loadUsers() {
+                    this.loading = true;
+                    try {
+                        const params = {
+                            skip: (this.pagination.page - 1) * this.pagination.limit,
+                            limit: this.pagination.limit
+                        };
+
+                        if (this.searchKeyword) {
+                            params.keyword = this.searchKeyword;
+                        }
+                        if (this.filterDepartment) {
+                            params.department = this.filterDepartment;
+                        }
+                        if (this.filterRole) {
+                            params.role = this.filterRole;
+                        }
+                        if (this.filterStatus !== '') {
+                            params.is_active = parseInt(this.filterStatus);
+                        }
+
+                        const response = await api.get('/v2/users', params);
+                        this.users = response || [];
+                        
+                        // 更新分页信息（如果API返回）
+                        // this.pagination.total = response.total || this.users.length;
+                        
+                        // 临时：模拟总数
+                        this.pagination.total = this.users.length < this.pagination.limit && this.pagination.page === 1
+                            ? this.users.length
+                            : this.pagination.total || this.users.length;
+
+                    } catch (error) {
+                        console.error('加载用户失败:', error);
+                        Toast.error('加载用户列表失败');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadDepartments() {
+                    try {
+                        // 从现有用户中提取部门列表
+                        const users = await api.get('/v2/users', { limit: 1000 });
+                        const deptSet = new Set();
+                        users.forEach(user => {
+                            if (user.department) {
+                                deptSet.add(user.department);
+                            }
+                        });
+                        this.departments = Array.from(deptSet).sort();
+                    } catch (error) {
+                        console.error('加载部门列表失败:', error);
+                    }
+                },
+
+                async loadStats() {
+                    try {
+                        const users = await api.get('/v2/users', { limit: 1000 });
+                        
+                        this.stats.total = users.length;
+                        this.stats.active = users.filter(u => u.is_active).length;
+                        this.stats.admins = users.filter(u => u.role === 'admin' || u.role === 'super_admin').length;
+                        this.stats.inactive = users.filter(u => !u.is_active).length;
+                        
+                        this.pagination.total = users.length;
+                    } catch (error) {
+                        console.error('加载统计数据失败:', error);
+                    }
+                },
+
+                handleSearch() {
+                    this.pagination.page = 1;
+                    this.loadUsers();
+                },
+
+                resetFilters() {
+                    this.searchKeyword = '';
+                    this.filterDepartment = '';
+                    this.filterRole = '';
+                    this.filterStatus = '';
+                    this.pagination.page = 1;
+                    this.loadUsers();
+                },
+
+                isSelected(userId) {
+                    return this.selectedUsers.includes(userId);
+                },
+
+                toggleSelect(userId) {
+                    const index = this.selectedUsers.indexOf(userId);
+                    if (index > -1) {
+                        this.selectedUsers.splice(index, 1);
+                    } else {
+                        this.selectedUsers.push(userId);
+                    }
+                    this.selectAll = this.selectedUsers.length === this.users.length;
+                },
+
+                toggleSelectAll() {
+                    if (this.selectAll) {
+                        this.selectedUsers = this.users.map(u => u.id);
+                    } else {
+                        this.selectedUsers = [];
+                    }
+                },
+
+                async batchActivate() {
+                    if (this.selectedUsers.length === 0) return;
+
+                    Modal.confirm({
+                        title: '批量激活用户',
+                        message: `确定要激活选中的 ${this.selectedUsers.length} 个用户吗？`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            try {
+                                // 注意：后端可能需要批量激活API
+                                for (const userId of this.selectedUsers) {
+                                    await api.post(`/v2/users/${userId}/activate`);
+                                }
+                                Toast.success('批量激活成功');
+                                this.selectedUsers = [];
+                                this.selectAll = false;
+                                this.loadUsers();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('批量激活失败');
+                            }
+                        }
+                    });
+                },
+
+                async batchDeactivate() {
+                    if (this.selectedUsers.length === 0) return;
+
+                    Modal.confirm({
+                        title: '批量停用用户',
+                        message: `确定要停用选中的 ${this.selectedUsers.length} 个用户吗？`,
+                        type: 'warning',
+                        onConfirm: async () => {
+                            try {
+                                for (const userId of this.selectedUsers) {
+                                    await api.post(`/v2/users/${userId}/deactivate`);
+                                }
+                                Toast.success('批量停用成功');
+                                this.selectedUsers = [];
+                                this.selectAll = false;
+                                this.loadUsers();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('批量停用失败');
+                            }
+                        }
+                    });
+                },
+
+                async batchDelete() {
+                    if (this.selectedUsers.length === 0) return;
+
+                    Modal.confirm({
+                        title: '批量删除用户',
+                        message: `确定要删除选中的 ${this.selectedUsers.length} 个用户吗？此操作不可恢复！`,
+                        type: 'danger',
+                        danger: true,
+                        onConfirm: async () => {
+                            try {
+                                for (const userId of this.selectedUsers) {
+                                    await api.delete(`/v2/users/${userId}`);
+                                }
+                                Toast.success('批量删除成功');
+                                this.selectedUsers = [];
+                                this.selectAll = false;
+                                this.loadUsers();
+                                this.loadStats();
+                            } catch (error) {
+                                Toast.error('批量删除失败');
+                            }
+                        }
+                    });
+                },
+
+                openCreateModal() {
+                    Modal.form({
+                        id: 'create-user',
+                        title: '新建用户',
+                        fields: [
+                            {
+                                name: 'name',
+                                label: '用户名',
+                                type: 'text',
+                                required: true,
+                                placeholder: '请输入用户名'
+                            },
+                            {
+                                name: 'department',
+                                label: '部门',
+                                type: 'text',
+                                required: true,
+                                placeholder: '请输入部门名称'
+                            },
+                            {
+                                name: 'role',
+                                label: '角色',
+                                type: 'select',
+                                required: true,
+                                value: 'staff',
+                                options: [
+                                    { value: 'staff', label: '普通员工' },
+                                    { value: 'admin', label: '管理员' },
+                                    { value: 'super_admin', label: '超级管理员' }
+                                ]
+                            },
+                            {
+                                name: 'password',
+                                label: '密码',
+                                type: 'password',
+                                required: true,
+                                placeholder: '请输入密码',
+                                hint: '至少6个字符'
+                            },
+                            {
+                                name: 'balance_credit',
+                                label: '初始余额',
+                                type: 'number',
+                                value: 0,
+                                min: 0,
+                                step: 0.01
+                            }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post('/v2/users', formData);
+                            Toast.success('用户创建成功');
+                            this.loadUsers();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                editUser(user) {
+                    Modal.form({
+                        id: 'edit-user',
+                        title: '编辑用户',
+                        fields: [
+                            {
+                                name: 'name',
+                                label: '用户名',
+                                type: 'text',
+                                required: true,
+                                value: user.name
+                            },
+                            {
+                                name: 'department',
+                                label: '部门',
+                                type: 'text',
+                                required: true,
+                                value: user.department
+                            },
+                            {
+                                name: 'role',
+                                label: '角色',
+                                type: 'select',
+                                required: true,
+                                value: user.role,
+                                options: [
+                                    { value: 'staff', label: '普通员工' },
+                                    { value: 'admin', label: '管理员' },
+                                    { value: 'super_admin', label: '超级管理员' }
+                                ]
+                            },
+                            {
+                                name: 'balance_credit',
+                                label: '余额',
+                                type: 'number',
+                                value: user.balance_credit,
+                                min: 0,
+                                step: 0.01
+                            }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.put(`/v2/users/${user.id}`, formData);
+                            Toast.success('用户更新成功');
+                            this.loadUsers();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                async activateUser(user) {
+                    Modal.confirm({
+                        title: '激活用户',
+                        message: `确定要激活用户 "${user.name}" 吗？`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            await api.post(`/v2/users/${user.id}/activate`);
+                            Toast.success('用户已激活');
+                            this.loadUsers();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                async deactivateUser(user) {
+                    Modal.confirm({
+                        title: '停用用户',
+                        message: `确定要停用用户 "${user.name}" 吗？`,
+                        type: 'warning',
+                        onConfirm: async () => {
+                            await api.post(`/v2/users/${user.id}/deactivate`);
+                            Toast.success('用户已停用');
+                            this.loadUsers();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                resetPassword(user) {
+                    Modal.form({
+                        id: 'reset-password',
+                        title: '重置密码',
+                        fields: [
+                            {
+                                name: 'new_password',
+                                label: '新密码',
+                                type: 'password',
+                                required: true,
+                                placeholder: '请输入新密码',
+                                hint: '至少6个字符'
+                            }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post(`/v2/users/${user.id}/reset-password`, null, {
+                                params: { new_password: formData.new_password }
+                            });
+                            Toast.success('密码重置成功');
+                        }
+                    });
+                },
+
+                confirmDelete(user) {
+                    Modal.confirm({
+                        title: '删除用户',
+                        message: `确定要删除用户 "${user.name}" 吗？此操作不可恢复！`,
+                        type: 'danger',
+                        danger: true,
+                        onConfirm: async () => {
+                            await api.delete(`/v2/users/${user.id}`);
+                            Toast.success('用户已删除');
+                            this.loadUsers();
+                            this.loadStats();
+                        }
+                    });
+                },
+
+                changePage(page) {
+                    if (page < 1 || page > this.totalPages) return;
+                    this.pagination.page = page;
+                    this.loadUsers();
+                },
+
+                changeLimit() {
+                    this.pagination.page = 1;
+                    this.loadUsers();
+                },
+
+                getRoleBadgeClass(role) {
+                    const classes = {
+                        'staff': 'status-badge neutral',
+                        'admin': 'status-badge info',
+                        'super_admin': 'status-badge confirmed'
+                    };
+                    return classes[role] || 'status-badge neutral';
+                },
+
+                getRoleText(role) {
+                    const texts = {
+                        'staff': '普通员工',
+                        'admin': '管理员',
+                        'super_admin': '超级管理员'
+                    };
+                    return texts[role] || role;
+                },
+
+                getStatusBadgeClass(isActive) {
+                    return isActive ? 'status-badge active' : 'status-badge inactive';
+                },
+
+                formatMoney(value) {
+                    return Utils.formatMoney(value);
+                },
+
+                formatDate(date) {
+                    return Utils.formatDateTime(date);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

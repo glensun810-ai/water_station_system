@@ -1075,9 +1075,9 @@
                                 <a v-if="currentModule.startsWith('water')" href="/portal/admin/water/dashboard.html" class="btn btn-primary">
                                     查看完整版水站管理后台
                                 </a>
-                                <a v-else href="/meeting/admin.html" class="btn btn-primary">
-                                    查看完整版会议室管理后台
-                                </a>
+<a v-else href="/portal/admin/meeting/bookings.html" class="btn btn-primary">
+    查看完整版会议室管理后台
+</a>
                             </div>
                         </div>
                     </div>
@@ -1089,7 +1089,7 @@
     <script>
         const { createApp, ref, computed, watch, onMounted } = Vue;
         
-        const API_BASE = window.location.origin;
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '8008'}/api/v1`;
         
         createApp({
             setup() {
@@ -1312,7 +1312,7 @@
                     officePickupsLoading.value = true;
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const res = await fetch(`${API_BASE}/api/user/office-pickups`, { headers });
+                        const res = await fetch(`${API_BASE}/water/pickups`, { headers });
                         if (res.ok) {
                             officePickups.value = await res.json();
                         }
@@ -1326,7 +1326,7 @@
                 const loadOfficeSettlements = async () => {
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const res = await fetch(`${API_BASE}/api/admin/report`, { headers });
+                        const res = await fetch(`${API_BASE}/water/stats/today`, { headers });
                         if (res.ok) {
                             const data = await res.json();
                             officeSettlements.value = data.map(item => ({
@@ -1364,7 +1364,7 @@
                 
                 const loadProducts = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/api/products`);
+                        const res = await fetch(`${API_BASE}/water/products`);
                         if (res.ok) products.value = await res.json();
                     } catch (err) {
                         console.error('Load products failed:', err);
@@ -1374,7 +1374,7 @@
                 const loadOffices = async () => {
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const res = await fetch(`${API_BASE}/api/admin/office-accounts`, { headers });
+                        const res = await fetch(`${API_BASE}/water/accounts`, { headers });
                         if (res.ok) {
                             const data = await res.json();
                             offices.value = data.map(item => ({
@@ -1392,7 +1392,7 @@
                 const loadRooms = async () => {
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const res = await fetch(`${API_BASE}/api/meeting/rooms`, { headers });
+                        const res = await fetch(`${API_BASE}/meeting/rooms`, { headers });
                         if (res.ok) rooms.value = await res.json();
                     } catch (err) {
                         console.error('Load rooms failed:', err);
@@ -1402,7 +1402,7 @@
                 const loadBookings = async () => {
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const res = await fetch(`${API_BASE}/api/meeting/bookings`, { headers });
+                        const res = await fetch(`${API_BASE}/meeting/bookings`, { headers });
                         if (res.ok) bookings.value = await res.json();
                     } catch (err) {
                         console.error('Load bookings failed:', err);
@@ -1565,7 +1565,7 @@
                         let response;
                         if (showEditPickupModal.value && editingPickup.value) {
                             // 编辑
-                            response = await fetch(`${API_BASE}/api/admin/office-pickups/${editingPickup.value.id}`, {
+                            response = await fetch(`${API_BASE}/water/pickups/${editingPickup.value.id}`, {
                                 method: 'PUT',
                                 headers,
                                 body: JSON.stringify({
@@ -1576,7 +1576,7 @@
                             });
                         } else {
                             // 新增
-                            response = await fetch(`${API_BASE}/api/user/office-pickup`, {
+                            response = await fetch(`${API_BASE}/water/pickup`, {
                                 method: 'POST',
                                 headers,
                                 body: JSON.stringify({
@@ -1613,7 +1613,7 @@
                     
                     try {
                         const headers = { 'Authorization': `Bearer ${token.value}` };
-                        const response = await fetch(`${API_BASE}/api/admin/office-pickups/${deletingPickup.value.id}`, {
+                        const response = await fetch(`${API_BASE}/water/pickups/${deletingPickup.value.id}`, {
                             method: 'DELETE',
                             headers
                         });
@@ -1645,7 +1645,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token.value}`
                         };
-                        const response = await fetch(`${API_BASE}/api/admin/settlement/apply`, {
+                        const response = await fetch(`${API_BASE}/water/settlement/apply`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({ pickup_ids: [pickup.id] })
@@ -1676,7 +1676,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token.value}`
                         };
-                        const response = await fetch(`${API_BASE}/api/admin/settlement/${pickup.id}/confirm`, {
+                        const response = await fetch(`${API_BASE}/water/settlement/${pickup.id}/confirm`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({})
@@ -1707,7 +1707,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token.value}`
                         };
-                        const response = await fetch(`${API_BASE}/api/admin/settlement/${pickup.id}/reject`, {
+                        const response = await fetch(`${API_BASE}/water/settlement/${pickup.id}/reject`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({})
@@ -1768,7 +1768,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/api/admin/settlement/apply`, {
+                        const response = await fetch(`${API_BASE}/water/settlement/apply`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1815,7 +1815,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/api/admin/settlement/batch-confirm`, {
+                        const response = await fetch(`${API_BASE}/water/settlement/batch-confirm`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1875,7 +1875,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token.value}`
                         };
-                        const response = await fetch(`${API_BASE}/api/meeting/bookings/${booking.id}/approve`, {
+                        const response = await fetch(`${API_BASE}/meeting/bookings/${booking.id}/approve`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({})
@@ -1906,7 +1906,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token.value}`
                         };
-                        const response = await fetch(`${API_BASE}/api/meeting/bookings/${booking.id}/reject`, {
+                        const response = await fetch(`${API_BASE}/meeting/bookings/${booking.id}/reject`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({})

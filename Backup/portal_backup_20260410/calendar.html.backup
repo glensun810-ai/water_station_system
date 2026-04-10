@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预约日历 - 企业服务管理平台</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F1F5F9;
+        }
+        .calendar-day {
+            min-height: 100px;
+        }
+        .calendar-day:hover {
+            background-color: #F8FAFC;
+        }
+        .booking-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="app" v-cloak>
+        <!-- 顶部导航 -->
+        <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="admin.html" class="text-slate-500 hover:text-slate-700 mr-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                        </a>
+                        <h1 class="text-xl font-bold text-slate-800">预约日历</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- 视图切换 -->
+                        <div class="flex bg-slate-100 rounded-lg p-1">
+                            <button @click="viewMode = 'month'" 
+                                    :class="['px-3 py-1.5 rounded text-sm font-medium transition', 
+                                             viewMode === 'month' ? 'bg-white shadow text-blue-600' : 'text-slate-600']">
+                                月视图
+                            </button>
+                            <button @click="viewMode = 'week'" 
+                                    :class="['px-3 py-1.5 rounded text-sm font-medium transition', 
+                                             viewMode === 'week' ? 'bg-white shadow text-blue-600' : 'text-slate-600']">
+                                周视图
+                            </button>
+                        </div>
+                        
+                        <!-- 服务类型筛选 -->
+                        <select v-model="filterServiceType" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                            <option value="">全部服务</option>
+                            <option v-for="type in bookingServiceTypes" :key="type.value" :value="type.value">
+                                {{ type.icon }} {{ type.label }}
+                            </option>
+                        </select>
+                        
+                        <button @click="showBookingModal = true" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                            + 新建预约
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- 月份导航 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <button @click="previousMonth" class="p-2 hover:bg-slate-100 rounded-lg transition">
+                        <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-slate-800">{{ currentYear }}年{{ currentMonth }}月</h2>
+                        <p class="text-sm text-slate-500 mt-1">共 {{ monthBookings.length }} 个预约</p>
+                    </div>
+                    <button @click="nextMonth" class="p-2 hover:bg-slate-100 rounded-lg transition">
+                        <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- 快捷导航 -->
+                <div class="flex items-center justify-center gap-2 mt-4">
+                    <button @click="goToToday" 
+                            class="px-3 py-1 bg-blue-50 text-blue-600 rounded text-sm font-medium hover:bg-blue-100 transition">
+                        今天
+                    </button>
+                    <input v-model="jumpDate" type="date" 
+                           class="px-3 py-1 border border-slate-300 rounded text-sm"
+                           @change="jumpToDate">
+                </div>
+            </div>
+
+            <!-- 月视图 -->
+            <div v-if="viewMode === 'month'" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <!-- 星期标题 -->
+                <div class="grid grid-cols-7 border-b border-slate-200">
+                    <div v-for="day in weekDays" :key="day" 
+                         class="px-2 py-3 text-center text-sm font-semibold text-slate-600 bg-slate-50">
+                        {{ day }}
+                    </div>
+                </div>
+                
+                <!-- 日历格子 -->
+                <div class="grid grid-cols-7">
+                    <div v-for="(date, index) in calendarDays" :key="index"
+                         @click="date && selectDate(date)"
+                         :class="[
+                             'calendar-day border-b border-r border-slate-100 p-2 cursor-pointer transition',
+                             !date && 'bg-slate-50',
+                             date && isToday(date) && 'bg-blue-50',
+                             date && isSelectedDate(date) && 'bg-blue-100',
+                             date && !isCurrentMonth(date) && 'opacity-40'
+                         ]">
+                        <div v-if="date" class="h-full">
+                            <div class="flex items-center justify-between mb-1">
+                                <span :class="[
+                                    'text-sm font-medium',
+                                    isToday(date) ? 'text-blue-600' : 'text-slate-800'
+                                ]">
+                                    {{ getDateDay(date) }}
+                                </span>
+                                <span v-if="getDayBookingCount(date) > 0" 
+                                      class="text-xs text-slate-500">
+                                    {{ getDayBookingCount(date) }} 个
+                                </span>
+                            </div>
+                            
+                            <!-- 预约标记 -->
+                            <div class="space-y-1">
+                                <div v-for="booking in getDayBookings(date).slice(0, 3)" 
+                                     :key="booking.id"
+                                     @click.stop="viewBookingDetail(booking)"
+                                     :class="[
+                                         'text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition',
+                                         getStatusColor(booking.booking_status).bg,
+                                         getStatusColor(booking.booking_status).text
+                                     ]">
+                                    {{ booking.time_slot || booking.service_name || booking.product_name }}
+                                </div>
+                                <div v-if="getDayBookings(date).length > 3" 
+                                     class="text-xs text-slate-500 text-center">
+                                    +{{ getDayBookings(date).length - 3 }} 更多
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 周视图 -->
+            <div v-if="viewMode === 'week'" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <!-- 星期标题 -->
+                <div class="grid grid-cols-8 border-b border-slate-200">
+                    <div class="px-2 py-3 text-center text-sm font-semibold text-slate-600 bg-slate-50">
+                        时间
+                    </div>
+                    <div v-for="(date, index) in weekViewDates" :key="index"
+                         :class="[
+                             'px-2 py-3 text-center text-sm font-semibold bg-slate-50',
+                             isToday(date) ? 'text-blue-600 bg-blue-50' : 'text-slate-600'
+                         ]">
+                        <div>{{ getWeekDayName(date) }}</div>
+                        <div class="text-xs text-slate-500 mt-1">{{ getDateDay(date) }}日</div>
+                    </div>
+                </div>
+                
+                <!-- 时间格子 -->
+                <div class="max-h-[600px] overflow-y-auto">
+                    <div v-for="hour in hours" :key="hour" class="grid grid-cols-8 border-b border-slate-100">
+                        <div class="px-2 py-3 text-center text-xs text-slate-500 border-r border-slate-100">
+                            {{ hour }}:00
+                        </div>
+                        <div v-for="(date, index) in weekViewDates" :key="index"
+                             @click="selectDateTime(date, hour)"
+                             class="calendar-day border-r border-slate-100 p-1 cursor-pointer hover:bg-blue-50 transition">
+                            <div v-for="booking in getHourBookings(date, hour)" 
+                                 :key="booking.id"
+                                 @click.stop="viewBookingDetail(booking)"
+                                 :class="[
+                                     'text-xs px-1.5 py-1 rounded mb-1 cursor-pointer hover:opacity-80 transition truncate',
+                                     getStatusColor(booking.booking_status).bg,
+                                     getStatusColor(booking.booking_status).text
+                                 ]">
+                                {{ booking.service_name || booking.product_name }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图例 -->
+            <div class="mt-4 flex items-center justify-center gap-6 text-sm text-slate-600">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded bg-green-100"></span>
+                    <span>已确认</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded bg-yellow-100"></span>
+                    <span>待确认</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded bg-blue-100"></span>
+                    <span>已完成</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded bg-red-100"></span>
+                    <span>已取消</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- 新建预约模态框 -->
+        <div v-if="showBookingModal" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800">新建预约</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">预约日期</label>
+                        <input v-model="bookingForm.date" type="date" :min="minDate"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">服务类型 *</label>
+                        <select v-model="bookingForm.service_type"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="type in bookingServiceTypes" :key="type.value" :value="type.value">
+                                {{ type.icon }} {{ type.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">选择服务 *</label>
+                        <select v-model="bookingForm.product_id"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="service in availableServices" :key="service.id" :value="service.id">
+                                {{ service.name }} - ¥{{ service.price }}/{{ service.unit }}
+                            </option>
+                        </select>
+                    </div>
+                    <div v-if="currentTimeSlots.length > 0">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">时间段 *</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button v-for="slot in currentTimeSlots" :key="slot"
+                                    @click="bookingForm.time_slot = slot"
+                                    :class="[
+                                        'px-3 py-2 rounded-lg text-sm border-2 transition',
+                                        bookingForm.time_slot === slot 
+                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    ]">
+                                {{ slot }}
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">使用办公室 *</label>
+                        <select v-model="bookingForm.office_id"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option v-for="office in offices" :key="office.id" :value="office.id">
+                                {{ office.name }} {{ office.room_number ? `(${office.room_number})` : '' }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">参与人数</label>
+                        <input v-model.number="bookingForm.participants_count" type="number" min="1"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
+                        <input v-model="bookingForm.contact_phone" type="tel"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">使用目的</label>
+                        <textarea v-model="bookingForm.purpose" rows="2"
+                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
+                    <button @click="showBookingModal = false" 
+                            class="px-4 py-2 text-slate-700 hover:text-slate-900 font-medium">取消</button>
+                    <button @click="createBooking" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+                        创建预约
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预约详情模态框 -->
+        <div v-if="showDetailModal && selectedBooking" 
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+                <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-slate-800">预约详情</h3>
+                    <button @click="showDetailModal = false" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-3xl">{{ getServiceTypeIcon(selectedBooking.service_type) }}</span>
+                        <div>
+                            <h4 class="text-lg font-semibold">{{ selectedBooking.service_name || selectedBooking.product_name }}</h4>
+                            <span :class="[
+                                'px-2 py-0.5 rounded-full text-xs font-medium',
+                                getStatusColor(selectedBooking.booking_status).bg,
+                                getStatusColor(selectedBooking.booking_status).text
+                            ]">
+                                {{ getStatusLabel(selectedBooking.booking_status) }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">日期：</span>
+                            <span class="font-medium">{{ selectedBooking.pickup_time?.split('T')[0] }}</span>
+                        </div>
+                        <div v-if="selectedBooking.time_slot" class="flex justify-between">
+                            <span class="text-slate-500">时间段：</span>
+                            <span class="font-medium">{{ selectedBooking.time_slot }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">办公室：</span>
+                            <span class="font-medium">{{ selectedBooking.office_name }}</span>
+                        </div>
+                        <div v-if="selectedBooking.participants_count" class="flex justify-between">
+                            <span class="text-slate-500">参与人数：</span>
+                            <span class="font-medium">{{ selectedBooking.participants_count }} 人</span>
+                        </div>
+                        <div v-if="selectedBooking.contact_phone" class="flex justify-between">
+                            <span class="text-slate-500">联系电话：</span>
+                            <span class="font-medium">{{ selectedBooking.contact_phone }}</span>
+                        </div>
+                        <div v-if="selectedBooking.purpose" class="pt-2 border-t border-slate-200">
+                            <span class="text-slate-500 block mb-1">使用目的：</span>
+                            <span class="text-slate-800">{{ selectedBooking.purpose }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
+                    <button @click="showDetailModal = false" 
+                            class="px-4 py-2 text-slate-700 hover:text-slate-900 font-medium">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = localStorage.getItem('API_BASE') || 
+                    (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+                
+                const serviceTypes = ref(window.APP_CONFIG?.serviceTypes || []);
+                const bookingServiceTypes = computed(() => 
+                    serviceTypes.value.filter(t => t.bookingRequired)
+                );
+                
+                const bookings = ref([]);
+                const offices = ref([]);
+                const services = ref([]);
+                
+                const viewMode = ref('month');
+                const currentDate = ref(new Date());
+                const currentYear = computed(() => currentDate.value.getFullYear());
+                const currentMonth = computed(() => currentDate.value.getMonth() + 1);
+                
+                const filterServiceType = ref('');
+                const jumpDate = ref('');
+                
+                const showBookingModal = ref(false);
+                const showDetailModal = ref(false);
+                const selectedBooking = ref(null);
+                const selectedDate = ref(null);
+                
+                const bookingForm = ref({
+                    service_type: 'meeting_room',
+                    product_id: null,
+                    date: '',
+                    time_slot: '',
+                    office_id: null,
+                    participants_count: 1,
+                    contact_phone: '',
+                    purpose: ''
+                });
+
+                const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+                const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7:00 - 20:00
+
+                const minDate = computed(() => {
+                    const today = new Date();
+                    return today.toISOString().split('T')[0];
+                });
+
+                const currentTimeSlots = computed(() => {
+                    const type = serviceTypes.value.find(t => t.value === bookingForm.value.service_type);
+                    return type?.config?.timeSlots || [];
+                });
+
+                const availableServices = computed(() => {
+                    return services.value.filter(s => s.service_type === bookingForm.value.service_type);
+                });
+
+                const filteredBookings = computed(() => {
+                    let result = bookings.value.filter(b => b.service_type !== 'water');
+                    
+                    if (filterServiceType.value) {
+                        result = result.filter(b => b.service_type === filterServiceType.value);
+                    }
+                    
+                    return result;
+                });
+
+                const monthBookings = computed(() => {
+                    const year = currentYear.value;
+                    const month = currentMonth.value;
+                    
+                    return filteredBookings.value.filter(b => {
+                        const date = b.pickup_time?.split('T')[0];
+                        if (!date) return false;
+                        const [y, m] = date.split('-').map(Number);
+                        return y === year && m === month;
+                    });
+                });
+
+                const calendarDays = computed(() => {
+                    const year = currentYear.value;
+                    const month = currentMonth.value;
+                    
+                    const firstDay = new Date(year, month - 1, 1);
+                    const lastDay = new Date(year, month, 0);
+                    
+                    const days = [];
+                    
+                    // 前面的空白
+                    for (let i = 0; i < firstDay.getDay(); i++) {
+                        days.push(null);
+                    }
+                    
+                    // 本月的日期
+                    for (let i = 1; i <= lastDay.getDate(); i++) {
+                        days.push(new Date(year, month - 1, i));
+                    }
+                    
+                    // 后面的空白
+                    const remaining = 42 - days.length;
+                    for (let i = 0; i < remaining; i++) {
+                        days.push(null);
+                    }
+                    
+                    return days;
+                });
+
+                const weekViewDates = computed(() => {
+                    const dates = [];
+                    const startOfWeek = new Date(selectedDate.value || currentDate.value);
+                    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                    
+                    for (let i = 0; i < 7; i++) {
+                        const date = new Date(startOfWeek);
+                        date.setDate(startOfWeek.getDate() + i);
+                        dates.push(date);
+                    }
+                    
+                    return dates;
+                });
+
+                const formatDate = (date) => {
+                    if (!date) return '';
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                };
+
+                const isToday = (date) => {
+                    const today = new Date();
+                    return formatDate(date) === formatDate(today);
+                };
+
+                const isCurrentMonth = (date) => {
+                    return date.getFullYear() === currentYear.value && 
+                           date.getMonth() + 1 === currentMonth.value;
+                };
+
+                const isSelectedDate = (date) => {
+                    return selectedDate.value && formatDate(date) === formatDate(selectedDate.value);
+                };
+
+                const getDateDay = (date) => date.getDate();
+
+                const getWeekDayName = (date) => {
+                    return weekDays[date.getDay()];
+                };
+
+                const getDayBookings = (date) => {
+                    const dateStr = formatDate(date);
+                    return filteredBookings.value.filter(b => {
+                        return b.pickup_time?.split('T')[0] === dateStr;
+                    });
+                };
+
+                const getDayBookingCount = (date) => {
+                    return getDayBookings(date).length;
+                };
+
+                const getHourBookings = (date, hour) => {
+                    const dayBookings = getDayBookings(date);
+                    
+                    return dayBookings.filter(b => {
+                        if (!b.time_slot) return false;
+                        
+                        // 解析时间段，检查是否包含该小时
+                        const match = b.time_slot.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
+                        if (!match) return false;
+                        
+                        const startHour = parseInt(match[1]);
+                        const endHour = parseInt(match[3]);
+                        
+                        return hour >= startHour && hour < endHour;
+                    });
+                };
+
+                const selectDate = (date) => {
+                    selectedDate.value = date;
+                    bookingForm.value.date = formatDate(date);
+                };
+
+                const selectDateTime = (date, hour) => {
+                    selectDate(date);
+                    bookingForm.value.time_slot = `${String(hour).padStart(2, '0')}:00-${String(hour + 1).padStart(2, '0')}:00`;
+                    showBookingModal.value = true;
+                };
+
+                const previousMonth = () => {
+                    currentDate.value = new Date(currentYear.value, currentMonth.value - 2, 1);
+                };
+
+                const nextMonth = () => {
+                    currentDate.value = new Date(currentYear.value, currentMonth.value, 1);
+                };
+
+                const goToToday = () => {
+                    currentDate.value = new Date();
+                    selectedDate.value = new Date();
+                };
+
+                const jumpToDate = () => {
+                    if (jumpDate.value) {
+                        const [year, month] = jumpDate.value.split('-').map(Number);
+                        currentDate.value = new Date(year, month - 1, 1);
+                        selectedDate.value = new Date(jumpDate.value);
+                    }
+                };
+
+                const viewBookingDetail = (booking) => {
+                    selectedBooking.value = booking;
+                    showDetailModal.value = true;
+                };
+
+                const getServiceTypeIcon = (type) => {
+                    const found = serviceTypes.value.find(t => t.value === type);
+                    return found?.icon || '📦';
+                };
+
+                const getStatusLabel = (status) => {
+                    const map = {
+                        'confirmed': '已确认',
+                        'pending': '待确认',
+                        'cancelled': '已取消',
+                        'completed': '已完成'
+                    };
+                    return map[status] || status;
+                };
+
+                const getStatusColor = (status) => {
+                    const colors = {
+                        'confirmed': { bg: 'bg-green-100', text: 'text-green-800' },
+                        'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                        'cancelled': { bg: 'bg-red-100', text: 'text-red-800' },
+                        'completed': { bg: 'bg-blue-100', text: 'text-blue-800' }
+                    };
+                    return colors[status] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+                };
+
+                const loadBookings = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices/pickups`);
+                        if (response.ok) {
+                            bookings.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载预约失败:', error);
+                    }
+                };
+
+                const loadOffices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/offices`);
+                        if (response.ok) {
+                            offices.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载办公室失败:', error);
+                    }
+                };
+
+                const loadServices = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/products`);
+                        if (response.ok) {
+                            services.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载服务失败:', error);
+                    }
+                };
+
+                const createBooking = async () => {
+                    try {
+                        const office = offices.value.find(o => o.id === bookingForm.value.office_id);
+                        const service = services.value.find(s => s.id === bookingForm.value.product_id);
+                        
+                        const response = await fetch(`${API_BASE}/offices/pickups`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                office_id: bookingForm.value.office_id,
+                                office_name: office?.name,
+                                product_id: bookingForm.value.product_id,
+                                product_name: service?.name,
+                                quantity: 1,
+                                pickup_time: bookingForm.value.date,
+                                service_type: bookingForm.value.service_type,
+                                time_slot: bookingForm.value.time_slot,
+                                participants_count: bookingForm.value.participants_count,
+                                contact_phone: bookingForm.value.contact_phone,
+                                purpose: bookingForm.value.purpose,
+                                unit_price: service?.price || 0,
+                                total_amount: service?.price || 0,
+                                booking_status: 'confirmed'
+                            })
+                        });
+
+                        if (response.ok) {
+                            showBookingModal.value = false;
+                            await loadBookings();
+                            alert('预约创建成功！');
+                        }
+                    } catch (error) {
+                        console.error('创建预约失败:', error);
+                    }
+                };
+
+                watch(() => bookingForm.value.service_type, () => {
+                    const available = availableServices.value;
+                    if (available.length > 0) {
+                        bookingForm.value.product_id = available[0].id;
+                    }
+                    bookingForm.value.time_slot = currentTimeSlots.value[0] || '';
+                });
+
+                onMounted(() => {
+                    loadBookings();
+                    loadOffices();
+                    loadServices();
+                });
+
+                return {
+                    serviceTypes,
+                    bookingServiceTypes,
+                    bookings,
+                    offices,
+                    services,
+                    viewMode,
+                    currentDate,
+                    currentYear,
+                    currentMonth,
+                    filterServiceType,
+                    jumpDate,
+                    showBookingModal,
+                    showDetailModal,
+                    selectedBooking,
+                    selectedDate,
+                    bookingForm,
+                    weekDays,
+                    hours,
+                    minDate,
+                    currentTimeSlots,
+                    availableServices,
+                    filteredBookings,
+                    monthBookings,
+                    calendarDays,
+                    weekViewDates,
+                    formatDate,
+                    isToday,
+                    isCurrentMonth,
+                    isSelectedDate,
+                    getDateDay,
+                    getWeekDayName,
+                    getDayBookings,
+                    getDayBookingCount,
+                    getHourBookings,
+                    selectDate,
+                    selectDateTime,
+                    previousMonth,
+                    nextMonth,
+                    goToToday,
+                    jumpToDate,
+                    viewBookingDetail,
+                    getServiceTypeIcon,
+                    getStatusLabel,
+                    getStatusColor,
+                    createBooking
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

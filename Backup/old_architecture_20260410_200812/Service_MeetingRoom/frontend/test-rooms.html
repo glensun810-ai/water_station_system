@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议室API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; }
+        .info { background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #c8e6c9; }
+        .error { background: #ffcdd2; }
+        select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #1976d2; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>会议室API测试页面</h1>
+        <div id="config" class="info"></div>
+        <div id="status" class="info"></div>
+        <div>
+            <label>会议室下拉菜单：</label>
+            <select id="roomsSelect">
+                <option value="">加载中...</option>
+            </select>
+        </div>
+        <button onclick="testAPI()">测试API连接</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 动态API配置
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const currentPort = window.location.port;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        
+        const API_BASE = isLocalhost 
+            ? `${protocol}//${hostname}:${currentPort}/api/meeting`
+            : `${protocol}//${hostname}/api/meeting`;
+        
+        document.getElementById('config').innerHTML = `
+            <strong>API配置信息：</strong><br>
+            协议: ${protocol}<br>
+            主机: ${hostname}<br>
+            端口: ${currentPort}<br>
+            是否本地: ${isLocalhost}<br>
+            API地址: ${API_BASE}
+        `;
+        
+        // 加载会议室
+        async function loadRooms() {
+            try {
+                const url = `${API_BASE}/rooms?is_active=true`;
+                document.getElementById('status').innerHTML = `正在请求: ${url}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                document.getElementById('status').innerHTML = `
+                    <div class="success">
+                        <strong>✓ 加载成功</strong><br>
+                        找到 ${data.length} 个会议室
+                    </div>
+                `;
+                
+                const select = document.getElementById('roomsSelect');
+                select.innerHTML = '<option value="">请选择会议室</option>';
+                data.forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.id;
+                    option.textContent = `${room.name} (${room.capacity}人) - ¥${room.price_per_hour}/小时`;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = `
+                    <div class="error">
+                        <strong>✗ 加载失败</strong><br>
+                        错误: ${error.message}
+                    </div>
+                `;
+                console.error('加载失败:', error);
+            }
+        }
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">测试中...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/rooms?is_active=true`);
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>API测试成功！</strong><br>
+                        返回 ${data.length} 个会议室<br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>API测试失败！</strong><br>
+                        错误: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 页面加载时自动测试
+        loadRooms();
+    </script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+    <meta name="theme-color" content="#2563EB">
+    <title>预付管理 - 水站管理后台</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+    
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="shared/css/design-tokens.css">
+    <link rel="stylesheet" href="shared/css/components.css">
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        body { font-family: var(--font-sans); background-color: var(--color-gray-50); min-height: 100vh; }
+        .page-container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-6); }
+        @media (max-width: 768px) { .page-container { padding: var(--spacing-4); } }
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-6); flex-wrap: wrap; gap: var(--spacing-4); }
+        .page-title { font-size: var(--text-2xl); font-weight: 700; color: var(--color-gray-900); }
+        .page-subtitle { font-size: var(--text-sm); color: var(--color-gray-500); margin-top: var(--spacing-1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-6); margin-bottom: var(--spacing-6); }
+        
+        .tabs { display: flex; gap: var(--spacing-2); margin-bottom: var(--spacing-6); border-bottom: 2px solid var(--color-gray-200); padding-bottom: var(--spacing-2); overflow-x: auto; }
+        .tab { padding: var(--spacing-2) var(--spacing-4); border-radius: var(--radius-lg) var(--radius-lg) 0 0; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: none; background: none; font-size: var(--text-sm); font-weight: 500; color: var(--color-gray-600); }
+        .tab:hover { background-color: var(--color-gray-50); }
+        .tab.active { background-color: var(--color-primary-500); color: white; }
+        
+        .toolbar { display: flex; align-items: center; gap: var(--spacing-4); margin-bottom: var(--spacing-6); flex-wrap: wrap; }
+        .toolbar-left { display: flex; align-items: center; gap: var(--spacing-4); flex: 1; flex-wrap: wrap; }
+        .toolbar-right { display: flex; align-items: center; gap: var(--spacing-3); }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <i class="fas fa-credit-card" style="color: var(--color-primary-500);"></i>
+                        预付管理
+                    </h1>
+                    <p class="page-subtitle">管理预付套餐、订单和领取记录</p>
+                </div>
+                <div class="toolbar-right">
+                    <a href="/frontend/admin.html" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> 返回管理后台
+                    </a>
+                    <button class="btn btn-primary" @click="openCreatePackageModal">
+                        <i class="fas fa-plus"></i> 新建套餐
+                    </button>
+                    <a href="admin.html" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> 返回后台
+                    </a>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-icon warning"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="stat-card-value">{{ stats.pendingOrders }}</div>
+                    <div class="stat-card-label">待确认订单</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon success"><i class="fas fa-check-double"></i></div>
+                    <div class="stat-card-value">{{ stats.completedOrders }}</div>
+                    <div class="stat-card-label">已完成订单</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon error"><i class="fas fa-undo"></i></div>
+                    <div class="stat-card-value">{{ stats.refundedOrders }}</div>
+                    <div class="stat-card-label">已退款订单</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon primary"><i class="fas fa-coins"></i></div>
+                    <div class="stat-card-value">{{ formatMoney(stats.totalRevenue) }}</div>
+                    <div class="stat-card-label">总收入</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon info"><i class="fas fa-box"></i></div>
+                    <div class="stat-card-value">{{ stats.activePackages }}</div>
+                    <div class="stat-card-label">活跃套餐</div>
+                </div>
+            </div>
+
+            <!-- 标签页 -->
+            <div class="tabs" role="tablist">
+                <button class="tab" :class="{ active: activeTab === 'orders' }" 
+                    @click="switchTab('orders')" role="tab">订单管理</button>
+                <button class="tab" :class="{ active: activeTab === 'packages' }" 
+                    @click="switchTab('packages')" role="tab">套餐管理</button>
+                <button class="tab" :class="{ active: activeTab === 'pickups' }" 
+                    @click="switchTab('pickups')" role="tab">领取记录</button>
+            </div>
+
+            <!-- 订单管理Tab -->
+            <div v-show="activeTab === 'orders'">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-bar">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="search" class="form-input" v-model="orderSearch" 
+                                placeholder="搜索订单...">
+                        </div>
+                        <select class="form-select" v-model="orderStatus" @change="loadOrders">
+                            <option value="">全部状态</option>
+                            <option value="pending">待确认</option>
+                            <option value="confirmed">已确认</option>
+                            <option value="refunded">已退款</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="loading" class="loading-spinner"></div>
+                <div v-else class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>订单号</th>
+                                <th>用户</th>
+                                <th>套餐</th>
+                                <th>金额</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th style="width: 150px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody v-if="orders.length > 0">
+                            <tr v-for="order in orders" :key="order.id">
+                                <td><span style="font-weight: 500;">PO{{ order.id }}</span></td>
+                                <td>{{ order.user_name || '-' }}</td>
+                                <td>{{ order.package_name || '-' }}</td>
+                                <td style="font-weight: 500;">{{ formatMoney(order.amount) }}</td>
+                                <td>
+                                    <span :class="getOrderStatusClass(order.status)">
+                                        {{ getOrderStatusText(order.status) }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(order.created_at) }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button v-if="order.status === 'pending'" 
+                                            class="btn btn-ghost btn-sm" @click="confirmOrder(order)" title="确认">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button v-if="order.status === 'confirmed'" 
+                                            class="btn btn-ghost btn-sm" @click="refundOrder(order)" title="退款">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody v-else>
+                            <tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon"><i class="fas fa-inbox"></i></div><div class="empty-state-title">暂无订单</div></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 套餐管理Tab -->
+            <div v-show="activeTab === 'packages'">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <select class="form-select" v-model="packageStatus" @change="loadPackages">
+                            <option value="">全部状态</option>
+                            <option value="1">启用</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="loading" class="loading-spinner"></div>
+                <div v-else class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>套餐名称</th>
+                                <th>产品</th>
+                                <th>数量</th>
+                                <th>价格</th>
+                                <th>已售</th>
+                                <th>状态</th>
+                                <th style="width: 150px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody v-if="packages.length > 0">
+                            <tr v-for="pkg in packages" :key="pkg.id">
+                                <td><span style="font-weight: 500;">{{ pkg.name }}</span></td>
+                                <td>{{ pkg.product_name || '-' }}</td>
+                                <td>{{ pkg.quantity }}</td>
+                                <td style="font-weight: 500;">{{ formatMoney(pkg.price) }}</td>
+                                <td>{{ pkg.sold_count || 0 }}</td>
+                                <td>
+                                    <span :class="pkg.is_active ? 'status-badge active' : 'status-badge inactive'">
+                                        {{ pkg.is_active ? '启用' : '停用' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="btn btn-ghost btn-sm" @click="editPackage(pkg)" title="编辑">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm" @click="togglePackage(pkg)" title="切换状态">
+                                            <i :class="pkg.is_active ? 'fas fa-ban' : 'fas fa-check'"></i>
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm" @click="deletePackage(pkg)" title="删除">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody v-else>
+                            <tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon"><i class="fas fa-box-open"></i></div><div class="empty-state-title">暂无套餐</div></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 领取记录Tab -->
+            <div v-show="activeTab === 'pickups'">
+                <div v-if="loading" class="loading-spinner"></div>
+                <div v-else class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>用户</th>
+                                <th>套餐</th>
+                                <th>数量</th>
+                                <th>领取时间</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody v-if="pickups.length > 0">
+                            <tr v-for="pickup in pickups" :key="pickup.id">
+                                <td>{{ pickup.user_name || '-' }}</td>
+                                <td>{{ pickup.package_name || '-' }}</td>
+                                <td>{{ pickup.quantity }}</td>
+                                <td>{{ formatDate(pickup.created_at) }}</td>
+                                <td>{{ pickup.remark || '-' }}</td>
+                            </tr>
+                        </tbody>
+                        <tbody v-else>
+                            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon"><i class="fas fa-hand-holding-water"></i></div><div class="empty-state-title">暂无领取记录</div></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/js/api-client.js"></script>
+    <script src="shared/js/auth.js"></script>
+    <script src="shared/js/utils.js"></script>
+    <script src="shared/components/toast.js"></script>
+    <script src="shared/components/modal.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    activeTab: 'orders',
+                    orders: [],
+                    packages: [],
+                    pickups: [],
+                    stats: { pendingOrders: 0, completedOrders: 0, refundedOrders: 0, totalRevenue: 0, activePackages: 0 },
+                    orderSearch: '',
+                    orderStatus: '',
+                    packageStatus: ''
+                };
+            },
+
+            mounted() {
+                if (!Auth.requireAdmin()) return;
+                this.loadData();
+            },
+
+            methods: {
+                switchTab(tab) {
+                    this.activeTab = tab;
+                    this.loadData();
+                },
+
+                async loadData() {
+                    if (this.activeTab === 'orders') await this.loadOrders();
+                    else if (this.activeTab === 'packages') await this.loadPackages();
+                    else if (this.activeTab === 'pickups') await this.loadPickups();
+                    await this.loadStats();
+                },
+
+                async loadOrders() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.orderStatus) params.status = this.orderStatus;
+                        const response = await api.get('/admin/prepaid/orders', params);
+                        this.orders = response || [];
+                    } catch (error) {
+                        console.error('加载订单失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadPackages() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.packageStatus !== '') params.is_active = this.packageStatus;
+                        const response = await api.get('/admin/prepaid-packages', params);
+                        this.packages = response || [];
+                    } catch (error) {
+                        console.error('加载套餐失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadPickups() {
+                    this.loading = true;
+                    try {
+                        const response = await api.get('/prepaid/pickups');
+                        this.pickups = response || [];
+                    } catch (error) {
+                        console.error('加载领取记录失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadStats() {
+                    try {
+                        const orders = await api.get('/admin/prepaid/orders');
+                        const packages = await api.get('/admin/prepaid-packages');
+                        
+                        this.stats = {
+                            pendingOrders: orders?.filter(o => o.status === 'pending').length || 0,
+                            completedOrders: orders?.filter(o => o.status === 'confirmed').length || 0,
+                            refundedOrders: orders?.filter(o => o.status === 'refunded').length || 0,
+                            totalRevenue: orders?.filter(o => o.status === 'confirmed').reduce((sum, o) => sum + (o.amount || 0), 0) || 0,
+                            activePackages: packages?.filter(p => p.is_active).length || 0
+                        };
+                    } catch (error) {
+                        console.error('加载统计失败:', error);
+                    }
+                },
+
+                async confirmOrder(order) {
+                    Modal.confirm({
+                        title: '确认订单',
+                        message: `确定要确认订单 PO${order.id} 吗？`,
+                        type: 'info',
+                        onConfirm: async () => {
+                            await api.post(`/admin/prepaid/orders/${order.id}/confirm`);
+                            Toast.success('订单已确认');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                refundOrder(order) {
+                    Modal.confirm({
+                        title: '退款',
+                        message: `确定要退款订单 PO${order.id} 吗？金额: ${this.formatMoney(order.amount)}`,
+                        type: 'danger',
+                        danger: true,
+                        onConfirm: async () => {
+                            await api.post(`/admin/prepaid/orders/${order.id}/refund`);
+                            Toast.success('已退款');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                openCreatePackageModal() {
+                    Modal.form({
+                        id: 'create-package',
+                        title: '新建套餐',
+                        fields: [
+                            { name: 'name', label: '套餐名称', type: 'text', required: true, placeholder: '请输入套餐名称' },
+                            { name: 'product_id', label: '产品ID', type: 'number', required: true, placeholder: '请输入产品ID' },
+                            { name: 'quantity', label: '数量', type: 'number', required: true, value: 10, min: 1 },
+                            { name: 'price', label: '价格', type: 'number', required: true, min: 0, step: 0.01 },
+                            { name: 'description', label: '描述', type: 'textarea', placeholder: '选填' }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.post('/admin/prepaid-packages', formData);
+                            Toast.success('套餐创建成功');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                editPackage(pkg) {
+                    Modal.form({
+                        id: 'edit-package',
+                        title: '编辑套餐',
+                        fields: [
+                            { name: 'name', label: '套餐名称', type: 'text', required: true, value: pkg.name },
+                            { name: 'quantity', label: '数量', type: 'number', required: true, value: pkg.quantity, min: 1 },
+                            { name: 'price', label: '价格', type: 'number', required: true, value: pkg.price, min: 0, step: 0.01 },
+                            { name: 'description', label: '描述', type: 'textarea', value: pkg.description }
+                        ],
+                        onSubmit: async (formData) => {
+                            await api.put(`/admin/prepaid-packages/${pkg.id}`, formData);
+                            Toast.success('套餐更新成功');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                async togglePackage(pkg) {
+                    const action = pkg.is_active ? '停用' : '启用';
+                    Modal.confirm({
+                        title: `${action}套餐`,
+                        message: `确定要${action}套餐 "${pkg.name}" 吗？`,
+                        type: 'warning',
+                        onConfirm: async () => {
+                            await api.put(`/admin/prepaid-packages/${pkg.id}`, { is_active: pkg.is_active ? 0 : 1 });
+                            Toast.success(`套餐已${action}`);
+                            this.loadData();
+                        }
+                    });
+                },
+
+                deletePackage(pkg) {
+                    Modal.confirm({
+                        title: '删除套餐',
+                        message: `确定要删除套餐 "${pkg.name}" 吗？`,
+                        type: 'danger',
+                        danger: true,
+                        onConfirm: async () => {
+                            await api.delete(`/admin/prepaid-packages/${pkg.id}`);
+                            Toast.success('套餐已删除');
+                            this.loadData();
+                        }
+                    });
+                },
+
+                getOrderStatusClass(status) {
+                    const classes = { 'pending': 'status-badge pending', 'confirmed': 'status-badge confirmed', 'refunded': 'status-badge rejected' };
+                    return classes[status] || 'status-badge neutral';
+                },
+
+                getOrderStatusText(status) {
+                    const texts = { 'pending': '待确认', 'confirmed': '已确认', 'refunded': '已退款' };
+                    return texts[status] || status;
+                },
+
+                formatMoney(value) { return Utils.formatMoney(value); },
+                formatDate(date) { return Utils.formatDateTime(date); }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
