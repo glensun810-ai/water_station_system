@@ -7,6 +7,8 @@
     <title>预约管理 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/utils/api-config.js"></script>
+    <script src="../../shared/components/modal.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
     <link rel="stylesheet" href="../../components/GlobalHeader.css">
     <script src="../../components/GlobalHeader.js"></script>
@@ -386,7 +388,7 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '预约管理', icon: '📅', url: '/portal/admin/meeting/bookings.html'}]"></global-header>
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '预约管理', icon: '📅', url: '/portal/admin/meeting/meeting/bookings.html'}]"></global-header>
         <div v-if="loading" class="loading-overlay">
             <div class="loading-spinner"></div>
         </div>
@@ -516,6 +518,9 @@
                                 <button class="btn btn-secondary btn-sm" @click="viewDetails(booking)">
                                     详情
                                 </button>
+                                <button class="btn btn-danger btn-sm" @click="deleteBooking(booking)">
+                                    删除
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -543,10 +548,7 @@
         createApp({
             components: { 'global-header': GlobalHeader },
             setup() {
-                const protocol = window.location.protocol;
-                const hostname = window.location.hostname;
-                const MEETING_PORT = '8001';
-                const API_BASE = `${protocol}//${hostname}:${MEETING_PORT}/api/meeting`;
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '8008'}/api/v1`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -586,7 +588,7 @@
                 
                 const loadRooms = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/rooms`);
+                        const res = await fetch(window.buildApiUrl('/meeting/rooms'));
                         if (res.ok) rooms.value = await res.json();
                     } catch (e) {
                         console.error('加载会议室失败:', e);
@@ -595,7 +597,7 @@
                 
                 const loadBookings = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/bookings`);
+                        const res = await fetch(window.buildApiUrl('/meeting/meeting/bookings'));
                         if (res.ok) {
                             bookings.value = await res.json();
                         }
@@ -688,7 +690,7 @@
                         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                         const token = localStorage.getItem('token');
                         
-                        const res = await fetch(`${API_BASE}/approval/approve`, {
+                        const res = await fetch(`${API_BASE}/meeting/meeting/approval/approve`, {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -718,7 +720,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason || '')}`, {
+                        const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason || '')}`, {
                             method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -743,7 +745,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/bookings/${booking.id}/cancel`, {
+                        const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}/cancel`, {
                             method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -765,6 +767,46 @@
                 
                 const viewDetails = (booking) => {
                     alert(`预约详情\n\n会议室: ${booking.room_name}\n预订人: ${booking.user_name || booking.booked_by}\n日期: ${booking.booking_date}\n时间: ${booking.start_time} - ${booking.end_time}\n人数: ${booking.attendees || 1}\n用途: ${booking.purpose || '未填写'}`);
+                };
+                
+                const deleteBooking = async (booking) => {
+                    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                    
+                    if (userInfo.role !== 'admin' && userInfo.role !== 'super_admin') {
+                        alert('只有管理员或超级管理员才能删除预约记录');
+                        return;
+                    }
+                    
+                    Modal.confirm({
+                        title: '删除预约记录',
+                        message: `确认删除预约记录吗？\n\n会议室: ${booking.room_name || '未知'}\n预订人: ${booking.user_name || booking.booked_by || '未知'}\n日期: ${booking.booking_date}\n时间: ${booking.start_time} - ${booking.end_time}\n\n此操作不可恢复！`,
+                        confirmText: '确认删除',
+                        cancelText: '取消',
+                        type: 'danger',
+                        danger: true,
+                        onConfirm: async () => {
+                            try {
+                                const token = localStorage.getItem('token');
+                                const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}?deleted_by=${encodeURIComponent(userInfo.name || userInfo.username || '管理员')}`, {
+                                    method: 'DELETE',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
+                                
+                                if (res.ok) {
+                                    alert('预约记录已删除');
+                                    loadBookings();
+                                } else {
+                                    const err = await res.json();
+                                    alert(err.detail || '删除失败');
+                                }
+                            } catch (e) {
+                                alert('删除失败: ' + e.message);
+                            }
+                        }
+                    });
                 };
                 
                 const exportBookings = () => {
@@ -817,6 +859,7 @@
                     rejectBooking,
                     cancelBooking,
                     viewDetails,
+                    deleteBooking,
                     exportBookings
                 };
             }

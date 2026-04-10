@@ -1,0 +1,126 @@
+name: AI产业集群空间服务系统 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-test:
+    name: 代码质量检查与测试
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+    
+    steps:
+    - name: 检出代码
+      uses: actions/github.com/actions/checkout@v4
+    
+    - name: 设置Python ${{ matrix.python-version }}
+      uses: actions/github.com/actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: 缓存依赖
+      uses: actions/github.com/actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: 安装依赖
+      run: |
+        pip install --upgrade pip
+        pip install -r Service_WaterManage/backend/requirements.txt
+        pip install pytest-cov black flake8
+    
+    - name: 代码格式检查 (Black)
+      run: |
+        black --check . --exclude "(.venv|__pycache__|node_modules)"
+    
+    - name: 代码风格检查 (Flake8)
+      run: |
+        flake8 . --max-line-length=88 --ignore=E203,W503 --exclude=.venv,__pycache__,node_modules
+    
+    - name: 运行单元测试
+      run: |
+        cd Service_WaterManage/backend
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+    
+    - name: 上传测试覆盖率报告
+      uses: actions/github.com/actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: Service_WaterManage/backend/htmlcov/
+    
+    - name: 构建Docker镜像
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker build -f Dockerfile.water -t ai-cluster-water:${{ github.sha }} .
+        docker build -f Dockerfile.meeting -t ai-cluster-meeting:${{ github.sha }} .
+    
+    - name: 推送镜像到仓库
+      if: github.ref == 'refs/heads/main'
+      env:
+        DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME --password-stdin
+        docker tag ai-cluster-water:${{ github.sha }} $DOCKER_REGISTRY/ai-cluster-water:latest
+        docker tag ai-cluster-meeting:${{ github.sha }} $DOCKER_REGISTRY/ai-cluster-meeting:latest
+        docker push $DOCKER_REGISTRY/ai-cluster-water:latest
+        docker push $DOCKER_REGISTRY/ai-cluster-meeting:latest
+
+  deploy-staging:
+    name: 部署到预发布环境
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/github.com/actions/checkout@v4
+    
+    - name: 部署到预发布环境
+      env:
+        STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        STAGING_USER: ${{ secrets.STAGING_USER }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+      run: |
+        echo "$SSH_KEY" > staging_key
+        chmod 600 staging_key
+        ssh -i staging_key -o StrictHostKeyChecking=no $STAGING_USER@$STAGING_HOST "
+          cd /opt/ai-cluster-services &&
+          git pull origin develop &&
+          docker-compose -f docker-compose.staging.yml pull &&
+          docker-compose -f docker-compose.staging.yml up -d
+        "
+
+  deploy-production:
+    name: 部署到生产环境
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/github.com/actions/checkout@v4
+    
+    - name: 部署到生产环境
+      env:
+        PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+        PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+      run: |
+        echo "$SSH_KEY" > production_key
+        chmod 600 production_key
+        ssh -i production_key -o StrictHostKeyChecking=no $PRODUCTION_USER@$PRODUCTION_HOST "
+          cd /opt/ai-cluster-services &&
+          docker-compose -f docker-compose.prod.yml pull &&
+          docker-compose -f docker-compose.prod.yml up -d
+        "

@@ -1,0 +1,40 @@
+# Traefik configuration
+api:
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":8000"
+  websecure:
+    address: ":8443"
+
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic.yaml
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: ops@ai-cluster.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  bufferingSize: 100
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议室预定 - 企业服务管理平台</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F1F5F9;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="app" v-cloak>
+        <!-- 顶部导航 -->
+        <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="../../portal/index.html" class="text-slate-500 hover:text-slate-700 mr-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                        </a>
+                        <h1 class="text-xl font-bold text-slate-800">🏛️ 会议室预定</h1>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-sm text-slate-500">企业服务管理平台</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- 会议室列表 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">选择会议室</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div v-for="room in rooms" :key="room.id"
+                         @click="selectRoom(room)"
+                         :class="[
+                             'p-4 rounded-xl border-2 cursor-pointer transition',
+                             selectedRoom?.id === room.id 
+                                 ? 'border-purple-500 bg-purple-50' 
+                                 : 'border-slate-200 hover:border-slate-300'
+                         ]">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-semibold text-slate-800">{{ room.name }}</h3>
+                            <span class="text-2xl">🏛️</span>
+                        </div>
+                        <div class="text-sm text-slate-600 space-y-1">
+                            <p>📍 位置：{{ room.location }}</p>
+                            <p>👥 容纳：{{ room.capacity }}人</p>
+                            <p>💰 价格：¥{{ room.price }}/{{ room.unit }}</p>
+                        </div>
+                        <div class="mt-2 flex gap-1">
+                            <span v-for="facility in room.facilities" :key="facility"
+                                  class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">
+                                {{ facility }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预定表单 -->
+            <div v-if="selectedRoom" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">预定信息</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">预定日期</label>
+                        <input v-model="booking.date" type="date" 
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">时间段</label>
+                        <select v-model="booking.timeSlot"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">请选择时间段</option>
+                            <option value="09:00-12:00">上午 09:00-12:00</option>
+                            <option value="14:00-18:00">下午 14:00-18:00</option>
+                            <option value="19:00-21:00">晚上 19:00-21:00</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">预定人</label>
+                        <input v-model="booking.person" type="text" placeholder="请输入姓名"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
+                        <input v-model="booking.phone" type="tel" placeholder="请输入电话"
+                               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">会议主题</label>
+                    <input v-model="booking.topic" type="text" placeholder="请输入会议主题"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">参会人数</label>
+                    <input v-model.number="booking.attendees" type="number" min="1" :max="selectedRoom.capacity"
+                           placeholder="请输入参会人数"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <p class="text-xs text-slate-500 mt-1">最大容纳 {{ selectedRoom.capacity }} 人</p>
+                </div>
+
+                <div class="bg-purple-50 rounded-lg p-4 mb-4">
+                    <h3 class="text-sm font-semibold text-purple-800 mb-2">预定详情</h3>
+                    <div class="space-y-1 text-sm text-purple-700">
+                        <p>会议室：{{ selectedRoom.name }}</p>
+                        <p>日期：{{ booking.date || '未选择' }}</p>
+                        <p>时间段：{{ booking.timeSlot || '未选择' }}</p>
+                        <p>参会人数：{{ booking.attendees || 0 }}人</p>
+                        <p class="font-semibold">预计费用：¥{{ calculatePrice() }}</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @click="resetBooking" 
+                            class="px-6 py-2 text-slate-700 hover:text-slate-900 font-medium">
+                        重置
+                    </button>
+                    <button @click="submitBooking" 
+                            :disabled="!canSubmit"
+                            :class="[
+                                'px-6 py-2 rounded-lg font-medium transition',
+                                canSubmit 
+                                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            ]">
+                        确认预定
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = localStorage.getItem('API_BASE') || 
+                    (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+                
+                const rooms = ref([
+                    { 
+                        id: 1, 
+                        name: '小型会议室 A', 
+                        location: '3楼301', 
+                        capacity: 10, 
+                        price: 100, 
+                        unit: '小时',
+                        facilities: ['投影仪', '白板', 'WiFi']
+                    },
+                    { 
+                        id: 2, 
+                        name: '中型会议室 B', 
+                        location: '4楼401', 
+                        capacity: 20, 
+                        price: 200, 
+                        unit: '小时',
+                        facilities: ['投影仪', '白板', '视频会议', 'WiFi']
+                    },
+                    { 
+                        id: 3, 
+                        name: '大型会议室 C', 
+                        location: '5楼501', 
+                        capacity: 50, 
+                        price: 300, 
+                        unit: '小时',
+                        facilities: ['投影仪', '音响', '视频会议', 'WiFi', '茶水间']
+                    }
+                ]);
+
+                const selectedRoom = ref(null);
+                const booking = ref({
+                    date: '',
+                    timeSlot: '',
+                    person: '',
+                    phone: '',
+                    topic: '',
+                    attendees: 0
+                });
+
+                const selectRoom = (room) => {
+                    selectedRoom.value = room;
+                };
+
+                const calculatePrice = () => {
+                    if (!selectedRoom.value || !booking.value.timeSlot) return 0;
+                    
+                    // 根据时间段计算时长
+                    const slots = {
+                        '09:00-12:00': 3,
+                        '14:00-18:00': 4,
+                        '19:00-21:00': 2
+                    };
+                    
+                    const hours = slots[booking.value.timeSlot] || 0;
+                    return selectedRoom.value.price * hours;
+                };
+
+                const canSubmit = computed(() => {
+                    return selectedRoom.value && 
+                           booking.value.date && 
+                           booking.value.timeSlot && 
+                           booking.value.person && 
+                           booking.value.phone &&
+                           booking.value.attendees > 0 &&
+                           booking.value.attendees <= selectedRoom.value.capacity;
+                });
+
+                const submitBooking = async () => {
+                    if (!canSubmit.value) return;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/services/book`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                office_id: 1,
+                                service_id: selectedRoom.value.id,
+                                service_type: 'meeting_room',
+                                time_slot: `${booking.value.date} ${booking.value.timeSlot}`,
+                                pickup_person: booking.value.person,
+                                participants_count: booking.value.attendees,
+                                purpose: booking.value.topic,
+                                contact_phone: booking.value.phone,
+                                quantity: 1
+                            })
+                        });
+
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            alert('预定成功！预定编号：' + result.pickup_id);
+                            resetBooking();
+                        } else {
+                            alert('预定失败：' + (result.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('预定失败:', error);
+                        alert('预定失败，请稍后重试');
+                    }
+                };
+
+                const resetBooking = () => {
+                    booking.value = {
+                        date: '',
+                        timeSlot: '',
+                        person: '',
+                        phone: '',
+                        topic: '',
+                        attendees: 0
+                    };
+                };
+
+                return {
+                    rooms,
+                    selectedRoom,
+                    booking,
+                    selectRoom,
+                    calculatePrice,
+                    canSubmit,
+                    submitBooking,
+                    resetBooking
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

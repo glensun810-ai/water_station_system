@@ -1,0 +1,222 @@
+"""
+会议室服务API路由
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from datetime import datetime
+
+from config.database import get_db
+from models.user import User
+from models.meeting import MeetingRoom, MeetingBooking
+from depends.auth import get_current_user, get_admin_user
+from schemas.meeting import (
+    MeetingRoomResponse,
+    MeetingBookingCreate,
+    MeetingBookingResponse,
+    MeetingBookingUpdate,
+)
+
+router = APIRouter(prefix="/meeting", tags=["会议室服务"])
+
+
+@router.get("/rooms", response_model=List[MeetingRoomResponse])
+def get_meeting_rooms(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取所有可用的会议室"""
+    rooms = db.query(MeetingRoom).filter(MeetingRoom.is_active == True).all()
+    return rooms
+
+
+@router.get("/bookings")
+def get_meeting_bookings(
+    status: Optional[str] = Query(None, description="预订状态过滤"),
+    room_id: Optional[int] = Query(None, description="会议室ID过滤"),
+    date_from: Optional[str] = Query(None, description="开始日期"),
+    date_to: Optional[str] = Query(None, description="结束日期"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取会议室预订列表"""
+
+    query = db.query(MeetingBooking)
+
+    # 管理员可以查看所有预订，普通用户只能查看自己的
+    if current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(MeetingBooking.user_id == current_user.id)
+
+    if status:
+        query = query.filter(MeetingBooking.status == status)
+
+    if room_id:
+        query = query.filter(MeetingBooking.room_id == room_id)
+
+    if date_from:
+        query = query.filter(MeetingBooking.booking_date >= date_from)
+
+    if date_to:
+        query = query.filter(MeetingBooking.booking_date <= date_to)
+
+    bookings = query.order_by(MeetingBooking.booking_date.desc()).all()
+
+    results = []
+    for booking in bookings:
+        results.append(
+            {
+                "id": booking.id,
+                "booking_no": booking.booking_no,
+                "room_id": booking.room_id,
+                "room_name": booking.room_name,
+                "user_id": booking.user_id,
+                "user_name": booking.user_name,
+                "department": booking.department,
+                "booking_date": booking.booking_date.isoformat()
+                if booking.booking_date
+                else None,
+                "start_time": booking.start_time,
+                "end_time": booking.end_time,
+                "duration": booking.duration,
+                "meeting_title": booking.meeting_title,
+                "attendees_count": booking.attendees_count,
+                "total_fee": booking.total_fee,
+                "status": booking.status,
+                "confirmed_by": booking.confirmed_by,
+                "confirmed_at": booking.confirmed_at.isoformat()
+                if booking.confirmed_at
+                else None,
+                "office_id": booking.office_id,
+                "created_at": booking.created_at.isoformat()
+                if booking.created_at
+                else None,
+            }
+        )
+
+    return results
+
+
+@router.post("/bookings")
+def create_meeting_booking(
+    booking_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """创建会议室预订"""
+
+    # 验证会议室是否存在
+    room_id = booking_data.get("room_id")
+    room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="会议室不存在")
+
+    # 创建预订记录
+    booking = MeetingBooking(
+        room_id=room_id,
+        room_name=room.name,
+        user_id=current_user.id,
+        user_name=current_user.username,
+        department=current_user.department,
+        booking_date=booking_data.get("booking_date"),
+        start_time=booking_data.get("start_time"),
+        end_time=booking_data.get("end_time"),
+        duration=booking_data.get("duration"),
+        meeting_title=booking_data.get("meeting_title", ""),
+        attendees_count=booking_data.get("attendees_count", 1),
+        total_fee=booking_data.get("total_fee", 0),
+        office_id=current_user.department_id
+        if hasattr(current_user, "department_id")
+        else None,
+        status="pending" if room.requires_approval else "approved",
+    )
+
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+
+    return {"id": booking.id, "message": "预订创建成功"}
+
+
+@router.put("/bookings/{booking_id}/approve")
+def approve_meeting_booking(
+    booking_id: int,
+    approval_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """审批通过会议室预订"""
+
+    booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="预订记录不存在")
+
+    if booking.status != "pending":
+        raise HTTPException(status_code=400, detail="只能审批待处理的预订")
+
+    booking.status = "approved"
+    booking.confirmed_by = current_user.username
+    booking.confirmed_at = datetime.now()
+
+    db.commit()
+
+    return {"message": "预订已批准", "booking_id": booking_id}
+
+
+@router.put("/bookings/{booking_id}/reject")
+def reject_meeting_booking(
+    booking_id: int,
+    rejection_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """拒绝会议室预订"""
+
+    booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="预订记录不存在")
+
+    if booking.status != "pending":
+        raise HTTPException(status_code=400, detail="只能拒绝待处理的预订")
+
+    booking.status = "rejected"
+    booking.cancel_reason = rejection_data.get("reason", "管理员拒绝")
+    booking.cancelled_at = datetime.now()
+    booking.cancelled_by = current_user.username
+
+    db.commit()
+
+    return {"message": "预订已拒绝", "booking_id": booking_id}
+
+
+@router.put("/bookings/{booking_id}/cancel")
+def cancel_meeting_booking(
+    booking_id: int,
+    cancellation_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """取消会议室预订"""
+
+    booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="预订记录不存在")
+
+    # 普通用户只能取消自己的预订，管理员可以取消所有
+    if (
+        current_user.role not in ["admin", "super_admin"]
+        and booking.user_id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="无权限取消此预订")
+
+    if booking.status in ["completed", "cancelled", "rejected"]:
+        raise HTTPException(status_code=400, detail="无法取消已完成或已取消的预订")
+
+    booking.status = "cancelled"
+    booking.cancel_reason = cancellation_data.get("reason", "用户取消")
+    booking.cancelled_at = datetime.now()
+    booking.cancelled_by = current_user.username
+
+    db.commit()
+
+    return {"message": "预订已取消", "booking_id": booking_id}

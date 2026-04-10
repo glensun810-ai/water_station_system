@@ -1,0 +1,156 @@
+# Dynamic configuration for middlewares and other dynamic configurations
+
+http:
+  middlewares:
+    # 认证中间件
+    auth:
+      forwardAuth:
+        address: "http://auth-service:80/auth/verify"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-User-Department"
+    
+    # 限速中间件
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+    
+    # 压缩中间件
+    compress:
+      compress: {}
+    
+    # 安全头中间件
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+    
+    # CORS中间件
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        accessControlAllowOriginList:
+          - "http://localhost:8000"
+          - "http://127.0.0.1:8000"
+          - "https://ai-cluster.com"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 3600
+    
+    # 日志中间件
+    logging:
+      plugin:
+        requestid:
+          headerName: "X-Request-ID"
+          prefix: "req-"
+
+  services:
+    # 水站服务
+    water-service:
+      loadBalancer:
+        servers:
+          - url: "http://water-service:80"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "2s"
+    
+    # 会议室服务
+    meeting-service:
+      loadBalancer:
+        servers:
+          - url: "http://meeting-service:80"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "2s"
+    
+    # 统一账户服务
+    unified-service:
+      loadBalancer:
+        servers:
+          - url: "http://unified-service:80"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "2s"
+    
+    # 系统管理服务
+    system-service:
+      loadBalancer:
+        servers:
+          - url: "http://system-service:80"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "2s"
+
+  routers:
+    # 水站API路由
+    water-api:
+      rule: "PathPrefix(`/api/v1/water`)"
+      service: "water-service"
+      middlewares:
+        - "rate-limit"
+        - "security-headers"
+        - "cors"
+        - "compress"
+      entryPoints:
+        - "web"
+    
+    # 会议室API路由
+    meeting-api:
+      rule: "PathPrefix(`/api/v1/meeting`)"
+      service: "meeting-service"
+      middlewares:
+        - "rate-limit"
+        - "security-headers"
+        - "cors"
+        - "compress"
+      entryPoints:
+        - "web"
+    
+    # 统一账户API路由
+    unified-api:
+      rule: "PathPrefix(`/api/v1/unified`)"
+      service: "unified-service"
+      middlewares:
+        - "rate-limit"
+        - "security-headers"
+        - "cors"
+        - "compress"
+      entryPoints:
+        - "web"
+    
+    # 系统管理API路由
+    system-api:
+      rule: "PathPrefix(`/api/v1/system`)"
+      service: "system-service"
+      middlewares:
+        - "rate-limit"
+        - "security-headers"
+        - "cors"
+        - "compress"
+      entryPoints:
+        - "web"
+    
+    # 健康检查路由
+    health-check:
+      rule: "PathPrefix(`/health`)"
+      service: "water-service"  # 任意服务都可以，因为健康检查是通用的
+      entryPoints:
+        - "web"

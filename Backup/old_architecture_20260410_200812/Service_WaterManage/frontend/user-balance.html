@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的余额 - 水站管理系统</title>
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #3B82F6 0%, #1E40AF 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .balance-card {
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(59,130,246,0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .btn-success {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+        }
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #D1D5DB;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-prepaid { background: #D1FAE5; color: #065F46; }
+        .tab-active {
+            background: #EFF6FF;
+            color: #2563EB;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak class="pb-20">
+        <!-- 顶部导航 -->
+        <header class="bg-white/10 backdrop-blur-sm">
+            <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 class="text-white text-xl font-bold">💧 我的余额</h1>
+                <a href="../draft/index.html" class="text-white/80 hover:text-white text-sm">返回首页</a>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="max-w-3xl mx-auto px-4 py-6">
+            <!-- 总余额卡片 -->
+            <div class="balance-card mb-6">
+                <div class="text-white/80 text-sm mb-2">总可用余额</div>
+                <div class="text-5xl font-bold mb-4">{{ totalBalance }} <span class="text-2xl">桶</span></div>
+                <div class="pt-4 border-t border-white/20">
+                    <div>
+                        <div class="text-white/60 text-xs mb-1">💰 预付余额</div>
+                        <div class="text-2xl font-bold">{{ totalPrepaid }} <span class="text-sm">桶</span></div>
+                        <div class="text-white/60 text-xs mt-1">优惠价 ¥{{ avgPrepaidPrice }}/桶</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 产品余额明细 -->
+            <div class="mb-6">
+                <h2 class="text-white/90 font-bold mb-4 flex items-center gap-2">
+                    <span>📦</span> 按产品明细
+                </h2>
+                <div class="space-y-3">
+                    <div v-for="product in products" :key="product.product_id" class="product-card">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-gray-800">{{ product.product_name }}</h3>
+                                <p class="text-sm text-gray-500">{{ product.specification }} / {{ product.unit }}</p>
+                            </div>
+                            <button @click="openPickupModal(product)" class="btn-success px-4 py-2 rounded-lg text-sm font-medium">
+                                领取
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="bg-green-50 rounded-lg p-3">
+                                <div class="text-xs text-green-600 mb-1">💰 预付</div>
+                                <div class="text-lg font-bold text-green-700">{{ product.balance?.prepaid_available || 0 }} <span class="text-sm">{{ product.unit }}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近交易 -->
+            <div>
+                <h2 class="text-white/90 font-bold mb-4 flex items-center gap-2">
+                    <span>📋</span> 最近交易
+                </h2>
+                <div class="card overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">数量</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">金额</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">模式</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">时间</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr v-for="txn in recentTransactions" :key="txn.id" class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm font-medium">{{ getProductName(txn.product_id) }}</td>
+                                <td class="px-4 py-3 text-sm">{{ txn.quantity }}</td>
+                                <td class="px-4 py-3 text-sm">¥{{ txn.actual_price.toFixed(2) }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="badge badge-prepaid">预付</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(txn.created_at) }}</td>
+                            </tr>
+                            <tr v-if="recentTransactions.length === 0">
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">暂无交易记录</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- 领取弹窗 -->
+        <div v-if="showPickupModal" class="modal-overlay" @click.self="closePickupModal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold">📦 领取 {{ selectedProduct?.product_name || '' }}</h3>
+                    <button @click="closePickupModal" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- 可用余额提示 -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-sm text-green-600 mb-2">可用余额</div>
+                        <div class="flex gap-4">
+                            <div>
+                                <span class="text-green-600 font-bold">{{ selectedProduct?.balance?.prepaid_available || 0 }}</span>
+                                <span class="text-green-600 text-sm"> 预付</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 领取数量 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">领取数量</label>
+                        <div class="flex items-center gap-3">
+                            <button @click="adjustQuantity(-1)" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-xl font-bold">-</button>
+                            <input v-model.number="pickupForm.quantity" type="number" min="1" :max="maxPickupQty" 
+                                   class="input-field text-center text-xl font-bold" @input="calculatePickupDetail">
+                            <button @click="adjustQuantity(1)" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-xl font-bold">+</button>
+                        </div>
+                        <div class="text-right text-sm text-gray-500 mt-1">最多可领 {{ maxPickupQty }} {{ selectedProduct?.unit }}</div>
+                    </div>
+
+                    <!-- 扣款明细 -->
+                    <div v-if="pickupDetail" class="bg-gray-50 rounded-lg p-4 space-y-2">
+                        <div class="text-sm font-medium text-gray-700 mb-2">扣款明细</div>
+                        
+                        <div v-if="pickupDetail.prepaid.qty > 0" class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-prepaid">预付</span>
+                                <span class="text-sm text-gray-600">{{ pickupDetail.prepaid.qty }} {{ selectedProduct?.unit }} × ¥{{ pickupDetail.prepaid.unit_price }}</span>
+                            </div>
+                            <span class="font-medium text-green-600">¥{{ pickupDetail.prepaid.total_price.toFixed(2) }}</span>
+                        </div>
+                        
+                        <div class="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
+                            <span>合计：</span>
+                            <span class="text-gray-800">¥{{ pickupDetail.total_price.toFixed(2) }}</span>
+                        </div>
+                        
+                        <div v-if="pickupDetail.prepaid.free_qty > 0" class="text-xs text-green-600 mt-2">
+                            🎉 优惠：{{ pickupDetail.prepaid.discount_desc }}
+                        </div>
+                    </div>
+
+                    <!-- 备注 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">备注（可选）</label>
+                        <input v-model="pickupForm.note" type="text" class="input-field" placeholder="如：放门口">
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <button @click="submitPickup" :disabled="!canPickup" 
+                            :class="canPickup ? 'btn-primary' : 'bg-gray-300 cursor-not-allowed'"
+                            class="w-full py-3 rounded-lg font-bold text-white">
+                        确认领取
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div v-if="message" :class="messageType === 'error' ? 'bg-red-500' : 'bg-green-500'" 
+             class="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            {{ message }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        // API配置 - 动态适配端口
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const currentPort = window.location.port;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        
+        const API_BASE = isLocalhost 
+            ? `${protocol}//${hostname}:${currentPort}/api`
+            : `${protocol}//${hostname}/api`;
+        
+        console.log('用户余额API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
+
+        createApp({
+            data() {
+                return {
+                    currentUser: null,
+                    products: [],
+                    recentTransactions: [],
+                    
+                    showPickupModal: false,
+                    selectedProduct: null,
+                    pickupForm: {
+                        quantity: 1,
+                        note: ''
+                    },
+                    pickupDetail: null,
+                    
+                    message: '',
+                    messageType: 'success'
+                };
+            },
+            
+            computed: {
+                totalBalance() {
+                    return this.products.reduce((sum, p) => sum + (p.balance?.prepaid_available || 0), 0);
+                },
+                totalPrepaid() {
+                    return this.products.reduce((sum, p) => sum + (p.balance?.prepaid_available || 0), 0);
+                },
+                avgPrepaidPrice() {
+                    // 简化计算：假设买 10 赠 1，平均价格约为原价的 10/11
+                    return this.standardPrice ? (this.standardPrice * 10 / 11).toFixed(1) : '0.0';
+                },
+                standardPrice() {
+                    if (this.products.length === 0) return '0.0';
+                    return this.products[0]?.price?.toFixed(1) || '0.0';
+                },
+                maxPickupQty() {
+                    if (!this.selectedProduct) return 0;
+                    return this.selectedProduct.balance?.prepaid_available || 0;
+                },
+                canPickup() {
+                    return this.pickupForm.quantity > 0 && this.pickupForm.quantity <= this.maxPickupQty;
+                }
+            },
+            
+            async mounted() {
+                await this.checkAuth();
+                await this.loadBalance();
+                await this.loadTransactions();
+            },
+            
+            methods: {
+                async checkAuth() {
+                  const token = localStorage.getItem('token');
+                  if (!token) {
+                    this.notLoggedIn = true;
+                    return;
+                  }
+                  try {
+                    const res = await fetch(`${API_BASE}/api/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (!res.ok) {
+                      this.notLoggedIn = true;
+                      return;
+                    }
+                    this.me = await res.json();
+                  } catch (e) {
+                    this.notLoggedIn = true;
+                  }
+                },
+                
+                async loadBalance() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/api/unified/user/${this.currentUser.id}/balance`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.products = data.products || [];
+                        }
+                    } catch (e) {
+                        console.error('加载余额失败:', e);
+                    }
+                },
+                
+                async loadTransactions() {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/api/unified/transactions/${this.currentUser.id}?limit=20`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            this.recentTransactions = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('加载交易失败:', e);
+                    }
+                },
+                
+                openPickupModal(product) {
+                    this.selectedProduct = product;
+                    this.pickupForm = { quantity: 1, note: '' };
+                    this.pickupDetail = null;
+                    this.showPickupModal = true;
+                },
+                
+                closePickupModal() {
+                    this.showPickupModal = false;
+                    this.selectedProduct = null;
+                },
+                
+                adjustQuantity(delta) {
+                    const newQty = this.pickupForm.quantity + delta;
+                    if (newQty >= 1 && newQty <= this.maxPickupQty) {
+                        this.pickupForm.quantity = newQty;
+                        this.calculatePickupDetail();
+                    }
+                },
+                
+                async calculatePickupDetail() {
+                    if (!this.selectedProduct || !this.pickupForm.quantity) {
+                        this.pickupDetail = null;
+                        return;
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/api/unified/pickup/calculate`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                user_id: this.currentUser.id,
+                                product_id: this.selectedProduct.product_id,
+                                quantity: this.pickupForm.quantity
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            this.pickupDetail = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('计算领取失败:', e);
+                    }
+                },
+                
+                async submitPickup() {
+                    if (!this.canPickup) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/api/unified/pickup/record`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                user_id: this.currentUser.id,
+                                product_id: this.selectedProduct.product_id,
+                                quantity: this.pickupForm.quantity,
+                                note: this.pickupForm.note
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            const result = await res.json();
+                            this.showMessage(`领取成功！${result.message}`, 'success');
+                            this.closePickupModal();
+                            await this.loadBalance();
+                            await this.loadTransactions();
+                        } else {
+                            const error = await res.json();
+                            this.showMessage(error.detail || '领取失败', 'error');
+                        }
+                    } catch (e) {
+                        this.showMessage('网络错误', 'error');
+                    }
+                },
+                
+                getProductName(productId) {
+                    const product = this.products.find(p => p.product_id === productId);
+                    return product ? product.product_name : '未知产品';
+                },
+                
+                formatDate(dateStr) {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    const now = new Date();
+                    const diff = now - date;
+                    
+                    if (diff < 60000) return '刚刚';
+                    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+                    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+                    
+                    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                },
+                
+                showMessage(msg, type = 'success') {
+                    this.message = msg;
+                    this.messageType = type;
+                    setTimeout(() => this.message = '', 3000);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

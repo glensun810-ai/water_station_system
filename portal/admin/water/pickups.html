@@ -6,7 +6,8 @@
     <meta name="theme-color" content="#1E293B">
     <title>领水记录管理 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-    <script src="../../node_modules/vue/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/shared/utils/api-config.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
     <link rel="stylesheet" href="../../components/GlobalHeader.css">
     <script src="../../components/GlobalHeader.js"></script>
@@ -1076,10 +1077,8 @@
         createApp({
             components: { GlobalHeader },
             setup() {
-                const protocol = window.location.protocol;
-                const hostname = window.location.hostname;
-                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                // 使用统一API配置
+                const API_BASE = window.API_CONFIG.BASE_URL;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -1144,7 +1143,7 @@
                         const headers = {};
                         if (token) headers['Authorization'] = `Bearer ${token}`;
                         
-                        const res = await fetch(`${API_BASE}/offices`, { headers });
+                        const res = await fetch(window.buildApiUrl('/system/offices'), { headers });
                         if (res.ok) offices.value = await res.json();
                     } catch (e) {
                         console.error('加载办公室失败:', e);
@@ -1153,7 +1152,7 @@
                 
                 const loadProducts = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/products`);
+                        const res = await fetch(window.buildApiUrl('/water/products'));
                         if (res.ok) products.value = await res.json();
                     } catch (e) {
                         console.error('加载产品失败:', e);
@@ -1167,7 +1166,7 @@
                         const headers = { 'Cache-Control': 'no-cache' };
                         if (token) headers['Authorization'] = `Bearer ${token}`;
                         
-                        const res = await fetch(`${API_BASE}/office-pickups?limit=10000`, { headers });
+                        const res = await fetch(window.buildApiUrl('/water/pickups?limit=10000'), { headers });
                         if (res.ok) {
                             officePickups.value = await res.json();
                         }

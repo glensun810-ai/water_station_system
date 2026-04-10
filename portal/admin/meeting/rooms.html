@@ -470,10 +470,7 @@
         createApp({
             components: { 'global-header': GlobalHeader },
             setup() {
-                const protocol = window.location.protocol;
-                const hostname = window.location.hostname;
-                const MEETING_PORT = '8001';
-                const API_BASE = `${protocol}//${hostname}:${MEETING_PORT}/api/meeting`;
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '8008'}/api/v1`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -516,10 +513,16 @@
                     return true;
                 };
                 
-                const loadRooms = async () => {
+const loadRooms = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/rooms`);
-                        if (res.ok) rooms.value = await res.json();
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${API_BASE}/meeting/rooms`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            rooms.value = data.items || data;
+                        }
                     } catch (e) {
                         console.error('加载会议室失败:', e);
                     }
@@ -585,13 +588,13 @@
                         
                         let res;
                         if (editingRoom.value) {
-                            res = await fetch(`${API_BASE}/rooms/${editingRoom.value.id}`, {
+                            res = await fetch(`${API_BASE}/meeting/rooms/${editingRoom.value.id}`, {
                                 method: 'PUT',
                                 headers,
                                 body: JSON.stringify(payload)
                             });
                         } else {
-                            res = await fetch(`${API_BASE}/rooms`, {
+                            res = await fetch(`${API_BASE}/meeting/rooms`, {
                                 method: 'POST',
                                 headers,
                                 body: JSON.stringify(payload)
@@ -614,8 +617,10 @@
                 const deleteRoom = (room) => {
                     if (!confirm(`确定要删除会议室 "${room.name}" 吗？`)) return;
                     
-                    fetch(`${API_BASE}/rooms/${room.id}`, { 
+                    const token = localStorage.getItem('token');
+                    fetch(`${API_BASE}/meeting/rooms/${room.id}`, { 
                         method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` },
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                     })
                         .then(res => {

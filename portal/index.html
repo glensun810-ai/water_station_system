@@ -23,6 +23,8 @@
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/shared/utils/api-client.js"></script>
+    <script src="/shared/utils/api-endpoints.js"></script>
     <script src="/portal/components/GlobalHeader.js"></script>
     <style>
         [v-cloak] { display: none !important; }
@@ -609,10 +611,10 @@
                             <div class="service-icon">💧</div>
                             <div class="service-name">水站服务</div>
                             <div class="service-desc">饮用水订购与管理</div>
-                            <div class="service-actions">
-                                <a href="/water/index.html" class="service-btn service-btn-primary" @click.stop>领水</a>
-                                <a href="/water/index.html?tab=records" class="service-btn service-btn-secondary" @click.stop>查看记录</a>
-                            </div>
+                        <div class="service-actions">
+                            <button class="service-btn service-btn-primary" @click.stop="handleWaterPickup">领水</button>
+                            <a href="/water/index.html?tab=records" class="service-btn service-btn-secondary" @click.stop>查看记录</a>
+                        </div>
                         </div>
                         
                         <div class="service-card" @click="navigateTo('/meeting-frontend/index.html')">
@@ -759,13 +761,13 @@
                                 </div>
                             </div>
                             <div class="quick-actions" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm);">
-                                <a href="/portal/admin/index.html?module=meeting" class="btn btn-outline btn-sm" style="justify-content: center;">
-                                    预约管理
-                                </a>
-                                <a href="/portal/admin/index.html?module=meeting&tab=approvals" class="btn btn-outline btn-sm" style="justify-content: center;">
+<a href="/portal/admin/meeting/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+    预约管理
+</a>
+                                <a href="/portal/admin/meeting/approvals.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     审批中心
                                 </a>
-                                <a href="/portal/admin/index.html?module=meeting&tab=rooms" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                <a href="/portal/admin/meeting/rooms.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     会议室管理
                                 </a>
                             </div>
@@ -984,7 +986,7 @@
                     const protocol = window.location.protocol;
                     const hostname = window.location.hostname;
                     const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                    return `${protocol}//${hostname}:${port}/api`;
+                    return `${protocol}//${hostname}:${port}/api/v1`;
                 };
                 
                 const API_BASE = getApiBase();
@@ -1070,6 +1072,25 @@
                     window.location.href = url;
                 };
                 
+                const handleWaterPickup = () => {
+                    // 检查用户是否已登录
+                    if (!userInfo.value || !userInfo.value.id) {
+                        window.location.href = '/portal/admin/login.html';
+                        return;
+                    }
+                    
+                    // 检查用户是否有办公室配置
+                    const storedOffices = localStorage.getItem('user_offices');
+                    if (!storedOffices || JSON.parse(storedOffices).length === 0) {
+                        // 跳转到水站页面的设置标签页，让用户先配置办公室
+                        window.location.href = '/water/index.html?tab=settings';
+                        return;
+                    }
+                    
+                    // 直接跳转到水站领水页面
+                    window.location.href = '/water/index.html';
+                };
+                
                 const handleLogout = () => {
                     if (confirm('确定要退出登录吗？')) {
                         localStorage.removeItem('token');
@@ -1111,7 +1132,7 @@
                         // 加载系统管理数据（仅超管）
                         if (userInfo.value.role === '超级管理员' || userInfo.value.role === 'super_admin') {
                             // 办公室统计
-                            const officesRes = await fetch(`${API_BASE}/offices`).catch(() => ({ ok: false }));
+                            const officesRes = await fetch(`${API_BASE}/system/offices`).catch(() => ({ ok: false }));
                             if (officesRes.ok) {
                                 const officesData = await officesRes.json();
                                 officeCount.value = officesData.length || 0;
@@ -1119,7 +1140,7 @@
                             }
                             
                             // 用户统计
-                            const usersRes = await fetch(`${API_BASE}/users`).catch(() => ({ ok: false }));
+                            const usersRes = await fetch(`${API_BASE}/system/users`).catch(() => ({ ok: false }));
                             if (usersRes.ok) {
                                 const usersData = await usersRes.json();
                                 adminCount.value = usersData.filter(u => u.role === 'super_admin' || u.role === 'admin').length || 0;
@@ -1127,7 +1148,7 @@
                             }
                             
                             // 结算统计
-                            const settlementRes = await fetch(`${API_BASE}/settlements/summary`).catch(() => ({ ok: false }));
+                            const settlementRes = await fetch(`${API_BASE}/water/settlements/summary`).catch(() => ({ ok: false }));
                             if (settlementRes.ok) {
                                 const settlementData = await settlementRes.json();
                                 pendingSettlement.value = settlementData.total?.pending_amount || 0;
@@ -1167,6 +1188,7 @@
                     freeHours,
                     couponCount,
                     navigateTo,
+                    handleWaterPickup,
                     handleLogout,
                     todayOrders,
                     pendingTasks,
@@ -1187,7 +1209,14 @@
                     appliedSettlement
                 };
             }
-        }).mount('#app');
+        });
+    
+    // Vue错误监控（在mount之前设置）
+    app.config.errorHandler = (err, instance, info) => {
+        console.error('⚠️ Vue错误:', err, info);
+    };
+    
+    app.mount('#app');
     
     // 性能监控
     window.addEventListener('load', () => {
@@ -1195,9 +1224,6 @@
             const timing = performance.timing;
             const loadTime = timing.loadEventEnd - timing.navigationStart;
             console.log('📊 页面加载时间:', loadTime + 'ms');
-            
-            // 可选：上报性能数据
-            // fetch('/api/performance', { method: 'POST', body: JSON.stringify({ loadTime }) });
         }
     });
     
@@ -1209,18 +1235,7 @@
             lineno: e.lineno,
             colno: e.colno
         });
-        
-        // 可选：上报错误信息
-        // fetch('/api/error', { method: 'POST', body: JSON.stringify(e) });
     });
-    
-    // Vue错误监控
-    app.config.errorHandler = (err, instance, info) => {
-        console.error('⚠️ Vue错误:', err, info);
-        
-        // 可选：上报Vue错误
-        // fetch('/api/vue-error', { method: 'POST', body: JSON.stringify({ err, info }) });
-    };
     </script>
 </body>
 </html>

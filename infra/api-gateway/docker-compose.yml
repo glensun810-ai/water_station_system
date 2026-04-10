@@ -1,0 +1,179 @@
+# AI产业集群空间服务系统 API网关配置
+
+version: "3.8"
+
+services:
+  # Traefik API网关
+  traefik:
+    image: traefik:v2.9
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:8000"
+      - "--entrypoints.websecure.address=:8443"
+      - "--certificatesresolvers.myresolver.acme.email=ops@ai-cluster.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "8000:8000"    # HTTP API端口
+      - "8080:8080"    # Traefik Dashboard端口
+      - "8443:8443"    # HTTPS端口（生产环境）
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml
+    networks:
+      - ai-cluster-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.ai-cluster.local`)"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.api.entrypoints=web"
+
+  # 水站服务
+  water-service:
+    build:
+      context: ../apps/water/backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://water:water@postgres:5432/ai_cluster_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ../apps/water/backend:/app
+    networks:
+      - ai-cluster-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.water.rule=PathPrefix(`/api/v1/water`)"
+      - "traefik.http.routers.water.entrypoints=web"
+      - "traefik.http.middlewares.water-stripprefix.stripprefix.prefixes=/api/v1/water"
+      - "traefik.http.routers.water.middlewares=water-stripprefix"
+      - "traefik.http.services.water.loadbalancer.server.port=80"
+
+  # 会议室服务
+  meeting-service:
+    build:
+      context: ../apps/meeting/backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://meeting:meeting@postgres:5432/ai_cluster_db
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ../apps/meeting/backend:/app
+    networks:
+      - ai-cluster-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.meeting.rule=PathPrefix(`/api/v1/meeting`)"
+      - "traefik.http.routers.meeting.entrypoints=web"
+      - "traefik.http.middlewares.meeting-stripprefix.stripprefix.prefixes=/api/v1/meeting"
+      - "traefik.http.routers.meeting.middlewares=meeting-stripprefix"
+      - "traefik.http.services.meeting.loadbalancer.server.port=80"
+
+  # 统一账户服务
+  unified-service:
+    build:
+      context: ../apps/unified/backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://unified:unified@postgres:5432/ai_cluster_db
+      - REDIS_URL=redis://redis:6379/2
+    volumes:
+      - ../apps/unified/backend:/app
+    networks:
+      - ai-cluster-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.unified.rule=PathPrefix(`/api/v1/unified`)"
+      - "traefik.http.routers.unified.entrypoints=web"
+      - "traefik.http.middlewares.unified-stripprefix.stripprefix.prefixes=/api/v1/unified"
+      - "traefik.http.routers.unified.middlewares=unified-stripprefix"
+      - "traefik.http.services.unified.loadbalancer.server.port=80"
+
+  # 系统管理服务
+  system-service:
+    build:
+      context: ../apps/system/backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://system:system@postgres:5432/ai_cluster_db
+      - REDIS_URL=redis://redis:6379/3
+    volumes:
+      - ../apps/system/backend:/app
+    networks:
+      - ai-cluster-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.system.rule=PathPrefix(`/api/v1/system`)"
+      - "traefik.http.routers.system.entrypoints=web"
+      - "traefik.http.middlewares.system-stripprefix.stripprefix.prefixes=/api/v1/system"
+      - "traefik.http.routers.system.middlewares=system-stripprefix"
+      - "traefik.http.services.system.loadbalancer.server.port=80"
+
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: ai_cluster_db
+      POSTGRES_USER: ai_cluster
+      POSTGRES_PASSWORD: secure_password_2026
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - ai-cluster-network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - ai-cluster-network
+
+  # Prometheus监控
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - ai-cluster-network
+
+  # Grafana可视化
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana/:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin2026
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - ai-cluster-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  ai-cluster-network:
+    driver: bridge
