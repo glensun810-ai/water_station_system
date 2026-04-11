@@ -138,6 +138,14 @@ if os.path.exists(portal_dir):
 else:
     print(f"⚠️ Portal目录不存在: {portal_dir}")
 
+# Shared公共资源（挂载到/shared路径）
+shared_dir = os.path.join(backend_dir, "..", "..", "..", "shared")
+if os.path.exists(shared_dir):
+    print(f"✓ 挂载Shared目录: {shared_dir}")
+    app.mount("/shared", StaticFiles(directory=shared_dir), name="shared")
+else:
+    print(f"⚠️ Shared目录不存在: {shared_dir}")
+
 # 水站前端（挂载到/water路径）
 frontend_dir = os.path.join(backend_dir, "..", "frontend")
 if os.path.exists(frontend_dir):

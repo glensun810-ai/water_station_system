@@ -367,20 +367,44 @@
             <div v-show="activeTab === 'pickup'">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <div class="text-sm font-medium text-gray-700">1. 选择办公室</div>
-                        <div class="flex gap-1">
+                        <div class="text-sm font-medium text-gray-700">
+                            1. 选择办公室
+                            <span v-if="isSuperAdmin" class="text-xs text-blue-600 ml-1">(管理员 - 可选择任意办公室)</span>
+                            <span v-else-if="isAdmin" class="text-xs text-blue-600 ml-1">(办公室管理员 - 可选择管辖办公室)</span>
+                            <span v-else class="text-xs text-gray-500 ml-1">(仅限所属办公室)</span>
+                        </div>
+                        <div class="flex gap-1" v-if="isAdmin">
                             <button @click="officeTab = 'common'" :class="officeTab === 'common' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">常用</button>
                             <button @click="officeTab = 'uncommon'" :class="officeTab === 'uncommon' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">不常用</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
+                    
+                    <!-- 管理员/办公室管理员：显示办公室列表 -->
+                    <div v-if="isAdmin" class="grid grid-cols-3 gap-2">
                         <div v-for="office in displayOffices" :key="office.id" @click="selectOffice(office)" :class="form.officeId === office.id ? 'office-card active' : 'office-card'" class="rounded-lg p-2 cursor-pointer text-center">
                             <div class="text-xs text-gray-400">{{ office.room_number }}</div>
                             <div class="text-sm font-medium text-gray-800 truncate">{{ office.name }}</div>
                             <div class="text-xs text-blue-500 mt-1"><i class="fas fa-user mr-1"></i>{{ office.leader_name }}</div>
                         </div>
                     </div>
-                    <div v-if="displayOffices.length === 0" class="text-center py-4 text-gray-400 text-sm">{{ officeTab === 'common' ? '暂无常用办公室' : '暂无不常用办公室' }}</div>
+                    <div v-if="isAdmin && displayOffices.length === 0" class="text-center py-4 text-gray-400 text-sm">{{ officeTab === 'common' ? '暂无常用办公室' : '暂无不常用办公室' }}</div>
+                    
+                    <!-- 普通用户：只显示所属办公室 -->
+                    <div v-if="!isAdmin && offices.length > 0" class="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+                        <div class="text-center">
+                            <div class="text-lg font-bold text-blue-800 mb-2">{{ offices[0].name }}</div>
+                            <div class="text-sm text-gray-600 mb-1">房间号：{{ offices[0].room_number || '未设置' }}</div>
+                            <div class="text-sm text-gray-600">负责人：{{ offices[0].leader_name || '未设置' }}</div>
+                            <div class="text-xs text-blue-600 mt-2">✓ 已自动选择您的所属办公室</div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="!isAdmin && offices.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                        <div class="text-sm text-yellow-800">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            您未设置所属办公室，请联系管理员设置
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="mb-4">
@@ -995,19 +1019,42 @@
                 };
             },
             computed: {
+                isAdmin() {
+                    const userRole = localStorage.getItem('user_role');
+                    return userRole === 'admin' || userRole === 'super_admin' || userRole === 'office_admin';
+                },
+                isSuperAdmin() {
+                    const userRole = localStorage.getItem('user_role');
+                    return userRole === 'admin' || userRole === 'super_admin';
+                },
                 selectedOffice() { return this.offices.find(o => o.id === this.form.officeId); },
                 currentOfficeName() { 
                     const office = this.offices.find(o => o.id === (this.form.officeId || this.settlementOfficeId));
                     return office ? office.name : '';
                 },
-                displayOffices() { 
-                    // 如果用户已配置办公室，优先显示用户办公室
+                displayOffices() {
+                    const userRole = localStorage.getItem('user_role');
+                    
+                    // 超级管理员/管理员：显示所有办公室（按常用/不常用分类）
+                    if (userRole === 'admin' || userRole === 'super_admin') {
+                        return this.offices.filter(o => 
+                            this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1
+                        );
+                    }
+                    
+                    // 普通用户/办公室管理员：显示用户所属办公室
                     if (this.userOffices.length > 0) {
                         const userOfficeIds = this.userOffices.map(uo => uo.id);
-                        return this.offices.filter(o => userOfficeIds.includes(o.id));
+                        return this.offices.filter(o => 
+                            userOfficeIds.includes(o.id) && 
+                            (this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1)
+                        );
                     }
-                    // 否则显示所有办公室（管理员或新用户）
-                    return this.offices;
+                    
+                    // 如果 userOffices 为空，显示后端返回的 offices（后端已过滤权限）
+                    return this.offices.filter(o => 
+                        this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1
+                    );
                 },
                 totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
                 // 买 N 赠 M 优惠计算
@@ -1239,18 +1286,50 @@
                 }
             },
             methods: {
+                checkAuth() {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        alert('请先登录');
+                        window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                        return false;
+                    }
+                    return true;
+                },
+                
+                handleApiError(response) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('userInfo');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                        return true;
+                    }
+                    return false;
+                },
+                
+                getAuthHeaders() {
+                    const token = localStorage.getItem('token');
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                    return headers;
+                },
+                
                 async loadData() {
+                    if (!this.checkAuth()) return;
+                    
                     const storedUserOffices = localStorage.getItem('user_offices');
                     const hasSkippedGuide = localStorage.getItem('has_skipped_first_time_guide');
-                    if (storedUserOffices) {
+                    const userRole = localStorage.getItem('user_role');
+                    
+                    // 只有普通用户才需要从localStorage读取userOffices
+                    if (userRole !== 'admin' && userRole !== 'super_admin' && storedUserOffices) {
                         this.userOffices = JSON.parse(storedUserOffices);
                     }
                     
-                    // 自动为新用户设置办公室
-                    if (!storedUserOffices) {
+                    // 自动为新用户设置办公室（只针对普通用户）
+                    if (userRole !== 'admin' && userRole !== 'super_admin' && !storedUserOffices) {
                         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                         if (userInfo.department && this.offices.length > 0) {
-                            // 普通用户：根据部门自动匹配办公室
                             const matchingOffice = this.offices.find(o => 
                                 o.name === userInfo.department || 
                                 o.id.toString() === (userInfo.department_id || '').toString()
@@ -1261,61 +1340,59 @@
                                     id: matchingOffice.id,
                                     name: matchingOffice.name,
                                     room_number: matchingOffice.room_number,
-                                    leader_name: matchingOffice.leader_name || matchingOffice.manager_name || '',
+                                    leader_name: matchingOffice.leader_name || '',
                                     is_default: true
                                 }];
-                                
-                                // 保存到localStorage
                                 localStorage.setItem('user_offices', JSON.stringify(this.userOffices));
                             }
                         }
-                    }
-                    
-                    if (!storedUserOffices && !hasSkippedGuide) {
-                        this.showFirstTimeGuide = true;
+                        
+                        if (!storedUserOffices && !hasSkippedGuide) {
+                            this.showFirstTimeGuide = true;
+                        }
                     }
                     
                     try {
-                        // 并行加载办公室和产品数据
+                        // 并行加载办公室和产品数据（带认证）
                         const [officesRes, productsRes] = await Promise.all([
-                            fetch(API_BASE + '/system/offices?is_active=1'),
-                            fetch(API_BASE + '/water/products?is_active=1')
+                            fetch(API_BASE + '/water/offices?is_active=true', { headers: this.getAuthHeaders() }),
+                            fetch(API_BASE + '/water/products?active_only=true', { headers: this.getAuthHeaders() })
                         ]);
-                        if (officesRes.ok) this.offices = await officesRes.json();
-                        if (productsRes.ok) { 
+                        
+                        if (this.handleApiError(officesRes)) return;
+                        if (this.handleApiError(productsRes)) return;
+                        
+                        if (officesRes.ok) {
+                            this.offices = await officesRes.json();
+                            console.log('办公室加载成功:', this.offices.length, '个');
+                        }
+                        
+                        if (productsRes.ok) {
                             const productsData = await productsRes.json();
-                            // 加载产品数据
                             if (productsData && productsData.length > 0) {
                                 this.products = productsData;
                                 this.products.forEach(p => this.cart[p.id] = 0);
                             }
                         }
                         
-                        // 设置默认办公室和领水人
-                        if (this.userOffices.length > 0) {
-                            const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
-                            const defaultId = defaultOffice.id;
-                            if (!this.form.officeId) {
-                                this.form.officeId = defaultId;
-                            }
-                            if (defaultOffice.leader_name) {
-                                this.form.personName = defaultOffice.leader_name;
-                                this.form.personId = '';
-                                this.useManualPerson = true;
-                            }
-                            if (!this.settlementOfficeId) {
-                                this.settlementOfficeId = defaultId;
+                        // 设置默认办公室
+                        if (this.isAdmin) {
+                            // 管理员：可以选择任意办公室，默认选择第一个
+                            if (this.offices.length > 0 && !this.form.officeId) {
+                                this.form.officeId = this.offices[0].id;
+                                this.settlementOfficeId = this.offices[0].id;
                             }
                         } else {
-                            // 如果没有用户办公室，检查是否是管理员
-                            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-                            if (userInfo.role === 'admin' || userInfo.role === 'super_admin') {
-                                // 管理员可以查看所有办公室，不显示引导
-                                this.showFirstTimeGuide = false;
-                                console.log('管理员模式：可查看所有办公室');
-                            } else if (!hasSkippedGuide) {
-                                // 普通用户首次访问，显示引导
-                                this.showFirstTimeGuide = true;
+                            // 普通用户：只能使用自己的办公室（API已过滤）
+                            if (this.offices.length > 0 && !this.form.officeId) {
+                                this.form.officeId = this.offices[0].id;
+                                this.settlementOfficeId = this.offices[0].id;
+                                // 自动设置领水人
+                                if (this.offices[0].leader_name) {
+                                    this.form.personName = this.offices[0].leader_name;
+                                    this.form.personId = '';
+                                    this.useManualPerson = true;
+                                }
                             }
                         }
                     } catch (e) { 
@@ -1326,11 +1403,21 @@
                     // 加载支付二维码
                     this.loadPaymentQr();
                 },
-                async loadPaymentQr() { try { const res = await fetch(API_BASE + '/config/payment-qr'); if (res.ok) { const data = await res.json(); this.paymentQrCode = data.qr_code; } } catch (e) { console.error(e); } },
+                async loadPaymentQr() { 
+                    try { 
+                        const res = await fetch(API_BASE + '/system/config/payment-qr', { headers: this.getAuthHeaders() }); 
+                        if (res.ok) { 
+                            const data = await res.json(); 
+                            this.paymentQrCode = data.qr_code; 
+                        } 
+                    } catch (e) { 
+                        console.error('加载支付二维码失败:', e); 
+                    } 
+                },
 async loadRecordList() {
                     try {
                         console.log('开始加载领水记录，API_BASE:', API_BASE);
-                        const res = await fetch(API_BASE + '/water/pickups?limit=10000');
+                        const res = await fetch(API_BASE + '/water/pickups?limit=10000', { headers: this.getAuthHeaders() });
                         console.log('API响应状态:', res.status);
                         
                         if (res.ok) {
@@ -1373,7 +1460,7 @@ async loadRecords(officeId, status) {
                         const s = status || this.settlementStatus;
                         if (oid) params.append('office_id', oid);
                         if (s && s !== 'all') params.append('status', s);
-                        const res = await fetch(API_BASE + '/water/pickups?' + params);
+                        const res = await fetch(API_BASE + '/water/pickups?' + params, { headers: this.getAuthHeaders() });
                         if (res.ok) {
                             this.records = await res.json();
                         } else {
@@ -1396,7 +1483,7 @@ async loadRecords(officeId, status) {
                         // 如果选择了办公室，则按办公室筛选；否则显示所有
                         if (this.settlementOfficeId) params.append('office_id', this.settlementOfficeId);
                         if (this.settlementStatus && this.settlementStatus !== 'all') params.append('status', this.settlementStatus);
-                        const res = await fetch(API_BASE + '/water/settlements?' + params);
+                        const res = await fetch(API_BASE + '/water/settlements?' + params, { headers: this.getAuthHeaders() });
                         if (res.ok) this.settlementList = await res.json();
                     } catch (e) { console.error(e); }
                 },
@@ -1404,7 +1491,7 @@ async loadRecords(officeId, status) {
                     try {
                         const params = new URLSearchParams();
                         if (this.settlementOfficeId) params.append('office_id', this.settlementOfficeId);
-                        const res = await fetch(API_BASE + '/water/settlements?' + params);
+                        const res = await fetch(API_BASE + '/water/settlements?' + params, { headers: this.getAuthHeaders() });
                         if (res.ok) this.rechargeList = await res.json();
                     } catch (e) { console.error(e); }
                 },
@@ -1491,8 +1578,15 @@ async loadRecords(officeId, status) {
                         const params = new URLSearchParams(); 
                         const oid = officeId || this.settlementOfficeId;
                         if (oid) params.append('office_id', oid);
-                        const res = await fetch(API_BASE + '/water/pickups?office_id=' + this.form.officeId);
-                        if (res.ok) this.summary = await res.json(); 
+                        const res = await fetch(API_BASE + '/water/balance?' + params, { headers: this.getAuthHeaders() }); 
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.summary = {
+                                pending: { count: 0, amount: data.balance || 0 },
+                                applied: { count: 0, amount: 0 },
+                                settled: { count: 0, amount: 0 }
+                            };
+                        }
                     } catch (e) { console.error(e); } 
                 },
                 onSettlementOfficeChange() {
@@ -1625,7 +1719,7 @@ async loadRecords(officeId, status) {
                     const personName = this.form.personId ? (this.officeUsers.find(u => u.id === this.form.personId)?.name || '') : this.form.personName;
                     try {
                         for (const [productId, qty] of items) {
-                            const res = await fetch(API_BASE + '/water/pickup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ office_id: this.form.officeId, product_id: parseInt(productId), quantity: qty, pickup_person: personName, pickup_person_id: this.form.personId || null, pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null }) });
+                            const res = await fetch(API_BASE + '/water/pickup', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ office_id: this.form.officeId, product_id: parseInt(productId), quantity: qty, pickup_person: personName, pickup_person_id: this.form.personId || null, pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null }) });
                             if (!res.ok) { const e = await res.json(); this.showError(e.detail || '提交失败'); return; }
                         }
                         this.successMessage = '提交成功！'; this.showSuccess = true; this.resetForm(); await this.loadData();
@@ -1648,7 +1742,7 @@ async loadRecords(officeId, status) {
                     if (pending.length === 0) { this.showError('没有待付款记录'); return; }
                     if (!this.settlementOfficeId) { this.showError('请先选择办公室'); return; }
                     try {
-                        const res = await fetch(API_BASE + '/water/settlement/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pickup_ids: pending.map(p => p.id) }) });
+                        const res = await fetch(API_BASE + '/water/settlement/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ pickup_ids: pending.map(p => p.id) }) });
                         if (res.ok) { 
                             const data = await res.json();
                             this.showSuccess = true; 
@@ -1671,7 +1765,7 @@ async loadRecords(officeId, status) {
                     try {
                         const res = await fetch(API_BASE + '/water/settlement/apply', { 
                             method: 'POST', 
-                            headers: { 'Content-Type': 'application/json' }, 
+                            headers: this.getAuthHeaders(), 
                             body: JSON.stringify({ 
                                 office_id: this.settlementOfficeId, 
                                 product_id: this.rechargeForm.productId, 
@@ -1789,24 +1883,23 @@ async loadRecords(officeId, status) {
                 async batchMarkAsPaid() {
                     if (this.selectedRecords.length === 0) return;
                     if (!confirm(`确定要将选中的 ${this.selectedRecords.length} 条记录标记为去付款吗？`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/water/settlement/batch-confirm`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.selectedRecords)
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            alert(data.message || '批量操作成功');
-                            this.loadData();
-                            this.selectedRecords = [];
-                        } else {
-                            const e = await res.json();
-                            alert(e.detail || '操作失败');
+                    let successCount = 0;
+                    let failCount = 0;
+                    for (const recordId of this.selectedRecords) {
+                        try {
+                            const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, { method: 'POST' });
+                            if (res.ok) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                            }
+                        } catch (e) {
+                            failCount++;
                         }
-                    } catch (e) {
-                        alert('网络错误');
                     }
+                    alert(`批量操作完成：成功 ${successCount} 条，失败 ${failCount} 条`);
+                    this.loadData();
+                    this.selectedRecords = [];
                 },
                 showError(m) { this.errorMessage = m; setTimeout(() => this.errorMessage = '', 3000); }
             }

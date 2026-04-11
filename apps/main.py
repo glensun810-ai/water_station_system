@@ -9,9 +9,13 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 # Import the unified v1 API routes
-from apps.api.water_v1 import router as water_router
+from apps.api.v1.water import router as water_router
 from apps.api.v1.meeting import router as meeting_router
 from apps.api.v1.system import router as system_router
+from apps.api.v1.products import router as products_router
+from apps.api.v1.products import category_router as product_categories_router
+from apps.api.v1.offices import router as offices_router
+from apps.api.v1.accounts import router as accounts_router
 
 # Create main application
 app = FastAPI(
@@ -38,6 +42,10 @@ v1_router = APIRouter(prefix="/api/v1")
 v1_router.include_router(water_router, tags=["水站服务"])
 v1_router.include_router(meeting_router, tags=["会议室服务"])
 v1_router.include_router(system_router, tags=["系统服务"])
+v1_router.include_router(products_router, tags=["产品管理"])
+v1_router.include_router(product_categories_router, tags=["产品分类"])
+v1_router.include_router(offices_router, tags=["办公室管理"])
+v1_router.include_router(accounts_router, tags=["办公室账户管理"])
 
 # Add v1 router to main app
 app.include_router(v1_router)
@@ -45,6 +53,9 @@ app.include_router(v1_router)
 # Mount static files for portal and shared resources
 portal_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "portal")
 shared_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "shared")
+water_frontend_dir = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "apps", "water", "frontend"
+)
 meeting_frontend_dir = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "apps", "meeting", "frontend"
 )
@@ -54,6 +65,13 @@ if os.path.exists(portal_dir):
 
 if os.path.exists(shared_dir):
     app.mount("/shared", StaticFiles(directory=shared_dir), name="shared")
+
+if os.path.exists(water_frontend_dir):
+    app.mount(
+        "/water",
+        StaticFiles(directory=water_frontend_dir, html=True),
+        name="water",
+    )
 
 if os.path.exists(meeting_frontend_dir):
     app.mount(

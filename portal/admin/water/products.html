@@ -455,9 +455,26 @@
                         <span>📦</span>
                         <span>产品管理</span>
                     </h1>
-                    <button class="btn btn-primary" @click="openProductModal()">
-                        ➕ 添加产品
-                    </button>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <button class="btn btn-secondary" @click="exportProducts" v-if="products.length > 0">
+                            📥 导出
+                        </button>
+                        <button class="btn btn-secondary" @click="batchSetActive(true)" 
+                            v-if="selectedProducts.length > 0" :disabled="selectedProducts.length === 0">
+                            批量上架 ({{ selectedProducts.length }})
+                        </button>
+                        <button class="btn btn-secondary" @click="batchSetActive(false)"
+                            v-if="selectedProducts.length > 0" :disabled="selectedProducts.length === 0">
+                            批量下架 ({{ selectedProducts.length }})
+                        </button>
+                        <button class="btn btn-danger" @click="batchDelete"
+                            v-if="selectedProducts.length > 0" :disabled="selectedProducts.length === 0">
+                            批量删除 ({{ selectedProducts.length }})
+                        </button>
+                        <button class="btn btn-primary" @click="openProductModal()">
+                            ➕ 添加产品
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="stats-bar">
@@ -494,6 +511,11 @@
                 <div class="filter-section">
                     <div class="filter-row">
                         <div class="filter-group">
+                            <span class="filter-label">搜索:</span>
+                            <input type="text" class="filter-input" v-model="searchKeyword" 
+                                placeholder="搜索产品名称或规格..." style="min-width: 200px;">
+                        </div>
+                        <div class="filter-group">
                             <span class="filter-label">产品分类:</span>
                             <select class="filter-select" v-model="productCategoryFilter" @change="loadProducts">
                                 <option value="">全部</option>
@@ -523,7 +545,13 @@
                 <div v-if="filteredProducts.length > 0" class="product-grid">
                     <div class="product-card" v-for="product in filteredProducts" :key="product.id">
                         <div class="product-header">
-                            <span class="product-name">{{ product.name }}</span>
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                <input type="checkbox" 
+                                    :checked="selectedProducts.includes(product.id)"
+                                    @change="toggleProductSelection(product.id)"
+                                    style="cursor: pointer;">
+                                <span class="product-name">{{ product.name }}</span>
+                            </div>
                             <span class="product-badge" :class="product.is_active ? 'badge-active' : 'badge-inactive'">
                                 {{ product.is_active ? '上架' : '下架' }}
                             </span>
@@ -670,6 +698,8 @@
                 const productCategoryFilter = ref('');
                 const inventoryAlertFilter = ref('all');
                 const showInactive = ref(false);
+                const searchKeyword = ref('');
+                const selectedProducts = ref([]);
                 
                 const showProductModal = ref(false);
                 const editingProduct = ref(null);
@@ -699,7 +729,7 @@
                     }
                     
                     const user = JSON.parse(userInfoStr);
-                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                    const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'super_admin' || user.role === 'office_admin' || user.role === '超级管理员' || user.role === '管理员'; if (!isAdmin) {
                         authError.value = '您没有权限访问此页面';
                         loading.value = false;
                         setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
@@ -729,6 +759,14 @@
                 
                 const filteredProducts = computed(() => {
                     let result = products.value || [];
+                    
+                    if (searchKeyword.value && searchKeyword.value.trim()) {
+                        const keyword = searchKeyword.value.trim().toLowerCase();
+                        result = result.filter(p => 
+                            p.name.toLowerCase().includes(keyword) ||
+                            (p.specification && p.specification.toLowerCase().includes(keyword))
+                        );
+                    }
                     
                     if (productCategoryFilter.value) {
                         result = result.filter(p => p.category_id === productCategoryFilter.value);
@@ -901,6 +939,123 @@
                         .catch(e => alert('更新失败: ' + e.message));
                 };
                 
+                const toggleProductSelection = (productId) => {
+                    const index = selectedProducts.value.indexOf(productId);
+                    if (index > -1) {
+                        selectedProducts.value.splice(index, 1);
+                    } else {
+                        selectedProducts.value.push(productId);
+                    }
+                };
+                
+                const batchSetActive = async (activate) => {
+                    if (selectedProducts.value.length === 0) {
+                        alert('请先选择产品');
+                        return;
+                    }
+                    
+                    const action = activate ? '上架' : '下架';
+                    if (!confirm(`确定要批量${action} ${selectedProducts.value.length} 个产品吗？`)) {
+                        return;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/products/batch-active`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_ids: selectedProducts.value,
+                                is_active: activate ? 1 : 0
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message);
+                            selectedProducts.value = [];
+                            loadProducts();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '批量操作失败');
+                        }
+                    } catch (e) {
+                        alert('批量操作失败: ' + e.message);
+                    }
+                };
+                
+                const batchDelete = async () => {
+                    if (selectedProducts.value.length === 0) {
+                        alert('请先选择产品');
+                        return;
+                    }
+                    
+                    if (!confirm(`确定要批量删除 ${selectedProducts.value.length} 个产品吗？此操作不可恢复！`)) {
+                        return;
+                    }
+                    
+                    try {
+                        const res = await fetch(`${API_BASE}/products/batch-delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(selectedProducts.value)
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message);
+                            selectedProducts.value = [];
+                            loadProducts();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '批量删除失败');
+                        }
+                    } catch (e) {
+                        alert('批量删除失败: ' + e.message);
+                    }
+                };
+                
+                const exportProducts = async () => {
+                    if (products.value.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+                    
+                    try {
+                        const params = new URLSearchParams();
+                        if (productCategoryFilter.value) params.append('category_id', productCategoryFilter.value);
+                        if (showInactive.value) params.append('is_active', '0');
+                        else params.append('is_active', '1');
+                        
+                        const res = await fetch(`${API_BASE}/products/export?${params.toString()}`);
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            
+                            const csvContent = [
+                                ['ID', '产品名称', '规格', '单位', '价格', '库存', '成本价', '分类ID', '促销阈值', '赠送数量', '状态', '库存预警'].join(','),
+                                ...data.data.map(p => [
+                                    p.id, p.name, p.specification, p.unit, p.price, p.stock,
+                                    p.cost_price || '', p.category_id || '',
+                                    p.promo_threshold, p.promo_gift,
+                                    p.is_active ? '上架' : '下架', p.stock_alert
+                                ].join(','))
+                            ].join('\n');
+                            
+                            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = `products_${new Date().toISOString().slice(0,10)}.csv`;
+                            link.click();
+                            
+                            alert(`成功导出 ${data.total_count} 条产品数据`);
+                        } else {
+                            alert('导出失败');
+                        }
+                    } catch (e) {
+                        alert('导出失败: ' + e.message);
+                    }
+                };
+                
                 onMounted(async () => {
                     loading.value = true;
                     const authPassed = await checkAuth();
@@ -919,6 +1074,8 @@
                     productCategoryFilter,
                     inventoryAlertFilter,
                     showInactive,
+                    searchKeyword,
+                    selectedProducts,
                     showProductModal,
                     editingProduct,
                     productForm,
@@ -931,6 +1088,10 @@
                     saveProduct,
                     deleteProduct,
                     updateStockOne,
+                    toggleProductSelection,
+                    batchSetActive,
+                    batchDelete,
+                    exportProducts,
                     loadProducts
                 };
             }

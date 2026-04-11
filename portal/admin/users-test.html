@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>API测试 - 用户管理</title>
+    <script src="/shared/utils/api-config.js"></script>
+</head>
+<body>
+    <h1>用户管理API测试</h1>
+    <pre id="result"></pre>
+    
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        async function testAPIs() {
+            const tests = [
+                { name: '用户统计', url: window.buildApiUrl('/system/users/stats/overview') },
+                { name: '用户列表', url: window.buildApiUrl('/system/users') },
+                { name: '办公室列表', url: window.buildApiUrl('/system/offices') }
+            ];
+            
+            let results = 'API测试结果：\n\n';
+            
+            for (const test of tests) {
+                try {
+                    const response = await fetch(test.url);
+                    const data = await response.json();
+                    results += `✅ ${test.name} (${test.url})\n`;
+                    results += `   状态: ${response.status}\n`;
+                    results += `   数据: ${JSON.stringify(data).substring(0, 100)}...\n\n`;
+                } catch (e) {
+                    results += `❌ ${test.name} (${test.url})\n`;
+                    results += `   错误: ${e.message}\n\n`;
+                }
+            }
+            
+            resultDiv.textContent = results;
+        }
+        
+        testAPIs();
+    </script>
+</body>
+</html>

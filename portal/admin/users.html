@@ -6,6 +6,7 @@
     <title>用户管理 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/utils/api-config.js"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
@@ -955,7 +956,54 @@
                 
                 const form = ref({ name: '', password: '123456', department: '', role: 'user', is_active: 1 });
                 
-                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                const checkAuth = async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        alert('请先登录');
+                        window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                        return false;
+                    }
+                    
+                    // 验证token是否有效（防止过期token）
+                    try {
+                        const response = await fetch(window.buildApiUrl('/system/auth/profile'), {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (!response.ok) {
+                            // Token无效或已过期，清除并跳转
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('userInfo');
+                            alert('登录已过期，请重新登录');
+                            window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                            return false;
+                        }
+                        
+                        return true;
+                    } catch (e) {
+                        console.error('验证token失败:', e);
+                        return false;
+                    }
+                };
+                
+                const handleApiError = (response, errorMsg = '操作失败') => {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('userInfo');
+                        alert('未登录或登录已过期，请重新登录');
+                        window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                        return true;
+                    }
+                    return false;
+                };
+                
+                const getAuthHeaders = () => {
+                    const token = localStorage.getItem('token');
+                    return {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+                };
                 
                 const isUsernameValid = computed(() => {
                     if (!form.value.name) return true;
@@ -1045,22 +1093,32 @@
                 const isPartialSelected = computed(() => selectedIds.value.length > 0 && selectedIds.value.length < filteredUsers.value.length);
                 
                 const loadUsers = async () => {
+                    if (!checkAuth()) return;
                     try {
-                        const response = await fetch(`${API_BASE}/users`);
-                        if (response.ok) users.value = await response.json();
+                        const response = await fetch(window.buildApiUrl('/system/users'), { headers: getAuthHeaders() });
+                        if (handleApiError(response)) return;
+                        if (response.ok) {
+                            const data = await response.json();
+                            users.value = data.items || data;
+                        }
                     } catch (e) { console.error('加载用户失败:', e); }
                 };
                 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices`);
-                        if (response.ok) offices.value = await response.json();
+                        const response = await fetch('/api/v1/offices');
+                        if (response.ok) {
+                            const data = await response.json();
+                            offices.value = data;
+                        }
                     } catch (e) { console.error('加载办公室失败:', e); }
                 };
                 
                 const loadStats = async () => {
+                    if (!checkAuth()) return;
                     try {
-                        const response = await fetch(`${API_BASE}/users/stats/overview`);
+                        const response = await fetch(window.buildApiUrl('/system/users/stats/overview'), { headers: getAuthHeaders() });
+                        if (handleApiError(response)) return;
                         if (response.ok) stats.value = await response.json();
                     } catch (e) { console.error('加载统计失败:', e); }
                 };
@@ -1129,13 +1187,11 @@
                 };
                 
                 const toggleStatus = async (user) => {
-                    // 保护最后一个超级管理员不被停用
                     if (isLastSuperAdmin(user)) {
                         alert('⚠ 无法停用\n\n这是最后一个活跃的超级管理员账号，停用后将无法管理该系统。\n\n如需停用，请先创建新的超级管理员。');
                         return;
                     }
                     
-                    // 超级管理员停用需要二次确认
                     if (user.role === 'super_admin' && user.is_active) {
                         if (!confirm(`⚠ 警告\n\n确定要停用超级管理员「${user.name}」吗？\n\n停用后该用户将无法登录系统。`)) {
                             return;
@@ -1143,11 +1199,12 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, {
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: getAuthHeaders(),
                             body: JSON.stringify({ is_active: user.is_active ? 0 : 1 })
                         });
+                        if (handleApiError(response)) return;
                         if (response.ok) {
                             user.is_active = user.is_active ? 0 : 1;
                             await loadStats();
@@ -1165,7 +1222,6 @@
                         return;
                     }
                     
-                    // 二次确认
                     const confirmText = prompt('请输入 "确认" 以继续：');
                     if (confirmText !== '确认') {
                         alert('操作已取消');
@@ -1173,11 +1229,12 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, {
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: getAuthHeaders(),
                             body: JSON.stringify({ role: 'super_admin' })
                         });
+                        if (handleApiError(response)) return;
                         if (response.ok) {
                             user.role = 'super_admin';
                             await loadStats();
@@ -1210,7 +1267,6 @@
                 
                 const saveUser = async () => {
                     try {
-                        // 创建用户前的验证
                         if (!isFormValid.value) {
                             if (!form.value.name) {
                                 alert('请输入用户名');
@@ -1231,20 +1287,23 @@
                             return;
                         }
                         
-                        const url = isEdit.value ? `${API_BASE}/users/${editingUser.value.id}` : `${API_BASE}/users`;
+                        const url = isEdit.value ? window.buildApiUrl('/system/users/' + editingUser.value.id) : window.buildApiUrl('/system/users');
                         const method = isEdit.value ? 'PUT' : 'POST';
                         
                         const body = isEdit.value 
                             ? { name: form.value.name, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active }
                             : { name: form.value.name, password: form.value.password, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active };
                         
-                        const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(url, { method, headers, body: JSON.stringify(body) });
+                        
+                        if (handleApiError(response)) return;
                         
                         if (response.ok) {
                             const result = await response.json();
                             await Promise.all([loadUsers(), loadStats()]);
                             closeModal();
-                            // 成功提示
                             const roleName = form.value.role === 'super_admin' ? '超级管理员' :
                                             form.value.role === 'admin' ? '系统管理员' :
                                             form.value.role === 'office_admin' ? '办公室管理员' : '普通用户';
@@ -1270,11 +1329,14 @@
                     if (!newPassword) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify({ password: newPassword })
                         });
+                        if (handleApiError(response)) return;
                         if (response.ok) alert(`密码已重置为: ${newPassword}`);
                         else alert('重置失败');
                     } catch (e) { alert('重置失败'); }
@@ -1285,9 +1347,11 @@
                     if (!confirm(`确定将「${user.name}」设为系统管理员吗？\n系统管理员权限高于办公室管理员。`)) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify({ role: 'admin' })
                         });
                         if (response.ok) { user.role = 'admin'; await loadStats(); }
@@ -1303,9 +1367,11 @@
                     if (!confirm(`确定将「${user.name}」设为「${user.department}」的办公室管理员吗？`)) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify({ role: 'office_admin' })
                         });
                         if (response.ok) { user.role = 'office_admin'; await loadStats(); }
@@ -1317,7 +1383,8 @@
                     if (!confirm(`确定删除用户「${user.name}」吗？此操作不可恢复。`)) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/users/${user.id}`, { method: 'DELETE' });
+                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), { method: 'DELETE', headers: getAuthHeaders() });
+                        if (handleApiError(response)) return;
                         if (response.ok) { await Promise.all([loadUsers(), loadStats()]); }
                         else { const error = await response.json(); alert(error.detail || '删除失败'); }
                     } catch (e) { alert('删除失败'); }
@@ -1325,9 +1392,11 @@
                 
                 const batchUpdateStatus = async (isActive) => {
                     try {
-                        const response = await fetch(`${API_BASE}/users/batch`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/batch'), {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify({ user_ids: selectedIds.value, is_active: isActive })
                         });
                         if (response.ok) { await Promise.all([loadUsers(), loadStats()]); selectedIds.value = []; }
@@ -1336,9 +1405,11 @@
                 
                 const batchAssignOffice = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/users/batch`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/batch'), {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify({ user_ids: selectedIds.value, department: batchOffice.value || null })
                         });
                         if (response.ok) { await loadUsers(); selectedIds.value = []; showBatchOfficeModal.value = false; }
@@ -1348,9 +1419,11 @@
                 const batchDelete = async () => {
                     if (!confirm(`确定删除选中的 ${selectedIds.value.length} 个用户吗？`)) return;
                     try {
-                        const response = await fetch(`${API_BASE}/users/batch-delete`, {
+                        const headers = getAuthHeaders();
+                        
+                        const response = await fetch(window.buildApiUrl('/system/users/batch-delete'), {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers,
                             body: JSON.stringify(selectedIds.value)
                         });
                         if (response.ok) { await Promise.all([loadUsers(), loadStats()]); selectedIds.value = []; }
@@ -1396,7 +1469,9 @@
                     if (!e.target.closest('.action-dropdown')) activeDropdown.value = null;
                 });
                 
-                onMounted(() => {
+                onMounted(async () => {
+                    const isAuthValid = await checkAuth();
+                    if (!isAuthValid) return;
                     loadUsers();
                     loadOffices();
                     loadStats();

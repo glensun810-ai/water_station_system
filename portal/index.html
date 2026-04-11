@@ -1135,16 +1135,21 @@
                             const officesRes = await fetch(`${API_BASE}/system/offices`).catch(() => ({ ok: false }));
                             if (officesRes.ok) {
                                 const officesData = await officesRes.json();
-                                officeCount.value = officesData.length || 0;
-                                totalUsers.value = officesData.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                                officeCount.value = officesData.items?.length || officesData.length || 0;
+                                if (officesData.items) {
+                                    totalUsers.value = officesData.items.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                                } else if (Array.isArray(officesData)) {
+                                    totalUsers.value = officesData.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                                }
                             }
                             
                             // 用户统计
                             const usersRes = await fetch(`${API_BASE}/system/users`).catch(() => ({ ok: false }));
                             if (usersRes.ok) {
                                 const usersData = await usersRes.json();
-                                adminCount.value = usersData.filter(u => u.role === 'super_admin' || u.role === 'admin').length || 0;
-                                staffCount.value = usersData.filter(u => u.role === 'staff').length || 0;
+                                const userList = usersData.items || usersData;
+                                adminCount.value = userList.filter(u => u.role === 'super_admin' || u.role === 'admin').length || 0;
+                                staffCount.value = userList.filter(u => u.role === 'user').length || 0;
                             }
                             
                             // 结算统计
