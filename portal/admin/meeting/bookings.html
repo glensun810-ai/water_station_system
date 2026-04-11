@@ -388,7 +388,7 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '预约管理', icon: '📅', url: '/portal/admin/meeting/meeting/bookings.html'}]"></global-header>
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '预约管理', icon: '📅', url: '/portal/admin/meeting/bookings.html'}]"></global-header>
         <div v-if="loading" class="loading-overlay">
             <div class="loading-spinner"></div>
         </div>
@@ -576,7 +576,7 @@
                     }
                     
                     const user = JSON.parse(userInfoStr);
-                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                    const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'super_admin' || user.role === 'office_admin' || user.role === '超级管理员' || user.role === '管理员'; if (!isAdmin) {
                         authError.value = '您没有权限访问此页面';
                         loading.value = false;
                         setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
@@ -597,7 +597,7 @@
                 
                 const loadBookings = async () => {
                     try {
-                        const res = await fetch(window.buildApiUrl('/meeting/meeting/bookings'));
+                        const res = await fetch(window.buildApiUrl('/meeting/bookings'));
                         if (res.ok) {
                             bookings.value = await res.json();
                         }
@@ -720,7 +720,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason || '')}`, {
+                        const res = await fetch(`${API_BASE}/meeting/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason || '')}`, {
                             method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -745,7 +745,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}/cancel`, {
+                        const res = await fetch(`${API_BASE}/meeting/bookings/${booking.id}/cancel`, {
                             method: 'PUT',
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -787,7 +787,7 @@
                         onConfirm: async () => {
                             try {
                                 const token = localStorage.getItem('token');
-                                const res = await fetch(`${API_BASE}/meeting/meeting/bookings/${booking.id}?deleted_by=${encodeURIComponent(userInfo.name || userInfo.username || '管理员')}`, {
+                                const res = await fetch(`${API_BASE}/meeting/bookings/${booking.id}?deleted_by=${encodeURIComponent(userInfo.name || userInfo.username || '管理员')}`, {
                                     method: 'DELETE',
                                     headers: { 
                                         'Content-Type': 'application/json',

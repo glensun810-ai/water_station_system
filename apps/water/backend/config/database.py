@@ -123,7 +123,7 @@ def get_db() -> Generator[Session, None, None]:
 
 def get_meeting_db() -> Generator[Session, None, None]:
     """获取会议室数据库会话（依赖注入）"""
-    return db_manager.get_meeting_session()
+    yield from db_manager.get_meeting_session()
 
 
 # ==================== 向后兼容导出 ====================

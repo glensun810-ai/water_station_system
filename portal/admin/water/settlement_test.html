@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算管理测试页面 - 无需登录</title>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-applied { background: #cce5ff; color: #004085; }
+        .status-settled { background: #d4edda; color: #155724; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .action-btn {
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .action-btn:hover {
+            background: #764ba2;
+        }
+        .info-banner {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="info-banner">
+            <strong>测试页面说明：</strong>此页面无需登录即可查看结算管理数据，用于验证API功能是否正常。
+            <br>正式页面请访问: <a href="settlement_v3.html">settlement_v3.html</a> (需要先登录)
+        </div>
+        
+        <div class="header">
+            <h1>💰 结算管理测试页面</h1>
+            <p>验证API数据和页面渲染功能</p>
+        </div>
+        
+        <div v-if="loading" class="loading">
+            正在加载数据...
+        </div>
+        
+        <div v-else>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ statistics.pending_count }}</div>
+                    <div class="stat-label">待审核 (¥{{ statistics.pending_amount }})</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ statistics.applied_count }}</div>
+                    <div class="stat-label">待确认 (¥{{ statistics.applied_amount }})</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ statistics.settled_count }}</div>
+                    <div class="stat-label">已结清 (¥{{ statistics.settled_amount }})</div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <h2>申请列表 (共 {{ applications.length }} 条)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>申请编号</th>
+                            <th>办公室</th>
+                            <th>产品</th>
+                            <th>数量</th>
+                            <th>金额</th>
+                            <th>领取人</th>
+                            <th>状态</th>
+                            <th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="app in applications" :key="app.id">
+                            <td>{{ app.application_no }}</td>
+                            <td>{{ app.office_name }}<br><small>{{ app.office_room_number }}</small></td>
+                            <td>{{ app.product_name }}</td>
+                            <td>{{ app.quantity }}</td>
+                            <td>¥{{ app.total_amount }}</td>
+                            <td>{{ app.pickup_person }}</td>
+                            <td>
+                                <span :class="'status-badge status-' + app.status">
+                                    {{ getStatusText(app.status) }}
+                                </span>
+                            </td>
+                            <td>{{ formatDate(app.pickup_time) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div v-if="applications.length === 0" style="text-align: center; padding: 40px; color: #999;">
+                    暂无数据
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const applications = ref([]);
+                const statistics = ref({
+                    pending_count: 0,
+                    pending_amount: 0,
+                    applied_count: 0,
+                    applied_amount: 0,
+                    settled_count: 0,
+                    settled_amount: 0
+                });
+                
+                const loadApplications = async () => {
+                    try {
+                        const response = await fetch('/api/v1/water/settlements/applications');
+                        if (response.ok) {
+                            const data = await response.json();
+                            applications.value = data.data || [];
+                            console.log('加载申请列表成功:', applications.value.length, '条');
+                        } else {
+                            console.error('加载申请列表失败:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('加载申请列表异常:', error);
+                    }
+                };
+                
+                const loadStatistics = async () => {
+                    try {
+                        const response = await fetch('/api/v1/water/settlements/statistics');
+                        if (response.ok) {
+                            const data = await response.json();
+                            statistics.value = data;
+                            console.log('加载统计数据成功:', data);
+                        } else {
+                            console.error('加载统计数据失败:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('加载统计数据异常:', error);
+                    }
+                };
+                
+                const getStatusText = (status) => {
+                    const texts = {
+                        'pending': '待审核',
+                        'applied': '待确认',
+                        'settled': '已结清',
+                        'cancelled': '已取消'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+                };
+                
+                onMounted(async () => {
+                    console.log('页面初始化开始...');
+                    await loadApplications();
+                    await loadStatistics();
+                    loading.value = false;
+                    console.log('页面初始化完成');
+                });
+                
+                return {
+                    loading,
+                    applications,
+                    statistics,
+                    getStatusText,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

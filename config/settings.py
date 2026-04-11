@@ -40,11 +40,58 @@ class Settings:
 
         # JWT配置
         self.SECRET_KEY: str = os.getenv(
-            "SECRET_KEY", "ai-industry-cluster-secret-key-change-in-production"
+            "SECRET_KEY", "ai-industry-cluster-secret-key-change-in-production-2026"
         )
         self.ALGORITHM: str = "HS256"
         self.ACCESS_TOKEN_EXPIRE_HOURS: int = int(
             os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24")
+        )
+        self.REFRESH_TOKEN_EXPIRE_DAYS: int = int(
+            os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7")
+        )
+
+        # 密码安全配置
+        self.MIN_PASSWORD_LENGTH: int = int(os.getenv("MIN_PASSWORD_LENGTH", "8"))
+        self.MAX_PASSWORD_LENGTH: int = int(os.getenv("MAX_PASSWORD_LENGTH", "128"))
+        self.REQUIRE_SPECIAL_CHAR: bool = (
+            os.getenv("REQUIRE_SPECIAL_CHAR", "true").lower() == "true"
+        )
+        self.REQUIRE_NUMBER: bool = (
+            os.getenv("REQUIRE_NUMBER", "true").lower() == "true"
+        )
+        self.REQUIRE_UPPERCASE: bool = (
+            os.getenv("REQUIRE_UPPERCASE", "true").lower() == "true"
+        )
+        self.REQUIRE_LOWERCASE: bool = (
+            os.getenv("REQUIRE_LOWERCASE", "true").lower() == "true"
+        )
+        self.DEFAULT_ADMIN_PASSWORD: str = os.getenv(
+            "DEFAULT_ADMIN_PASSWORD", "Admin@2026"
+        )
+
+        # 登录安全配置
+        self.MAX_LOGIN_ATTEMPTS: int = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
+        self.LOGIN_LOCKOUT_DURATION_MINUTES: int = int(
+            os.getenv("LOGIN_LOCKOUT_DURATION_MINUTES", "30")
+        )
+        self.LOGIN_ATTEMPT_WINDOW_MINUTES: int = int(
+            os.getenv("LOGIN_ATTEMPT_WINDOW_MINUTES", "15")
+        )
+
+        # Token黑名单配置
+        self.TOKEN_BLACKLIST_ENABLED: bool = (
+            os.getenv("TOKEN_BLACKLIST_ENABLED", "true").lower() == "true"
+        )
+        self.TOKEN_BLACKLIST_CLEANUP_INTERVAL_HOURS: int = int(
+            os.getenv("TOKEN_BLACKLIST_CLEANUP_INTERVAL_HOURS", "24")
+        )
+
+        # 会话安全配置
+        self.MAX_CONCURRENT_SESSIONS: int = int(
+            os.getenv("MAX_CONCURRENT_SESSIONS", "5")
+        )
+        self.SESSION_BINDING_ENABLED: bool = (
+            os.getenv("SESSION_BINDING_ENABLED", "false").lower() == "true"
         )
 
         # 服务器配置

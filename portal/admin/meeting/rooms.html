@@ -503,7 +503,7 @@
                     }
                     
                     const user = JSON.parse(userInfoStr);
-                    if (user.role !== 'admin' && user.role !== 'super_admin') {
+                    const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'super_admin' || user.role === 'office_admin' || user.role === '超级管理员' || user.role === '管理员'; if (!isAdmin) {
                         authError.value = '您没有权限访问此页面';
                         loading.value = false;
                         setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
@@ -516,15 +516,31 @@
 const loadRooms = async () => {
                     try {
                         const token = localStorage.getItem('token');
+                        if (!token) {
+                            alert('请先登录');
+                            window.location.href = '/portal/admin/login.html';
+                            return;
+                        }
+                        
                         const res = await fetch(`${API_BASE}/meeting/rooms`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
+                        
                         if (res.ok) {
                             const data = await res.json();
                             rooms.value = data.items || data;
+                        } else if (res.status === 401) {
+                            const errData = await res.json();
+                            alert(errData.detail || '登录已过期，请重新登录');
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('userInfo');
+                            window.location.href = '/portal/admin/login.html';
+                        } else {
+                            alert('加载会议室失败: HTTP ' + res.status);
                         }
                     } catch (e) {
                         console.error('加载会议室失败:', e);
+                        alert('加载会议室失败: ' + e.message);
                     }
                 };
                 

@@ -13,9 +13,56 @@ from config.database import get_db
 from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
 from models.user import User
-from depends.auth import get_current_user, get_admin_user, get_current_user_required
+from depends.auth import get_current_user, get_admin_user, get_current_user
 
 router = APIRouter(prefix="/meeting", tags=["会议室服务"])
+
+
+@router.get("/stats/today")
+def get_meeting_stats_today(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取今日会议室统计数据"""
+
+    from datetime import date
+    from sqlalchemy import func
+
+    today = date.today()
+
+    booking_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(MeetingBooking.booking_date == today)
+        .scalar()
+        or 0
+    )
+
+    pending_approvals = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(MeetingBooking.status == BookingStatus.PENDING)
+        .scalar()
+        or 0
+    )
+
+    cancelled_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date == today,
+            MeetingBooking.status == BookingStatus.CANCELLED,
+        )
+        .scalar()
+        or 0
+    )
+
+    alerts = cancelled_count
+
+    return {
+        "booking_count": booking_count,
+        "pending_approvals": pending_approvals,
+        "cancelled_count": cancelled_count,
+        "alerts": alerts,
+        "date": today.isoformat(),
+    }
 
 
 # ==================== Pydantic Schemas ====================
@@ -134,7 +181,7 @@ def get_meeting_rooms(
     limit: int = Query(20, description="每页数量"),
     is_active: Optional[bool] = Query(None, description="激活状态过滤"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_required),
+    current_user: User = Depends(get_current_user),
 ):
     """获取会议室列表"""
     query = db.query(MeetingRoom)
@@ -245,7 +292,7 @@ def get_bookings(
     status: Optional[str] = Query(None, description="状态过滤"),
     q: Optional[str] = Query(None, description="全局搜索关键词"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_required),
+    current_user: User = Depends(get_current_user),
 ):
     """获取预约列表"""
     query = db.query(MeetingBooking)

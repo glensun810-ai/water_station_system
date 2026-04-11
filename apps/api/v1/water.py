@@ -8,12 +8,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
-from ...config.database import get_db
-from ...models.user import User
-from ...models.product import Product
-from ...models.office import Office
-from ...models.pickup import OfficePickup
-from ...depends.auth import get_current_user, get_admin_user, get_super_admin_user
+from config.database import get_db
+from models.user import User
+from models.product import Product
+from models.office import Office
+from models.pickup import OfficePickup
+from depends.auth import get_current_user, get_admin_user, get_super_admin_user
 # Note: schemas are not yet unified, using placeholder imports
 
 router = APIRouter(prefix="/water", tags=["水站服务"])
@@ -50,6 +50,60 @@ def get_water_products(
         )
 
     return results
+
+
+@router.get("/stats/today")
+def get_water_stats_today(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取今日水站统计数据"""
+
+    from datetime import date
+    from sqlalchemy import func
+
+    today = date.today()
+
+    pickup_count = (
+        db.query(func.count(OfficePickup.id))
+        .filter(OfficePickup.pickup_time >= today, OfficePickup.is_deleted == False)
+        .scalar()
+        or 0
+    )
+
+    today_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(OfficePickup.pickup_time >= today, OfficePickup.is_deleted == False)
+        .scalar()
+        or 0.0
+    )
+
+    pending_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status == "pending",
+            OfficePickup.is_deleted == False,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    low_stock_products = (
+        db.query(func.count(Product.id))
+        .filter(Product.is_active == True, Product.stock < 10)
+        .scalar()
+        or 0
+    )
+
+    alerts = low_stock_products
+
+    return {
+        "pickup_count": pickup_count,
+        "today_amount": float(today_amount),
+        "pending_amount": float(pending_amount),
+        "alerts": alerts,
+        "date": today.isoformat(),
+    }
 
 
 @router.get("/balance")
@@ -131,7 +185,13 @@ def create_water_pickup(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """创建领水记录"""
+    """
+    创建领水记录（权限验证）
+
+    权限规则：
+    - 管理员（admin, super_admin）：可以为任何办公室领水
+    - 普通用户（user, office_admin）：只能为自己所属的办公室领水
+    """
 
     office_id = pickup_data.get("office_id")
     product_id = pickup_data.get("product_id")
@@ -147,6 +207,43 @@ def create_water_pickup(
     )
     if not office:
         raise HTTPException(status_code=404, detail="办公室不存在或已停用")
+
+    # 权限验证
+    # - super_admin/admin: 可以为任何办公室领水
+    # - office_admin: 可以为管辖的办公室领水（包括自己所属的办公室和被分配管理的办公室）
+    # - user: 只能为自己所属的办公室领水
+    if current_user.role == "office_admin":
+        allowed_offices = set()
+        if current_user.department:
+            allowed_offices.add(current_user.department)
+        from sqlalchemy import text
+
+        managed_offices = db.execute(
+            text("""
+                SELECT o.name 
+                FROM office_admin_relations oar
+                JOIN office o ON oar.office_id = o.id
+                WHERE oar.user_id = :user_id AND o.is_active = 1
+            """),
+            {"user_id": current_user.id},
+        ).fetchall()
+        for office_row in managed_offices:
+            allowed_offices.add(office_row[0])
+        if office.name not in allowed_offices:
+            raise HTTPException(
+                status_code=403,
+                detail=f"您没有权限为办公室 '{office.name}' 进行领水登记",
+            )
+    elif current_user.role == "user":
+        if not current_user.department:
+            raise HTTPException(
+                status_code=403, detail="您未设置所属办公室，请联系管理员设置"
+            )
+        if office.name != current_user.department:
+            raise HTTPException(
+                status_code=403,
+                detail=f"您只能为所属办公室 '{current_user.department}' 进行领水登记，无权限为 '{office.name}' 登记",
+            )
 
     # 验证产品
     product = (
@@ -263,12 +360,59 @@ def get_active_offices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取办公室列表"""
+    """
+    获取办公室列表（权限过滤）
+
+    权限规则：
+    - 超级管理员（super_admin）和管理员（admin）：可以看到所有办公室
+    - 办公室管理员（office_admin）：可以看到所管辖的办公室
+    - 普通用户（user）：只能看到所归属的办公室
+    """
 
     query = db.query(Office)
 
     if is_active:
         query = query.filter(Office.is_active == True)
+
+    # 权限过滤
+    if current_user.role in ["admin", "super_admin"]:
+        # 管理员可以看到所有办公室
+        pass
+    elif current_user.role == "office_admin":
+        # 办公室管理员可以看到自己管理的办公室和自己所属的办公室
+        # 首先获取自己所属的办公室
+        owned_offices = set()
+        if current_user.department:
+            owned_offices.add(current_user.department)
+
+        # 获取自己管理的办公室
+        from sqlalchemy import text
+
+        managed_offices = db.execute(
+            text("""
+                SELECT o.name 
+                FROM office_admin_relations oar
+                JOIN office o ON oar.office_id = o.id
+                WHERE oar.user_id = :user_id AND o.is_active = 1
+            """),
+            {"user_id": current_user.id},
+        ).fetchall()
+
+        for office_row in managed_offices:
+            owned_offices.add(office_row[0])
+
+        if owned_offices:
+            query = query.filter(Office.name.in_(list(owned_offices)))
+        else:
+            # 如果没有管理任何办公室，也不属于任何办公室，返回空列表
+            return []
+    else:
+        # 普通用户只能看到自己所属的办公室
+        if current_user.department:
+            query = query.filter(Office.name == current_user.department)
+        else:
+            # 如果用户没有设置department，返回空列表
+            return []
 
     offices = query.order_by(Office.name).all()
 
@@ -280,7 +424,7 @@ def get_active_offices(
                 "name": office.name,
                 "room_number": office.room_number,
                 "leader_name": office.leader_name,
-                "manager_name": office.manager_name,
+                "is_common": office.is_common if hasattr(office, "is_common") else 1,
             }
         )
 

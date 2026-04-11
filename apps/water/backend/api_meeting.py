@@ -24,9 +24,13 @@ current_dir = os.path.dirname(__file__)
 possible_paths = [
     # 1. 环境变量指定的路径（适用于云服务器）
     os.environ.get("MEETING_DB_PATH"),
-    # 2. Service_MeetingRoom模块的标准路径
-    os.path.join(current_dir, "../../Service_MeetingRoom/backend/meeting.db"),
-    # 3. 当前模块目录下（备选）
+    # 2. apps/meeting目录下的数据库（主要路径）
+    os.path.join(current_dir, "..", "..", "meeting", "meeting.db"),
+    # 3. Service_MeetingRoom模块的标准路径（历史路径）
+    os.path.join(
+        current_dir, "..", "..", "..", "Service_MeetingRoom", "backend", "meeting.db"
+    ),
+    # 4. 当前模块目录下（备选）
     os.path.join(current_dir, "meeting.db"),
 ]
 

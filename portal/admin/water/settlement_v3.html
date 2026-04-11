@@ -739,19 +739,39 @@
                     if (!storedToken || !userInfoStr) {
                         authError.value = '请先登录';
                         loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname); }, 1500);
+                        return false;
+                    }
+                    
+                    try {
+                        const user = JSON.parse(userInfoStr);
+                        
+                        // 正确的权限检查：使用 is_admin 字段，兼容多种角色
+                        const isAdmin = user.is_admin === true || 
+                                       user.role === 'admin' || 
+                                       user.role === 'super_admin' ||
+                                       user.role === 'office_admin' ||
+                                       user.role === '超级管理员' ||
+                                       user.role === '管理员';
+                        
+                        if (!isAdmin) {
+                            authError.value = '您没有权限访问此页面';
+                            loading.value = false;
+                            setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                            return false;
+                        }
+                        
+                        console.log('权限验证通过，用户:', user.name, '角色:', user.role);
+                        return true;
+                    } catch (parseError) {
+                        console.error('解析用户信息失败:', parseError);
+                        authError.value = '用户信息格式错误，请重新登录';
+                        loading.value = false;
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('userInfo');
                         setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
                         return false;
                     }
-                    
-                    const user = JSON.parse(userInfoStr);
-                    if (user.role !== 'admin' && user.role !== 'super_admin') {
-                        authError.value = '您没有权限访问此页面';
-                        loading.value = false;
-                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
-                        return false;
-                    }
-                    
-                    return true;
                 };
 
                 const filteredApplications = computed(() => {
