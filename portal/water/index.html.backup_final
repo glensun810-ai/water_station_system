@@ -34,9 +34,8 @@
         .qty-input { width: 56px; text-align: center; font-size: 18px; font-weight: 600; padding: 6px; border: 1px solid #E5E7EB; border-radius: 8px; }
         .qty-input:focus { outline: none; border-color: #2563EB; }
         
-        .tab-btn { padding: 12px 20px; font-weight: 500; color: #6B7280; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; background: transparent; border-top: none; border-left: none; border-right: none; }
-        .tab-btn:hover { color: #3B82F6; background: #F3F4F6; }
-        .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; background: #EFF6FF; }
+        .tab-btn { padding: 12px 20px; font-weight: 500; color: #6B7280; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; }
         
         .home-btn {
             position: relative;
@@ -103,9 +102,6 @@
         .status-pending { background: #FEF3C7; color: #92400E; }
         .status-applied { background: #DBEAFE; color: #1E40AF; }
         .status-settled, .status-confirmed { background: #D1FAE5; color: #065F46; }
-        
-        .sort-icon { font-size: 12px; margin-left: 4px; opacity: 0.5; }
-        th:hover .sort-icon { opacity: 1; }
         
         /* ========== 移动端适配优化 ========== */
         
@@ -362,9 +358,9 @@
         <global-header :breadcrumbs="breadcrumbs"></global-header>
         
         <!-- Tab导航 -->
-        <div class="bg-white border-b flex sticky top-[56px] z-[100]" style="position: sticky;">
-            <button type="button" @click="switchTab('pickup')" :class="activeTab === 'pickup' ? 'tab-btn active' : 'tab-btn'">领水登记</button>
-            <button type="button" @click="switchTab('records')" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">我的记录</button>
+        <div class="bg-white border-b flex">
+            <button @click="activeTab = 'pickup'" :class="activeTab === 'pickup' ? 'tab-btn active' : 'tab-btn'">领水登记</button>
+            <button @click="activeTab = 'records'" :class="activeTab === 'records' ? 'tab-btn active' : 'tab-btn'">我的记录</button>
         </div>
         
         <div class="pb-96 px-3 py-4">
@@ -378,23 +374,20 @@
                             <span v-else class="text-xs text-gray-500 ml-1">(仅限所属办公室)</span>
                         </div>
                         <div class="flex gap-1" v-if="isAdmin">
-                            <button @click="officeTab = 'all'" :class="officeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">全部</button>
                             <button @click="officeTab = 'common'" :class="officeTab === 'common' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">常用</button>
                             <button @click="officeTab = 'uncommon'" :class="officeTab === 'uncommon' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 rounded-lg text-xs font-medium">不常用</button>
                         </div>
                     </div>
                     
                     <!-- 管理员/办公室管理员：显示办公室列表 -->
-                    <div v-if="isAdmin" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div v-if="isAdmin" class="grid grid-cols-3 gap-2">
                         <div v-for="office in displayOffices" :key="office.id" @click="selectOffice(office)" :class="form.officeId === office.id ? 'office-card active' : 'office-card'" class="rounded-lg p-2 cursor-pointer text-center">
                             <div class="text-xs text-gray-400">{{ office.room_number }}</div>
                             <div class="text-sm font-medium text-gray-800 truncate">{{ office.name }}</div>
                             <div class="text-xs text-blue-500 mt-1"><i class="fas fa-user mr-1"></i>{{ office.leader_name }}</div>
                         </div>
                     </div>
-                    <div v-if="isAdmin && displayOffices.length === 0" class="text-center py-4 text-gray-400 text-sm">
-                        {{ officeTab === 'all' ? '暂无办公室' : (officeTab === 'common' ? '暂无常用办公室' : '暂无不常用办公室') }}
-                    </div>
+                    <div v-if="isAdmin && displayOffices.length === 0" class="text-center py-4 text-gray-400 text-sm">{{ officeTab === 'common' ? '暂无常用办公室' : '暂无不常用办公室' }}</div>
                     
                     <!-- 普通用户：只显示所属办公室 -->
                     <div v-if="!isAdmin && offices.length > 0" class="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
@@ -503,22 +496,22 @@
                         <div @click="recordStatusFilter = 'pending'" :class="recordStatusFilter === 'pending' ? 'ring-2 ring-yellow-500 bg-yellow-100' : 'bg-yellow-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
                             <div class="text-lg sm:text-xl font-bold text-yellow-600">{{ recordStats.pending.count }}</div>
                             <div class="text-[10px] sm:text-xs text-yellow-600">待付款</div>
-                            <div class="text-[9px] sm:text-xs text-yellow-400 hidden sm:block">¥{{ (recordStats.pending.amount || 0).toFixed(2) }}</div>
+                            <div class="text-[9px] sm:text-xs text-yellow-400 hidden sm:block">¥{{ recordStats.pending.amount.toFixed(2) }}</div>
                         </div>
                         <div @click="recordStatusFilter = 'applied'" :class="recordStatusFilter === 'applied' ? 'ring-2 ring-blue-500 bg-blue-100' : 'bg-blue-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
                             <div class="text-lg sm:text-xl font-bold text-blue-600">{{ recordStats.applied.count }}</div>
                             <div class="text-[10px] sm:text-xs text-blue-600">待确认</div>
-                            <div class="text-[9px] sm:text-xs text-blue-400 hidden sm:block">¥{{ (recordStats.applied.amount || 0).toFixed(2) }}</div>
+                            <div class="text-[9px] sm:text-xs text-blue-400 hidden sm:block">¥{{ recordStats.applied.amount.toFixed(2) }}</div>
                         </div>
                         <div @click="recordStatusFilter = 'settled'" :class="recordStatusFilter === 'settled' ? 'ring-2 ring-green-500 bg-green-100' : 'bg-green-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
                             <div class="text-lg sm:text-xl font-bold text-green-600">{{ recordStats.settled.count }}</div>
                             <div class="text-[10px] sm:text-xs text-green-600">已结清</div>
-                            <div class="text-[9px] sm:text-xs text-green-400 hidden sm:block">¥{{ (recordStats.settled.amount || 0).toFixed(2) }}</div>
+                            <div class="text-[9px] sm:text-xs text-green-400 hidden sm:block">¥{{ recordStats.settled.amount.toFixed(2) }}</div>
                         </div>
                         <div @click="recordStatusFilter = ''" :class="recordStatusFilter === '' ? 'ring-2 ring-blue-500 bg-slate-200' : 'bg-slate-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
                             <div class="text-lg sm:text-xl font-bold text-slate-600">{{ recordStats.total.count }}</div>
                             <div class="text-[10px] sm:text-xs text-slate-600">总记录</div>
-                            <div class="text-[9px] sm:text-xs text-slate-400 hidden sm:block">¥{{ (recordStats.total.amount || 0).toFixed(2) }}</div>
+                            <div class="text-[9px] sm:text-xs text-slate-400 hidden sm:block">¥{{ recordStats.total.amount.toFixed(2) }}</div>
                         </div>
                     </div>
 
@@ -552,33 +545,15 @@
                                         <th class="py-2 px-2 text-left text-slate-600 font-medium">
                                             <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected" :indeterminate="isIndeterminate" class="w-4 h-4 rounded">
                                         </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('pickup_time')">
-                                            领取时间 <span class="sort-icon">{{ getSortIcon('pickup_time') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('office_name')">
-                                            办公室 <span class="sort-icon">{{ getSortIcon('office_name') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('office_room_number')">
-                                            房间号 <span class="sort-icon">{{ getSortIcon('office_room_number') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('product_name')">
-                                            产品 <span class="sort-icon">{{ getSortIcon('product_name') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-right text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('quantity')">
-                                            数量 <span class="sort-icon">{{ getSortIcon('quantity') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-right text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('unit_price')">
-                                            单价 <span class="sort-icon">{{ getSortIcon('unit_price') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-right text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('total_amount')">
-                                            金额 <span class="sort-icon">{{ getSortIcon('total_amount') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('settlement_status')">
-                                            状态 <span class="sort-icon">{{ getSortIcon('settlement_status') }}</span>
-                                        </th>
-                                        <th class="py-2 px-2 text-left text-slate-600 font-medium cursor-pointer hover:bg-slate-100 select-none" @click="toggleRecordSort('pickup_person')">
-                                            领取人 <span class="sort-icon">{{ getSortIcon('pickup_person') }}</span>
-                                        </th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">领取时间</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">办公室</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">房间号</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">产品</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">数量</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">单价</th>
+                                        <th class="py-2 px-2 text-right text-slate-600 font-medium">金额</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">状态</th>
+                                        <th class="py-2 px-2 text-left text-slate-600 font-medium">领取人</th>
                                         <th class="py-2 px-2 text-left text-slate-600 font-medium">操作</th>
                                     </tr>
                                 </thead>
@@ -592,8 +567,8 @@
                                         <td class="py-2 px-2 text-slate-600">{{ r.office_room_number || '-' }}</td>
                                         <td class="py-2 px-2 text-slate-600">{{ r.product_name }}</td>
                                         <td class="py-2 px-2 text-right text-slate-600">{{ r.quantity }}</td>
-                                        <td class="py-2 px-2 text-right text-slate-600">¥{{ (r.unit_price || 0).toFixed(2) }}</td>
-                                        <td class="py-2 px-2 text-right text-slate-800 font-medium">¥{{ (r.total_amount || 0).toFixed(2) }}</td>
+                                        <td class="py-2 px-2 text-right text-slate-600">¥{{ r.unit_price.toFixed(2) }}</td>
+                                        <td class="py-2 px-2 text-right text-slate-800 font-medium">¥{{ r.total_amount.toFixed(2) }}</td>
                                         <td class="py-2 px-2">
                                             <span :class="getRecordStatusClass(r.settlement_status)" class="text-xs px-2 py-1 rounded-full">
                                                 {{ getRecordStatusText(r.settlement_status) }}
@@ -633,7 +608,7 @@
                                 </div>
                                 <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
                                     <span>{{ r.product_name }} × {{ r.quantity }}</span>
-                                    <span class="font-medium text-slate-800">¥{{ (r.total_amount || 0).toFixed(2) }}</span>
+                                    <span class="font-medium text-slate-800">¥{{ r.total_amount.toFixed(2) }}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-[10px] text-slate-400">{{ formatRecordDateFull(r.pickup_time) }} · {{ r.pickup_person }}</span>
@@ -700,17 +675,17 @@
                     <div @click="settlementStatus = 'pending'; loadSettlementData()" :class="settlementStatus === 'pending' ? 'ring-2 ring-yellow-500' : ''" class="bg-yellow-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
                         <div class="text-lg font-bold text-yellow-600">{{ settlementStats.pending.count }}</div>
                         <div class="text-xs text-yellow-600">待付款</div>
-                        <div class="text-xs text-yellow-400">¥{{ (settlementStats.pending.amount || 0).toFixed(2) }}</div>
+                        <div class="text-xs text-yellow-400">¥{{ settlementStats.pending.amount.toFixed(2) }}</div>
                     </div>
                     <div @click="settlementStatus = 'applied'; loadSettlementData()" :class="settlementStatus === 'applied' ? 'ring-2 ring-blue-500' : ''" class="bg-blue-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
                         <div class="text-lg font-bold text-blue-600">{{ settlementStats.applied.count }}</div>
                         <div class="text-xs text-blue-600">付款待确认</div>
-                        <div class="text-xs text-blue-400">¥{{ (settlementStats.applied.amount || 0).toFixed(2) }}</div>
+                        <div class="text-xs text-blue-400">¥{{ settlementStats.applied.amount.toFixed(2) }}</div>
                     </div>
                     <div @click="settlementStatus = 'confirmed'; loadSettlementData()" :class="settlementStatus === 'confirmed' ? 'ring-2 ring-green-500' : ''" class="bg-green-50 rounded-xl p-2 text-center cursor-pointer hover:opacity-80">
                         <div class="text-lg font-bold text-green-600">{{ settlementStats.confirmed.count }}</div>
                         <div class="text-xs text-green-600">已结清</div>
-                        <div class="text-xs text-green-400">¥{{ (settlementStats.confirmed.amount || 0).toFixed(2) }}</div>
+                        <div class="text-xs text-green-400">¥{{ settlementStats.confirmed.amount.toFixed(2) }}</div>
                     </div>
                 </div>
                 
@@ -722,7 +697,7 @@
                             <span class="text-lg font-bold text-red-600">{{ overdueStats.count }}</span>
                             <span class="text-xs text-red-600">笔逾期</span>
                         </div>
-                        <div class="text-xs text-red-400">超过30天未结清 ¥{{ (overdueStats.amount || 0).toFixed(2) }}</div>
+                        <div class="text-xs text-red-400">超过30天未结清 ¥{{ overdueStats.amount.toFixed(2) }}</div>
                     </div>
                 </div>
                 
@@ -746,7 +721,7 @@
                 
                 <div v-if="settlementStats.pending.count > 0 && settlementOfficeId" class="mb-3">
                     <button @click="applySettlement" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl font-bold shadow-lg text-sm">
-                        🎯 申请结算 ({{ settlementStats.pending.count }}笔 ¥{{ (settlementStats.pending.amount || 0).toFixed(2) }})
+                        🎯 申请结算 ({{ settlementStats.pending.count }}笔 ¥{{ settlementStats.pending.amount.toFixed(2) }})
                     </button>
                 </div>
                 <div v-else-if="!settlementOfficeId" class="bg-gray-50 rounded-xl p-4 text-center mb-3 border">
@@ -830,12 +805,12 @@
             <img :src="paymentQrCode" @error="paymentQrCode = null" class="w-14 h-14 rounded-lg border-2 border-white shadow-lg" alt="支付">
         </div>
         
-        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1100] p-4 md:items-center">
-            <div class="bg-white rounded-2xl p-6 text-center max-w-xs modal-mobile-content" @click.stop>
+        <div v-if="showSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 md:items-center" @click="showSuccess = false">
+            <div class="bg-white rounded-2xl p-6 text-center max-w-xs modal-mobile-content">
                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-check text-xl text-green-500"></i></div>
                 <h3 class="font-bold mb-2">提交成功</h3>
                 <p class="text-sm text-gray-500 mb-3">{{ successMessage }}</p>
-                <button type="button" @click="closeSuccessAndSwitchTab" class="w-full bg-blue-600 text-white py-2 rounded-lg cursor-pointer hover:bg-blue-700">确定</button>
+                <button @click="showSuccess = false; resetForm()" class="w-full bg-blue-600 text-white py-2 rounded-lg">确定</button>
             </div>
         </div>
         
@@ -1036,9 +1011,7 @@
                     selectedRecords: [],
                     recordDateFrom: '',
                     recordDateTo: '',
-                    recordSortField: 'pickup_time',
-                    recordSortOrder: 'desc',
-                    officeTab: 'all',  // 默认显示所有办公室（超级管理员）
+                    officeTab: 'common',
                     userOffices: [],
                     showOfficeSettings: false,
                     showFirstTimeGuide: false,
@@ -1059,48 +1032,29 @@
                     const office = this.offices.find(o => o.id === (this.form.officeId || this.settlementOfficeId));
                     return office ? office.name : '';
                 },
-                sortedOffices() {
-                    // 按房间号排序（支持数字和字符串）
-                    return this.offices.sort((a, b) => {
-                        const roomA = a.room_number || '';
-                        const roomB = b.room_number || '';
-                        
-                        // 尝试按数字排序
-                        const numA = parseInt(roomA);
-                        const numB = parseInt(roomB);
-                        
-                        if (!isNaN(numA) && !isNaN(numB)) {
-                            return numA - numB;  // 数字排序
-                        } else {
-                            return roomA.localeCompare(roomB, 'zh');  // 字符串排序
-                        }
-                    });
-                },
-                
                 displayOffices() {
                     const userRole = localStorage.getItem('user_role');
                     
-                    // 超级管理员/管理员：显示所有办公室（按房间号排序）
+                    // 超级管理员/管理员：显示所有办公室（按常用/不常用分类）
                     if (userRole === 'admin' || userRole === 'super_admin') {
-                        // 如果选择了特定标签，按标签过滤
-                        if (this.officeTab === 'common') {
-                            return this.sortedOffices.filter(o => o.is_common === 1);
-                        } else if (this.officeTab === 'uncommon') {
-                            return this.sortedOffices.filter(o => o.is_common !== 1);
-                        } else {
-                            // 默认显示所有办公室（全部）
-                            return this.sortedOffices;
-                        }
+                        return this.offices.filter(o => 
+                            this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1
+                        );
                     }
                     
                     // 普通用户/办公室管理员：显示用户所属办公室
                     if (this.userOffices.length > 0) {
                         const userOfficeIds = this.userOffices.map(uo => uo.id);
-                        return this.sortedOffices.filter(o => userOfficeIds.includes(o.id));
+                        return this.offices.filter(o => 
+                            userOfficeIds.includes(o.id) && 
+                            (this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1)
+                        );
                     }
                     
                     // 如果 userOffices 为空，显示后端返回的 offices（后端已过滤权限）
-                    return this.sortedOffices;
+                    return this.offices.filter(o => 
+                        this.officeTab === 'common' ? o.is_common === 1 : o.is_common !== 1
+                    );
                 },
                 totalQty() { return Object.values(this.cart).reduce((s, v) => s + (v || 0), 0); },
                 // 买 N 赠 M 优惠计算
@@ -1243,34 +1197,6 @@
                         to.setHours(23, 59, 59);
                         recs = recs.filter(r => new Date(r.pickup_time) <= to);
                     }
-                    // 排序
-                    const field = this.recordSortField;
-                    const order = this.recordSortOrder;
-                    recs = recs.sort((a, b) => {
-                        let valA = a[field];
-                        let valB = b[field];
-                        // 处理时间字段
-                        if (field === 'pickup_time') {
-                            valA = new Date(valA || 0).getTime();
-                            valB = new Date(valB || 0).getTime();
-                        }
-                        // 处理数值字段
-                        if (field === 'quantity' || field === 'unit_price' || field === 'total_amount') {
-                            valA = parseFloat(valA) || 0;
-                            valB = parseFloat(valB) || 0;
-                        }
-                        // 处理字符串字段
-                        if (typeof valA === 'string') valA = valA.toLowerCase();
-                        if (typeof valB === 'string') valB = valB.toLowerCase();
-                        // 处理null/undefined
-                        if (valA == null) valA = '';
-                        if (valB == null) valB = '';
-                        // 比较
-                        let result = 0;
-                        if (valA < valB) result = -1;
-                        if (valA > valB) result = 1;
-                        return order === 'desc' ? -result : result;
-                    });
                     return recs;
                 },
                 isAllSelected() {
@@ -1360,15 +1286,6 @@
                 }
             },
             methods: {
-                switchTab(tab) {
-                    console.log('切换Tab:', this.activeTab, '->', tab);
-                    this.activeTab = tab;
-                },
-                closeSuccessAndSwitchTab() {
-                    console.log('关闭成功弹窗并切换到记录Tab');
-                    this.showSuccess = false;
-                    this.activeTab = 'records';
-                },
                 checkAuth() {
                     const token = localStorage.getItem('token');
                     if (!token) {
@@ -1805,7 +1722,7 @@ async loadRecords(officeId, status) {
                             const res = await fetch(API_BASE + '/water/pickup', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ office_id: this.form.officeId, product_id: parseInt(productId), quantity: qty, pickup_person: personName, pickup_person_id: this.form.personId || null, pickup_time: this.form.pickupTime ? new Date(this.form.pickupTime).toISOString() : null }) });
                             if (!res.ok) { const e = await res.json(); this.showError(e.detail || '提交失败'); return; }
                         }
-                        this.successMessage = '提交成功！'; this.showSuccess = true; this.resetForm(); await this.loadData(); await this.loadRecordList();
+                        this.successMessage = '提交成功！'; this.showSuccess = true; this.resetForm(); await this.loadData();
                     } catch (e) { this.showError('网络错误'); }
                 },
                 resetForm() { 
@@ -1983,18 +1900,6 @@ async loadRecords(officeId, status) {
                     alert(`批量操作完成：成功 ${successCount} 条，失败 ${failCount} 条`);
                     this.loadData();
                     this.selectedRecords = [];
-                },
-                toggleRecordSort(field) {
-                    if (this.recordSortField === field) {
-                        this.recordSortOrder = this.recordSortOrder === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        this.recordSortField = field;
-                        this.recordSortOrder = 'desc';
-                    }
-                },
-                getSortIcon(field) {
-                    if (this.recordSortField !== field) return '↕';
-                    return this.recordSortOrder === 'asc' ? '↑' : '↓';
                 },
                 showError(m) { this.errorMessage = m; setTimeout(() => this.errorMessage = '', 3000); }
             }

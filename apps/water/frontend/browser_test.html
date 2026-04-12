@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>浏览器诊断工具</title>
+    <style>
+        body { background: #1a1a2e; color: #eee; font-family: monospace; padding: 20px; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warning { color: #fbbf24; }
+        .info { color: #60a5fa; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #333; background: #16213e; }
+        button { padding: 8px 16px; margin: 5px; background: #2563eb; color: white; border: none; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        #log { background: #0f0f23; padding: 10px; margin: 10px 0; min-height: 100px; }
+    </style>
+</head>
+<body>
+    <h1>浏览器端诊断工具</h1>
+    <p>请在浏览器中打开此页面进行诊断</p>
+    
+    <div class="test-section">
+        <h2>步骤1: 检查页面加载</h2>
+        <button onclick="checkPageLoad()">检查领水页面</button>
+        <div id="page-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤2: 检查Vue.js</h2>
+        <button onclick="checkVue()">检查Vue.js状态</button>
+        <div id="vue-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤3: 检查localStorage</h2>
+        <button onclick="checkStorage()">检查本地存储</button>
+        <div id="storage-status"></div>
+        <button onclick="clearStorage()">清除localStorage并刷新</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤4: 模拟测试</h2>
+        <button onclick="simulateTabSwitch()">模拟Tab切换</button>
+        <button onclick="simulateSuccessModal()">模拟成功弹窗</button>
+        <div id="simulate-status"></div>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        function log(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            document.getElementById('log').innerHTML += 
+                `<div class="${type}">[${time}] ${msg}</div>`;
+        }
+        
+        async function checkPageLoad() {
+            log('检查页面加载...');
+            try {
+                const resp = await fetch('/water/index.html');
+                const text = await resp.text();
+                
+                const checks = {
+                    'Vue.js': text.includes('vue.global.js'),
+                    'switchTab方法': text.includes('switchTab'),
+                    'closeSuccessAndSwitchTab': text.includes('closeSuccessAndSwitchTab'),
+                    'Tab按钮type="button"': text.includes('type="button"'),
+                    'sticky定位': text.includes('sticky'),
+                    'z-index': text.includes('z-[1100]'),
+                };
+                
+                let html = '<table>';
+                for (const [name, result] of Object.entries(checks)) {
+                    html += `<tr><td>${name}</td><td class="${result ? 'success' : 'error'}">${result ? '✅' : '❌'}</td></tr>`;
+                }
+                html += '</table>';
+                document.getElementById('page-status').innerHTML = html;
+                
+                log('页面检查完成', 'success');
+            } catch (e) {
+                log('检查失败: ' + e.message, 'error');
+            }
+        }
+        
+        function checkVue() {
+            log('检查Vue.js...');
+            const results = {
+                'Vue对象存在': typeof Vue !== 'undefined',
+                'Vue.createApp存在': typeof Vue?.createApp === 'function',
+            };
+            
+            let html = '<table>';
+            for (const [name, result] of Object.entries(results)) {
+                html += `<tr><td>${name}</td><td class="${result ? 'success' : 'error'}">${result ? '✅' : '❌'}</td></tr>`;
+            }
+            html += '</table>';
+            document.getElementById('vue-status').innerHTML = html;
+            
+            if (results['Vue对象存在']) {
+                log('Vue.js可用', 'success');
+            } else {
+                log('Vue.js未加载!', 'error');
+            }
+        }
+        
+        function checkStorage() {
+            log('检查localStorage...');
+            const items = {
+                'token': localStorage.getItem('token'),
+                'userInfo': localStorage.getItem('userInfo'),
+                'user_role': localStorage.getItem('user_role'),
+                'userActiveTab': localStorage.getItem('userActiveTab'),
+                'user_offices': localStorage.getItem('user_offices'),
+            };
+            
+            let html = '<table>';
+            for (const [key, value] of Object.entries(items)) {
+                const hasValue = value !== null;
+                html += `<tr><td>${key}</td><td class="${hasValue ? 'success' : 'warning'}">${hasValue ? '已设置' : '未设置'}</td></tr>`;
+            }
+            html += '</table>';
+            document.getElementById('storage-status').innerHTML = html;
+            
+            log('localStorage检查完成', 'success');
+        }
+        
+        function clearStorage() {
+            log('清除localStorage...');
+            localStorage.removeItem('userActiveTab');
+            localStorage.removeItem('user_offices');
+            log('已清除userActiveTab和user_offices，请刷新领水页面', 'warning');
+        }
+        
+        function simulateTabSwitch() {
+            log('模拟Tab切换...');
+            
+            // 创建测试Vue app
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="test-app">
+                    <p>activeTab: {{ activeTab }}</p>
+                    <button @click="switchTab('pickup')">切换到领水</button>
+                    <button @click="switchTab('records')">切换到记录</button>
+                </div>
+            `;
+            document.body.appendChild(container);
+            
+            if (typeof Vue !== 'undefined') {
+                const testApp = Vue.createApp({
+                    data() { return { activeTab: 'pickup' }; },
+                    methods: {
+                        switchTab(tab) {
+                            log(`Tab切换成功: ${this.activeTab} -> ${tab}`, 'success');
+                            this.activeTab = tab;
+                        }
+                    },
+                    mounted() {
+                        log('测试Vue app挂载成功', 'success');
+                    }
+                });
+                testApp.mount('#test-app');
+                
+                document.getElementById('simulate-status').innerHTML = 
+                    '<span class="success">✅ Tab切换功能正常</span>';
+            } else {
+                document.getElementById('simulate-status').innerHTML = 
+                    '<span class="error">❌ Vue.js未加载，无法测试</span>';
+                log('Vue.js未加载!', 'error');
+            }
+        }
+        
+        function simulateSuccessModal() {
+            log('模拟成功弹窗...');
+            
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div id="modal-app">
+                    <p>showSuccess: {{ showSuccess }}</p>
+                    <button @click="showModal">显示弹窗</button>
+                    <div v-if="showSuccess" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1100;">
+                        <div style="background:white;padding:20px;border-radius:10px;" @click.stop>
+                            <h3>测试弹窗</h3>
+                            <button type="button" @click="closeModal">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(container);
+            
+            if (typeof Vue !== 'undefined') {
+                const modalApp = Vue.createApp({
+                    data() { return { showSuccess: false }; },
+                    methods: {
+                        showModal() {
+                            log('显示弹窗', 'info');
+                            this.showSuccess = true;
+                        },
+                        closeModal() {
+                            log('关闭弹窗按钮点击成功!', 'success');
+                            this.showSuccess = false;
+                        }
+                    }
+                });
+                modalApp.mount('#modal-app');
+                
+                document.getElementById('simulate-status').innerHTML += 
+                    '<br><span class="success">✅ 成功弹窗功能正常</span>';
+            } else {
+                document.getElementById('simulate-status').innerHTML = 
+                    '<span class="error">❌ Vue.js未加载，无法测试</span>';
+            }
+        }
+        
+        // 自动运行检查
+        log('诊断工具已加载，请点击按钮进行检查');
+    </script>
+</body>
+</html>

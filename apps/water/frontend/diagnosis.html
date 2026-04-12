@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>领水页面功能诊断</title>
+    <script src="vue.global.js?v=20260330"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #fff; }
+        .test-box { background: #252526; border: 1px solid #3c3c3c; padding: 15px; margin: 10px 0; }
+        .success { color: #4ec9b0; }
+        .error { color: #f14c4c; }
+        .info { color: #dcdcaa; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .tab-btn { padding: 12px 20px; cursor: pointer; border-bottom: 2px solid transparent; background: transparent; }
+        .tab-btn.active { border-bottom-color: #2563EB; background: #EFF6FF; }
+        #log { white-space: pre-wrap; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>领水页面功能诊断工具</h1>
+    
+    <div class="test-box">
+        <h2>测试1: Vue.js初始化</h2>
+        <div id="vue-test">
+            <p>activeTab当前值: <span class="info">{{ activeTab }}</span></p>
+            <p>showSuccess当前值: <span class="info">{{ showSuccess }}</span></p>
+        </div>
+        <p id="vue-status">检查中...</p>
+    </div>
+    
+    <div class="test-box">
+        <h2>测试2: Tab按钮切换</h2>
+        <div id="tab-test">
+            <button class="tab-btn" :class="activeTab === 'pickup' ? 'active' : ''" @click="switchTab('pickup')">领水登记</button>
+            <button class="tab-btn" :class="activeTab === 'records' ? 'active' : ''" @click="switchTab('records')">我的记录</button>
+        </div>
+        <p>点击次数记录: <span id="click-log"></span></p>
+    </div>
+    
+    <div class="test-box">
+        <h2>测试3: 成功弹窗按钮</h2>
+        <button @click="testShowSuccess">显示成功弹窗</button>
+        <div v-if="showSuccess" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100;">
+            <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;" @click.stop>
+                <h3 style="color: green;">提交成功</h3>
+                <p style="color: gray;">测试消息</p>
+                <button type="button" @click="testCloseSuccess" style="background: #2563EB; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer;">确定</button>
+            </div>
+        </div>
+        <p>弹窗关闭次数: <span id="close-log"></span></p>
+    </div>
+    
+    <div class="test-box">
+        <h2>测试日志</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        const log = document.getElementById('log');
+        const clickLog = document.getElementById('click-log');
+        const closeLog = document.getElementById('close-log');
+        const vueStatus = document.getElementById('vue-status');
+        
+        let clickCount = { pickup: 0, records: 0 };
+        let closeCount = 0;
+        
+        function addLog(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<span class="${type}">[${time}] ${msg}</span>\n`;
+        }
+        
+        const app = Vue.createApp({
+            data() {
+                return {
+                    activeTab: 'pickup',
+                    showSuccess: false
+                };
+            },
+            methods: {
+                switchTab(tab) {
+                    addLog(`Tab切换: ${this.activeTab} -> ${tab}`, 'info');
+                    this.activeTab = tab;
+                    clickCount[tab]++;
+                    clickLog.textContent = JSON.stringify(clickCount);
+                },
+                testShowSuccess() {
+                    addLog('显示成功弹窗', 'info');
+                    this.showSuccess = true;
+                },
+                testCloseSuccess() {
+                    addLog('点击确定按钮，关闭弹窗并切换Tab', 'success');
+                    this.showSuccess = false;
+                    this.activeTab = 'records';
+                    closeCount++;
+                    closeLog.textContent = closeCount;
+                    addLog(`当前activeTab: ${this.activeTab}`, 'info');
+                }
+            },
+            mounted() {
+                addLog('Vue app已挂载', 'success');
+                vueStatus.innerHTML = '<span class="success">Vue.js初始化成功!</span>';
+            }
+        });
+        
+        app.mount('#vue-test');
+        app.mount('#tab-test');
+        
+        addLog('诊断页面加载完成', 'success');
+    </script>
+</body>
+</html>

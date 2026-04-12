@@ -14,6 +14,7 @@ from config.database import get_db
 from config.settings import settings
 from models.user import User
 from models.office import Office
+from models.office_admin import OfficeAdminRelation
 from depends.auth import get_current_user, get_admin_user, get_super_admin_user
 from schemas.system import UserResponse, OfficeResponse, AuthResponse
 from utils.jwt import create_access_token, verify_token
@@ -33,6 +34,54 @@ from utils.token_blacklist import revoke_token, is_token_revoked, revoke_user_to
 
 
 router = APIRouter(prefix="/system", tags=["系统服务"])
+
+
+def get_user_managed_offices(db: Session, user_id: int) -> List[dict]:
+    """获取用户管理的办公室列表"""
+    relations = (
+        db.query(OfficeAdminRelation)
+        .filter(OfficeAdminRelation.user_id == user_id)
+        .all()
+    )
+
+    offices = []
+    for relation in relations:
+        office = db.query(Office).filter(Office.id == relation.office_id).first()
+        if office:
+            offices.append(
+                {
+                    "id": office.id,
+                    "name": office.name,
+                    "room_number": office.room_number,
+                    "is_primary": relation.is_primary,
+                    "role_type": relation.role_type,
+                }
+            )
+
+    return offices
+
+
+def set_user_managed_offices(
+    db: Session, user_id: int, office_ids: List[int], is_primary: bool = False
+):
+    """设置用户管理的办公室列表"""
+    db.query(OfficeAdminRelation).filter(
+        OfficeAdminRelation.user_id == user_id
+    ).delete()
+
+    for office_id in office_ids:
+        office = db.query(Office).filter(Office.id == office_id).first()
+        if office:
+            relation = OfficeAdminRelation(
+                office_id=office_id,
+                user_id=user_id,
+                is_primary=1 if is_primary else 0,
+                role_type=1,
+                created_at=datetime.now(),
+            )
+            db.add(relation)
+
+    db.commit()
 
 
 def parse_user_agent(user_agent: str) -> dict:
@@ -589,6 +638,12 @@ def get_users(
 
     items = []
     for user in users:
+        managed_offices = []
+        if user.role == "office_admin":
+            managed_offices = get_user_managed_offices(db, user.id)
+
+        office_names = [o["name"] for o in managed_offices]
+
         items.append(
             {
                 "id": user.id,
@@ -599,6 +654,12 @@ def get_users(
                 "is_active": user.is_active,
                 "email": user.email,
                 "phone": user.phone,
+                "balance_credit": user.balance_credit,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "managed_offices": managed_offices,
+                "managed_office_names": ", ".join(office_names)
+                if office_names
+                else (user.department or ""),
             }
         )
 
@@ -642,21 +703,51 @@ def update_user(
     if user.role == "super_admin" and current_user.role != "super_admin":
         raise HTTPException(status_code=403, detail="无权限修改超级管理员")
 
+    office_ids = user_update.get("office_ids")
+    new_role = user_update.get("role")
+
+    if new_role == "office_admin":
+        if office_ids is not None and len(office_ids) == 0:
+            raise HTTPException(
+                status_code=400, detail="办公室管理员需要至少管理一个办公室"
+            )
+
+        if office_ids:
+            set_user_managed_offices(db, user.id, office_ids)
+            first_office = db.query(Office).filter(Office.id == office_ids[0]).first()
+            if first_office and not user_update.get("department"):
+                user_update["department"] = first_office.name
+    elif new_role and new_role != "office_admin":
+        db.query(OfficeAdminRelation).filter(
+            OfficeAdminRelation.user_id == user.id
+        ).delete()
+
     update_data = {
         k: v
         for k, v in user_update.items()
-        if hasattr(User, k) and k not in ["id", "password_hash"]
+        if hasattr(User, k) and k not in ["id", "password_hash", "office_ids"]
     }
 
     for key, value in update_data.items():
         setattr(user, key, value)
+
+    if "password" in user_update and user_update["password"]:
+        user.password_hash = hash_password(user_update["password"])
 
     user.updated_at = datetime.now()
 
     db.commit()
     db.refresh(user)
 
-    return {"message": "用户信息更新成功", "user_id": user_id}
+    managed_offices = []
+    if user.role == "office_admin":
+        managed_offices = get_user_managed_offices(db, user.id)
+
+    return {
+        "message": "用户信息更新成功",
+        "user_id": user_id,
+        "managed_offices": managed_offices,
+    }
 
 
 @router.delete("/users/{user_id}")
@@ -705,6 +796,7 @@ def create_user(
     department = user_data.get("department")
     role = user_data.get("role", "user")
     is_active = user_data.get("is_active", 1)
+    office_ids = user_data.get("office_ids", [])
 
     if not username:
         raise HTTPException(status_code=400, detail="用户名不能为空")
@@ -713,16 +805,24 @@ def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="用户名已存在")
 
-    if role == "office_admin" and not department:
-        raise HTTPException(status_code=400, detail="办公室管理员需要分配到具体办公室")
+    if role == "office_admin" and not office_ids:
+        raise HTTPException(
+            status_code=400, detail="办公室管理员需要分配到至少一个办公室"
+        )
 
     hashed_password = hash_password(password)
+
+    first_office_name = None
+    if office_ids:
+        first_office = db.query(Office).filter(Office.id == office_ids[0]).first()
+        if first_office:
+            first_office_name = first_office.name
 
     new_user = User(
         username=username,
         name=username,
         password_hash=hashed_password,
-        department=department,
+        department=department or first_office_name,
         role=role,
         is_active=is_active,
         created_at=datetime.now(),
@@ -732,6 +832,9 @@ def create_user(
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    if role == "office_admin" and office_ids:
+        set_user_managed_offices(db, new_user.id, office_ids)
 
     return {
         "message": "用户创建成功",
@@ -750,6 +853,7 @@ def batch_update_users(
 
     user_ids = batch_data.get("user_ids", [])
     updates = batch_data.get("updates", {})
+    office_ids = batch_data.get("office_ids")
 
     if not user_ids:
         raise HTTPException(status_code=400, detail="用户ID列表不能为空")
@@ -764,6 +868,17 @@ def batch_update_users(
             for key, value in updates.items():
                 if hasattr(User, key) and key not in ["id", "password_hash"]:
                     setattr(user, key, value)
+
+            if office_ids is not None:
+                if user.role == "office_admin":
+                    if len(office_ids) == 0:
+                        continue
+                    set_user_managed_offices(db, user.id, office_ids)
+                    first_office = (
+                        db.query(Office).filter(Office.id == office_ids[0]).first()
+                    )
+                    if first_office:
+                        user.department = first_office.name
 
             user.updated_at = datetime.now()
             updated_count += 1
@@ -1047,3 +1162,104 @@ def get_payment_qr(db: Session = Depends(get_db)):
         return {"qr_code": config.config_value}
 
     return {"qr_code": None}
+
+
+@router.get("/users/{user_id}/managed-offices")
+def get_user_managed_offices_api(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取用户管理的办公室列表"""
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    offices = get_user_managed_offices(db, user_id)
+
+    return {
+        "user_id": user_id,
+        "username": user.username,
+        "managed_offices": offices,
+    }
+
+
+@router.put("/users/{user_id}/managed-offices")
+def update_user_managed_offices_api(
+    user_id: int,
+    office_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """更新用户管理的办公室列表"""
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if user.role == "super_admin" and current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="无权限修改超级管理员")
+
+    office_ids = office_data.get("office_ids", [])
+
+    if user.role == "office_admin" and len(office_ids) == 0:
+        raise HTTPException(
+            status_code=400, detail="办公室管理员需要至少管理一个办公室"
+        )
+
+    set_user_managed_offices(db, user_id, office_ids)
+
+    if office_ids:
+        first_office = db.query(Office).filter(Office.id == office_ids[0]).first()
+        if first_office:
+            user.department = first_office.name
+            user.updated_at = datetime.now()
+            db.commit()
+
+    offices = get_user_managed_offices(db, user_id)
+
+    return {
+        "message": "办公室管理权限更新成功",
+        "user_id": user_id,
+        "managed_offices": offices,
+    }
+
+
+@router.get("/offices/{office_id}/admins")
+def get_office_admins_api(
+    office_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取办公室的管理员列表"""
+
+    office = db.query(Office).filter(Office.id == office_id).first()
+    if not office:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    relations = (
+        db.query(OfficeAdminRelation)
+        .filter(OfficeAdminRelation.office_id == office_id)
+        .all()
+    )
+
+    admins = []
+    for relation in relations:
+        user = db.query(User).filter(User.id == relation.user_id).first()
+        if user:
+            admins.append(
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "name": user.name,
+                    "is_primary": relation.is_primary,
+                    "role_type": relation.role_type,
+                }
+            )
+
+    return {
+        "office_id": office_id,
+        "office_name": office.name,
+        "admins": admins,
+    }

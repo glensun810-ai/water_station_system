@@ -750,7 +750,14 @@
                                     <strong style="color: var(--text-primary);">{{ user.name }}</strong>
                                     <span v-if="user.role === 'super_admin'" style="margin-left: 4px; font-size: 12px;" title="超级管理员受保护">🛡️</span>
                                 </td>
-                                <td>{{ user.department || '—' }}</td>
+                                <td>
+                                    <template v-if="user.role === 'office_admin' && user.managed_offices && user.managed_offices.length > 0">
+                                        <span v-for="(office, idx) in user.managed_offices" :key="office.id" style="display: inline-block; margin-right: 4px;">
+                                            <span class="badge badge-info" style="font-size: 11px;">{{ office.name }}</span>
+                                        </span>
+                                    </template>
+                                    <template v-else>{{ user.department || '—' }}</template>
+                                </td>
                                 <td>
                                     <span :class="getRoleBadgeClass(user)">
                                         {{ getRoleLabel(user) }}
@@ -867,21 +874,39 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">所属办公室</label>
-                        <select v-model="form.department" class="form-input">
-                            <option value="">— 不分配 —</option>
-                            <option v-for="office in filteredOffices" :key="office.id" :value="office.name">
-                                {{ office.name }}{{ office.leader_name ? ` (${office.leader_name})` : '' }}
-                            </option>
-                        </select>
-                        <div v-if="form.role === 'office_admin' && !form.department" class="form-hint" style="color: var(--warning);">
-                            ⚠ 办公室管理员需要分配到具体办公室
-                        </div>
-                        <div v-if="form.role === 'office_admin' && form.department" class="form-hint" style="color: var(--success);">
-                            ✓ 将成为「{{ form.department }}」的管理员
-                        </div>
-                    </div>
+<div v-if="form.role === 'office_admin'" class="form-group">
+                         <label class="form-label">管理的办公室（可多选）</label>
+                         <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); max-height: 200px; overflow-y: auto; padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                             <label v-for="office in filteredOffices" :key="office.id" 
+                                 style="display: flex; align-items: center; gap: var(--spacing-xs); padding: 6px 12px; background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer; border: 2px solid transparent;"
+                                 :style="{ borderColor: form.office_ids.includes(office.id) ? 'var(--primary)' : 'var(--border)' }">
+                                 <input type="checkbox" 
+                                     :value="office.id" 
+                                     v-model="form.office_ids"
+                                     style="cursor: pointer;">
+                                 <span style="font-size: var(--font-size-sm);">{{ office.name }}</span>
+                             </label>
+                             <div v-if="filteredOffices.length === 0" style="color: var(--text-tertiary); font-size: var(--font-size-sm); padding: var(--spacing-sm);">
+                                 暂无可用办公室
+                             </div>
+                         </div>
+                         <div v-if="form.office_ids.length > 0" class="form-hint" style="color: var(--success);">
+                             ✓ 已选择 {{ form.office_ids.length }} 个办公室
+                         </div>
+                         <div v-if="form.office_ids.length === 0" class="form-hint" style="color: var(--warning);">
+                             ⚠ 请至少选择一个办公室
+                         </div>
+                     </div>
+                     
+                     <div v-if="form.role !== 'office_admin'" class="form-group">
+                         <label class="form-label">所属办公室</label>
+                         <select v-model="form.department" class="form-input">
+                             <option value="">— 不分配 —</option>
+                             <option v-for="office in filteredOffices" :key="office.id" :value="office.name">
+                                 {{ office.name }}{{ office.leader_name ? ` (${office.leader_name})` : '' }}
+                             </option>
+                         </select>
+                     </div>
                     
                     <div v-if="isEdit" class="form-group">
                         <label class="form-label">状态</label>
@@ -900,28 +925,38 @@
             </div>
         </div>
         
-        <!-- 批量分配办公室模态框 -->
         <div v-if="showBatchOfficeModal" class="modal-overlay" @click="showBatchOfficeModal = false">
-            <div class="modal" @click.stop style="max-width: 400px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">批量分配办公室</h3>
-                    <button @click="showBatchOfficeModal = false" class="modal-close">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label">选择办公室</label>
-                        <select v-model="batchOffice" class="form-input">
-                            <option value="">— 清除办公室 —</option>
-                            <option v-for="office in offices" :key="office.id" :value="office.name">{{ office.name }}</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button @click="showBatchOfficeModal = false" class="btn btn-secondary">取消</button>
-                    <button @click="batchAssignOffice" class="btn btn-primary">确认分配</button>
-                </div>
-            </div>
-        </div>
+             <div class="modal" @click.stop style="max-width: 500px;">
+                 <div class="modal-header">
+                     <h3 class="modal-title">批量分配办公室</h3>
+                     <button @click="showBatchOfficeModal = false" class="modal-close">×</button>
+                 </div>
+                 <div class="modal-body">
+                     <div class="form-group">
+                         <label class="form-label">选择办公室（可多选）</label>
+                         <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); max-height: 200px; overflow-y: auto; padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                             <label v-for="office in offices.filter(o => o.is_active)" :key="office.id" 
+                                 style="display: flex; align-items: center; gap: var(--spacing-xs); padding: 6px 12px; background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer; border: 2px solid transparent;"
+                                 :style="{ borderColor: batchOfficeIds.includes(office.id) ? 'var(--primary)' : 'var(--border)' }">
+                                 <input type="checkbox" 
+                                     :value="office.id" 
+                                     v-model="batchOfficeIds"
+                                     style="cursor: pointer;">
+                                 <span style="font-size: var(--font-size-sm);">{{ office.name }}</span>
+                             </label>
+                         </div>
+                         <div class="form-hint">选择的用户将被分配为这些办公室的管理员（角色将设置为办公室管理员）</div>
+                         <div v-if="batchOfficeIds.length === 0" class="form-hint" style="color: var(--warning);">
+                             如不选择任何办公室，将清除选中用户的办公室分配
+                         </div>
+                     </div>
+                 </div>
+                 <div class="modal-footer">
+                     <button @click="showBatchOfficeModal = false; batchOfficeIds = [];" class="btn btn-secondary">取消</button>
+                     <button @click="batchAssignOffice" class="btn btn-primary">确认分配</button>
+                 </div>
+             </div>
+         </div>
     </div>
     
     <script>
@@ -950,11 +985,11 @@
                 const showPassword = ref(false);
                 const isEdit = ref(false);
                 const editingUser = ref(null);
-                const batchOffice = ref('');
+                const batchOfficeIds = ref([]);
                 
                 const stats = ref({ total: 0, super_admins: 0, admins: 0, office_admins: 0, users: 0, active: 0, inactive: 0 });
                 
-                const form = ref({ name: '', password: '123456', department: '', role: 'user', is_active: 1 });
+                const form = ref({ name: '', password: '123456', department: '', role: 'user', is_active: 1, office_ids: [] });
                 
                 const checkAuth = async () => {
                     const token = localStorage.getItem('token');
@@ -1014,12 +1049,12 @@
                     return offices.value.filter(o => o.is_active).sort((a, b) => a.name.localeCompare(b.name, 'zh'));
                 });
                 
-                const isFormValid = computed(() => {
-                    if (!form.value.name || !isUsernameValid.value) return false;
-                    if (!isEdit.value && !form.value.password) return false;
-                    if (form.value.role === 'office_admin' && !form.value.department) return false;
-                    return true;
-                });
+const isFormValid = computed(() => {
+                     if (!form.value.name || !isUsernameValid.value) return false;
+                     if (!isEdit.value && !form.value.password) return false;
+                     if (form.value.role === 'office_admin' && form.value.office_ids.length === 0) return false;
+                     return true;
+                 });
                 
                 const superAdminCount = computed(() => {
                     return users.value.filter(u => u.role === 'super_admin' && u.is_active).length;
@@ -1250,73 +1285,85 @@
                     // 实时验证用户名格式
                 };
                 
-                const showCreateModal = () => {
-                    isEdit.value = false;
-                    showPassword.value = false;
-                    form.value = { name: '', password: '123456', department: '', role: 'user', is_active: 1 };
-                    showModal.value = true;
-                };
+const showCreateModal = () => {
+                     isEdit.value = false;
+                     showPassword.value = false;
+                     form.value = { name: '', password: '123456', department: '', role: 'user', is_active: 1, office_ids: [] };
+                     showModal.value = true;
+                 };
                 
-                const editUser = (user) => {
-                    isEdit.value = true;
-                    editingUser.value = user;
-                    form.value = { name: user.name, department: user.department || '', role: user.role, is_active: user.is_active };
-                    showModal.value = true;
-                    activeDropdown.value = null;
-                };
+const editUser = async (user) => {
+                     isEdit.value = true;
+                     editingUser.value = user;
+                     
+                     let officeIds = [];
+                     if (user.role === 'office_admin' && user.managed_offices) {
+                         officeIds = user.managed_offices.map(o => o.id);
+                     }
+                     
+                     form.value = { 
+                         name: user.name, 
+                         department: user.department || '', 
+                         role: user.role, 
+                         is_active: user.is_active,
+                         office_ids: officeIds
+                     };
+                     showModal.value = true;
+                     activeDropdown.value = null;
+                 };
                 
-                const saveUser = async () => {
-                    try {
-                        if (!isFormValid.value) {
-                            if (!form.value.name) {
-                                alert('请输入用户名');
-                                return;
-                            }
-                            if (!isUsernameValid.value) {
-                                alert('用户名格式不正确');
-                                return;
-                            }
-                            if (!isEdit.value && !form.value.password) {
-                                alert('请输入密码');
-                                return;
-                            }
-                            if (form.value.role === 'office_admin' && !form.value.department) {
-                                alert('办公室管理员需要分配到具体办公室');
-                                return;
-                            }
-                            return;
-                        }
-                        
-                        const url = isEdit.value ? window.buildApiUrl('/system/users/' + editingUser.value.id) : window.buildApiUrl('/system/users');
-                        const method = isEdit.value ? 'PUT' : 'POST';
-                        
-                        const body = isEdit.value 
-                            ? { name: form.value.name, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active }
-                            : { name: form.value.name, password: form.value.password, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active };
-                        
-                        const headers = getAuthHeaders();
-                        
-                        const response = await fetch(url, { method, headers, body: JSON.stringify(body) });
-                        
-                        if (handleApiError(response)) return;
-                        
-                        if (response.ok) {
-                            const result = await response.json();
-                            await Promise.all([loadUsers(), loadStats()]);
-                            closeModal();
-                            const roleName = form.value.role === 'super_admin' ? '超级管理员' :
-                                            form.value.role === 'admin' ? '系统管理员' :
-                                            form.value.role === 'office_admin' ? '办公室管理员' : '普通用户';
-                            alert(isEdit.value ? `用户「${form.value.name}」已更新` : `用户「${form.value.name}」创建成功\n角色：${roleName}`);
-                        } else {
-                            const error = await response.json();
-                            alert(error.detail || '操作失败');
-                        }
-                    } catch (e) { 
-                        console.error('保存用户失败:', e); 
-                        alert('操作失败，请检查网络连接后重试'); 
-                    }
-                };
+const saveUser = async () => {
+                     try {
+                         if (!isFormValid.value) {
+                             if (!form.value.name) {
+                                 alert('请输入用户名');
+                                 return;
+                             }
+                             if (!isUsernameValid.value) {
+                                 alert('用户名格式不正确');
+                                 return;
+                             }
+                             if (!isEdit.value && !form.value.password) {
+                                 alert('请输入密码');
+                                 return;
+                             }
+                             if (form.value.role === 'office_admin' && form.value.office_ids.length === 0) {
+                                 alert('办公室管理员需要至少选择一个办公室');
+                                 return;
+                             }
+                             return;
+                         }
+                         
+                         const url = isEdit.value ? window.buildApiUrl('/system/users/' + editingUser.value.id) : window.buildApiUrl('/system/users');
+                         const method = isEdit.value ? 'PUT' : 'POST';
+                         
+                         const body = isEdit.value 
+                             ? { name: form.value.name, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active, office_ids: form.value.office_ids }
+                             : { name: form.value.name, password: form.value.password, department: form.value.department || null, role: form.value.role, is_active: form.value.is_active, office_ids: form.value.office_ids };
+                         
+                         const headers = getAuthHeaders();
+                         
+                         const response = await fetch(url, { method, headers, body: JSON.stringify(body) });
+                         
+                         if (handleApiError(response)) return;
+                         
+                         if (response.ok) {
+                             const result = await response.json();
+                             await Promise.all([loadUsers(), loadStats()]);
+                             closeModal();
+                             const roleName = form.value.role === 'super_admin' ? '超级管理员' :
+                                             form.value.role === 'admin' ? '系统管理员' :
+                                             form.value.role === 'office_admin' ? '办公室管理员' : '普通用户';
+                             alert(isEdit.value ? `用户「${form.value.name}」已更新` : `用户「${form.value.name}」创建成功\n角色：${roleName}`);
+                         } else {
+                             const error = await response.json();
+                             alert(error.detail || '操作失败');
+                         }
+                     } catch (e) { 
+                         console.error('保存用户失败:', e); 
+                         alert('操作失败，请检查网络连接后重试'); 
+                     }
+                 };
                 
                 const closeModal = () => {
                     showModal.value = false;
@@ -1403,18 +1450,28 @@
                     } catch (e) { alert('操作失败'); }
                 };
                 
-                const batchAssignOffice = async () => {
-                    try {
-                        const headers = getAuthHeaders();
-                        
-                        const response = await fetch(window.buildApiUrl('/system/users/batch'), {
-                            method: 'POST',
-                            headers,
-                            body: JSON.stringify({ user_ids: selectedIds.value, department: batchOffice.value || null })
-                        });
-                        if (response.ok) { await loadUsers(); selectedIds.value = []; showBatchOfficeModal.value = false; }
-                    } catch (e) { alert('操作失败'); }
-                };
+const batchAssignOffice = async () => {
+                     try {
+                         const headers = getAuthHeaders();
+                         
+                         const response = await fetch(window.buildApiUrl('/system/users/batch'), {
+                             method: 'POST',
+                             headers,
+                             body: JSON.stringify({ 
+                                 user_ids: selectedIds.value, 
+                                 office_ids: batchOfficeIds.value,
+                                 updates: { role: batchOfficeIds.value.length > 0 ? 'office_admin' : 'user' }
+                             })
+                         });
+                         if (handleApiError(response)) return;
+                         if (response.ok) { 
+                             await loadUsers(); 
+                             selectedIds.value = []; 
+                             showBatchOfficeModal.value = false;
+                             batchOfficeIds.value = [];
+                         }
+                     } catch (e) { alert('操作失败'); }
+                 };
                 
                 const batchDelete = async () => {
                     if (!confirm(`确定删除选中的 ${selectedIds.value.length} 个用户吗？`)) return;
@@ -1445,12 +1502,12 @@
                     link.click();
                 };
                 
-                const getRoleLabel = (user) => {
-                    if (user.role === 'super_admin') return '超级管理员';
-                    if (user.role === 'admin') return '系统管理员';
-                    if (user.role === 'office_admin') return user.department ? `${user.department}管理员` : '办公室管理员';
-                    return '普通用户';
-                };
+const getRoleLabel = (user) => {
+                     if (user.role === 'super_admin') return '超级管理员';
+                     if (user.role === 'admin') return '系统管理员';
+                     if (user.role === 'office_admin') return '办公室管理员';
+                     return '普通用户';
+                 };
                 
                 const getRoleBadgeClass = (user) => {
                     if (user.role === 'super_admin') return 'badge badge-primary';
@@ -1477,19 +1534,19 @@
                     loadStats();
                 });
                 
-                return {
-                    users, offices, searchText, selectedIds, activeDropdown, dropdownUpIds, stats,
-                    roleFilter, officeFilter, statusFilter, activeFilter, sortField, sortOrder,
-                    showModal, showBatchOfficeModal, showPassword, isEdit, form, batchOffice,
-                    filteredUsers, filteredOffices, isAllSelected, isPartialSelected,
-                    isUsernameValid, isFormValid, validateUsername,
-                    superAdminCount, isLastSuperAdmin, getStatusToggleTitle,
-                    setFilter, applyFilters, toggleSort, debounceSearch, toggleSelectAll, toggleDropdown,
-                    toggleStatus, showCreateModal, editUser, saveUser, closeModal,
-                    resetPassword, setAdmin, setOfficeAdmin, promoteToSuperAdmin, deleteUser,
-                    batchUpdateStatus, batchAssignOffice, batchDelete, exportData,
-                    getRoleLabel, getRoleBadgeClass, formatDate
-                };
+return {
+                     users, offices, searchText, selectedIds, activeDropdown, dropdownUpIds, stats,
+                     roleFilter, officeFilter, statusFilter, activeFilter, sortField, sortOrder,
+                     showModal, showBatchOfficeModal, showPassword, isEdit, form, batchOfficeIds,
+                     filteredUsers, filteredOffices, isAllSelected, isPartialSelected,
+                     isUsernameValid, isFormValid, validateUsername,
+                     superAdminCount, isLastSuperAdmin, getStatusToggleTitle,
+                     setFilter, applyFilters, toggleSort, debounceSearch, toggleSelectAll, toggleDropdown,
+                     toggleStatus, showCreateModal, editUser, saveUser, closeModal,
+                     resetPassword, setAdmin, setOfficeAdmin, promoteToSuperAdmin, deleteUser,
+                     batchUpdateStatus, batchAssignOffice, batchDelete, exportData,
+                     getRoleLabel, getRoleBadgeClass, formatDate
+                 };
             }
         }).mount('#app');
     </script>

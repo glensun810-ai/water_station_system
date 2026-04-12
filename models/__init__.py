@@ -7,6 +7,7 @@ from models.base import Base, TimestampMixin, SoftDeleteMixin
 from models.user import User
 from models.product import Product, ProductCategory
 from models.office import Office
+from models.office_admin import OfficeAdminRelation
 from models.pickup import OfficePickup
 from models.transaction import Transaction
 from models.inventory import InventoryRecord, InventoryAlertConfig
@@ -39,6 +40,7 @@ __all__ = [
     "Product",
     "ProductCategory",
     "Office",
+    "OfficeAdminRelation",
     "OfficePickup",
     "Transaction",
     "InventoryRecord",

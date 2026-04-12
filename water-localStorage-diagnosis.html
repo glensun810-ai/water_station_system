@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>领水页面localStorage诊断与修复</title>
+    <script src="/shared/utils/api-config.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            margin: 5px;
+        }
+        .btn-primary { background: #2563EB; color: white; }
+        .btn-danger { background: #EF4444; color: white; }
+        .btn-success { background: #10B981; color: white; }
+        .code-box {
+            background: #1F2937;
+            color: #10B981;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .alert-error { background: #FEE2E2; border: 2px solid #EF4444; color: #991B1B; }
+        .alert-success { background: #D1FAE5; border: 2px solid #10B981; color: #065F46; }
+        .alert-warning { background: #FEF3C7; border: 2px solid #F59E0B; color: #92400E; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div class="card">
+            <div class="card-title">
+                <span class="mdi mdi-water"></span>
+                领水页面localStorage诊断与修复
+            </div>
+            
+            <div v-if="!hasUserRole" class="alert alert-error">
+                <strong>❌ 问题诊断：localStorage中没有user_role字段</strong>
+                <div style="margin-top: 10px;">
+                    这就是为什么只显示1个办公室的原因：<br>
+                    isAdmin判断需要读取user_role（英文：'super_admin'），但localStorage中没有这个字段。<br>
+                    登录页面只存储了userInfo.role（中文：'超级管理员'），领水页面无法识别管理员身份。
+                </div>
+            </div>
+            
+            <div v-if="hasUserRole && userRoleCorrect" class="alert alert-success">
+                <strong>✅ localStorage正常</strong>
+                <div style="margin-top: 10px;">
+                    user_role字段存在且正确：{{ userRole }}<br>
+                    领水页面应该能正常显示所有21个办公室。
+                </div>
+            </div>
+            
+            <div v-if="hasUserRole && !userRoleCorrect" class="alert alert-warning">
+                <strong>⚠️ localStorage中user_role字段不正确</strong>
+                <div style="margin-top: 10px;">
+                    当前user_role：{{ userRole }}<br>
+                    需要的值：'super_admin' 或 'admin'<br>
+                    请重新登录以更新user_role。
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button @click="clearStorage" class="btn btn-danger">
+                    清除localStorage并重新登录
+                </button>
+                <button @click="fixStorage" class="btn btn-primary">
+                    手动修复localStorage（添加user_role）
+                </button>
+                <button @click="goToWaterPage" class="btn btn-success">
+                    进入领水页面
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="mdi mdi-code-json"></span>
+                localStorage内容
+            </div>
+            
+            <div class="code-box">{{ localStorageContent }}</div>
+            
+            <div style="margin-top: 15px;">
+                <button @click="refreshStorage" class="btn btn-success">
+                    刷新localStorage内容
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="mdi mdi-information"></span>
+                问题根源与修复说明
+            </div>
+            
+            <div class="alert alert-error">
+                <strong>问题根源：</strong>
+                <div style="margin-top: 10px;">
+                    1. 登录API返回：role='super_admin'（英文）和role_name='超级管理员'（中文）<br>
+                    2. 登录页面存储：userInfo.role = role_name（中文）<br>
+                    3. 登录页面没有存储：localStorage.setItem('user_role', role)（英文）<br>
+                    4. 领水页面读取：localStorage.getItem('user_role') → null<br>
+                    5. isAdmin判断：userRole === 'super_admin' → false<br>
+                    6. 结果：显示普通用户逻辑，只显示1个办公室
+                </div>
+            </div>
+            
+            <div class="alert alert-success">
+                <strong>修复方案：</strong>
+                <div style="margin-top: 10px;">
+                    ✅ 已修复登录页面（apps/water/frontend/login.html 和 portal/admin/login.html）<br>
+                    ✅ 登录成功后，现在会存储：<br>
+                    &nbsp;&nbsp;&nbsp;- localStorage.setItem('token', data.access_token)<br>
+                    &nbsp;&nbsp;&nbsp;- localStorage.setItem('user_role', data.user_info.role)  // 新增<br>
+                    &nbsp;&nbsp;&nbsp;- localStorage.setItem('userInfo', JSON.stringify(userInfo))<br>
+                    ✅ 下次登录后，领水页面能正常识别管理员身份，显示所有21个办公室
+                </div>
+            </div>
+            
+            <div class="alert alert-warning">
+                <strong>立即解决方案：</strong>
+                <div style="margin-top: 10px;">
+                    方案1（推荐）：清除localStorage，重新登录<br>
+                    &nbsp;&nbsp;&nbsp;点击"清除localStorage并重新登录"按钮<br>
+                    &nbsp;&nbsp;&nbsp;使用admin/admin123登录<br>
+                    &nbsp;&nbsp;&nbsp;进入领水页面，应该能看到所有21个办公室<br>
+                    <br>
+                    方案2：手动修复localStorage（如果不想重新登录）<br>
+                    &nbsp;&nbsp;&nbsp;点击"手动修复localStorage"按钮<br>
+                    &nbsp;&nbsp;&nbsp;会自动添加user_role字段<br>
+                    &nbsp;&nbsp;&nbsp;刷新领水页面，应该能看到所有21个办公室
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    localStorageContent: '',
+                    hasUserRole: false,
+                    userRole: '',
+                    userRoleCorrect: false
+                };
+            },
+            mounted() {
+                this.refreshStorage();
+            },
+            methods: {
+                refreshStorage() {
+                    const token = localStorage.getItem('token');
+                    const userRole = localStorage.getItem('user_role');
+                    const userInfo = localStorage.getItem('userInfo');
+                    
+                    this.userRole = userRole || '';
+                    this.hasUserRole = userRole !== null && userRole !== '';
+                    this.userRoleCorrect = userRole === 'super_admin' || userRole === 'admin' || userRole === 'office_admin';
+                    
+                    const content = {
+                        token: token ? '存在（长度：' + token.length + '）' : '不存在',
+                        user_role: userRole || '不存在 ❌',
+                        userInfo: userInfo ? JSON.parse(userInfo) : null
+                    };
+                    
+                    this.localStorageContent = JSON.stringify(content, null, 2);
+                    
+                    if (!this.hasUserRole) {
+                        console.warn('❌ localStorage中没有user_role字段，这就是为什么只显示1个办公室的原因');
+                    } else if (this.userRoleCorrect) {
+                        console.log('✅ localStorage正常，领水页面应该能显示所有办公室');
+                    } else {
+                        console.warn('⚠️ localStorage中user_role不正确：' + userRole);
+                    }
+                },
+                
+                clearStorage() {
+                    localStorage.clear();
+                    alert('localStorage已清除，请重新登录');
+                    window.location.href = '/portal/admin/login.html';
+                },
+                
+                fixStorage() {
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!userInfoStr) {
+                        alert('localStorage中没有userInfo，请先登录');
+                        return;
+                    }
+                    
+                    const userInfo = JSON.parse(userInfoStr);
+                    
+                    // 从userInfo.role中提取英文role（如果是中文，需要映射）
+                    const roleNameMap = {
+                        '超级管理员': 'super_admin',
+                        '管理员': 'admin',
+                        '办公室管理员': 'office_admin',
+                        '普通用户': 'user'
+                    };
+                    
+                    let role = userInfo.role;
+                    
+                    // 如果role是中文，转换为英文
+                    if (roleNameMap[role]) {
+                        role = roleNameMap[role];
+                    }
+                    
+                    // 存储user_role
+                    localStorage.setItem('user_role', role);
+                    
+                    alert('已添加user_role字段：' + role + '\n请刷新领水页面');
+                    this.refreshStorage();
+                },
+                
+                goToWaterPage() {
+                    window.location.href = '/water/index.html';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
