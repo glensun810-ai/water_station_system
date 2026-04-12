@@ -12,6 +12,14 @@ from models.base import Base
 class OfficePickup(Base):
     """
     办公室领水记录表
+
+    状态流转：
+    pending(待付款) → paid(已付款待确认) → confirmed(已确认收款)
+
+    业务流程：
+    1. 用户领水登记 → pending
+    2. 用户付款 → paid
+    3. 管理员确认收款 → confirmed
     """
 
     __tablename__ = "office_pickup"
@@ -37,8 +45,21 @@ class OfficePickup(Base):
     # 支付模式: prepaid(预付) / credit(信用/先用后付)
     payment_mode = Column(String(20), default="credit")
 
-    # 结算状态: pending(待结算) / applied(已申请待确认) / settled(已结清)
+    # 结算状态: pending(待付款) / paid(已付款待确认) / confirmed(已确认收款)
     settlement_status = Column(String(20), default="pending")
+
+    # 付款信息
+    payment_time = Column(DateTime, nullable=True)
+    payment_method = Column(
+        String(20), nullable=True
+    )  # cash/transfer/prepaid/wechat/alipay
+    payment_note = Column(String(200), nullable=True)
+
+    # 确认信息
+    confirmed_time = Column(DateTime, nullable=True)
+    confirmed_by = Column(Integer, nullable=True)
+    confirmed_by_name = Column(String(100), nullable=True)
+    confirm_note = Column(String(200), nullable=True)
 
     # 金额
     unit_price = Column(Float, nullable=False)

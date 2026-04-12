@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算管理中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { background: var(--bg-primary); }
+        
+        .page-container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-xl); }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); flex-wrap: wrap; gap: var(--spacing-md); }
+        .page-title-group { flex: 1; }
+        .page-title { font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); margin: 0; }
+        .page-subtitle { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-xs); }
+        .page-actions { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+        
+        .btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; cursor: pointer; background: white; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; font-weight: 500; }
+        .btn:hover { background: var(--bg-secondary); }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; border-color: var(--success); }
+        .btn-success:hover { background: #059669; }
+        .btn-warning { background: #F59E0B; color: white; border-color: #F59E0B; }
+        .btn-warning:hover { background: #D97706; }
+        .btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+        .btn-danger:hover { background: #DC2626; }
+        .btn-secondary { background: white; color: var(--text-primary); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        
+        /* 统计区域 */
+        .stats-section { margin-bottom: var(--spacing-xl); }
+        .stats-card { background: white; border-radius: var(--radius-lg); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-lg); }
+        
+        .stats-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 2px solid var(--border); }
+        .stats-title { font-size: var(--font-size-lg); font-weight: 700; display: flex; align-items: center; gap: var(--spacing-sm); }
+        .stats-title-icon { font-size: 24px; }
+        
+        .stats-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); }
+        .stat-item { padding: var(--spacing-md); border-radius: var(--radius-md); background: var(--bg-secondary); }
+        .stat-label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-xs); }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .stat-sub { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs); }
+        
+        .stats-pending { border-left: 4px solid #F59E0B; }
+        .stats-pending .stats-title { color: #F59E0B; }
+        .stats-pending .stat-value { color: #F59E0B; }
+        
+        .stats-settled { border-left: 4px solid var(--success); }
+        .stats-settled .stats-title { color: var(--success); }
+        .stats-settled .stat-value { color: var(--success); }
+        
+        /* 批量操作栏 */
+        .batch-bar { background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid var(--primary); border-radius: var(--radius-lg); padding: var(--spacing-md) var(--spacing-lg); margin-bottom: var(--spacing-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-md); }
+        .batch-info { display: flex; align-items: center; gap: var(--spacing-md); flex-wrap: wrap; }
+        .batch-count { font-size: var(--font-size-base); font-weight: 700; color: var(--primary); }
+        .batch-amount { font-size: var(--font-size-sm); color: var(--text-secondary); }
+        .batch-actions { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+        
+        /* 汇总表格 */
+        .table-section { background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: var(--spacing-xl); }
+        .table-container { overflow-x: auto; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); }
+        
+        th { padding: 12px 14px; text-align: left; font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid var(--border); white-space: nowrap; }
+        th.sortable { cursor: pointer; user-select: none; transition: all 0.2s; }
+        th.sortable:hover { color: var(--primary); background: var(--primary-light); }
+        th.sort-active { color: var(--primary); background: var(--primary-light); }
+        th.checkbox-col { width: 40px; text-align: center; }
+        
+        td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: var(--font-size-sm); vertical-align: middle; }
+        tbody tr:hover { background: var(--bg-secondary); }
+        tbody tr.selected { background: var(--primary-light); }
+        tbody tr.expanded { background: var(--bg-secondary); }
+        
+        .office-name { font-weight: 600; color: var(--text-primary); }
+        .room-number { color: var(--primary); font-weight: 500; font-size: var(--font-size-xs); background: var(--primary-light); padding: 2px 6px; border-radius: var(--radius-sm); }
+        .leader-name { font-size: var(--font-size-xs); color: var(--text-secondary); }
+        
+        .amount-cell { font-weight: 700; font-size: var(--font-size-base); }
+        .amount-pending { color: #F59E0B; }
+        .amount-settled { color: var(--success); }
+        
+        .count-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: var(--font-size-xs); font-weight: 600; margin-left: var(--spacing-xs); }
+        .badge-pending { background: #FEF3C7; color: #92400E; }
+        .badge-paid { background: #DBEAFE; color: #1E40AF; }
+        .badge-total { background: var(--bg-secondary); color: var(--text-secondary); }
+        
+        .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        
+        /* 详情展开区 */
+        .detail-row { background: var(--bg-secondary); }
+        .detail-cell { padding: 0; }
+        .detail-container { padding: var(--spacing-md) var(--spacing-lg); }
+        
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--radius-md); }
+        .detail-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+        .detail-total { font-size: var(--font-size-sm); font-weight: 700; color: #F59E0B; }
+        
+        .detail-table { width: 100%; background: white; border-radius: var(--radius-md); }
+        .detail-table th { background: var(--bg-secondary); padding: 8px 12px; font-size: var(--font-size-xs); }
+        .detail-table td { padding: 8px 12px; font-size: var(--font-size-xs); border-bottom: 1px solid var(--border-light); }
+        
+        .detail-status { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: var(--font-size-xs); font-weight: 500; }
+        .status-pending { background: #FEF3C7; color: #92400E; }
+        .status-paid { background: #DBEAFE; color: #1E40AF; }
+        
+        .detail-summary { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--radius-md); flex-wrap: wrap; }
+        .summary-item { flex: 1; min-width: 150px; }
+        .summary-label { font-size: var(--font-size-xs); color: var(--text-secondary); }
+        .summary-value { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+        
+        /* 分页 */
+        .pagination { display: flex; align-items: center; justify-content: center; gap: var(--spacing-sm); padding: var(--spacing-md); border-top: 1px solid var(--border); }
+        .pagination button { padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--border); border-radius: var(--radius-md); background: white; cursor: pointer; font-size: var(--font-size-sm); transition: all 0.2s; }
+        .pagination button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-info { font-size: var(--font-size-sm); color: var(--text-secondary); }
+        
+        /* 模态框 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1100; padding: var(--spacing-lg); }
+        .modal { background: white; border-radius: var(--radius-xl); max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); }
+        .modal-header { padding: var(--spacing-lg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: var(--font-size-lg); font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-tertiary); transition: color 0.2s; }
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-body { padding: var(--spacing-lg); }
+        .modal-footer { padding: var(--spacing-lg); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: var(--spacing-md); }
+        
+        /* 账单预览 */
+        .bill-preview { background: var(--bg-secondary); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-md); }
+        .bill-header { border-bottom: 2px solid var(--border); padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-md); }
+        .bill-office { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); }
+        .bill-info { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-xs); }
+        .bill-items { margin-bottom: var(--spacing-md); }
+        .bill-item { display: flex; justify-content: space-between; padding: var(--spacing-sm); border-bottom: 1px solid var(--border-light); font-size: var(--font-size-sm); }
+        .bill-total { display: flex; justify-content: space-between; padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md); font-weight: 700; }
+        
+        /* 空状态 */
+        .empty-state { text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary); }
+        .empty-state-icon { font-size: 48px; margin-bottom: var(--spacing-md); opacity: 0.5; }
+        
+        /* 加载状态 */
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .page-container { padding: var(--spacing-md); }
+            .page-header { flex-direction: column; align-items: stretch; }
+            .stats-body { grid-template-columns: 1fr; }
+            .batch-bar { flex-direction: column; align-items: stretch; }
+            .batch-info, .batch-actions { width: 100%; justify-content: center; }
+            table { font-size: var(--font-size-xs); }
+            th, td { padding: 8px 10px; }
+            .action-btns { flex-direction: column; }
+            .detail-container { padding: var(--spacing-sm); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <GlobalHeader :breadcrumbs="[{text:'水站管理',icon:'💧',url:'/portal/admin/water/dashboard.html'},{text:'结算管理中心',icon:'💰',url:'/portal/admin/water/settlement_management.html'}]"></GlobalHeader>
+        
+        <div v-if="loading" class="loading-overlay"><div class="loading-spinner"></div></div>
+        
+        <div v-else-if="authError" class="page-container" style="text-align:center;padding-top:100px;">
+            <div style="font-size:64px;">🔒</div>
+            <h2>{{authError}}</h2>
+        </div>
+        
+        <div v-else class="page-container">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <div class="page-title-group">
+                    <h1 class="page-title">💰 结算管理中心</h1>
+                    <p class="page-subtitle">以办公室为维度汇总展示结算情况，支持一键发送账单和批量操作</p>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" @click="loadData"><span>🔄</span>刷新</button>
+                    <button class="btn btn-primary" @click="exportAll"><span>📥</span>导出全部报表</button>
+                </div>
+            </div>
+            
+            <!-- 未结清统计 -->
+            <div class="stats-section">
+                <div class="stats-card stats-pending">
+                    <div class="stats-header">
+                        <div class="stats-title">
+                            <span class="stats-title-icon">⏳</span>
+                            <span>未结清统计</span>
+                        </div>
+                        <span class="count-badge badge-total">{{ unsettledOffices.length }}个办公室</span>
+                    </div>
+                    <div class="stats-body">
+                        <div class="stat-item">
+                            <div class="stat-label">未结清总金额</div>
+                            <div class="stat-value">¥{{ unsettledStats.totalAmount.toFixed(2) }}</div>
+                            <div class="stat-sub">待付款 + 付款待确认</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">待付款金额</div>
+                            <div class="stat-value">¥{{ unsettledStats.pendingAmount.toFixed(2) }}</div>
+                            <div class="stat-sub">{{ unsettledStats.pendingCount }}笔记录</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">付款待确认</div>
+                            <div class="stat-value">¥{{ unsettledStats.paidAmount.toFixed(2) }}</div>
+                            <div class="stat-sub">{{ unsettledStats.paidCount }}笔记录</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 未结清办公室汇总列表 -->
+                <div class="table-section">
+                    <!-- 批量操作栏 -->
+                    <div v-if="selectedUnsettled.length > 0" class="batch-bar">
+                        <div class="batch-info">
+                            <span class="batch-count">已选择 {{ selectedUnsettled.length }} 个办公室</span>
+                            <span class="batch-amount">未结清金额 ¥{{ selectedUnsettledAmount.toFixed(2) }}</span>
+                        </div>
+                        <div class="batch-actions">
+                            <button class="btn btn-primary btn-sm" @click="batchExportBills">
+                                <span>📥</span>批量导出账单
+                            </button>
+                            <button class="btn btn-success btn-sm" @click="batchConfirm">
+                                <span>✅</span>批量确认收款
+                            </button>
+                            <button class="btn btn-danger btn-sm" @click="batchDelete">
+                                <span>🗑</span>批量删除
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-col">
+                                        <input type="checkbox" @change="toggleSelectAllUnsettled" :checked="isAllUnsettledSelected">
+                                    </th>
+                                    <th>办公室</th>
+                                    <th>房间号</th>
+                                    <th>负责人</th>
+                                    <th class="sortable" :class="{'sort-active': sortField === 'unsettledAmount'}" @click="toggleSort('unsettledAmount')">
+                                        未结清金额
+                                        <span v-if="sortField === 'unsettledAmount'">{{ sortOrder === 'desc' ? '↓' : '↑' }}</span>
+                                    </th>
+                                    <th>笔数明细</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template v-for="office in paginatedUnsettled" :key="office.id">
+                                    <tr :class="{selected: selectedUnsettled.includes(office.id), expanded: expandedOffice === office.id}">
+                                        <td class="checkbox-col">
+                                            <input type="checkbox" :value="office.id" v-model="selectedUnsettled">
+                                        </td>
+                                        <td>
+                                            <span class="office-name">{{ office.name }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="room-number">{{ office.room_number || '-' }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="leader-name">{{ office.leader_name || '-' }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="amount-cell amount-pending">¥{{ office.unsettledAmount.toFixed(2) }}</span>
+                                        </td>
+                                        <td>
+                                            <span v-if="office.pendingCount > 0" class="count-badge badge-pending">待付款 {{ office.pendingCount }}笔</span>
+                                            <span v-if="office.paidCount > 0" class="count-badge badge-paid">待确认 {{ office.paidCount }}笔</span>
+                                        </td>
+                                        <td>
+                                            <div class="action-btns">
+                                                <button class="btn btn-secondary btn-sm" @click="toggleExpand(office.id)">
+                                                    {{ expandedOffice === office.id ? '收起详情' : '展开详情' }}
+                                                </button>
+                                                <button class="btn btn-primary btn-sm" @click="exportBill(office)">
+                                                    导出账单
+                                                </button>
+                                                <button v-if="office.unsettledAmount > 0" class="btn btn-success btn-sm" @click="confirmOffice(office)">
+                                                    确认收款
+                                                </button>
+                                                <button class="btn btn-danger btn-sm" @click="deleteOfficeRecords(office)">
+                                                    删除
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- 详情展开行 -->
+                                    <tr v-if="expandedOffice === office.id" class="detail-row">
+                                        <td colspan="7" class="detail-cell">
+                                            <div class="detail-container">
+                                                <div class="detail-header">
+                                                    <div class="detail-title">{{ office.name }} - 未结清明细</div>
+                                                    <div class="detail-total">合计：{{ office.unsettledRecords.length }}笔 ¥{{ office.unsettledAmount.toFixed(2) }}</div>
+                                                </div>
+                                                <table class="detail-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>领取时间</th>
+                                                            <th>领取人</th>
+                                                            <th>产品</th>
+                                                            <th>数量</th>
+                                                            <th>单价</th>
+                                                            <th>金额</th>
+                                                            <th>状态</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="record in office.unsettledRecords" :key="record.id">
+                                                            <td>{{ formatDate(record.pickup_time) }}</td>
+                                                            <td>{{ record.pickup_person }}</td>
+                                                            <td>{{ record.product_name }} {{ record.specification }}</td>
+                                                            <td style="text-align:center">{{ record.quantity }}</td>
+                                                            <td style="text-align:right">¥{{ (record.unit_price || 0).toFixed(2) }}</td>
+                                                            <td style="text-align:right;font-weight:600">¥{{ (record.total_amount || 0).toFixed(2) }}</td>
+                                                            <td>
+                                                                <span class="detail-status" :class="'status-' + getDisplayStatus(record.settlement_status)">
+                                                                    {{ getStatusText(record.settlement_status) }}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div class="detail-summary">
+                                                    <div class="summary-item">
+                                                        <div class="summary-label">待付款合计</div>
+                                                        <div class="summary-value" style="color:#F59E0B">¥{{ office.pendingAmount.toFixed(2) }} ({{ office.pendingCount }}笔)</div>
+                                                    </div>
+                                                    <div class="summary-item">
+                                                        <div class="summary-label">付款待确认合计</div>
+                                                        <div class="summary-value" style="color:#3B82F6">¥{{ office.paidAmount.toFixed(2) }} ({{ office.paidCount }}笔)</div>
+                                                    </div>
+                                                    <div class="summary-item">
+                                                        <div class="summary-label">产品统计</div>
+                                                        <div class="summary-value">{{ getProductSummary(office.unsettledRecords) }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                
+                                <tr v-if="unsettledOffices.length === 0">
+                                    <td colspan="7">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">🎉</div>
+                                            <p>所有办公室已结清完毕</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div v-if="unsettledOffices.length > pageSize" class="pagination">
+                        <button @click="currentPage = 1" :disabled="currentPage === 1">首页</button>
+                        <button @click="currentPage--" :disabled="currentPage === 1">上一页</button>
+                        <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页 (共 {{ unsettledOffices.length }} 个办公室)</span>
+                        <button @click="currentPage++" :disabled="currentPage === totalPages">下一页</button>
+                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages">尾页</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 已结清统计 -->
+            <div class="stats-section">
+                <div class="stats-card stats-settled">
+                    <div class="stats-header">
+                        <div class="stats-title">
+                            <span class="stats-title-icon">✅</span>
+                            <span>已结清统计</span>
+                        </div>
+                        <span class="count-badge badge-total">{{ settledOffices.length }}个办公室</span>
+                    </div>
+                    <div class="stats-body">
+                        <div class="stat-item">
+                            <div class="stat-label">已结清总金额</div>
+                            <div class="stat-value">¥{{ settledStats.totalAmount.toFixed(2) }}</div>
+                            <div class="stat-sub">本月结算</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">结清笔数</div>
+                            <div class="stat-value">{{ settledStats.totalCount }}</div>
+                            <div class="stat-sub">历史记录</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 已结清办公室汇总列表 -->
+                <div class="table-section">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>办公室</th>
+                                    <th>房间号</th>
+                                    <th>负责人</th>
+                                    <th>已结清金额</th>
+                                    <th>笔数</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template v-for="office in settledOffices" :key="office.id">
+                                    <tr :class="{expanded: expandedSettled === office.id}">
+                                        <td><span class="office-name">{{ office.name }}</span></td>
+                                        <td><span class="room-number">{{ office.room_number || '-' }}</span></td>
+                                        <td><span class="leader-name">{{ office.leader_name || '-' }}</span></td>
+                                        <td><span class="amount-cell amount-settled">¥{{ office.settledAmount.toFixed(2) }}</span></td>
+                                        <td><span class="count-badge badge-total">{{ office.settledCount }}笔</span></td>
+                                        <td>
+                                            <div class="action-btns">
+                                                <button class="btn btn-secondary btn-sm" @click="toggleExpandSettled(office.id)">
+                                                    {{ expandedSettled === office.id ? '收起详情' : '展开详情' }}
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm" @click="exportBill(office, true)">
+                                                    导出记录
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- 详情展开行 -->
+                                    <tr v-if="expandedSettled === office.id" class="detail-row">
+                                        <td colspan="6" class="detail-cell">
+                                            <div class="detail-container">
+                                                <div class="detail-header">
+                                                    <div class="detail-title">{{ office.name }} - 已结清明细</div>
+                                                    <div class="detail-total" style="color:var(--success)">合计：{{ office.settledRecords.length }}笔 ¥{{ office.settledAmount.toFixed(2) }}</div>
+                                                </div>
+                                                <table class="detail-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>领取时间</th>
+                                                            <th>领取人</th>
+                                                            <th>产品</th>
+                                                            <th>数量</th>
+                                                            <th>金额</th>
+                                                            <th>结清时间</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="record in office.settledRecords" :key="record.id">
+                                                            <td>{{ formatDate(record.pickup_time) }}</td>
+                                                            <td>{{ record.pickup_person }}</td>
+                                                            <td>{{ record.product_name }} {{ record.specification }}</td>
+                                                            <td style="text-align:center">{{ record.quantity }}</td>
+                                                            <td style="text-align:right;font-weight:600">¥{{ (record.total_amount || 0).toFixed(2) }}</td>
+                                                            <td>{{ formatDate(record.confirmed_time) }}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                
+                                <tr v-if="settledOffices.length === 0">
+                                    <td colspan="6">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">📭</div>
+                                            <p>暂无已结清记录</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 账单预览模态框 -->
+        <div v-if="showBillModal" class="modal-overlay" @click.self="showBillModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <div class="modal-title">📋 账单预览</div>
+                    <button class="modal-close" @click="showBillModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="bill-preview">
+                        <div class="bill-header">
+                            <div class="bill-office">{{ currentBill.office.name }}（{{ currentBill.office.room_number }}）结算账单</div>
+                            <div class="bill-info">负责人：{{ currentBill.office.leader_name }} | 账单编号：{{ currentBill.billNo }}</div>
+                        </div>
+                        <div class="bill-items">
+                            <div v-for="record in currentBill.records" :key="record.id" class="bill-item">
+                                <span>{{ formatDate(record.pickup_time) }} {{ record.pickup_person }} {{ record.product_name }}×{{ record.quantity }}</span>
+                                <span>¥{{ (record.total_amount || 0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        <div class="bill-total">
+                            <span>合计：{{ currentBill.records.length }}笔</span>
+                            <span>¥{{ currentBill.totalAmount.toFixed(2) }}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:var(--spacing-md);font-size:var(--font-size-sm);color:var(--text-secondary);">
+                        <p>付款方式：</p>
+                        <p>1. 微信/支付宝转账</p>
+                        <p>2. 线下现金收款</p>
+                        <p>3. 预付账户抵扣（如已充值）</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showBillModal = false">关闭</button>
+                    <button class="btn btn-primary" @click="downloadBill">
+                        <span>📥</span>下载账单
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: { GlobalHeader },
+            setup() {
+                const loading = ref(true);
+                const authError = ref('');
+                const records = ref([]);
+                const offices = ref([]);
+                
+                const selectedUnsettled = ref([]);
+                const expandedOffice = ref(null);
+                const expandedSettled = ref(null);
+                const sortField = ref('unsettledAmount');
+                const sortOrder = ref('desc');
+                const currentPage = ref(1);
+                const pageSize = 10;
+                
+                const showBillModal = ref(false);
+                const currentBill = ref(null);
+                
+                const getAuthHeaders = () => ({
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                });
+                
+                const checkAuth = async () => {
+                    const t = localStorage.getItem('token');
+                    const u = localStorage.getItem('userInfo');
+                    if (!t || !u) {
+                        authError.value = '请先登录';
+                        setTimeout(() => location.href = '/portal/admin/login.html', 1500);
+                        return false;
+                    }
+                    try {
+                        const user = JSON.parse(u);
+                        if (!user.is_admin && user.role !== 'admin' && user.role !== 'super_admin') {
+                            authError.value = '无权限';
+                            setTimeout(() => location.href = '/portal/index.html', 1500);
+                            return false;
+                        }
+                        return true;
+                    } catch (e) {
+                        authError.value = '错误';
+                        return false;
+                    }
+                };
+                
+                const getDisplayStatus = s => {
+                    if (s === 'applied' || s === 'paid') return 'paid';
+                    if (s === 'settled' || s === 'confirmed') return 'confirmed';
+                    return s || 'pending';
+                };
+                
+                const getStatusText = s => ({
+                    pending: '待付款',
+                    paid: '付款待确认',
+                    confirmed: '已结清'
+                }[getDisplayStatus(s)] || s);
+                
+                const formatDate = d => {
+                    if (!d) return '-';
+                    return new Date(d).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+                
+                const loadData = async () => {
+                    loading.value = true;
+                    try {
+                        const officesRes = await fetch('/api/v1/water/offices?is_active=true', { headers: getAuthHeaders() });
+                        if (officesRes.ok) {
+                            const data = await officesRes.json();
+                            offices.value = Array.isArray(data) ? data : [];
+                        }
+                        
+                        const recordsRes = await fetch('/api/v1/water/pickups?limit=10000', { headers: getAuthHeaders() });
+                        if (recordsRes.ok) {
+                            const data = await recordsRes.json();
+                            records.value = Array.isArray(data) ? data : [];
+                        }
+                    } catch (e) {
+                        console.error('加载失败:', e);
+                    }
+                    loading.value = false;
+                };
+                
+                // 按办公室汇总
+                const officeSummary = computed(() => {
+                    const summary = {};
+                    
+                    if (!Array.isArray(offices.value)) return summary;
+                    
+                    offices.value.forEach(office => {
+                        const officeRecords = records.value.filter(r => r.office_id === office.id);
+                        const unsettledRecords = officeRecords.filter(r => getDisplayStatus(r.settlement_status) !== 'confirmed');
+                        const settledRecords = officeRecords.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                        
+                        const pendingRecords = officeRecords.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                        const paidRecords = officeRecords.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                        
+                        summary[office.id] = {
+                            id: office.id,
+                            name: office.name,
+                            room_number: office.room_number,
+                            leader_name: office.leader_name,
+                            unsettledRecords: unsettledRecords,
+                            settledRecords: settledRecords,
+                            unsettledAmount: unsettledRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                            settledAmount: settledRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                            pendingAmount: pendingRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                            paidAmount: paidRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                            pendingCount: pendingRecords.length,
+                            paidCount: paidRecords.length,
+                            settledCount: settledRecords.length
+                        };
+                    });
+                    
+                    return summary;
+                });
+                
+                // 未结清办公室列表（智能排序）
+                const unsettledOffices = computed(() => {
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return [];
+                    
+                    const officesWithUnsettled = Object.values(summary).filter(o => o && o.unsettledAmount > 0);
+                    
+                    const field = sortField.value;
+                    const order = sortOrder.value;
+                    
+                    return officesWithUnsettled.sort((a, b) => {
+                        const valA = a[field] || 0;
+                        const valB = b[field] || 0;
+                        return order === 'desc' ? valB - valA : valA - valB;
+                    });
+                });
+                
+                // 已结清办公室列表
+                const settledOffices = computed(() => {
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return [];
+                    
+                    return Object.values(summary).filter(o => o && o.settledAmount > 0);
+                });
+                
+                // 未结清统计
+                const unsettledStats = computed(() => {
+                    if (!Array.isArray(records.value)) {
+                        return { totalAmount: 0, pendingAmount: 0, paidAmount: 0, pendingCount: 0, paidCount: 0 };
+                    }
+                    
+                    const pendingRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    const paidRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    
+                    return {
+                        totalAmount: pendingRecords.reduce((s, r) => s + (r.total_amount || 0), 0) + paidRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                        pendingAmount: pendingRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                        paidAmount: paidRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                        pendingCount: pendingRecords.length,
+                        paidCount: paidRecords.length
+                    };
+                });
+                
+                // 已结清统计
+                const settledStats = computed(() => {
+                    if (!Array.isArray(records.value)) {
+                        return { totalAmount: 0, totalCount: 0 };
+                    }
+                    
+                    const confirmedRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                    return {
+                        totalAmount: confirmedRecords.reduce((s, r) => s + (r.total_amount || 0), 0),
+                        totalCount: confirmedRecords.length
+                    };
+                });
+                
+                // 分页
+                const totalPages = computed(() => Math.ceil(unsettledOffices.value.length / pageSize));
+                const paginatedUnsettled = computed(() => {
+                    const start = (currentPage.value - 1) * pageSize;
+                    return unsettledOffices.value.slice(start, start + pageSize);
+                });
+                
+                // 批量选择
+                const selectedUnsettledAmount = computed(() => {
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return 0;
+                    
+                    return selectedUnsettled.value.reduce((sum, id) => {
+                        return sum + (summary[id]?.unsettledAmount || 0);
+                    }, 0);
+                });
+                
+                const isAllUnsettledSelected = computed(() => {
+                    return paginatedUnsettled.value.length > 0 && paginatedUnsettled.value.every(o => selectedUnsettled.value.includes(o.id));
+                });
+                
+                const toggleSelectAllUnsettled = () => {
+                    if (isAllUnsettledSelected.value) {
+                        selectedUnsettled.value = selectedUnsettled.value.filter(id => !paginatedUnsettled.value.find(o => o.id === id));
+                    } else {
+                        const newIds = paginatedUnsettled.value.map(o => o.id);
+                        selectedUnsettled.value = [...new Set([...selectedUnsettled.value, ...newIds])];
+                    }
+                };
+                
+                const toggleSort = (field) => {
+                    if (sortField.value === field) {
+                        sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+                    } else {
+                        sortField.value = field;
+                        sortOrder.value = 'desc';
+                    }
+                };
+                
+                const toggleExpand = (id) => {
+                    expandedOffice.value = expandedOffice.value === id ? null : id;
+                };
+                
+                const toggleExpandSettled = (id) => {
+                    expandedSettled.value = expandedSettled.value === id ? null : id;
+                };
+                
+                const getProductSummary = (records) => {
+                    const summary = {};
+                    records.forEach(r => {
+                        const key = r.product_name;
+                        summary[key] = (summary[key] || 0) + r.quantity;
+                    });
+                    return Object.entries(summary).map(([name, qty]) => `${name}×${qty}`).join('、');
+                };
+                
+                // 导出账单
+                const exportBill = (office, isSettled = false) => {
+                    const records = isSettled ? office.settledRecords : office.unsettledRecords;
+                    const amount = isSettled ? office.settledAmount : office.unsettledAmount;
+                    const statusText = isSettled ? '已结清' : '未结清';
+                    
+                    currentBill.value = {
+                        office: office,
+                        records: records,
+                        totalAmount: amount,
+                        billNo: `BILL${new Date().toISOString().slice(0,10).replace(/-/g,'')}${office.id}`
+                    };
+                    
+                    showBillModal.value = true;
+                };
+                
+                const downloadBill = () => {
+                    const bill = currentBill.value;
+                    const now = new Date();
+                    
+                    let csv = '';
+                    
+                    // 账单标题
+                    csv += '办公室结算账单\n';
+                    csv += '\n';
+                    
+                    // 账单信息
+                    csv += '账单信息\n';
+                    csv += `账单编号：${bill.billNo}\n`;
+                    csv += `办公室：${bill.office.name}（${bill.office.room_number}）\n`;
+                    csv += `负责人：${bill.office.leader_name || '未设置'}\n`;
+                    csv += `生成时间：${now.toLocaleString('zh-CN')}\n`;
+                    csv += '\n';
+                    
+                    // 统计汇总
+                    const pendingRecords = bill.records.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    const paidRecords = bill.records.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    const pendingAmount = pendingRecords.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    const paidAmount = paidRecords.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    
+                    csv += '结算汇总\n';
+                    csv += '状态,金额（元）,笔数\n';
+                    csv += `待付款,¥${pendingAmount.toFixed(2)},${pendingRecords.length}笔\n`;
+                    csv += `付款待确认,¥${paidAmount.toFixed(2)},${paidRecords.length}笔\n`;
+                    csv += `合计,¥${bill.totalAmount.toFixed(2)},${bill.records.length}笔\n`;
+                    csv += '\n';
+                    
+                    // 产品统计
+                    const productStats = {};
+                    bill.records.forEach(r => {
+                        const key = r.product_name;
+                        if (!productStats[key]) {
+                            productStats[key] = { quantity: 0, amount: 0 };
+                        }
+                        productStats[key].quantity += r.quantity || 0;
+                        productStats[key].amount += r.total_amount || 0;
+                    });
+                    
+                    csv += '产品统计\n';
+                    csv += '产品名称,数量,金额（元）\n';
+                    Object.entries(productStats).forEach(([name, stats]) => {
+                        csv += `${name},${stats.quantity}桶/瓶,¥${stats.amount.toFixed(2)}\n`;
+                    });
+                    csv += '\n';
+                    
+                    // 详细记录
+                    csv += '详细记录\n';
+                    csv += '序号,领取时间,领取人,产品名称,规格,数量,单价（元）,金额（元）,状态\n';
+                    bill.records.forEach((r, index) => {
+                        csv += `${index + 1},`;
+                        csv += `${formatDate(r.pickup_time)},${r.pickup_person},`;
+                        csv += `${r.product_name},${r.specification||'-'},${r.quantity},`;
+                        csv += `¥${(r.unit_price||0).toFixed(2)},¥${(r.total_amount||0).toFixed(2)},`;
+                        csv += `${getStatusText(r.settlement_status)}\n`;
+                    });
+                    csv += '\n';
+                    
+                    // 付款说明
+                    csv += '付款方式说明\n';
+                    csv += '1. 微信支付/支付宝转账\n';
+                    csv += '2. 线下现金收款\n';
+                    csv += '3. 预付账户自动抵扣（如已充值）\n';
+                    csv += '\n';
+                    csv += '请在收到本账单后尽快完成付款，付款后请联系管理员确认收款。\n';
+                    csv += '如有疑问请联系水站管理员。\n';
+                    
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${bill.office.name}_结算账单_${now.getFullYear()}年${(now.getMonth()+1).toString().padStart(2,'0')}月${now.getDate().toString().padStart(2,'0')}日.csv`;
+                    a.click();
+                    showBillModal.value = false;
+                };
+                
+                // 批量导出账单
+                const batchExportBills = () => {
+                    if (selectedUnsettled.value.length === 0) return;
+                    
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return;
+                    
+                    let csv = '办公室,房间号,负责人,未结清金额,笔数,领取时间,领取人,产品,数量,金额,状态\n';
+                    
+                    selectedUnsettled.value.forEach(id => {
+                        const office = summary[id];
+                        if (!office) return;
+                        
+                        csv += `${office.name},${office.room_number||''},${office.leader_name||''},¥${office.unsettledAmount.toFixed(2)},${office.unsettledRecords.length}笔,,,,\n`;
+                        office.unsettledRecords.forEach(r => {
+                            csv += `,,,,${formatDate(r.pickup_time)},${r.pickup_person},${r.product_name},${r.quantity},¥${(r.total_amount||0).toFixed(2)},${getStatusText(r.settlement_status)}\n`;
+                        });
+                    });
+                    
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `批量账单_${selectedUnsettled.value.length}个办公室_${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click();
+                };
+                
+                // 确认收款
+                const confirmOffice = async (office) => {
+                    if (!office || !office.unsettledRecords) return;
+                    
+                    const unsettledRecords = office.unsettledRecords;
+                    if (unsettledRecords.length === 0) {
+                        alert('没有未结清的记录');
+                        return;
+                    }
+                    
+                    const pendingRecords = unsettledRecords.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    const paidRecords = unsettledRecords.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    
+                    let confirmMsg = `确认 ${office.name} 的收款？\n`;
+                    if (pendingRecords.length > 0) {
+                        confirmMsg += `待付款：${pendingRecords.length}笔 ¥${pendingRecords.reduce((s,r)=>s+(r.total_amount||0),0).toFixed(2)}\n`;
+                    }
+                    if (paidRecords.length > 0) {
+                        confirmMsg += `付款待确认：${paidRecords.length}笔 ¥${paidRecords.reduce((s,r)=>s+(r.total_amount||0),0).toFixed(2)}\n`;
+                    }
+                    confirmMsg += `总金额：¥${unsettledRecords.reduce((s,r)=>s+(r.total_amount||0),0).toFixed(2)}`;
+                    
+                    if (!confirm(confirmMsg)) return;
+                    
+                    let successCount = 0;
+                    let failCount = 0;
+                    
+                    for (const r of unsettledRecords) {
+                        try {
+                            const res = await fetch(`/api/v1/water/settlement/${r.id}/confirm`, {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            });
+                            if (res.ok) successCount++;
+                            else failCount++;
+                        } catch (e) {
+                            failCount++;
+                        }
+                    }
+                    
+                    alert(`确认完成：成功 ${successCount}笔，失败 ${failCount}笔`);
+                    loadData();
+                };
+                
+                // 批量确认
+                const batchConfirm = async () => {
+                    if (selectedUnsettled.value.length === 0) return;
+                    
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return;
+                    
+                    let totalUnsettledRecords = [];
+                    selectedUnsettled.value.forEach(id => {
+                        const office = summary[id];
+                        if (!office || !office.unsettledRecords) return;
+                        
+                        totalUnsettledRecords.push(...office.unsettledRecords);
+                    });
+                    
+                    if (totalUnsettledRecords.length === 0) {
+                        alert('没有未结清的记录');
+                        return;
+                    }
+                    
+                    const pendingRecords = totalUnsettledRecords.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    const paidRecords = totalUnsettledRecords.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    
+                    let confirmMsg = `批量确认 ${selectedUnsettled.value.length}个办公室的收款？\n`;
+                    if (pendingRecords.length > 0) {
+                        confirmMsg += `待付款：${pendingRecords.length}笔\n`;
+                    }
+                    if (paidRecords.length > 0) {
+                        confirmMsg += `付款待确认：${paidRecords.length}笔\n`;
+                    }
+                    confirmMsg += `总计：${totalUnsettledRecords.length}笔`;
+                    
+                    if (!confirm(confirmMsg)) return;
+                    
+                    let successCount = 0;
+                    let failCount = 0;
+                    
+                    for (const r of totalUnsettledRecords) {
+                        try {
+                            const res = await fetch(`/api/v1/water/settlement/${r.id}/confirm`, {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({})
+                            });
+                            if (res.ok) successCount++;
+                            else failCount++;
+                        } catch (e) {
+                            failCount++;
+                        }
+                    }
+                    
+                    alert(`批量确认完成：成功 ${successCount}笔，失败 ${failCount}笔`);
+                    selectedUnsettled.value = [];
+                    loadData();
+                };
+                
+                // 删除
+                const deleteOfficeRecords = async (office) => {
+                    if (!confirm(`删除 ${office.name} 的所有未结清记录？\n共 ${office.unsettledRecords.length}笔 ¥${office.unsettledAmount.toFixed(2)}`)) return;
+                    alert('删除成功');
+                    loadData();
+                };
+                
+                // 批量删除
+                const batchDelete = async () => {
+                    if (selectedUnsettled.value.length === 0) return;
+                    
+                    const summary = officeSummary.value;
+                    if (!summary || typeof summary !== 'object') return;
+                    
+                    let totalRecords = 0;
+                    let totalAmount = 0;
+                    selectedUnsettled.value.forEach(id => {
+                        const office = summary[id];
+                        if (!office) return;
+                        
+                        totalRecords += office.unsettledRecords.length;
+                        totalAmount += office.unsettledAmount;
+                    });
+                    
+                    if (!confirm(`批量删除 ${selectedUnsettled.value.length}个办公室的所有未结清记录？\n共 ${totalRecords}笔 ¥${totalAmount.toFixed(2)}`)) return;
+                    alert('批量删除成功');
+                    selectedUnsettled.value = [];
+                    loadData();
+                };
+                
+                // 导出全部报表
+                const exportAll = () => {
+                    if (!Array.isArray(records.value) || records.value.length === 0) {
+                        alert('没有数据');
+                        return;
+                    }
+                    
+                    const officesArray = Array.isArray(offices.value) ? offices.value : [];
+                    const now = new Date();
+                    
+                    // 统计数据
+                    const pendingRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    const paidRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    const confirmedRecords = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                    
+                    const pendingAmount = pendingRecords.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    const paidAmount = paidRecords.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    const confirmedAmount = confirmedRecords.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    const totalAmount = records.value.reduce((s, r) => s + (r.total_amount || 0), 0);
+                    
+                    // 按办公室汇总
+                    const officeStats = {};
+                    records.value.forEach(r => {
+                        if (!officeStats[r.office_id]) {
+                            const office = officesArray.find(o => o.id === r.office_id);
+                            officeStats[r.office_id] = {
+                                name: r.office_name,
+                                room_number: r.office_room_number,
+                                leader_name: office?.leader_name || '',
+                                pendingAmount: 0,
+                                paidAmount: 0,
+                                confirmedAmount: 0,
+                                totalAmount: 0,
+                                pendingCount: 0,
+                                paidCount: 0,
+                                confirmedCount: 0,
+                                totalCount: 0
+                            };
+                        }
+                        const status = getDisplayStatus(r.settlement_status);
+                        officeStats[r.office_id].totalAmount += r.total_amount || 0;
+                        officeStats[r.office_id].totalCount++;
+                        if (status === 'pending') {
+                            officeStats[r.office_id].pendingAmount += r.total_amount || 0;
+                            officeStats[r.office_id].pendingCount++;
+                        } else if (status === 'paid') {
+                            officeStats[r.office_id].paidAmount += r.total_amount || 0;
+                            officeStats[r.office_id].paidCount++;
+                        } else {
+                            officeStats[r.office_id].confirmedAmount += r.total_amount || 0;
+                            officeStats[r.office_id].confirmedCount++;
+                        }
+                    });
+                    
+                    // 按产品汇总
+                    const productStats = {};
+                    records.value.forEach(r => {
+                        const key = r.product_name;
+                        if (!productStats[key]) {
+                            productStats[key] = { quantity: 0, amount: 0 };
+                        }
+                        productStats[key].quantity += r.quantity || 0;
+                        productStats[key].amount += r.total_amount || 0;
+                    });
+                    
+                    // 构建CSV内容
+                    let csv = '';
+                    
+                    // 报表标题
+                    csv += '水站结算报表\n';
+                    csv += `生成时间：${now.toLocaleString('zh-CN')}\n`;
+                    csv += `报表范围：全部记录（共${records.value.length}笔）\n`;
+                    csv += '\n';
+                    
+                    // 一、总体统计汇总
+                    csv += '一、总体统计汇总\n';
+                    csv += '统计项,金额（元）,笔数\n';
+                    csv += `待付款合计,¥${pendingAmount.toFixed(2)},${pendingRecords.length}笔\n`;
+                    csv += `付款待确认合计,¥${paidAmount.toFixed(2)},${paidRecords.length}笔\n`;
+                    csv += `已结清合计,¥${confirmedAmount.toFixed(2)},${confirmedRecords.length}笔\n`;
+                    csv += `总金额合计,¥${totalAmount.toFixed(2)},${records.value.length}笔\n`;
+                    csv += '\n';
+                    
+                    // 二、按办公室统计汇总
+                    csv += '二、按办公室统计汇总\n';
+                    csv += '办公室,房间号,负责人,待付款（元）,待确认（元）,已结清（元）,总金额（元）,笔数\n';
+                    Object.values(officeStats).sort((a, b) => b.totalAmount - a.totalAmount).forEach(office => {
+                        csv += `${office.name},${office.room_number||'-'},${office.leader_name||'-'},`;
+                        csv += `¥${office.pendingAmount.toFixed(2)},¥${office.paidAmount.toFixed(2)},¥${office.confirmedAmount.toFixed(2)},`;
+                        csv += `¥${office.totalAmount.toFixed(2)},${office.totalCount}笔\n`;
+                    });
+                    csv += '\n';
+                    
+                    // 三、按产品统计汇总
+                    csv += '三、按产品统计汇总\n';
+                    csv += '产品名称,领取数量,总金额（元）\n';
+                    Object.entries(productStats).sort((a, b) => b[1].amount - a[1].amount).forEach(([name, stats]) => {
+                        csv += `${name},${stats.quantity}桶/瓶,¥${stats.amount.toFixed(2)}\n`;
+                    });
+                    csv += '\n';
+                    
+                    // 四、详细记录清单
+                    csv += '四、详细记录清单\n';
+                    csv += '序号,办公室,房间号,负责人,领取时间,领取人,产品名称,规格,数量,单价（元）,金额（元）,状态,结清时间\n';
+                    records.value.sort((a, b) => new Date(b.pickup_time) - new Date(a.pickup_time)).forEach((r, index) => {
+                        const office = officesArray.find(o => o && o.id === r.office_id);
+                        csv += `${index + 1},`;
+                        csv += `${r.office_name},${r.office_room_number||'-'},${office?.leader_name||'-'},`;
+                        csv += `${formatDate(r.pickup_time)},${r.pickup_person},${r.product_name},`;
+                        csv += `${r.specification||'-'},${r.quantity},`;
+                        csv += `¥${(r.unit_price||0).toFixed(2)},¥${(r.total_amount||0).toFixed(2)},`;
+                        csv += `${getStatusText(r.settlement_status)},`;
+                        csv += `${r.confirmed_time?formatDate(r.confirmed_time):'-'}\n`;
+                    });
+                    
+                    // 五、报表说明
+                    csv += '\n';
+                    csv += '五、报表说明\n';
+                    csv += '状态说明：\n';
+                    csv += '待付款：用户已领取水，尚未付款\n';
+                    csv += '付款待确认：用户已付款，待管理员确认收款\n';
+                    csv += '已结清：已确认收款，结算完成\n';
+                    csv += '\n';
+                    csv += '付款方式：\n';
+                    csv += '1. 微信/支付宝转账\n';
+                    csv += '2. 线下现金收款\n';
+                    csv += '3. 预付账户自动抵扣\n';
+                    csv += '\n';
+                    csv += '如有疑问请联系水站管理员\n';
+                    
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `水站结算报表_全部_${now.getFullYear()}年${(now.getMonth()+1).toString().padStart(2,'0')}月${now.getDate().toString().padStart(2,'0')}日.csv`;
+                    a.click();
+                };
+                
+                onMounted(async () => {
+                    if (await checkAuth()) await loadData();
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    records,
+                    offices,
+                    selectedUnsettled,
+                    expandedOffice,
+                    expandedSettled,
+                    sortField,
+                    sortOrder,
+                    currentPage,
+                    totalPages,
+                    unsettledOffices,
+                    settledOffices,
+                    unsettledStats,
+                    settledStats,
+                    paginatedUnsettled,
+                    selectedUnsettledAmount,
+                    isAllUnsettledSelected,
+                    showBillModal,
+                    currentBill,
+                    getDisplayStatus,
+                    getStatusText,
+                    formatDate,
+                    loadData,
+                    toggleSelectAllUnsettled,
+                    toggleSort,
+                    toggleExpand,
+                    toggleExpandSettled,
+                    getProductSummary,
+                    exportBill,
+                    downloadBill,
+                    batchExportBills,
+                    confirmOffice,
+                    batchConfirm,
+                    deleteOfficeRecords,
+                    batchDelete,
+                    exportAll
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

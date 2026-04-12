@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>结算管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .module-container {
+            padding: var(--spacing-xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+        
+        .module-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .tab-filters {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+        
+        .tab-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: none;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        
+        .tab-btn:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .tab-btn .count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: var(--radius-full);
+            background: var(--bg-secondary);
+            font-size: var(--font-size-xs);
+            margin-left: var(--spacing-xs);
+        }
+        
+        .tab-btn.active .count {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        
+        .filter-select, .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 140px;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        
+        .table-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .settlement-card {
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .settlement-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+        
+        .settlement-header:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .settlement-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            flex: 1;
+        }
+        
+        .settlement-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+        
+        .settlement-room {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .settlement-stats {
+            display: flex;
+            gap: var(--spacing-xl);
+        }
+        
+        .settlement-stat {
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .settlement-stat-value {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .settlement-stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .settlement-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .settlement-details {
+            padding: 0 var(--spacing-lg) var(--spacing-lg);
+            background: var(--bg-primary);
+            display: none;
+        }
+        
+        .settlement-details.show {
+            display: block;
+        }
+        
+        .detail-table {
+            width: 100%;
+            background: white;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        
+        .detail-table th {
+            background: var(--bg-secondary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .detail-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-sm);
+            border-top: 1px solid var(--border);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-applied {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .status-settled {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .expand-icon {
+            transition: transform var(--transition-fast);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+        
+        @media (max-width: 768px) {
+            .module-container {
+                padding: var(--spacing-md);
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .settlement-stats {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html'}, {text: '结算管理', icon: '💳', url: '/portal/admin/water/settlement.html'}]"></global-header>
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div v-if="authError" class="module-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-secondary);">正在跳转登录页面...</p>
+        </div>
+        
+        <template v-else>
+            <div class="module-container">
+                <div class="module-header">
+                    <h1 class="module-title">
+                        <span>💰</span>
+                        <span>结算管理</span>
+                    </h1>
+                    <div class="table-actions">
+                        <button class="btn btn-secondary" @click="exportSettlementRecords">
+                            📥 导出结算记录
+                        </button>
+                        <button class="btn btn-primary" @click="autoGenerateSettlement">
+                            🔄 自动生成结算单
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ settlementStats.pendingOfficeCount }}</div>
+                            <div class="stat-label">待付款办公室</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">📝</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ settlementStats.appliedOfficeCount }}</div>
+                            <div class="stat-label">待确认办公室</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ settlementStats.fullySettledOfficeCount }}</div>
+                            <div class="stat-label">已结清办公室</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">💵</div>
+                        <div class="stat-info">
+                            <div class="stat-value">¥{{ (settlementStats.pendingAmount + settlementStats.appliedAmount).toFixed(2) }}</div>
+                            <div class="stat-label">待结金额</div>
+                        </div>
+                    </div>
+                </div>
+                
+<div class="filter-section">
+                    <div class="tab-filters">
+                        <button class="tab-btn" :class="{ active: settlementTab === 'applied' }" @click="settlementTab = 'applied'">
+                            待确认 <span class="count">{{ settlementStats.appliedOfficeCount }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: settlementTab === 'pending' }" @click="settlementTab = 'pending'">
+                            待付款 <span class="count">{{ settlementStats.pendingOfficeCount }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: settlementTab === 'settled' }" @click="settlementTab = 'settled'">
+                            已结清 <span class="count">{{ settlementStats.fullySettledOfficeCount }}</span>
+                        </button>
+                        <button class="tab-btn" :class="{ active: settlementTab === 'all' }" @click="settlementTab = 'all'">
+                            全部 <span class="count">{{ officeSettlements.length }}</span>
+                        </button>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <span class="filter-label">办公室:</span>
+                            <select class="filter-select" v-model="settlementFilter" @change="filterOfficeSettlements">
+                                <option value="applied">待确认</option>
+                                <option value="pending">待付款</option>
+                                <option value="settled">已结清</option>
+                                <option value="all">全部</option>
+                            </select>
+                        </div>
+<button class="btn btn-secondary btn-sm" @click="batchConfirmAllSettlements" v-if="settlementStats.pendingOfficeCount > 0 || settlementStats.appliedOfficeCount > 0">
+                            批量确认
+                        </button>
+                        <button class="btn btn-secondary btn-sm" @click="sendReminderToUnsettled" v-if="settlementStats.pendingOfficeCount > 0">
+                            批量提醒
+                        </button>
+                        <button class="btn btn-secondary btn-sm" @click="sendReminderToUnsettled" v-if="settlementStats.pendingCount > 0">
+                            发送催款提醒
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">
+                            共 {{ filteredOfficeSettlements.length }} 个办公室
+                        </div>
+                    </div>
+                    
+                    <div v-if="filteredOfficeSettlements.length > 0">
+                        <div class="settlement-card" v-for="record in filteredOfficeSettlements" :key="record.id || record.office_id">
+                            <div class="settlement-header" @click="toggleSettlementExpand(record)">
+                                <div class="settlement-info">
+                                    <span class="expand-icon" :class="{ expanded: expandedSettlementId === (record.id || record.office_id) }">
+                                        ▼
+                                    </span>
+                                    <div>
+                                        <div class="settlement-name">{{ record.office_name || record.name }}</div>
+                                        <div class="settlement-room">{{ record.office_room_number || '' }}</div>
+                                    </div>
+                                </div>
+                                <div class="settlement-stats">
+                                    <div class="settlement-stat">
+                                        <div class="settlement-stat-value" style="color: var(--warning-dark);">{{ record.pending_count || 0 }}</div>
+                                        <div class="settlement-stat-label">待付款</div>
+                                    </div>
+                                    <div class="settlement-stat">
+                                        <div class="settlement-stat-value" style="color: var(--info-dark);">{{ record.applied_count || 0 }}</div>
+                                        <div class="settlement-stat-label">待确认</div>
+                                    </div>
+                                    <div class="settlement-stat">
+                                        <div class="settlement-stat-value" style="color: var(--success-dark);">{{ record.confirmed_count || 0 }}</div>
+                                        <div class="settlement-stat-label">已结清</div>
+                                    </div>
+                                    <div class="settlement-stat">
+                                        <div class="settlement-stat-value">¥{{ (record.total_amount || 0).toFixed(2) }}</div>
+                                        <div class="settlement-stat-label">总金额</div>
+                                    </div>
+                                </div>
+                                <div class="settlement-actions" @click.stop>
+                                    <button class="btn btn-primary btn-sm" @click="confirmOfficeSettlement(record)" 
+                                        v-if="(record.pending_count > 0 || record.applied_count > 0) && settlementTab !== 'settled'">
+                                        确认收款
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" @click="remindOfficePayment(record)"
+                                        v-if="record.pending_count > 0 && settlementTab !== 'settled'">
+                                        催款
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="settlement-details" :class="{ show: expandedSettlementId === (record.id || record.office_id) }">
+                                <table class="detail-table" v-if="record.pickups && record.pickups.length > 0">
+                                    <thead>
+                                        <tr>
+                                            <th>领取时间</th>
+                                            <th>产品</th>
+                                            <th>规格</th>
+                                            <th>数量</th>
+                                            <th>单价</th>
+                                            <th>金额</th>
+                                            <th>领取人</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="pickup in record.pickups" :key="pickup.id">
+                                            <td>{{ formatDate(pickup.pickup_time) }}</td>
+                                            <td>{{ pickup.product_name || '-' }}</td>
+                                            <td>{{ pickup.specification || '-' }}</td>
+                                            <td>{{ pickup.quantity }}</td>
+                                            <td>¥{{ (pickup.unit_price || 0).toFixed(2) }}</td>
+                                            <td>¥{{ (pickup.total_amount || 0).toFixed(2) }}</td>
+                                            <td>{{ pickup.pickup_person || '-' }}</td>
+                                            <td>
+                                                <span class="status-badge" :class="'status-' + pickup.settlement_status">
+                                                    {{ getStatusText(pickup.settlement_status) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div v-else class="empty-state" style="padding: var(--spacing-lg);">
+                                    <p>暂无结算记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>暂无结算记录</p>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api/v1`;
+                
+                const loading = ref(true);
+                const authError = ref('');
+                
+                const officeSettlements = ref([]);
+                const settlementTab = ref('applied');
+                const settlementFilter = ref('applied');
+                const expandedSettlementId = ref(null);
+                
+                const checkAuth = async () => {
+                    const storedToken = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    
+                    if (!storedToken || !userInfoStr) {
+                        authError.value = '请先登录';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/admin/login.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    const user = JSON.parse(userInfoStr);
+                    const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'super_admin' || user.role === 'office_admin' || user.role === '超级管理员' || user.role === '管理员'; if (!isAdmin) {
+                        authError.value = '您没有权限访问此页面';
+                        loading.value = false;
+                        setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
+                        return false;
+                    }
+                    
+                    return true;
+                };
+                
+                const loadOfficeSettlements = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = {};
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        
+                        const res = await fetch(`${API_BASE}/admin/office-settlements`, { headers });
+                        if (res.ok) officeSettlements.value = await res.json();
+                    } catch (e) {
+                        console.error('加载结算数据失败:', e);
+                    }
+                };
+                
+                const filteredOfficeSettlements = computed(() => {
+                    if (settlementTab.value === 'all') {
+                        return officeSettlements.value;
+                    }
+                    return officeSettlements.value.filter(r => {
+                        if (settlementTab.value === 'settled') {
+                            return r.confirmed_count > 0 && r.pending_count === 0 && r.applied_count === 0;
+                        } else if (settlementTab.value === 'pending') {
+                            return r.pending_count > 0;
+                        } else if (settlementTab.value === 'applied') {
+                            return r.applied_count > 0;
+                        }
+                        return true;
+                    });
+                });
+                
+const settlementStats = computed(() => {
+    const records = officeSettlements.value;
+    
+    let pendingRecordCount = 0;
+    let appliedRecordCount = 0;
+    let settledRecordCount = 0;
+    let pendingAmount = 0;
+    let appliedAmount = 0;
+    let settledAmount = 0;
+    
+    records.forEach(r => {
+        if (r.pickups && Array.isArray(r.pickups)) {
+            r.pickups.forEach(p => {
+                if (p.settlement_status === 'pending') {
+                    pendingRecordCount++;
+                    pendingAmount += (p.total_amount || 0);
+                } else if (p.settlement_status === 'applied') {
+                    appliedRecordCount++;
+                    appliedAmount += (p.total_amount || 0);
+                } else if (p.settlement_status === 'settled') {
+                    settledRecordCount++;
+                    settledAmount += (p.total_amount || 0);
+                }
+            });
+        }
+    });
+    
+    return {
+        pendingRecordCount,
+        appliedRecordCount,
+        settledRecordCount,
+        pendingOfficeCount: records.filter(r => r.pending_count > 0).length,
+        appliedOfficeCount: records.filter(r => r.applied_count > 0).length,
+        fullySettledOfficeCount: records.filter(r => {
+            return r.confirmed_count > 0 && r.pending_count === 0 && r.applied_count === 0;
+        }).length,
+        pendingAmount,
+        appliedAmount,
+        settledAmount
+    };
+});
+                
+                const toggleSettlementExpand = (record) => {
+                    const id = record.id || record.office_id;
+                    expandedSettlementId.value = expandedSettlementId.value === id ? null : id;
+                };
+                
+                const filterOfficeSettlements = () => {
+                    settlementTab.value = settlementFilter.value;
+                };
+                
+                const getStatusText = (status) => {
+                    const map = { pending: '待付款', applied: '待确认', settled: '已结清' };
+                    return map[status] || status;
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                const confirmOfficeSettlement = async (record) => {
+                    const officeName = record.office_name || record.name;
+                    const pendingCount = record.pending_count || 0;
+                    const appliedCount = record.applied_count || 0;
+                    const totalCount = pendingCount + appliedCount;
+                    
+                    if (totalCount === 0) {
+                        alert('没有待确认的记录');
+                        return;
+                    }
+                    
+                    if (!confirm(`确认收到办公室"${officeName}"的结算款项？\n\n待付款: ${pendingCount}笔\n待确认: ${appliedCount}笔`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const pickupIds = (record.pickups || [])
+                            .filter(p => p && (p.settlement_status === 'pending' || p.settlement_status === 'applied'))
+                            .map(p => p.id);
+                        
+                        if (pickupIds.length === 0) {
+                            alert('没有待确认的记录');
+                            return;
+                        }
+                        
+                        const confirmRes = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(pickupIds)
+                        });
+                        
+                        if (confirmRes.ok) {
+                            alert(`已确认收款，共 ${pickupIds.length} 条记录`);
+                            loadOfficeSettlements();
+                        } else {
+                            const err = await confirmRes.json();
+                            alert(err.detail || '确认失败');
+                        }
+                    } catch (e) {
+                        alert('确认失败: ' + e.message);
+                    }
+                };
+                
+                const remindOfficePayment = async (record) => {
+                    const officeName = record.office_name || record.name;
+                    const pendingCount = record.pending_count || 0;
+                    
+                    if (pendingCount === 0) {
+                        alert('没有待付款的记录');
+                        return;
+                    }
+                    
+                    if (!confirm(`向办公室"${officeName}"发送付款提醒？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const pendingPickups = (record.pickups || [])
+                            .filter(p => p && p.settlement_status === 'pending');
+                        
+                        let successCount = 0;
+                        for (const pickup of pendingPickups) {
+                            try {
+                                await fetch(`${API_BASE}/office-pickup/${pickup.id}/remind`, { 
+                                    method: 'POST',
+                                    headers
+                                });
+                                successCount++;
+                            } catch (e) {
+                                console.error(`提醒失败: pickup ${pickup.id}`, e);
+                            }
+                        }
+                        
+                        alert(`已发送 ${successCount} 条付款提醒`);
+                    } catch (e) {
+                        alert('发送提醒失败: ' + e.message);
+                    }
+                };
+                
+                const batchConfirmAllSettlements = async () => {
+                    const stats = settlementStats.value;
+                    if (stats.appliedOfficeCount === 0) {
+                        alert('没有已申请待确认的记录');
+                        return;
+                    }
+                    
+                    const appliedAmount = stats.appliedAmount;
+                    const appliedCount = stats.appliedRecordCount;
+                    
+                    const confirmed = confirm(
+`确认批量确认收款?
+
+涉及办公室: ${stats.appliedOfficeCount}个
+待确认记录: ${appliedCount}条
+总金额: ¥${appliedAmount.toFixed(2)}
+
+⚠️ 提示: 此操作将确认所有已申请待审核的记录,确认后不可撤销。`
+                    );
+                    
+                    if (!confirmed) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        let allAppliedPickupIds = [];
+                        for (const o of officeSettlements.value) {
+                            if (o.applied_count > 0) {
+                                const appliedPickupIds = (o.pickups || [])
+                                    .filter(p => p.settlement_status === 'applied')
+                                    .map(p => p.id);
+                                allAppliedPickupIds = allAppliedPickupIds.concat(appliedPickupIds);
+                            }
+                        }
+                        
+                        if (allAppliedPickupIds.length > 0) {
+                            const confirmRes = await fetch(`${API_BASE}/office-pickups/batch-confirm`, {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify(allAppliedPickupIds)
+                            });
+
+                            if (!confirmRes.ok) {
+                                const err = await confirmRes.json();
+                                alert(err.detail || '确认失败');
+                                return;
+                            }
+
+                            const result = await confirmRes.json();
+                            alert(
+`批量确认收款成功!
+
+成功确认: ${allAppliedPickupIds.length}条记录
+总金额: ¥${appliedAmount.toFixed(2)}
+
+操作时间: ${new Date().toLocaleString('zh-CN')}
+操作人: ${JSON.parse(localStorage.getItem('userInfo') || '{}').name || '未知'}`
+                            );
+
+await loadOfficeSettlements();
+                        }
+                    } catch (e) {
+                        alert('批量确认失败: ' + e.message);
+                    }
+                };
+                
+                const sendReminderToUnsettled = async () => {
+                    if (!confirm('向所有未结算的办公室发送付款提醒？')) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        let successCount = 0;
+                        for (const office of officeSettlements.value) {
+                            const pendingPickups = (office.pickups || [])
+                                .filter(p => p.settlement_status === 'pending');
+                            
+                            for (const pickup of pendingPickups) {
+                                try {
+                                    await fetch(`${API_BASE}/office-pickup/${pickup.id}/remind`, { 
+                                        method: 'POST',
+                                        headers
+                                    });
+                                    successCount++;
+                                } catch (e) {
+                                    console.error(`提醒失败: pickup ${pickup.id}`, e);
+                                }
+                            }
+                        }
+                        
+                        alert(`提醒发送成功！共发送 ${successCount} 条提醒`);
+                    } catch (e) {
+                        alert('发送提醒失败: ' + e.message);
+                    }
+                };
+                
+                const autoGenerateSettlement = async () => {
+                    if (!confirm('确定要自动生成结算单吗？\n\n将把所有待付款的领水记录按办公室合并生成结算单。')) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        
+                        const res = await fetch(`${API_BASE}/office-settlements/auto-generate-monthly`, {
+                            method: 'POST',
+                            headers
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || '结算单生成成功');
+                            loadOfficeSettlements();
+                        } else {
+                            const e = await res.json();
+                            alert(e.detail || '生成失败');
+                        }
+                    } catch (e) {
+                        alert('生成失败: ' + e.message);
+                    }
+                };
+                
+                const exportSettlementRecords = () => {
+                    if (filteredOfficeSettlements.value.length === 0) {
+                        alert('没有可导出的数据');
+                        return;
+                    }
+                    
+                    let csv = '办公室,房间号,待付款数,待确认数,已结清数,总金额\n';
+                    filteredOfficeSettlements.value.forEach(r => {
+                        csv += `${r.office_name || r.name || ''},${r.office_room_number || ''},${r.pending_count || 0},${r.applied_count || 0},${r.confirmed_count || 0},${(r.total_amount || 0).toFixed(2)}\n`;
+                    });
+                    
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `结算记录_${new Date().toISOString().slice(0,10)}.csv`;
+                    link.click();
+                };
+                
+                onMounted(async () => {
+                    loading.value = true;
+                    const authPassed = await checkAuth();
+                    
+                    if (!authPassed) return;
+                    
+                    await loadOfficeSettlements();
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    officeSettlements,
+                    settlementTab,
+                    settlementFilter,
+                    expandedSettlementId,
+                    filteredOfficeSettlements,
+                    settlementStats,
+                    toggleSettlementExpand,
+                    filterOfficeSettlements,
+                    getStatusText,
+                    formatDate,
+                    confirmOfficeSettlement,
+                    remindOfficePayment,
+                    batchConfirmAllSettlements,
+                    sendReminderToUnsettled,
+                    autoGenerateSettlement,
+                    exportSettlementRecords
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

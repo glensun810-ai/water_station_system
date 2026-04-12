@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>领水记录管理 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { background: var(--bg-primary); }
+        
+        .page-container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-xl); }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); }
+        .page-title { font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); }
+        .page-actions { display: flex; gap: var(--spacing-sm); }
+        
+        .btn { padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--font-size-sm); font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: var(--spacing-xs); background: var(--bg-card); color: var(--text-primary); transition: all var(--transition-fast); }
+        .btn:hover { background: var(--bg-hover); border-color: var(--primary); }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-success { background: var(--success); color: white; border-color: var(--success); }
+        .btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+        
+        /* 统计卡片 - 与用户端风格统一 */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }
+        .stat-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); cursor: pointer; transition: all var(--transition-base); border: 2px solid transparent; position: relative; }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .stat-card.active { border-color: var(--primary); background: var(--primary-light); }
+        .stat-label { font-size: var(--font-size-sm); color: var(--text-tertiary); margin-bottom: var(--spacing-xs); display: flex; align-items: center; gap: var(--spacing-sm); }
+        .stat-value { font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); }
+        .stat-amount { font-size: var(--font-size-sm); color: var(--text-tertiary); margin-top: var(--spacing-xs); }
+        .stat-icon { position: absolute; top: var(--spacing-md); right: var(--spacing-md); font-size: 24px; opacity: 0.3; }
+        .stat-card.active .stat-icon { opacity: 1; }
+        
+        /* 工具栏 */
+        .toolbar { display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); align-items: center; flex-wrap: wrap; }
+        .toolbar-left { display: flex; gap: var(--spacing-md); align-items: center; flex: 1; }
+        .toolbar-right { display: flex; gap: var(--spacing-sm); }
+        .filter-select, .filter-input { padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--bg-card); color: var(--text-primary); cursor: pointer; }
+        .filter-label { font-size: var(--font-size-sm); color: var(--text-secondary); }
+        
+        /* 批量操作栏 */
+        .batch-bar { background: var(--primary-light); border: 1px solid var(--primary); border-radius: var(--radius-lg); padding: var(--spacing-md) var(--spacing-lg); margin-bottom: var(--spacing-lg); display: flex; justify-content: space-between; align-items: center; }
+        .batch-info { display: flex; align-items: center; gap: var(--spacing-md); }
+        .batch-count { font-weight: 600; color: var(--primary); }
+        .batch-amount { font-size: var(--font-size-sm); color: var(--text-secondary); }
+        
+        /* 数据表格 - 与用户端风格统一 */
+        .data-table { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: var(--bg-secondary); }
+        th { padding: var(--spacing-md); text-align: left; font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { color: var(--primary); }
+        th.sortable.active { color: var(--primary); }
+        th.checkbox-col { width: 40px; }
+        td { padding: var(--spacing-md); border-bottom: 1px solid var(--border-light); font-size: var(--font-size-sm); }
+        tbody tr:hover { background: var(--bg-hover); }
+        tbody tr.selected { background: var(--primary-light); }
+        
+        /* 状态徽章 - 与用户端统一 */
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 500; }
+        .badge-pending { background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; }
+        .badge-paid { background: #DBEAFE; color: #1E40AF; border: 1px solid #3B82F6; }
+        .badge-confirmed { background: #D1FAE5; color: #065F46; border: 1px solid #10B981; }
+        
+        /* 操作列 */
+        .action-cell { display: flex; gap: var(--spacing-xs); align-items: center; flex-wrap: nowrap; }
+        .btn-sm { padding: 6px 10px; border-radius: var(--radius-md); font-size: var(--font-size-xs); cursor: pointer; border: none; font-weight: 500; transition: all var(--transition-fast); }
+        .btn-confirm-sm { background: var(--success); color: white; }
+        .btn-confirm-sm:hover { background: var(--success-hover); }
+        .btn-delete-sm { background: var(--danger-light); color: var(--danger-dark); }
+        .btn-delete-sm:hover { background: var(--danger); color: white; }
+        .btn-detail-sm { background: var(--bg-secondary); color: var(--text-secondary); }
+        .btn-detail-sm:hover { background: var(--bg-hover); color: var(--text-primary); }
+        
+        /* 空状态 */
+        .empty-state { text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary); }
+        .empty-icon { font-size: 48px; opacity: 0.5; margin-bottom: var(--spacing-md); }
+        
+        /* 弹窗 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1100; padding: var(--spacing-lg); }
+        .modal { background: var(--bg-card); border-radius: var(--radius-xl); max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); }
+        .modal-header { padding: var(--spacing-lg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: var(--font-size-lg); font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-tertiary); }
+        .modal-body { padding: var(--spacing-lg); }
+        .modal-footer { padding: var(--spacing-lg); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: var(--spacing-sm); }
+        
+        /* 详情卡片 */
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+        .detail-item { display: flex; flex-direction: column; gap: var(--spacing-xs); }
+        .detail-label { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+        .detail-value { font-size: var(--font-size-sm); font-weight: 500; }
+        
+        /* 加载状态 */
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .page-container { padding: var(--spacing-md); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .toolbar { flex-direction: column; }
+            .toolbar-left, .toolbar-right { width: 100%; flex-wrap: wrap; }
+            .action-cell { flex-direction: column; gap: var(--spacing-xs); }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <GlobalHeader :breadcrumbs="[{text: '水站管理', icon: '💧', url: '/portal/admin/water/dashboard.html'}, {text: '领水记录', icon: '📋', url: '/portal/admin/water/pickups_v2.html'}]"></GlobalHeader>
+        
+        <!-- 加载状态 -->
+        <div v-if="loading" class="page-container" style="text-align: center; padding-top: 100px;">
+            <div class="loading-spinner" style="margin: 0 auto;"></div>
+            <p style="margin-top: 20px; color: var(--text-tertiary);">加载中...</p>
+        </div>
+        
+        <!-- 错误状态 -->
+        <div v-else-if="authError" class="page-container" style="text-align: center; padding-top: 100px;">
+            <div style="font-size: 64px;">🔒</div>
+            <h2 style="margin-bottom: 10px;">{{ authError }}</h2>
+            <p style="color: var(--text-tertiary);">正在跳转...</p>
+        </div>
+        
+        <!-- 主内容 -->
+        <div v-else class="page-container">
+            <!-- 页面头部 -->
+            <div class="page-header">
+                <h1 class="page-title">📋 领水记录管理</h1>
+                <div class="page-actions">
+                    <button class="btn" @click="loadRecords">
+                        <span>🔄</span> 刷新
+                    </button>
+                    <button class="btn" @click="exportData">
+                        <span>📥</span> 导出
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card" :class="statusFilter === 'pending' ? 'active' : ''" @click="statusFilter = 'pending'">
+                    <div class="stat-label"><span>📝</span> 待付款</div>
+                    <div class="stat-value">{{ stats.pending.count }}</div>
+                    <div class="stat-amount">¥{{ (stats.pending.amount || 0).toFixed(2) }}</div>
+                    <div class="stat-icon">📝</div>
+                </div>
+                
+                <div class="stat-card" :class="statusFilter === 'paid' ? 'active' : ''" @click="statusFilter = 'paid'">
+                    <div class="stat-label"><span>💳</span> 付款待确认</div>
+                    <div class="stat-value">{{ stats.paid.count }}</div>
+                    <div class="stat-amount">¥{{ (stats.paid.amount || 0).toFixed(2) }}</div>
+                    <div class="stat-icon">💳</div>
+                </div>
+                
+                <div class="stat-card" :class="statusFilter === 'confirmed' ? 'active' : ''" @click="statusFilter = 'confirmed'">
+                    <div class="stat-label"><span>✅</span> 已确认收款</div>
+                    <div class="stat-value">{{ stats.confirmed.count }}</div>
+                    <div class="stat-amount">¥{{ (stats.confirmed.amount || 0).toFixed(2) }}</div>
+                    <div class="stat-icon">✅</div>
+                </div>
+                
+                <div class="stat-card" :class="statusFilter === '' ? 'active' : ''" @click="statusFilter = ''">
+                    <div class="stat-label"><span>📊</span> 全部记录</div>
+                    <div class="stat-value">{{ stats.total.count }}</div>
+                    <div class="stat-amount">¥{{ (stats.total.amount || 0).toFixed(2) }}</div>
+                    <div class="stat-icon">📊</div>
+                </div>
+            </div>
+            
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span class="filter-label">办公室</span>
+                        <select class="filter-select" v-model="officeFilter">
+                            <option value="">全部</option>
+                            <option v-for="o in offices" :key="o.id" :value="o.id">{{ o.name }}</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span class="filter-label">时间</span>
+                        <input type="date" class="filter-input" v-model="dateFrom" style="width: 130px;">
+                        <span style="color: var(--text-tertiary);">-</span>
+                        <input type="date" class="filter-input" v-model="dateTo" style="width: 130px;">
+                    </div>
+                    
+                    <button class="btn btn-primary" @click="loadRecords">
+                        <span>🔍</span> 搜索
+                    </button>
+                    
+                    <button class="btn" @click="resetFilters">
+                        <span>重置</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 批量操作栏 -->
+            <div v-if="selectedRecords.length > 0" class="batch-bar">
+                <div class="batch-info">
+                    <span class="batch-count">已选 {{ selectedRecords.length }} 条</span>
+                    <span class="batch-amount">金额: ¥{{ selectedAmount.toFixed(2) }}</span>
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn" @click="selectedRecords = []">取消</button>
+                    <button class="btn btn-success" @click="batchConfirm" v-if="selectedConfirmableCount > 0">
+                        <span>✅</span> 批量确认收款
+                    </button>
+                    <button class="btn btn-danger" @click="batchDelete" v-if="isAdmin">
+                        <span>🗑️</span> 批量删除
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 数据表格 -->
+            <div class="data-table">
+                <div class="table-container">
+                    <table v-if="filteredRecords.length > 0">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-col"><input type="checkbox" @change="toggleAll" :checked="allSelected"></th>
+                                <th class="sortable" :class="sortField === 'pickup_time' ? 'active' : ''" @click="toggleSort('pickup_time')">领取时间 <span class="sort-icon">{{ sortOrder === 'desc' ? '↓' : '↑' }}</span></th>
+                                <th>办公室</th>
+                                <th>房间号</th>
+                                <th>产品</th>
+                                <th class="sortable" :class="sortField === 'quantity' ? 'active' : ''" @click="toggleSort('quantity')">数量 <span class="sort-icon">{{ sortOrder === 'desc' ? '↓' : '↑' }}</span></th>
+                                <th class="sortable" :class="sortField === 'total_amount' ? 'active' : ''" @click="toggleSort('total_amount')">金额 <span class="sort-icon">{{ sortOrder === 'desc' ? '↓' : '↑' }}</span></th>
+                                <th>状态</th>
+                                <th>领取人</th>
+                                <th style="width: 150px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in filteredRecords" :key="r.id" :class="selectedRecords.includes(r.id) ? 'selected' : ''">
+                                <td><input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="getDisplayStatus(r.settlement_status) === 'confirmed'"></td>
+                                <td>{{ formatDate(r.pickup_time) }}</td>
+                                <td>{{ r.office_name }} <span v-if="r.office_room_number" style="color: var(--text-tertiary);">{{ r.office_room_number }}</span></td>
+                                <td>{{ r.product_name }}</td>
+                                <td style="text-align: right;">{{ r.quantity }}</td>
+                                <td style="text-align: right; font-weight: 500;">¥{{ (r.total_amount || 0).toFixed(2) }}</td>
+                                <td>
+                                    <span class="badge" :class="'badge-' + getDisplayStatus(r.settlement_status)">
+                                        {{ getStatusText(r.settlement_status) }}
+                                    </span>
+                                </td>
+                                <td>{{ r.pickup_person }}</td>
+                                <td>
+                                    <div class="action-cell">
+                                        <!-- pending和paid状态都可以确认收款 -->
+                                        <button v-if="getDisplayStatus(r.settlement_status) !== 'confirmed'" class="btn-sm btn-confirm-sm" @click="confirmRecord(r.id)">确认</button>
+                                        <button class="btn-sm btn-detail-sm" @click="viewDetail(r)">详情</button>
+                                        <button v-if="isAdmin" class="btn-sm btn-delete-sm" @click="deleteRecord(r.id)">删除</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div v-else class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>暂无领水记录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 确认弹窗 -->
+        <div v-if="showConfirmModal" class="modal-overlay" @click.self="showConfirmModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <div class="modal-title">✅ 确认收款</div>
+                    <button class="modal-close" @click="showConfirmModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: var(--spacing-lg);">
+                        确认选中 <strong>{{ selectedRecords.length }}</strong> 条记录收款？<br>
+                        总金额: <strong style="color: var(--primary);">¥{{ selectedAmount.toFixed(2) }}</strong>
+                    </p>
+                    <div style="margin-bottom: var(--spacing-md);">
+                        <label class="detail-label">备注（可选）</label>
+                        <input type="text" v-model="confirmNote" style="width: 100%; padding: var(--spacing-sm); border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    </div>
+                    <p style="font-size: var(--font-size-sm); color: var(--text-tertiary);">
+                        提示：无论记录处于"待付款"还是"付款待确认"状态，管理员都可以直接确认收款。
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showConfirmModal = false">取消</button>
+                    <button class="btn btn-success" @click="doBatchConfirm">确认收款</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 详情弹窗 -->
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <div class="modal-title">📋 记录详情</div>
+                    <button class="modal-close" @click="showDetailModal = false">&times;</button>
+                </div>
+                <div class="modal-body" v-if="currentRecord">
+                    <div class="detail-grid">
+                        <div class="detail-item"><span class="detail-label">记录ID</span><span class="detail-value">#{{ currentRecord.id }}</span></div>
+                        <div class="detail-item"><span class="detail-label">状态</span><span class="badge" :class="'badge-' + getDisplayStatus(currentRecord.settlement_status)">{{ getStatusText(currentRecord.settlement_status) }}</span></div>
+                        <div class="detail-item"><span class="detail-label">领取时间</span><span class="detail-value">{{ formatDate(currentRecord.pickup_time) }}</span></div>
+                        <div class="detail-item"><span class="detail-label">领取人</span><span class="detail-value">{{ currentRecord.pickup_person }}</span></div>
+                        <div class="detail-item"><span class="detail-label">办公室</span><span class="detail-value">{{ currentRecord.office_name }}</span></div>
+                        <div class="detail-item"><span class="detail-label">房间号</span><span class="detail-value">{{ currentRecord.office_room_number || '-' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">产品</span><span class="detail-value">{{ currentRecord.product_name }}</span></div>
+                        <div class="detail-item"><span class="detail-label">数量</span><span class="detail-value">{{ currentRecord.quantity }}</span></div>
+                        <div class="detail-item"><span class="detail-label">金额</span><span class="detail-value" style="color: var(--primary);">¥{{ (currentRecord.total_amount || 0).toFixed(2) }}</span></div>
+                        <div class="detail-item"><span class="detail-label">付款方式</span><span class="detail-value">{{ getPaymentMethodText(currentRecord.payment_method) }}</span></div>
+                    </div>
+                    
+                    <div v-if="currentRecord.payment_time" style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div class="detail-grid">
+                            <div class="detail-item"><span class="detail-label">付款时间</span><span class="detail-value">{{ formatDate(currentRecord.payment_time) }}</span></div>
+                            <div class="detail-item"><span class="detail-label">付款方式</span><span class="detail-value">{{ getPaymentMethodText(currentRecord.payment_method) }}</span></div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="currentRecord.confirmed_by_name" style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div class="detail-grid">
+                            <div class="detail-item"><span class="detail-label">确认人</span><span class="detail-value">{{ currentRecord.confirmed_by_name }}</span></div>
+                            <div class="detail-item"><span class="detail-label">确认时间</span><span class="detail-value">{{ currentRecord.confirmed_time ? formatDate(currentRecord.confirmed_time) : '-' }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showDetailModal = false">关闭</button>
+                    <button v-if="currentRecord && getDisplayStatus(currentRecord.settlement_status) !== 'confirmed'" class="btn btn-success" @click="confirmRecord(currentRecord.id); showDetailModal = false;">确认收款</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, watch, onMounted } = Vue;
+        const API_BASE = '/api/v1/water';
+        
+        createApp({
+            components: { GlobalHeader },
+            setup() {
+                const loading = ref(true);
+                const authError = ref('');
+                const isAdmin = ref(false);
+                const records = ref([]);
+                const offices = ref([]);
+                const selectedRecords = ref([]);
+                const statusFilter = ref('pending');
+                const officeFilter = ref('');
+                const dateFrom = ref('');
+                const dateTo = ref('');
+                const sortField = ref('pickup_time');
+                const sortOrder = ref('desc');
+                const showConfirmModal = ref(false);
+                const showDetailModal = ref(false);
+                const currentRecord = ref(null);
+                const confirmNote = ref('');
+                
+                const stats = ref({ pending: { count: 0, amount: 0 }, paid: { count: 0, amount: 0 }, confirmed: { count: 0, amount: 0 }, total: { count: 0, amount: 0 } });
+                
+                const getAuthHeaders = () => {
+                    const token = localStorage.getItem('token');
+                    return { 'Content-Type': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' };
+                };
+                
+                const checkAuth = async () => {
+                    const token = localStorage.getItem('token');
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    if (!token || !userInfoStr) { authError.value = '请先登录'; setTimeout(() => window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname), 1500); return false; }
+                    try {
+                        const user = JSON.parse(userInfoStr);
+                        isAdmin.value = user.is_admin || user.role === 'admin' || user.role === 'super_admin';
+                        if (!isAdmin.value && user.role !== 'office_admin') { authError.value = '无权限访问'; setTimeout(() => window.location.href = '/portal/index.html', 1500); return false; }
+                        return true;
+                    } catch (e) { authError.value = '用户信息错误'; return false; }
+                };
+                
+                const loadOffices = async () => {
+                    try { const res = await fetch('/api/v1/water/offices?is_active=true', { headers: getAuthHeaders() }); if (res.ok) offices.value = await res.json(); } catch (e) { console.error('加载办公室失败:', e); }
+                };
+                
+                const loadRecords = async () => {
+                    loading.value = true;
+                    try {
+                        const params = new URLSearchParams({ limit: '10000' });
+                        if (statusFilter.value) params.append('status', statusFilter.value);
+                        if (officeFilter.value) params.append('office_id', officeFilter.value);
+                        const res = await fetch(`${API_BASE}/pickups?${params}`, { headers: getAuthHeaders() });
+                        if (res.ok) {
+                            let data = await res.json();
+                            if (dateFrom.value) { const from = new Date(dateFrom.value); data = data.filter(r => new Date(r.pickup_time) >= from); }
+                            if (dateTo.value) { const to = new Date(dateTo.value); to.setHours(23, 59, 59); data = data.filter(r => new Date(r.pickup_time) <= to); }
+                            
+                            const pending = data.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                            const paid = data.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                            const confirmed = data.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                            stats.value = {
+                                pending: { count: pending.length, amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                paid: { count: paid.length, amount: paid.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                confirmed: { count: confirmed.length, amount: confirmed.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                total: { count: data.length, amount: data.reduce((s, r) => s + (r.total_amount || 0), 0) }
+                            };
+                            
+                            data.sort((a, b) => {
+                                let va = a[sortField.value], vb = b[sortField.value];
+                                if (sortField.value === 'pickup_time') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); }
+                                if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase();
+                                if (va == null) va = ''; if (vb == null) vb = '';
+                                return sortOrder.value === 'desc' ? (va > vb ? -1 : 1) : (va < vb ? -1 : 1);
+                            });
+                            records.value = data;
+                        }
+                    } catch (e) { console.error('加载记录失败:', e); }
+                    loading.value = false;
+                };
+                
+                const getDisplayStatus = (s) => { if (s === 'applied' || s === 'paid') return 'paid'; if (s === 'settled' || s === 'confirmed') return 'confirmed'; return s || 'pending'; };
+                
+                const filteredRecords = computed(() => {
+                    let recs = records.value;
+                    if (statusFilter.value) { if (statusFilter.value === 'paid') recs = recs.filter(r => getDisplayStatus(r.settlement_status) === 'paid'); else if (statusFilter.value === 'confirmed') recs = recs.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed'); else recs = recs.filter(r => getDisplayStatus(r.settlement_status) === statusFilter.value); }
+                    return recs;
+                });
+                
+                const selectedAmount = computed(() => records.value.filter(r => selectedRecords.value.includes(r.id)).reduce((s, r) => s + (r.total_amount || 0), 0));
+                const selectedConfirmableCount = computed(() => records.value.filter(r => selectedRecords.value.includes(r.id) && getDisplayStatus(r.settlement_status) !== 'confirmed').length);
+                const allSelected = computed(() => { const selectable = filteredRecords.value.filter(r => getDisplayStatus(r.settlement_status) !== 'confirmed'); return selectable.length > 0 && selectable.every(r => selectedRecords.value.includes(r.id)); });
+                
+                const toggleAll = () => { const selectable = filteredRecords.value.filter(r => getDisplayStatus(r.settlement_status) !== 'confirmed'); if (allSelected.value) selectedRecords.value = []; else selectedRecords.value = selectable.map(r => r.id); };
+                const toggleSort = (field) => { if (sortField.value === field) sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'; else { sortField.value = field; sortOrder.value = 'desc'; } };
+                const resetFilters = () => { statusFilter.value = ''; officeFilter.value = ''; dateFrom.value = ''; dateTo.value = ''; loadRecords(); };
+                const formatDate = (d) => { if (!d) return '-'; return new Date(d).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+                const getStatusText = (s) => { const status = getDisplayStatus(s); const texts = { pending: '待付款', paid: '付款待确认', confirmed: '已确认收款' }; return texts[status] || s; };
+                const getPaymentMethodText = (m) => { const texts = { cash: '现金', transfer: '转账', prepaid: '预付账户', wechat: '微信支付', alipay: '支付宝' }; return texts[m] || '-'; };
+                
+                const viewDetail = (r) => { currentRecord.value = r; showDetailModal.value = true; };
+                
+                const confirmRecord = async (id) => {
+                    if (!confirm('确定确认收款？')) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/settlement/${id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ confirm_note: confirmNote.value }) });
+                        if (res.ok) { alert('已确认收款'); loadRecords(); } else { const e = await res.json(); alert(e.detail || '操作失败'); }
+                    } catch (e) { alert('操作失败'); }
+                };
+                
+                const deleteRecord = async (id) => {
+                    if (!confirm('确定删除此记录？')) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/pickup/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                        if (res.ok) { alert('已删除'); selectedRecords.value = selectedRecords.value.filter(i => i !== id); loadRecords(); } else { const e = await res.json(); alert(e.detail || '删除失败'); }
+                    } catch (e) { alert('删除失败'); }
+                };
+                
+                const batchConfirm = () => { if (selectedConfirmableCount.value === 0) { alert('没有可确认的记录'); return; } confirmNote.value = ''; showConfirmModal.value = true; };
+                
+                const doBatchConfirm = async () => {
+                    showConfirmModal.value = false;
+                    let success = 0, fail = 0;
+                    for (const id of selectedRecords.value) {
+                        try {
+                            const r = records.value.find(r => r.id === id);
+                            if (r && getDisplayStatus(r.settlement_status) !== 'confirmed') {
+                                const res = await fetch(`${API_BASE}/settlement/${id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ confirm_note: confirmNote.value }) });
+                                if (res.ok) success++; else fail++;
+                            }
+                        } catch (e) { fail++; }
+                    }
+                    alert(`批量操作完成：成功 ${success} 条，失败 ${fail} 条`);
+                    selectedRecords.value = []; confirmNote.value = ''; loadRecords();
+                };
+                
+                const batchDelete = async () => {
+                    if (!confirm(`确定删除 ${selectedRecords.value.length} 条记录？`)) return;
+                    let success = 0, fail = 0;
+                    for (const id of selectedRecords.value) { try { const res = await fetch(`${API_BASE}/pickup/${id}`, { method: 'DELETE', headers: getAuthHeaders() }); if (res.ok) success++; else fail++; } catch (e) { fail++; } }
+                    alert(`批量删除完成：成功 ${success} 条，失败 ${fail} 条`);
+                    selectedRecords.value = []; loadRecords();
+                };
+                
+                const exportData = () => {
+                    if (filteredRecords.value.length === 0) { alert('没有可导出的数据'); return; }
+                    let csv = '序号,领取时间,办公室,房间号,产品,数量,金额,状态,领取人\n';
+                    filteredRecords.value.forEach((r, i) => { csv += `${i+1},${formatDate(r.pickup_time)},${r.office_name},${r.office_room_number || ''},${r.product_name},${r.quantity},${(r.total_amount || 0).toFixed(2)},${getStatusText(r.settlement_status)},${r.pickup_person}\n`; });
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `领水记录_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+                };
+                
+                watch(statusFilter, () => { selectedRecords.value = []; });
+                
+                onMounted(async () => { const ok = await checkAuth(); if (!ok) return; await loadOffices(); await loadRecords(); });
+                
+                return { loading, authError, isAdmin, records, offices, selectedRecords, statusFilter, officeFilter, dateFrom, dateTo, sortField, sortOrder, stats, filteredRecords, selectedAmount, selectedConfirmableCount, allSelected, showConfirmModal, showDetailModal, currentRecord, confirmNote, loadRecords, toggleAll, toggleSort, resetFilters, formatDate, getStatusText, getPaymentMethodText, getDisplayStatus, viewDetail, confirmRecord, deleteRecord, batchConfirm, doBatchConfirm, batchDelete, exportData };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

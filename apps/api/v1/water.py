@@ -131,19 +131,36 @@ def get_user_pickups(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取用户的领水记录"""
+    """
+    获取领水记录列表
+
+    状态说明:
+    - pending: 待付款（用户已登记，等待付款）
+    - paid/applied: 已付款待确认（用户已付款，等待管理员确认）
+    - confirmed/settled: 已确认收款（管理员已确认）
+    """
 
     query = db.query(OfficePickup).filter(OfficePickup.is_deleted == False)
 
     # 普通用户只能查看自己的记录
-    if current_user.role not in ["admin", "super_admin"]:
+    if current_user.role not in ["admin", "super_admin", "office_admin"]:
         query = query.filter(OfficePickup.pickup_person_id == current_user.id)
 
     if office_id:
         query = query.filter(OfficePickup.office_id == office_id)
 
+    # 状态过滤（兼容新旧状态名称）
     if status and status != "all":
-        query = query.filter(OfficePickup.settlement_status == status)
+        if status == "paid":
+            query = query.filter(
+                OfficePickup.settlement_status.in_(["paid", "applied"])
+            )
+        elif status == "confirmed":
+            query = query.filter(
+                OfficePickup.settlement_status.in_(["confirmed", "settled"])
+            )
+        else:
+            query = query.filter(OfficePickup.settlement_status == status)
 
     pickups = (
         query.order_by(OfficePickup.pickup_time.desc())
@@ -154,21 +171,42 @@ def get_user_pickups(
 
     results = []
     for pickup in pickups:
+        # 状态兼容处理
+        status_display = pickup.settlement_status
+        if status_display == "applied":
+            status_display = "paid"
+        elif status_display == "settled":
+            status_display = "confirmed"
+
         results.append(
             {
                 "id": pickup.id,
                 "office_id": pickup.office_id,
                 "office_name": pickup.office_name,
+                "office_room_number": pickup.office_room_number,
                 "product_id": pickup.product_id,
                 "product_name": pickup.product_name,
                 "product_specification": pickup.product_specification,
                 "quantity": pickup.quantity,
+                "unit_price": float(pickup.unit_price) if pickup.unit_price else 0.0,
                 "pickup_person": pickup.pickup_person,
                 "pickup_person_id": pickup.pickup_person_id,
                 "pickup_time": pickup.pickup_time.isoformat()
                 if pickup.pickup_time
                 else None,
                 "settlement_status": pickup.settlement_status,
+                "status_display": status_display,
+                # 付款信息
+                "payment_time": pickup.payment_time.isoformat()
+                if hasattr(pickup, "payment_time") and pickup.payment_time
+                else None,
+                "payment_method": getattr(pickup, "payment_method", None),
+                # 确认信息
+                "confirmed_time": pickup.confirmed_time.isoformat()
+                if hasattr(pickup, "confirmed_time") and pickup.confirmed_time
+                else None,
+                "confirmed_by_name": getattr(pickup, "confirmed_by_name", None),
+                # 金额信息
                 "total_amount": float(pickup.total_amount)
                 if pickup.total_amount
                 else 0.0,
@@ -322,10 +360,19 @@ def create_water_pickup(
 @router.post("/pickup/{pickup_id}/pay")
 def mark_pickup_as_paid(
     pickup_id: int,
+    payment_data: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """标记领水记录为已付款"""
+    """
+    用户付款（标记领水记录为已付款）
+
+    状态流转: pending → paid
+    用户点击"去付款"后调用此API
+
+    Args:
+        payment_data: 包含 payment_method(付款方式), payment_note(付款备注)
+    """
 
     pickup = (
         db.query(OfficePickup)
@@ -348,10 +395,46 @@ def mark_pickup_as_paid(
             status_code=400, detail="只能对'待付款'状态的记录进行付款操作"
         )
 
-    pickup.settlement_status = "applied"
+    # 更新付款信息
+    pickup.settlement_status = "paid"
+    pickup.payment_time = datetime.now()
+    pickup.payment_method = payment_data.get("payment_method", "cash")
+    pickup.payment_note = payment_data.get("payment_note", "")
+
     db.commit()
 
-    return {"message": "付款状态更新成功", "pickup_id": pickup_id}
+    return {
+        "message": "付款成功，等待管理员确认",
+        "pickup_id": pickup_id,
+        "payment_time": pickup.payment_time.isoformat(),
+        "status": "paid",
+    }
+
+
+@router.delete("/pickup/{pickup_id}")
+def delete_pickup(
+    pickup_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """删除领水记录（管理员）"""
+
+    pickup = (
+        db.query(OfficePickup)
+        .filter(OfficePickup.id == pickup_id, OfficePickup.is_deleted == False)
+        .first()
+    )
+
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    pickup.is_deleted = True
+    pickup.deleted_at = datetime.now()
+    pickup.deleted_by = current_user.id
+
+    db.commit()
+
+    return {"message": "删除成功", "pickup_id": pickup_id}
 
 
 @router.get("/offices")
@@ -440,7 +523,7 @@ def get_settlement_records(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取结算记录列表"""
+    """获取结算记录列表（管理员）"""
 
     query = db.query(OfficePickup).filter(OfficePickup.is_deleted == False)
 
@@ -450,8 +533,18 @@ def get_settlement_records(
     if office_id:
         query = query.filter(OfficePickup.office_id == office_id)
 
+    # 状态过滤（兼容新旧状态名称）
     if status and status != "all":
-        query = query.filter(OfficePickup.settlement_status == status)
+        if status == "paid":
+            query = query.filter(
+                OfficePickup.settlement_status.in_(["paid", "applied"])
+            )
+        elif status == "confirmed":
+            query = query.filter(
+                OfficePickup.settlement_status.in_(["confirmed", "settled"])
+            )
+        else:
+            query = query.filter(OfficePickup.settlement_status == status)
 
     settlements = (
         query.order_by(OfficePickup.pickup_time.desc())
@@ -462,20 +555,44 @@ def get_settlement_records(
 
     results = []
     for settlement in settlements:
+        # 状态兼容处理
+        status_display = settlement.settlement_status
+        if status_display == "applied":
+            status_display = "paid"
+        elif status_display == "settled":
+            status_display = "confirmed"
+
         results.append(
             {
                 "id": settlement.id,
                 "office_id": settlement.office_id,
                 "office_name": settlement.office_name,
+                "office_room_number": settlement.office_room_number,
                 "product_name": settlement.product_name,
                 "quantity": settlement.quantity,
+                "unit_price": float(settlement.unit_price)
+                if settlement.unit_price
+                else 0.0,
                 "total_amount": float(settlement.total_amount)
                 if settlement.total_amount
                 else 0.0,
                 "settlement_status": settlement.settlement_status,
+                "status_display": status_display,
+                "pickup_person": settlement.pickup_person,
+                "pickup_person_id": settlement.pickup_person_id,
                 "pickup_time": settlement.pickup_time.isoformat()
                 if settlement.pickup_time
                 else None,
+                # 付款信息
+                "payment_time": settlement.payment_time.isoformat()
+                if hasattr(settlement, "payment_time") and settlement.payment_time
+                else None,
+                "payment_method": getattr(settlement, "payment_method", None),
+                # 确认信息
+                "confirmed_time": settlement.confirmed_time.isoformat()
+                if hasattr(settlement, "confirmed_time") and settlement.confirmed_time
+                else None,
+                "confirmed_by_name": getattr(settlement, "confirmed_by_name", None),
                 "created_at": settlement.created_at.isoformat()
                 if settlement.created_at
                 else None,
@@ -531,16 +648,36 @@ def confirm_settlement(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    """确认结算（管理员）"""
+    """
+    管理员确认收款
+
+    状态流转: pending/paid → confirmed
+    管理员确认收款后调用此API
+
+    Args:
+        confirmation: 包含 confirm_note(确认备注)
+    """
 
     pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
 
-    if pickup.settlement_status not in ["pending", "applied"]:
+    if pickup.settlement_status not in ["pending", "paid", "applied"]:
         raise HTTPException(status_code=400, detail="该记录不可确认结算")
 
-    pickup.settlement_status = "settled"
+    # 更新确认信息
+    pickup.settlement_status = "confirmed"
+    pickup.confirmed_time = datetime.now()
+    pickup.confirmed_by = current_user.id
+    pickup.confirmed_by_name = current_user.name
+    pickup.confirm_note = confirmation.get("confirm_note", "")
+
     db.commit()
 
-    return {"message": "结算确认成功", "pickup_id": pickup_id}
+    return {
+        "message": "收款确认成功",
+        "pickup_id": pickup_id,
+        "confirmed_time": pickup.confirmed_time.isoformat(),
+        "confirmed_by": pickup.confirmed_by_name,
+        "status": "confirmed",
+    }

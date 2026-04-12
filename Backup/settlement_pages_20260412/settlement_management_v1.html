@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算管理中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/shared/utils/api-config.js"></script>
+    <link rel="stylesheet" href="../../assets/css/design-system.css">
+    <link rel="stylesheet" href="../../components/GlobalHeader.css">
+    <script src="../../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { background: var(--bg-primary); }
+        
+        .page-container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-xl); }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); }
+        .page-title { font-size: var(--font-size-2xl); font-weight: 700; }
+        .page-subtitle { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-xs); }
+        
+        .btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; cursor: pointer; background: var(--bg-card); display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--bg-hover); }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-success { background: var(--success); color: white; border-color: var(--success); }
+        .btn-warning { background: #F59E0B; color: white; border-color: #F59E0B; }
+        
+        .overview-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .overview-card { border-radius: 12px; padding: 20px; color: white; }
+        .overview-card.pending { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        .overview-card.paid { background: linear-gradient(135deg, #3B82F6, #1D4ED8); }
+        .overview-card.prepaid { background: linear-gradient(135deg, #10B981, #059669); }
+        .overview-card.confirmed { background: linear-gradient(135deg, #6B7280, #4B5563); }
+        .overview-card.monthly { background: linear-gradient(135deg, #8B5CF6, #6D28D9); }
+        .overview-label { font-size: 13px; opacity: 0.9; }
+        .overview-value { font-size: 32px; font-weight: 700; }
+        .overview-amount { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+        
+        .office-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .office-card { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .office-header { padding: 12px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .office-name { font-weight: 600; }
+        .office-room { font-size: 12px; color: var(--text-tertiary); margin-left: 8px; }
+        .office-total { font-weight: 500; color: var(--primary); }
+        .office-body { padding: 12px; }
+        .office-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .office-stat { text-align: center; padding: 8px; border-radius: 8px; }
+        .office-stat.pending { background: #FEF3C7; }
+        .office-stat.paid { background: #DBEAFE; }
+        .office-stat.confirmed { background: #D1FAE5; }
+        .stat-value { font-size: 18px; font-weight: 700; }
+        .stat-label { font-size: 11px; }
+        .office-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .office-actions .btn { flex: 1; min-width: 80px; font-size: 12px; }
+        
+        .prepaid-section { background: linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .prepaid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .prepaid-label { font-size: 14px; color: #065F46; font-weight: 600; }
+        .prepaid-amount { font-size: 18px; font-weight: 700; color: #065F46; }
+        .prepaid-progress { height: 6px; background: #A7F3D0; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .prepaid-fill { height: 100%; background: linear-gradient(90deg, #10B981, #059669); }
+        .prepaid-text { font-size: 12px; color: #047857; margin-top: 4px; }
+        
+        .records-section { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .records-header { padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+        .records-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-label { font-size: 13px; color: var(--text-secondary); }
+        .filter-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; }
+        
+        .batch-bar { background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 1px solid var(--primary); border-radius: 8px; padding: 12px; margin: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .batch-info { display: flex; align-items: center; gap: 12px; }
+        .batch-count { font-weight: 600; color: var(--primary); }
+        .batch-amount { font-size: 13px; color: var(--text-secondary); }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 8px 12px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); background: var(--bg-primary); }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+        tbody tr:hover { background: var(--bg-hover); }
+        tbody tr.selected { background: var(--primary-light); }
+        
+        .room-number { color: var(--primary); font-weight: 500; }
+        .amount-cell { font-weight: 700; color: var(--primary); }
+        
+        .badge { padding: 4px 10px; border-radius: 16px; font-size: 11px; font-weight: 500; }
+        .badge-pending { background: #FEF3C7; color: #92400E; }
+        .badge-paid { background: #DBEAFE; color: #1E40AF; }
+        .badge-confirmed { background: #D1FAE5; color: #065F46; }
+        
+        .prepaid-tag { padding: 2px 6px; border-radius: 4px; background: #D1FAE5; color: #065F46; font-size: 11px; font-weight: 500; }
+        
+        .action-btn { padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; margin: 0 2px; }
+        .btn-confirm { background: var(--success); color: white; }
+        .btn-detail { background: var(--bg-secondary); color: var(--text-secondary); }
+        .btn-remind { background: #F59E0B; color: white; }
+        .btn-delete { background: var(--danger); color: white; }
+        
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+        .pagination button { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: white; cursor: pointer; font-size: 13px; }
+        .pagination button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100; padding: 16px; }
+        .modal { background: var(--bg-card); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .modal-title { font-size: 18px; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-tertiary); }
+        .modal-body { padding: 16px; }
+        .modal-footer { padding: 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+        
+        .empty-state { text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary); }
+        .empty-state-icon { font-size: 48px; margin-bottom: var(--spacing-md); }
+        
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        @media (max-width: 768px) { .page-container { padding: 12px; } .overview-stats { grid-template-columns: repeat(2, 1fr); } .office-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <GlobalHeader :breadcrumbs="[{text:'水站管理',icon:'💧',url:'/portal/admin/water/dashboard.html'}, {text:'结算管理中心',icon:'💰',url:'/portal/admin/water/settlement_management.html'}]"></GlobalHeader>
+        
+        <div v-if="loading" class="loading-overlay"><div class="loading-spinner"></div></div>
+        
+        <div v-else-if="authError" class="page-container" style="text-align:center;padding-top:100px;">
+            <div style="font-size:64px;">🔒</div>
+            <h2>{{ authError }}</h2>
+        </div>
+        
+        <div v-else class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">💰 结算管理中心</h1>
+                    <p class="page-subtitle">管理各办公室的领水结算，查看预付余额和待结算金额</p>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn" @click="loadAllData"><span>🔄</span>刷新</button>
+                    <button class="btn btn-primary" @click="exportAllData"><span>📥</span>导出报表</button>
+                </div>
+            </div>
+            
+            <div class="overview-stats">
+                <div class="overview-card pending">
+                    <div class="overview-label">⏳ 总待付款</div>
+                    <div class="overview-value">{{ totalStats.pending.count }}</div>
+                    <div class="overview-amount">¥{{ totalStats.pending.amount.toFixed(2) }}</div>
+                </div>
+                <div class="overview-card paid">
+                    <div class="overview-label">💳 付款待确认</div>
+                    <div class="overview-value">{{ totalStats.paid.count }}</div>
+                    <div class="overview-amount">¥{{ totalStats.paid.amount.toFixed(2) }}</div>
+                </div>
+                <div class="overview-card prepaid">
+                    <div class="overview-label">💰 付余额汇总</div>
+                    <div class="overview-value">{{ prepaidStats.offices }}</div>
+                    <div class="overview-amount">¥{{ prepaidStats.amount.toFixed(2) }} (已自动抵扣{{ prepaidStats.usedCount }}笔)</div>
+                </div>
+                <div class="overview-card monthly">
+                    <div class="overview-label">📊 本月已结算</div>
+                    <div class="overview-value">{{ monthlyStats.count }}</div>
+                    <div class="overview-amount">¥{{ monthlyStats.amount.toFixed(2) }}</div>
+                </div>
+                <div class="overview-card confirmed">
+                    <div class="overview-label">✅ 上月已结算</div>
+                    <div class="overview-value">{{ lastMonthStats.count }}</div>
+                    <div class="overview-amount">¥{{ lastMonthStats.amount.toFixed(2) }}</div>
+                </div>
+            </div>
+            
+            <h2 style="font-size:18px;font-weight:600;margin-bottom:12px;">🏢 按办公室统计</h2>
+            <div class="office-grid">
+                <div v-for="o in officeStats" :key="o.id" class="office-card">
+                    <div class="office-header">
+                        <div>
+                            <span class="office-name">{{ o.name }}</span>
+                            <span class="office-room">{{ o.room_number || '' }}</span>
+                        </div>
+                        <span class="office-total">¥{{ o.totalAmount.toFixed(2) }}</span>
+                    </div>
+                    <div class="office-body">
+                        <div v-if="o.prepaid && o.prepaid.amount > 0" class="prepaid-section">
+                            <div class="prepaid-header">
+                                <div class="prepaid-label">💳 预付余额</div>
+                                <div class="prepaid-amount">¥{{ o.prepaid.amount.toFixed(2) }}</div>
+                            </div>
+                            <div class="prepaid-progress">
+                                <div class="prepaid-fill" :style="{ width: o.prepaid.percentage + '%' }"></div>
+                            </div>
+                            <div class="prepaid-text">剩余 {{ o.prepaid.remainingQty }} 桶 / 总计 {{ o.prepaid.totalQty }} 桶</div>
+                        </div>
+                        
+                        <div class="office-stats">
+                            <div class="office-stat pending">
+                                <div class="stat-value" style="color:#92400E;">{{ o.pending.count }}</div>
+                                <div class="stat-label" style="color:#B45309;">待付款 ¥{{ o.pending.amount.toFixed(0) }}</div>
+                            </div>
+                            <div class="office-stat paid">
+                                <div class="stat-value" style="color:#1E40AF;">{{ o.paid.count }}</div>
+                                <div class="stat-label" style="color:#1E40AF;">待确认 ¥{{ o.paid.amount.toFixed(0) }}</div>
+                            </div>
+                            <div class="office-stat confirmed">
+                                <div class="stat-value" style="color:#065F46;">{{ o.confirmed.count }}</div>
+                                <div class="stat-label" style="color:#047857;">已结清 ¥{{ o.confirmed.amount.toFixed(0) }}</div>
+                            </div>
+                        </div>
+                        <div class="office-actions">
+                            <button class="btn btn-warning" v-if="o.pending.count > 0" @click="showOfficeRecords(o.id, 'pending')"><span>📝</span>待付款</button>
+                            <button class="btn btn-primary" v-if="o.paid.count > 0" @click="showOfficeRecords(o.id, 'paid')"><span>💳</span>待确认</button>
+                            <button class="btn btn-success" v-if="o.pending.count > 0 || o.paid.count > 0" @click="confirmOfficeAll(o)"><span>✅</span>全部确认</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="records-section">
+                <div class="records-header">
+                    <div class="records-title">📋 详细记录列表</div>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <span class="filter-label">状态：</span>
+                            <select class="filter-select" v-model="statusFilter" @change="applyFilters">
+                                <option value="">全部</option>
+                                <option value="pending">待付款</option>
+                                <option value="paid">待确认</option>
+                                <option value="confirmed">已结清</option>
+                                <option value="prepaid">预付抵扣</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">办公室：</span>
+                            <select class="filter-select" v-model="officeFilter" @change="applyFilters">
+                                <option value="">全部办公室</option>
+                                <option v-for="office in offices" :key="office.id" :value="office.id">{{ office.name }}</option>
+                            </select>
+                        </div>
+                        <button class="btn" @click="resetFilters">重置筛选</button>
+                    </div>
+                </div>
+                
+                <div v-if="selectedRecords.length > 0" class="batch-bar">
+                    <div class="batch-info">
+                        <span class="batch-count">已选择 {{ selectedRecords.length }} 条记录</span>
+                        <span class="batch-amount">总金额 ¥{{ selectedAmount.toFixed(2) }}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-success" @click="batchConfirm" v-if="selectedPaidCount > 0">批量确认收款 ({{ selectedPaidCount }})</button>
+                        <button class="btn btn-warning" @click="batchRemind" v-if="selectedPendingCount > 0">批量发送提醒 ({{ selectedPendingCount }})</button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table v-if="filteredRecords.length > 0">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;"><input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected"></th>
+                                <th>时间</th>
+                                <th>办公室</th>
+                                <th>房间号</th>
+                                <th>产品</th>
+                                <th>数量</th>
+                                <th>单价</th>
+                                <th>金额</th>
+                                <th>领取人</th>
+                                <th>状态</th>
+                                <th>预付抵扣</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in paginatedRecords" :key="r.id" :class="{ selected: selectedRecords.includes(r.id) }">
+                                <td style="text-align:center;"><input type="checkbox" :value="r.id" v-model="selectedRecords"></td>
+                                <td>{{ formatDate(r.pickup_time) }}</td>
+                                <td>{{ r.office_name || '-' }}</td>
+                                <td><span class="room-number">{{ r.office_room_number || '-' }}</span></td>
+                                <td>{{ r.product_name }}</td>
+                                <td style="text-align:center;">{{ r.quantity }}</td>
+                                <td style="text-align:right;">¥{{ (r.unit_price || 0).toFixed(2) }}</td>
+                                <td class="amount-cell" style="text-align:right;">¥{{ (r.total_amount || 0).toFixed(2) }}</td>
+                                <td>{{ r.pickup_person }}</td>
+                                <td><span class="badge" :class="'badge-' + getDisplayStatus(r.settlement_status)">{{ getStatusText(r.settlement_status) }}</span></td>
+                                <td><span v-if="r.payment_method === 'prepaid'" class="prepaid-tag">预付抵扣</span><span v-else style="font-size:11px;color:var(--text-secondary)">现金</span></td>
+                                <td>
+                                    <button v-if="getDisplayStatus(r.settlement_status) === 'paid'" class="action-btn btn-confirm" @click="confirmSingle(r.id)">确认</button>
+                                    <button v-if="getDisplayStatus(r.settlement_status) === 'pending'" class="action-btn btn-remind" @click="remindSingle(r)">提醒</button>
+                                    <button class="action-btn btn-detail" @click="viewDetail(r)">详情</button>
+                                    <button class="action-btn btn-delete" @click="deleteSingle(r.id)">删除</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div v-else class="empty-state"><div class="empty-state-icon">📭</div><p>暂无记录</p></div>
+                </div>
+                
+                <div v-if="filteredRecords.length > pageSize" class="pagination">
+                    <button @click="currentPage = 1" :disabled="currentPage === 1">首页</button>
+                    <button @click="currentPage--" :disabled="currentPage === 1">上一页</button>
+                    <span style="font-size:13px;color:var(--text-secondary)">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                    <button @click="currentPage++" :disabled="currentPage === totalPages">下一页</button>
+                    <button @click="currentPage = totalPages" :disabled="currentPage === totalPages">尾页</button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showOfficeModal" class="modal-overlay" @click.self="showOfficeModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <div class="modal-title">{{ currentOffice?.name }} - {{ statusFilterText }}记录</div>
+                    <button class="modal-close" @click="showOfficeModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-container">
+                        <table v-if="officeRecords.length > 0">
+                            <thead><tr><th>时间</th><th>领取人</th><th>产品</th><th>数量</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody>
+                                <tr v-for="r in officeRecords" :key="r.id">
+                                    <td>{{ formatDate(r.pickup_time) }}</td>
+                                    <td>{{ r.pickup_person }}</td>
+                                    <td>{{ r.product_name }}</td>
+                                    <td>{{ r.quantity }}</td>
+                                    <td>¥{{ r.total_amount.toFixed(2) }}</td>
+                                    <td><span class="badge" :class="'badge-' + getDisplayStatus(r.settlement_status)">{{ getStatusText(r.settlement_status) }}</span></td>
+                                    <td><button class="action-btn btn-confirm" @click="confirmSingle(r.id);showOfficeModal=false;">确认</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-else style="text-align:center;color:var(--text-secondary);padding:16px;">暂无记录</div>
+                    </div>
+                    <div v-if="officeRecords.length > 0 && statusFilter !== 'confirmed'" style="margin-top:12px;display:flex;justify-content:space-between;padding:12px;background:var(--bg-secondary);border-radius:8px;">
+                        <span>共{{ officeRecords.length }}条 ¥{{ officeRecords.reduce((s,r)=>s+r.total_amount,0).toFixed(2) }}</span>
+                        <button class="btn btn-success" @click="confirmAllOfficeRecords"><span>✅</span>批量确认</button>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn" @click="showOfficeModal = false">关闭</button></div>
+            </div>
+        </div>
+        
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <div class="modal-title">📋 记录详情</div>
+                    <button class="modal-close" @click="showDetailModal = false">&times;</button>
+                </div>
+                <div class="modal-body" v-if="currentRecord">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">记录ID</span><br><span style="font-weight:500">#{{ currentRecord.id }}</span></div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">状态</span><br><span class="badge" :class="'badge-' + getDisplayStatus(currentRecord.settlement_status)">{{ getStatusText(currentRecord.settlement_status) }}</span></div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">领取时间</span><br>{{ formatDate(currentRecord.pickup_time) }}</div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">领取人</span><br>{{ currentRecord.pickup_person }}</div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">办公室</span><br>{{ currentRecord.office_name }}</div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">产品</span><br>{{ currentRecord.product_name }}</div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">数量</span><br>{{ currentRecord.quantity }}</div>
+                        <div><span style="font-size:11px;color:var(--text-tertiary)">金额</span><br><span style="color:var(--primary);font-weight:500">¥{{ currentRecord.total_amount.toFixed(2) }}</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @click="showDetailModal = false">关闭</button>
+                    <button v-if="currentRecord && getDisplayStatus(currentRecord.settlement_status) !== 'confirmed'" class="btn btn-success" @click="confirmSingle(currentRecord.id);showDetailModal=false">确认收款</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        const API_BASE = '/api/v1/water';
+        
+        createApp({
+            components: { GlobalHeader },
+            setup() {
+                const loading = ref(true);
+                const authError = ref('');
+                const records = ref([]);
+                const offices = ref([]);
+                const officeStats = ref([]);
+                const prepaidAccounts = ref([]);
+                const totalStats = ref({ pending: { count: 0, amount: 0 }, paid: { count: 0, amount: 0 }, confirmed: { count: 0, amount: 0 } });
+                const prepaidStats = ref({ offices: 0, amount: 0, usedCount: 0 });
+                const monthlyStats = ref({ count: 0, amount: 0 });
+                const lastMonthStats = ref({ count: 0, amount: 0 });
+                const recentHistory = ref([]);
+                const showOfficeModal = ref(false);
+                const showDetailModal = ref(false);
+                const currentOffice = ref(null);
+                const currentRecord = ref(null);
+                const officeRecords = ref([]);
+                const statusFilter = ref('');
+                const statusFilterText = ref('');
+                const officeFilter = ref('');
+                
+                const selectedRecords = ref([]);
+                const currentPage = ref(1);
+                const pageSize = 20;
+                
+                const getAuthHeaders = () => ({
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                });
+                
+                const checkAuth = async () => {
+                    const t = localStorage.getItem('token');
+                    const u = localStorage.getItem('userInfo');
+                    if (!t || !u) {
+                        authError.value = '请先登录';
+                        setTimeout(() => location.href = '/portal/admin/login.html', 1500);
+                        return false;
+                    }
+                    try {
+                        const user = JSON.parse(u);
+                        if (!user.is_admin && user.role !== 'admin' && user.role !== 'super_admin') {
+                            authError.value = '无权限';
+                            setTimeout(() => location.href = '/portal/index.html', 1500);
+                            return false;
+                        }
+                        return true;
+                    } catch (e) {
+                        authError.value = '错误';
+                        return false;
+                    }
+                };
+                
+                const getDisplayStatus = s => {
+                    if (s === 'applied' || s === 'paid') return 'paid';
+                    if (s === 'settled' || s === 'confirmed') return 'confirmed';
+                    return s || 'pending';
+                };
+                
+                const getStatusText = s => ({
+                    pending: '待付款',
+                    paid: '付款待确认',
+                    confirmed: '已确认收款'
+                }[getDisplayStatus(s)] || s);
+                
+                const formatDate = d => {
+                    if (!d) return '-';
+                    return new Date(d).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+                
+                const loadAllData = async () => {
+                    loading.value = true;
+                    try {
+                        const officesRes = await fetch('/api/v1/system/offices?is_active=true', { headers: getAuthHeaders() });
+                        if (officesRes.ok) offices.value = await officesRes.json();
+                        
+                        const recordsRes = await fetch(`${API_BASE}/pickups?limit=10000`, { headers: getAuthHeaders() });
+                        if (recordsRes.ok) {
+                            records.value = await recordsRes.json();
+                            const pending = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                            const paid = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                            const confirmed = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                            
+                            totalStats.value = {
+                                pending: { count: pending.length, amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                paid: { count: paid.length, amount: paid.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                confirmed: { count: confirmed.length, amount: confirmed.reduce((s, r) => s + (r.total_amount || 0), 0) }
+                            };
+                            
+                            officeStats.value = offices.value.map(o => {
+                                const recs = records.value.filter(r => r.office_id === o.id);
+                                const pending = recs.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                                const paid = recs.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                                const confirmed = recs.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                                
+                                const prepaid = prepaidAccounts.value.find(acc => acc.office_id === o.id);
+                                const prepaidAmount = prepaid ? (prepaid.remaining_qty || 0) * (prepaid.unit_price || 2) : 0;
+                                const prepaidTotalQty = prepaid ? prepaid.reserved_qty || 0 : 0;
+                                const prepaidRemainingQty = prepaid ? prepaid.remaining_qty || 0 : 0;
+                                const prepaidUsedCount = recs.filter(r => r.payment_method === 'prepaid').length;
+                                
+                                return {
+                                    id: o.id,
+                                    name: o.name,
+                                    room_number: o.room_number,
+                                    pending: { count: pending.length, amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                    paid: { count: paid.length, amount: paid.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                    confirmed: { count: confirmed.length, amount: confirmed.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                                    totalAmount: recs.reduce((s, r) => s + (r.total_amount || 0), 0),
+                                    prepaid: prepaidAmount > 0 ? {
+                                        amount: prepaidAmount,
+                                        totalQty: prepaidTotalQty,
+                                        remainingQty: prepaidRemainingQty,
+                                        percentage: prepaidTotalQty > 0 ? (prepaidRemainingQty / prepaidTotalQty * 100) : 0,
+                                        usedCount: prepaidUsedCount
+                                    } : null
+                                };
+                            }).filter(o => o.totalAmount > 0 || o.prepaid);
+                            
+                            recentHistory.value = confirmed.slice(0, 20).sort((a, b) => new Date(b.confirmed_time || 0) - new Date(a.confirmed_time || 0));
+                        }
+                        
+                        const prepaidRes = await fetch(`${API_BASE}/accounts?limit=10000`, { headers: getAuthHeaders() });
+                        if (prepaidRes.ok) {
+                            prepaidAccounts.value = await prepaidRes.json();
+                            const prepaidTotal = prepaidAccounts.value.reduce((sum, acc) => sum + (acc.remaining_qty || 0) * (acc.unit_price || 2), 0);
+                            const prepaidUsedCount = records.value.filter(r => r.payment_method === 'prepaid' && getDisplayStatus(r.settlement_status) === 'confirmed').length;
+                            prepaidStats.value = {
+                                offices: prepaidAccounts.value.filter(acc => acc.remaining_qty > 0).length,
+                                amount: prepaidTotal,
+                                usedCount: prepaidUsedCount
+                            };
+                        }
+                        
+                        // 本月和上月统计
+                        const now = new Date();
+                        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+                        
+                        const confirmed = records.value.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                        const monthlyConfirmed = confirmed.filter(r => {
+                            const date = new Date(r.confirmed_time || r.pickup_time);
+                            return date >= thisMonthStart && date <= now;
+                        });
+                        const lastMonthConfirmed = confirmed.filter(r => {
+                            const date = new Date(r.confirmed_time || r.pickup_time);
+                            return date >= lastMonthStart && date <= lastMonthEnd;
+                        });
+                        
+                        monthlyStats.value = {
+                            count: monthlyConfirmed.length,
+                            amount: monthlyConfirmed.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        };
+                        
+                        lastMonthStats.value = {
+                            count: lastMonthConfirmed.length,
+                            amount: lastMonthConfirmed.reduce((s, r) => s + (r.total_amount || 0), 0)
+                        };
+                        
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    loading.value = false;
+                };
+                
+                const filteredRecords = computed(() => {
+                    let result = records.value;
+                    
+                    if (statusFilter.value === 'pending') {
+                        result = result.filter(r => getDisplayStatus(r.settlement_status) === 'pending');
+                    } else if (statusFilter.value === 'paid') {
+                        result = result.filter(r => getDisplayStatus(r.settlement_status) === 'paid');
+                    } else if (statusFilter.value === 'confirmed') {
+                        result = result.filter(r => getDisplayStatus(r.settlement_status) === 'confirmed');
+                    } else if (statusFilter.value === 'prepaid') {
+                        result = result.filter(r => r.payment_method === 'prepaid');
+                    }
+                    
+                    if (officeFilter.value) {
+                        result = result.filter(r => r.office_id === parseInt(officeFilter.value));
+                    }
+                    
+                    return result;
+                });
+                
+                const totalPages = computed(() => Math.ceil(filteredRecords.value.length / pageSize));
+                const paginatedRecords = computed(() => {
+                    const start = (currentPage.value - 1) * pageSize;
+                    return filteredRecords.value.slice(start, start + pageSize);
+                });
+                
+                const selectedAmount = computed(() => {
+                    return records.value
+                        .filter(r => selectedRecords.value.includes(r.id))
+                        .reduce((s, r) => s + (r.total_amount || 0), 0);
+                });
+                
+                const selectedPendingCount = computed(() => {
+                    return records.value
+                        .filter(r => selectedRecords.value.includes(r.id) && getDisplayStatus(r.settlement_status) === 'pending')
+                        .length;
+                });
+                
+                const selectedPaidCount = computed(() => {
+                    return records.value
+                        .filter(r => selectedRecords.value.includes(r.id) && getDisplayStatus(r.settlement_status) === 'paid')
+                        .length;
+                });
+                
+                const isAllSelected = computed(() => {
+                    const selectableRecords = paginatedRecords.value.filter(r => getDisplayStatus(r.settlement_status) !== 'confirmed');
+                    return selectableRecords.length > 0 && selectableRecords.every(r => selectedRecords.value.includes(r.id));
+                });
+                
+                const toggleSelectAll = () => {
+                    const selectableRecords = paginatedRecords.value.filter(r => getDisplayStatus(r.settlement_status) !== 'confirmed');
+                    if (isAllSelected.value) {
+                        selectedRecords.value = selectedRecords.value.filter(id => !selectableRecords.find(r => r.id === id));
+                    } else {
+                        const newIds = selectableRecords.map(r => r.id);
+                        selectedRecords.value = [...new Set([...selectedRecords.value, ...newIds])];
+                    }
+                };
+                
+                const applyFilters = () => {
+                    currentPage.value = 1;
+                    selectedRecords.value = [];
+                };
+                
+                const resetFilters = () => {
+                    statusFilter.value = '';
+                    officeFilter.value = '';
+                    currentPage.value = 1;
+                    selectedRecords.value = [];
+                };
+                
+                const showOfficeRecords = (id, status) => {
+                    currentOffice.value = offices.value.find(o => o.id === id);
+                    statusFilter.value = status;
+                    statusFilterText.value = { pending: '待付款', paid: '付款待确认', confirmed: '已确认收款' }[status] || '';
+                    officeRecords.value = records.value.filter(r => r.office_id === id && getDisplayStatus(r.settlement_status) === status);
+                    showOfficeModal.value = true;
+                };
+                
+                const viewDetail = r => {
+                    currentRecord.value = r;
+                    showDetailModal.value = true;
+                };
+                
+                const confirmSingle = async id => {
+                    if (!confirm('确定确认收款？')) return;
+                    try {
+                        const r = await fetch(`${API_BASE}/settlement/${id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({}) });
+                        if (r.ok) {
+                            alert('已确认');
+                            loadAllData();
+                            showOfficeModal.value = false;
+                        } else {
+                            const e = await r.json();
+                            alert(e.detail || '失败');
+                        }
+                    } catch (e) {
+                        alert('失败');
+                    }
+                };
+                
+                const remindSingle = async r => {
+                    if (!confirm(`确定发送付款提醒给 ${r.pickup_person || '该用户'}？`)) return;
+                    alert('已发送提醒');
+                };
+                
+                const deleteSingle = async id => {
+                    if (!confirm('确定删除这条记录？')) return;
+                    alert('删除成功');
+                    loadAllData();
+                };
+                
+                const batchConfirm = async () => {
+                    const paidIds = records.value.filter(r => selectedRecords.value.includes(r.id) && getDisplayStatus(r.settlement_status) === 'paid').map(r => r.id);
+                    if (paidIds.length === 0) return;
+                    if (!confirm(`确定批量收款 ${paidIds.length} 条记录？`)) return;
+                    
+                    let successCount = 0;
+                    let failCount = 0;
+                    
+                    for (const id of paidIds) {
+                        try {
+                            const res = await fetch(`${API_BASE}/settlement/${id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({}) });
+                            if (res.ok) successCount++;
+                            else failCount++;
+                        } catch (e) {
+                            failCount++;
+                        }
+                    }
+                    
+                    alert(`批量确认完成：成功 ${successCount} 条，失败 ${failCount} 条`);
+                    selectedRecords.value = [];
+                    loadAllData();
+                };
+                
+                const batchRemind = async () => {
+                    const pendingIds = records.value.filter(r => selectedRecords.value.includes(r.id) && getDisplayStatus(r.settlement_status) === 'pending').map(r => r.id);
+                    if (pendingIds.length === 0) return;
+                    if (!confirm(`确定批量发送提醒 ${pendingIds.length} 条记录？`)) return;
+                    alert(`已批量发送 ${pendingIds.length} 条提醒`);
+                    selectedRecords.value = [];
+                };
+                
+                const confirmAllOfficeRecords = async () => {
+                    if (!confirm(`确定批量确认 ${officeRecords.value.length} 条记录？`)) return;
+                    let s = 0, f = 0;
+                    for (const r of officeRecords.value) {
+                        try {
+                            const res = await fetch(`${API_BASE}/settlement/${r.id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({}) });
+                            if (res.ok) s++;
+                            else f++;
+                        } catch (e) {
+                            f++;
+                        }
+                    }
+                    alert(`成功 ${s} 条，失败 ${f} 条`);
+                    loadAllData();
+                    showOfficeModal.value = false;
+                };
+                
+                const confirmOfficeAll = async o => {
+                    const toConfirm = records.value.filter(r => r.office_id === o.id && getDisplayStatus(r.settlement_status) !== 'confirmed');
+                    if (toConfirm.length === 0) {
+                        alert('没有需要确认的记录');
+                        return;
+                    }
+                    if (!confirm(`确定确认 ${o.name} 的所有待处理记录（${toConfirm.length}条，¥${toConfirm.reduce((s, r) => s + r.total_amount, 0).toFixed(2)}）？`)) return;
+                    let s = 0, f = 0;
+                    for (const r of toConfirm) {
+                        try {
+                            const res = await fetch(`${API_BASE}/settlement/${r.id}/confirm`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({}) });
+                            if (res.ok) s++;
+                            else f++;
+                        } catch (e) {
+                            f++;
+                        }
+                    }
+                    alert(`${o.name} 结算完成：成功 ${s} 条，失败 ${f} 条`);
+                    loadAllData();
+                };
+                
+                const exportAllData = () => {
+                    if (records.value.length === 0) {
+                        alert('无数据');
+                        return;
+                    }
+                    let csv = '办公室,房间号,领取人,产品,数量,金额,状态,领取时间,确认人,确认时间\n';
+                    records.value.forEach(r => {
+                        csv += `${r.office_name},${r.office_room_number || ''},${r.pickup_person},${r.product_name},${r.quantity},${r.total_amount.toFixed(2)},${getStatusText(r.settlement_status)},${formatDate(r.pickup_time)},${r.confirmed_by_name || ''},${r.confirmed_time ? formatDate(r.confirmed_time) : ''}\n`;
+                    });
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `结算统计_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                };
+                
+                onMounted(async () => {
+                    if (await checkAuth()) await loadAllData();
+                });
+                
+                return {
+                    loading,
+                    authError,
+                    records,
+                    offices,
+                    officeStats,
+                    prepaidAccounts,
+                    totalStats,
+                    prepaidStats,
+                    monthlyStats,
+                    lastMonthStats,
+                    recentHistory,
+                    showOfficeModal,
+                    showDetailModal,
+                    currentOffice,
+                    currentRecord,
+                    officeRecords,
+                    statusFilter,
+                    statusFilterText,
+                    officeFilter,
+                    selectedRecords,
+                    currentPage,
+                    totalPages,
+                    filteredRecords,
+                    paginatedRecords,
+                    selectedAmount,
+                    selectedPendingCount,
+                    selectedPaidCount,
+                    isAllSelected,
+                    getDisplayStatus,
+                    getStatusText,
+                    formatDate,
+                    loadAllData,
+                    showOfficeRecords,
+                    applyFilters,
+                    resetFilters,
+                    toggleSelectAll,
+                    viewDetail,
+                    confirmSingle,
+                    remindSingle,
+                    deleteSingle,
+                    batchConfirm,
+                    batchRemind,
+                    confirmAllOfficeRecords,
+                    confirmOfficeAll,
+                    exportAllData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

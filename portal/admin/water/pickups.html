@@ -53,6 +53,39 @@
             display: flex;
             align-items: center;
             gap: var(--spacing-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .stat-card.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary-light) 0%, white 100%);
+        }
+        
+        .stat-card.active-warning {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, var(--warning-light) 0%, white 100%);
+        }
+        
+        .stat-card.active-info {
+            border-color: var(--info);
+            background: linear-gradient(135deg, var(--info-light) 0%, white 100%);
+        }
+        
+        .stat-card.active-success {
+            border-color: var(--success);
+            background: linear-gradient(135deg, var(--success-light) 0%, white 100%);
+        }
+        
+        .stat-card.active-danger {
+            border-color: var(--danger);
+            background: linear-gradient(135deg, var(--danger-light) 0%, white 100%);
         }
         
         .stat-icon {
@@ -78,6 +111,23 @@
         .stat-label {
             font-size: var(--font-size-sm);
             color: var(--text-secondary);
+        }
+        
+        .stat-amount {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .stat-hint {
+            font-size: var(--font-size-xs);
+            color: var(--primary);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .stat-card:hover .stat-hint {
+            opacity: 1;
         }
         
         .filter-section {
@@ -202,6 +252,28 @@
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
             overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        /* 表格容器优化 */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
         }
         
         .table-header {
@@ -231,16 +303,19 @@
         
         th {
             text-align: left;
-            padding: var(--spacing-md) var(--spacing-lg);
+            padding: 12px 14px;
             font-size: var(--font-size-sm);
             font-weight: 600;
             color: var(--text-secondary);
-            background: var(--bg-primary);
-            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         td {
-            padding: var(--spacing-md) var(--spacing-lg);
+            padding: 10px 14px;
             font-size: var(--font-size-sm);
             color: var(--text-primary);
             border-bottom: 1px solid var(--border);
@@ -248,7 +323,15 @@
         }
         
         tr:hover {
-            background: var(--bg-secondary);
+            background: linear-gradient(90deg, var(--bg-secondary) 0%, transparent 100%);
+        }
+        
+        tr:hover td {
+            color: var(--primary);
+        }
+        
+        tr:hover .amount-cell {
+            color: var(--primary-dark);
         }
         
         .checkbox-cell {
@@ -277,13 +360,117 @@
             cursor: pointer;
         }
         
-        .status-badge {
+.status-badge {
             display: inline-flex;
             align-items: center;
-            padding: 4px 10px;
-            border-radius: var(--radius-full);
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: var(--font-size-xs);
-            font-weight: 500;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .status-pending {
+            background: linear-gradient(135deg, var(--warning-light) 0%, #fef3c7 100%);
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .status-applied {
+            background: linear-gradient(135deg, var(--info-light) 0%, #dbeafe 100%);
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+        
+        .status-settled {
+            background: linear-gradient(135deg, var(--success-light) 0%, #d1fae5 100%);
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        
+        .status-overdue {
+            background: linear-gradient(135deg, var(--danger-light) 0%, #fee2e2 100%);
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        
+        /* 表格列宽优化 - 符合国际顶级产品设计标准 */
+        table.pickups-table th:nth-child(1),
+        table.pickups-table td:nth-child(1) { width: 36px; min-width: 36px; text-align: center; }
+        table.pickups-table th:nth-child(2),
+        table.pickups-table td:nth-child(2) { width: 135px; min-width: 120px; }
+        table.pickups-table th:nth-child(3),
+        table.pickups-table td:nth-child(3) { width: 110px; min-width: 100px; }
+        table.pickups-table th:nth-child(4),
+        table.pickups-table td:nth-child(4) { width: 60px; min-width: 50px; text-align: center; }
+        table.pickups-table th:nth-child(5),
+        table.pickups-table td:nth-child(5) { width: 120px; min-width: 100px; }
+        table.pickups-table th:nth-child(6),
+        table.pickups-table td:nth-child(6) { width: 65px; min-width: 50px; text-align: center; }
+        table.pickups-table th:nth-child(7),
+        table.pickups-table td:nth-child(7) { width: 75px; min-width: 60px; text-align: right; }
+        table.pickups-table th:nth-child(8),
+        table.pickups-table td:nth-child(8) { width: 85px; min-width: 70px; text-align: right; font-weight: 600; color: var(--primary); }
+        table.pickups-table th:nth-child(9),
+        table.pickups-table td:nth-child(9) { width: 85px; min-width: 70px; }
+        table.pickups-table th:nth-child(10),
+        table.pickups-table td:nth-child(10) { width: 85px; min-width: 70px; text-align: center; }
+        table.pickups-table th:nth-child(11),
+        table.pickups-table td:nth-child(11) { 
+            width: 160px; 
+            min-width: 140px; 
+            text-align: center;
+        }
+        
+        /* 表格单元格间距优化 */
+        table.pickups-table th,
+        table.pickups-table td {
+            padding: 10px 12px;
+            white-space: nowrap;
+        }
+        
+        /* 产品规格合并显示样式 */
+        .product-spec-inline {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-left: 4px;
+            opacity: 0.8;
+        }
+        
+        /* 金额列加粗突出 */
+        .amount-cell {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        /* 排序图标 - 现代化设计 */
+        .sort-icon { 
+            font-size: 14px; 
+            margin-left: 6px; 
+            opacity: 0.4; 
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+        th.sortable:hover .sort-icon { opacity: 1; }
+        th.sortable { 
+            cursor: pointer; 
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        th.sortable:hover { 
+            background: linear-gradient(180deg, var(--primary-light) 0%, var(--bg-secondary) 100%);
+        }
+        th.sort-active { 
+            background: linear-gradient(180deg, var(--primary-light) 0%, #dbeafe 100%);
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        th.sort-active .sort-icon { 
+            opacity: 1; 
+            color: var(--primary);
+            font-size: 16px;
         }
         
         .status-pending {
@@ -311,6 +498,49 @@
         .action-btns .btn {
             justify-content: center;
             min-width: 50px;
+        }
+        
+        /* 精简文字按钮样式 - 更符合现代设计 */
+        .action-btns-compact {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-action.btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-action.btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .btn-action.btn-info {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+        
+        .btn-action.btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
         }
         
         .btn-placeholder {
@@ -646,14 +876,83 @@
                 margin-bottom: var(--spacing-md);
             }
             
+            .card-header-left {
+                flex: 1;
+            }
+            
             .card-time {
                 font-weight: 600;
                 color: var(--text-primary);
                 font-size: var(--font-size-sm);
             }
             
-            .card-status {
-                margin-left: auto;
+            .card-office {
+                font-size: var(--font-size-xs);
+                color: var(--text-secondary);
+                margin-top: 4px;
+            }
+            
+            .card-room-number {
+                color: var(--primary);
+                font-weight: 500;
+                margin-left: 2px;
+            }
+            
+            .card-product-info {
+                background: var(--bg-secondary);
+                padding: var(--spacing-sm);
+                border-radius: var(--radius-md);
+                margin-bottom: var(--spacing-md);
+            }
+            
+            .product-name-row {
+                display: flex;
+                align-items: center;
+                gap: var(--spacing-xs);
+                flex-wrap: wrap;
+            }
+            
+            .product-name {
+                font-weight: 600;
+                color: var(--text-primary);
+                font-size: var(--font-size-sm);
+            }
+            
+            .product-spec {
+                font-size: var(--font-size-xs);
+                color: var(--text-secondary);
+                background: white;
+                padding: 2px 6px;
+                border-radius: var(--radius-sm);
+            }
+            
+            .product-spec-inline {
+                font-size: var(--font-size-xs);
+                color: var(--text-secondary);
+                margin-left: 4px;
+                opacity: 0.8;
+            }
+            
+            .card-amount {
+                font-weight: 700;
+                color: var(--primary);
+            }
+            
+            .card-note {
+                background: var(--warning-light);
+                padding: var(--spacing-sm);
+                border-radius: var(--radius-md);
+                margin-bottom: var(--spacing-md);
+                font-size: var(--font-size-xs);
+                color: var(--warning-dark);
+            }
+            
+            .note-label {
+                font-weight: 600;
+            }
+            
+            .note-text {
+                margin-left: var(--spacing-xs);
             }
             
             .card-body {
@@ -682,15 +981,46 @@
             
             .card-actions {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
                 gap: var(--spacing-sm);
             }
             
-            .action-btn-sm {
-                padding: var(--spacing-sm);
-                min-height: var(--touch-min);
-                font-size: var(--font-size-xs);
+            /* 移动端按钮样式 */
+            .btn-action-mobile {
+                padding: 10px 16px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                transition: all 0.2s ease;
                 text-align: center;
+                min-height: 42px;
+            }
+            
+            .btn-action-mobile:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+            
+            .btn-action-mobile.btn-success {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+            }
+            
+            .btn-action-mobile.btn-warning {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                color: white;
+            }
+            
+            .btn-action-mobile.btn-info {
+                background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+                color: white;
+            }
+            
+            .btn-action-mobile.btn-danger {
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: white;
             }
             
             /* 复选框选择模式 */
@@ -765,11 +1095,6 @@
                 min-width: 160px;
             }
         }
-        
-        /* 默认隐藏移动端卡片布局 */
-        .mobile-card-list {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -795,32 +1120,52 @@
                 </div>
                 
                 <div class="stats-bar">
-                    <div class="stat-card">
+                    <div class="stat-card" :class="{ 'active': officePickupFilter.status === '' }" @click="filterByStatus('')">
                         <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">📊</div>
                         <div class="stat-info">
                             <div class="stat-value">{{ pickupStats.total }}</div>
                             <div class="stat-label">总记录数</div>
+                            <div class="stat-amount">¥{{ pickupStats.totalAmount.toFixed(2) }}</div>
+                            <div class="stat-hint">点击查看全部</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card" :class="{ 'active-warning': officePickupFilter.status === 'pending' }" @click="filterByStatus('pending')">
                         <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">⏳</div>
                         <div class="stat-info">
                             <div class="stat-value">{{ pickupStats.pending }}</div>
                             <div class="stat-label">待付款</div>
+                            <div class="stat-amount">¥{{ pickupStats.pendingAmount.toFixed(2) }}</div>
+                            <div class="stat-hint">点击筛选</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card" :class="{ 'active-info': officePickupFilter.status === 'applied' }" @click="filterByStatus('applied')">
                         <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">✅</div>
                         <div class="stat-info">
                             <div class="stat-value">{{ pickupStats.applied }}</div>
                             <div class="stat-label">待确认</div>
+                            <div class="stat-amount">¥{{ pickupStats.appliedAmount.toFixed(2) }}</div>
+                            <div class="stat-hint">点击筛选</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card" :class="{ 'active-success': officePickupFilter.status === 'settled' }" @click="filterByStatus('settled')">
                         <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">💰</div>
                         <div class="stat-info">
-                            <div class="stat-value">¥{{ pickupStats.totalAmount.toFixed(2) }}</div>
-                            <div class="stat-label">待结算金额</div>
+                            <div class="stat-value">{{ pickupStats.settled }}</div>
+                            <div class="stat-label">已结清</div>
+                            <div class="stat-amount">¥{{ pickupStats.settledAmount.toFixed(2) }}</div>
+                            <div class="stat-hint">点击筛选</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-if="pickupStats.overdue > 0" class="stats-bar" style="margin-bottom: var(--spacing-md);">
+                    <div class="stat-card" :class="{ 'active-danger': officePickupFilter.status === 'overdue' }" @click="filterByStatus('overdue')" style="background: var(--danger-light);">
+                        <div class="stat-icon" style="background: white; color: var(--danger);">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-value" style="color: var(--danger);">{{ pickupStats.overdue }}</div>
+                            <div class="stat-label" style="color: var(--danger);">逾期记录</div>
+                            <div class="stat-amount" style="color: var(--danger);">¥{{ pickupStats.overdueAmount.toFixed(2) }} (超过30天)</div>
+                            <div class="stat-hint" style="color: var(--danger);">点击筛选</div>
                         </div>
                     </div>
                 </div>
@@ -913,21 +1258,39 @@
                         </div>
                     </div>
                     
-                    <table>
+                    <table class="pickups-table">
                         <thead>
                             <tr>
                                 <th class="checkbox-cell">
                                     <input type="checkbox" @change="toggleAllPickups" :checked="allPickupsSelected">
                                 </th>
-                                <th>领取时间</th>
-                                <th>办公室</th>
-                                <th>产品</th>
-                                <th>规格</th>
-                                <th>数量</th>
-                                <th>单价</th>
-                                <th>金额</th>
-                                <th>领取人</th>
-                                <th>状态</th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'pickup_time' }" @click="toggleSort('pickup_time')">
+                                    领取时间 <span class="sort-icon">{{ getSortIcon('pickup_time') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'office_name' }" @click="toggleSort('office_name')">
+                                    办公室 <span class="sort-icon">{{ getSortIcon('office_name') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'office_room_number' }" @click="toggleSort('office_room_number')">
+                                    房间号 <span class="sort-icon">{{ getSortIcon('office_room_number') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'product_name' }" @click="toggleSort('product_name')">
+                                    产品规格 <span class="sort-icon">{{ getSortIcon('product_name') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'quantity' }" @click="toggleSort('quantity')">
+                                    数量 <span class="sort-icon">{{ getSortIcon('quantity') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'unit_price' }" @click="toggleSort('unit_price')">
+                                    单价 <span class="sort-icon">{{ getSortIcon('unit_price') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'total_amount' }" @click="toggleSort('total_amount')">
+                                    金额 <span class="sort-icon">{{ getSortIcon('total_amount') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'pickup_person' }" @click="toggleSort('pickup_person')">
+                                    领取人 <span class="sort-icon">{{ getSortIcon('pickup_person') }}</span>
+                                </th>
+                                <th class="sortable" :class="{ 'sort-active': sortField === 'settlement_status' }" @click="toggleSort('settlement_status')">
+                                    状态 <span class="sort-icon">{{ getSortIcon('settlement_status') }}</span>
+                                </th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -939,26 +1302,32 @@
                                     </td>
                                     <td>{{ formatDate(pickup.pickup_time) }}</td>
                                     <td>{{ pickup.office_name || '-' }}</td>
-                                    <td>{{ pickup.product_name || '-' }}</td>
-                                    <td>{{ pickup.specification || '-' }}</td>
+                                    <td>{{ pickup.office_room_number || '-' }}</td>
+                                    <td>
+                                        <span>{{ pickup.product_name || '-' }}</span>
+                                        <span v-if="pickup.specification" class="product-spec-inline">{{ pickup.specification }}</span>
+                                    </td>
                                     <td>{{ pickup.quantity }}</td>
                                     <td>¥{{ (pickup.unit_price || 0).toFixed(2) }}</td>
-                                    <td>¥{{ (pickup.total_amount || 0).toFixed(2) }}</td>
+                                    <td class="amount-cell">¥{{ (pickup.total_amount || 0).toFixed(2) }}</td>
                                     <td>{{ pickup.pickup_person || '-' }}</td>
                                     <td>
                                         <span class="status-badge" :class="'status-' + pickup.settlement_status">
                                             {{ getStatusText(pickup.settlement_status) }}
                                         </span>
                                     </td>
-<td>
-                                        <div class="action-btns">
-                                            <button class="btn btn-primary btn-sm" @click="confirmSinglePickup(pickup.id)" v-show="pickup.settlement_status === 'applied'">
+                                    <td>
+                                        <div class="action-btns-compact">
+                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'">
                                                 确认
                                             </button>
-                                            <button class="btn btn-secondary btn-sm" @click="sendRemindForPickup(pickup)" v-show="pickup.settlement_status === 'pending'">
+                                            <button class="btn-action btn-warning" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'">
                                                 提醒
                                             </button>
-                                            <button class="btn btn-danger btn-sm" @click="deleteSinglePickup(pickup.id)">
+                                            <button class="btn-action btn-info" @click="showPickupDetail(pickup)">
+                                                详情
+                                            </button>
+                                            <button class="btn-action btn-danger" @click="deleteSinglePickup(pickup.id)">
                                                 删除
                                             </button>
                                         </div>
@@ -993,27 +1362,27 @@
                                     class="card-checkbox"
                                 >
                                 <div class="card-header">
-                                    <div class="card-time">{{ formatDate(pickup.pickup_time) }}</div>
+                                    <div class="card-header-left">
+                                        <div class="card-time">{{ formatDate(pickup.pickup_time) }}</div>
+                                        <div class="card-office">
+                                            {{ pickup.office_name || '-' }}
+                                            <span v-if="pickup.office_room_number" class="card-room-number">({{ pickup.office_room_number }})</span>
+                                        </div>
+                                    </div>
                                     <span class="status-badge" :class="'status-' + pickup.settlement_status">
                                         {{ getStatusText(pickup.settlement_status) }}
                                     </span>
                                 </div>
+                                <div class="card-product-info">
+                                    <div class="product-name-row">
+                                        <span class="product-name">{{ pickup.product_name || '-' }}</span>
+                                        <span v-if="pickup.specification" class="product-spec">({{ pickup.specification }})</span>
+                                    </div>
+                                </div>
                                 <div class="card-body">
                                     <div class="card-item">
-                                        <span class="card-label">办公室</span>
-                                        <span class="card-value">{{ pickup.office_name || '-' }}</span>
-                                    </div>
-                                    <div class="card-item">
-                                        <span class="card-label">产品</span>
-                                        <span class="card-value">{{ pickup.product_name || '-' }}</span>
-                                    </div>
-                                    <div class="card-item">
-                                        <span class="card-label">规格</span>
-                                        <span class="card-value">{{ pickup.specification || '-' }}</span>
-                                    </div>
-                                    <div class="card-item">
                                         <span class="card-label">数量</span>
-                                        <span class="card-value">{{ pickup.quantity }}</span>
+                                        <span class="card-value">{{ pickup.quantity }}件</span>
                                     </div>
                                     <div class="card-item">
                                         <span class="card-label">单价</span>
@@ -1021,30 +1390,40 @@
                                     </div>
                                     <div class="card-item">
                                         <span class="card-label">金额</span>
-                                        <span class="card-value">¥{{ (pickup.total_amount || 0).toFixed(2) }}</span>
+                                        <span class="card-value card-amount">¥{{ (pickup.total_amount || 0).toFixed(2) }}</span>
                                     </div>
                                     <div class="card-item">
                                         <span class="card-label">领取人</span>
                                         <span class="card-value">{{ pickup.pickup_person || '-' }}</span>
                                     </div>
                                 </div>
+                                <div v-if="pickup.note" class="card-note">
+                                    <span class="note-label">备注:</span>
+                                    <span class="note-text">{{ pickup.note }}</span>
+                                </div>
                                 <div class="card-actions">
                                     <button 
-                                        class="btn btn-primary btn-sm action-btn-sm" 
+                                        class="btn-action-mobile btn-success" 
                                         @click="confirmSinglePickup(pickup.id)" 
-                                        v-show="pickup.settlement_status === 'applied'"
+                                        v-if="pickup.settlement_status === 'applied'"
                                     >
-                                        确认
+                                        确认收款
                                     </button>
                                     <button 
-                                        class="btn btn-secondary btn-sm action-btn-sm" 
+                                        class="btn-action-mobile btn-warning" 
                                         @click="sendRemindForPickup(pickup)" 
-                                        v-show="pickup.settlement_status === 'pending'"
+                                        v-if="pickup.settlement_status === 'pending'"
                                     >
-                                        提醒
+                                        发送提醒
                                     </button>
                                     <button 
-                                        class="btn btn-danger btn-sm action-btn-sm" 
+                                        class="btn-action-mobile btn-info" 
+                                        @click="showPickupDetail(pickup)"
+                                    >
+                                        查看详情
+                                    </button>
+                                    <button 
+                                        class="btn-action-mobile btn-danger" 
                                         @click="deleteSinglePickup(pickup.id)"
                                     >
                                         删除
@@ -1113,6 +1492,8 @@
                 
                 const currentPage = ref(1);
                 const pageSize = 20;
+                const sortField = ref('pickup_time');
+                const sortOrder = ref('desc');
                 
                 const checkAuth = async () => {
                     const storedToken = localStorage.getItem('token');
@@ -1179,8 +1560,18 @@
                 
                 const filteredPickups = computed(() => {
                     let result = officePickups.value || [];
+                    const now = new Date();
                     
-                    if (officePickupFilter.value.status) {
+                    // 逾期筛选
+                    if (officePickupFilter.value.status === 'overdue') {
+                        result = result.filter(p => {
+                            if (p.settlement_status === 'settled') return false;
+                            const pickupDate = p.pickup_time ? new Date(p.pickup_time) : null;
+                            if (!pickupDate) return false;
+                            const days = Math.floor((now - pickupDate) / (1000 * 60 * 60 * 24));
+                            return days > 30;
+                        });
+                    } else if (officePickupFilter.value.status) {
                         result = result.filter(p => p.settlement_status === officePickupFilter.value.status);
                     }
                     
@@ -1209,19 +1600,67 @@
                         result = result.filter(p => new Date(p.pickup_time) <= to);
                     }
                     
-                    return result.sort((a, b) => new Date(b.pickup_time) - new Date(a.pickup_time));
+                    // 动态排序
+                    const field = sortField.value;
+                    const order = sortOrder.value;
+                    result = result.sort((a, b) => {
+                        let valA = a[field];
+                        let valB = b[field];
+                        
+                        if (field === 'pickup_time') {
+                            valA = new Date(valA || 0).getTime();
+                            valB = new Date(valB || 0).getTime();
+                        }
+                        
+                        if (field === 'quantity' || field === 'unit_price' || field === 'total_amount') {
+                            valA = parseFloat(valA) || 0;
+                            valB = parseFloat(valB) || 0;
+                        }
+                        
+                        if (typeof valA === 'string') valA = valA.toLowerCase();
+                        if (typeof valB === 'string') valB = valB.toLowerCase();
+                        
+                        if (valA == null) valA = '';
+                        if (valB == null) valB = '';
+                        
+                        let result = 0;
+                        if (valA < valB) result = -1;
+                        if (valA > valB) result = 1;
+                        
+                        return order === 'desc' ? -result : result;
+                    });
+                    
+                    return result;
                 });
                 
                 const pickupStats = computed(() => {
                     const pickups = officePickups.value || [];
+                    const now = new Date();
+                    
+                    const pendingList = pickups.filter(p => p.settlement_status === 'pending');
+                    const appliedList = pickups.filter(p => p.settlement_status === 'applied');
+                    const settledList = pickups.filter(p => p.settlement_status === 'settled');
+                    
+                    // 逾期计算：超过30天未结清
+                    const overdueList = pickups.filter(p => {
+                        if (p.settlement_status === 'settled') return false;
+                        const pickupDate = p.pickup_time ? new Date(p.pickup_time) : null;
+                        if (!pickupDate) return false;
+                        const days = Math.floor((now - pickupDate) / (1000 * 60 * 60 * 24));
+                        return days > 30;
+                    });
+                    
                     return {
                         total: pickups.length,
-                        pending: pickups.filter(p => p.settlement_status === 'pending').length,
-                        applied: pickups.filter(p => p.settlement_status === 'applied').length,
-                        settled: pickups.filter(p => p.settlement_status === 'settled').length,
-                        totalAmount: pickups
-                            .filter(p => p.settlement_status !== 'settled')
-                            .reduce((sum, p) => sum + (p.total_amount || 0), 0)
+                        pending: pendingList.length,
+                        applied: appliedList.length,
+                        settled: settledList.length,
+                        overdue: overdueList.length,
+                        totalAmount: pickups.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+                        pendingAmount: pendingList.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+                        appliedAmount: appliedList.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+                        settledAmount: settledList.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+                        overdueAmount: overdueList.reduce((sum, p) => sum + (p.total_amount || 0), 0)
                     };
                 });
                 
@@ -1266,6 +1705,37 @@
                     officePickupFilter.value.status = status;
                     selectedPickups.value = [];
                     currentPage.value = 1;
+                };
+                
+                const toggleSort = (field) => {
+                    if (sortField.value === field) {
+                        sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+                    } else {
+                        sortField.value = field;
+                        sortOrder.value = 'desc';
+                    }
+                };
+                
+                const getSortIcon = (field) => {
+                    if (sortField.value !== field) return '↕';
+                    return sortOrder.value === 'desc' ? '↓' : '↑';
+                };
+                
+                const showPickupDetail = (pickup) => {
+                    const detail = `
+【领水记录详情】
+
+领取时间: ${formatDate(pickup.pickup_time)}
+办公室: ${pickup.office_name || '-'}
+产品: ${pickup.product_name || '-'} (${pickup.specification || '-'})
+数量: ${pickup.quantity}件
+单价: ¥${(pickup.unit_price || 0).toFixed(2)}
+金额: ¥${(pickup.total_amount || 0).toFixed(2)}
+领取人: ${pickup.pickup_person || '-'}
+状态: ${getStatusText(pickup.settlement_status)}
+备注: ${pickup.note || '无'}
+                    `.trim();
+                    alert(detail);
                 };
                 
                 const setDateFilter = (type) => {
@@ -1673,7 +2143,12 @@
                     batchRemindPickups,
                     batchDeletePickups,
                     exportFilteredPickups,
-                    exportAllPickups
+                    exportAllPickups,
+                    sortField,
+                    sortOrder,
+                    toggleSort,
+                    getSortIcon,
+                    showPickupDetail
                 };
             }
         }).mount('#app');

@@ -107,6 +107,30 @@
         .sort-icon { font-size: 12px; margin-left: 4px; opacity: 0.5; }
         th:hover .sort-icon { opacity: 1; }
         
+        /* ========== 记录表格列宽优化 ========== */
+        .records-table th:nth-child(1),
+        .records-table td:nth-child(1) { width: 32px; min-width: 32px; }
+        .records-table th:nth-child(2),
+        .records-table td:nth-child(2) { width: 130px; min-width: 100px; }
+        .records-table th:nth-child(3),
+        .records-table td:nth-child(3) { width: 100px; min-width: 80px; }
+        .records-table th:nth-child(4),
+        .records-table td:nth-child(4) { width: 60px; min-width: 50px; }
+        .records-table th:nth-child(5),
+        .records-table td:nth-child(5) { width: 80px; min-width: 60px; }
+        .records-table th:nth-child(6),
+        .records-table td:nth-child(6) { width: 50px; min-width: 40px; }
+        .records-table th:nth-child(7),
+        .records-table td:nth-child(7) { width: 60px; min-width: 50px; }
+        .records-table th:nth-child(8),
+        .records-table td:nth-child(8) { width: 70px; min-width: 60px; }
+        .records-table th:nth-child(9),
+        .records-table td:nth-child(9) { width: 80px; min-width: 70px; }
+        .records-table th:nth-child(10),
+        .records-table td:nth-child(10) { width: 70px; min-width: 60px; }
+        .records-table th:nth-child(11),
+        .records-table td:nth-child(11) { width: 80px; min-width: 70px; }
+        
         /* ========== 移动端适配优化 ========== */
         
         /* 安全区域适配 */
@@ -505,19 +529,19 @@
                             <div class="text-[10px] sm:text-xs text-yellow-600">待付款</div>
                             <div class="text-[9px] sm:text-xs text-yellow-400 hidden sm:block">¥{{ (recordStats.pending.amount || 0).toFixed(2) }}</div>
                         </div>
-                        <div @click="recordStatusFilter = 'applied'" :class="recordStatusFilter === 'applied' ? 'ring-2 ring-blue-500 bg-blue-100' : 'bg-blue-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
-                            <div class="text-lg sm:text-xl font-bold text-blue-600">{{ recordStats.applied.count }}</div>
-                            <div class="text-[10px] sm:text-xs text-blue-600">待确认</div>
-                            <div class="text-[9px] sm:text-xs text-blue-400 hidden sm:block">¥{{ (recordStats.applied.amount || 0).toFixed(2) }}</div>
+                        <div @click="recordStatusFilter = 'paid'" :class="recordStatusFilter === 'paid' ? 'ring-2 ring-blue-500 bg-blue-100' : 'bg-blue-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-blue-600">{{ recordStats.paid.count }}</div>
+                            <div class="text-[10px] sm:text-xs text-blue-600">付款待确认</div>
+                            <div class="text-[9px] sm:text-xs text-blue-400 hidden sm:block">¥{{ (recordStats.paid.amount || 0).toFixed(2) }}</div>
                         </div>
-                        <div @click="recordStatusFilter = 'settled'" :class="recordStatusFilter === 'settled' ? 'ring-2 ring-green-500 bg-green-100' : 'bg-green-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
-                            <div class="text-lg sm:text-xl font-bold text-green-600">{{ recordStats.settled.count }}</div>
+                        <div @click="recordStatusFilter = 'confirmed'" :class="recordStatusFilter === 'confirmed' ? 'ring-2 ring-green-500 bg-green-100' : 'bg-green-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
+                            <div class="text-lg sm:text-xl font-bold text-green-600">{{ recordStats.confirmed.count }}</div>
                             <div class="text-[10px] sm:text-xs text-green-600">已结清</div>
-                            <div class="text-[9px] sm:text-xs text-green-400 hidden sm:block">¥{{ (recordStats.settled.amount || 0).toFixed(2) }}</div>
+                            <div class="text-[9px] sm:text-xs text-green-400 hidden sm:block">¥{{ (recordStats.confirmed.amount || 0).toFixed(2) }}</div>
                         </div>
                         <div @click="recordStatusFilter = ''" :class="recordStatusFilter === '' ? 'ring-2 ring-blue-500 bg-slate-200' : 'bg-slate-50'" class="rounded-xl p-2 text-center cursor-pointer active:scale-95 transition-transform">
                             <div class="text-lg sm:text-xl font-bold text-slate-600">{{ recordStats.total.count }}</div>
-                            <div class="text-[10px] sm:text-xs text-slate-600">总记录</div>
+                            <div class="text-[10px] sm:text-xs text-slate-600">全部记录</div>
                             <div class="text-[9px] sm:text-xs text-slate-400 hidden sm:block">¥{{ (recordStats.total.amount || 0).toFixed(2) }}</div>
                         </div>
                     </div>
@@ -546,7 +570,7 @@
                     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                         <!-- 桌面端表格 -->
                         <div class="hidden sm:block overflow-x-auto">
-                            <table class="w-full text-sm">
+                            <table class="w-full text-sm records-table">
                                 <thead class="bg-slate-50 border-b border-slate-200">
                                     <tr>
                                         <th class="py-2 px-2 text-left text-slate-600 font-medium">
@@ -585,7 +609,7 @@
                                 <tbody>
                                     <tr v-for="r in filteredRecordList" :key="r.id" class="border-b border-slate-100 hover:bg-slate-50">
                                         <td class="py-2 px-2">
-                                            <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="r.settlement_status === 'settled'" class="w-4 h-4 rounded">
+                                            <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="getDisplayStatus(r.settlement_status) === 'confirmed'" class="w-4 h-4 rounded">
                                         </td>
                                         <td class="py-2 px-2 text-slate-600">{{ formatRecordDateFull(r.pickup_time) }}</td>
                                         <td class="py-2 px-2 text-slate-800 font-medium">{{ r.office_name }}</td>
@@ -601,14 +625,14 @@
                                         </td>
                                         <td class="py-2 px-2 text-slate-600">{{ r.pickup_person }}</td>
                                         <td class="py-2 px-2">
-                                            <button v-if="r.settlement_status === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200">
+                                            <button v-if="getDisplayStatus(r.settlement_status) === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200">
                                                 去付款
                                             </button>
-                                            <span v-else-if="r.settlement_status === 'applied'" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                                            <span v-else-if="getDisplayStatus(r.settlement_status) === 'paid'" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
                                                 待确认
                                             </span>
                                             <span v-else class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                                已结清
+                                                已确认
                                             </span>
                                         </td>
                                     </tr>
@@ -621,9 +645,9 @@
                         <!-- 移动端卡片式列表 -->
                         <div class="sm:hidden divide-y divide-slate-100">
                             <div v-for="r in filteredRecordList" :key="r.id" class="p-3 hover:bg-slate-50">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="r.settlement_status === 'settled'" class="w-4 h-4 rounded">
+<div class="flex justify-between items-start mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <input type="checkbox" :value="r.id" v-model="selectedRecords" :disabled="getDisplayStatus(r.settlement_status) === 'confirmed'" class="w-4 h-4 rounded">
                                         <span class="text-sm font-medium text-slate-800">{{ r.office_name }}</span>
                                         <span v-if="r.office_room_number" class="text-xs text-slate-400">{{ r.office_room_number }}</span>
                                     </div>
@@ -635,18 +659,18 @@
                                     <span>{{ r.product_name }} × {{ r.quantity }}</span>
                                     <span class="font-medium text-slate-800">¥{{ (r.total_amount || 0).toFixed(2) }}</span>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-slate-400">{{ formatRecordDateFull(r.pickup_time) }} · {{ r.pickup_person }}</span>
-                                    <button v-if="r.settlement_status === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
-                                        去付款
-                                    </button>
-                                    <span v-else-if="r.settlement_status === 'applied'" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded">
-                                        待确认
-                                    </span>
-                                    <span v-else class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded">
-                                        已结清
-                                    </span>
-                                </div>
+<div class="flex justify-between items-center">
+                                        <span class="text-[10px] text-slate-400">{{ formatRecordDateFull(r.pickup_time) }} · {{ r.pickup_person }}</span>
+                                        <button v-if="getDisplayStatus(r.settlement_status) === 'pending'" @click="markAsPaid(r.id)" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
+                                            去付款
+                                        </button>
+                                        <span v-else-if="getDisplayStatus(r.settlement_status) === 'paid'" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                                            待确认
+                                        </span>
+                                        <span v-else class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded">
+                                            已确认
+                                        </span>
+                                    </div>
                             </div>
                             <div v-if="filteredRecordList.length === 0" class="py-12 text-center text-slate-400">
                                 <i class="fas fa-inbox text-3xl mb-2"></i>
@@ -1030,7 +1054,7 @@
                     rechargeList: [],
                     rechargeForm: { productId: '', quantity: 1, note: '' },
                     rechargeProducts: [],
-                    recordStatusFilter: 'pending',
+                    recordStatusFilter: '',
                     recordQuickDate: '',
                     recordList: [],
                     selectedRecords: [],
@@ -1214,25 +1238,27 @@
                 filteredRecords() {
                     let recs = this.recordList;
                     if (this.recordStatusFilter) {
-                        recs = recs.filter(r => r.settlement_status === this.recordStatusFilter);
+                        // 兼容新旧状态名称
+                        recs = recs.filter(r => this.getDisplayStatus(r.settlement_status) === this.recordStatusFilter);
                     }
                     return recs;
                 },
                 recordStats() {
-                    const pending = this.recordList.filter(r => r.settlement_status === 'pending');
-                    const applied = this.recordList.filter(r => r.settlement_status === 'applied');
-                    const settled = this.recordList.filter(r => r.settlement_status === 'settled');
+                    const pending = this.recordList.filter(r => this.getDisplayStatus(r.settlement_status) === 'pending');
+                    const paid = this.recordList.filter(r => this.getDisplayStatus(r.settlement_status) === 'paid');
+                    const confirmed = this.recordList.filter(r => this.getDisplayStatus(r.settlement_status) === 'confirmed');
                     return {
                         total: { count: this.recordList.length, amount: this.recordList.reduce((s, r) => s + (r.total_amount || 0), 0) },
                         pending: { count: pending.length, amount: pending.reduce((s, r) => s + (r.total_amount || 0), 0) },
-                        applied: { count: applied.length, amount: applied.reduce((s, r) => s + (r.total_amount || 0), 0) },
-                        settled: { count: settled.length, amount: settled.reduce((s, r) => s + (r.total_amount || 0), 0) }
+                        paid: { count: paid.length, amount: paid.reduce((s, r) => s + (r.total_amount || 0), 0) },
+                        confirmed: { count: confirmed.length, amount: confirmed.reduce((s, r) => s + (r.total_amount || 0), 0) }
                     };
                 },
                 filteredRecordList() {
                     let recs = this.recordList;
                     if (this.recordStatusFilter) {
-                        recs = recs.filter(r => r.settlement_status === this.recordStatusFilter);
+                        // 兼容新旧状态名称
+                        recs = recs.filter(r => this.getDisplayStatus(r.settlement_status) === this.recordStatusFilter);
                     }
                     if (this.recordDateFrom) {
                         const from = new Date(this.recordDateFrom);
@@ -1938,8 +1964,30 @@ async loadRecords(officeId, status) {
                         this.selectedRecords = this.selectedRecords.filter(id => !pendingIds.includes(id));
                     }
                 },
-                getRecordStatusClass(s) { const classes = { pending: 'bg-yellow-100 text-yellow-700', applied: 'bg-blue-100 text-blue-700', settled: 'bg-green-100 text-green-700' }; return classes[s] || ''; },
-                getRecordStatusText(s) { const texts = { pending: '待付款', applied: '付款待确认', settled: '已结清' }; return texts[s] || s; },
+                // 获取显示状态（兼容新旧状态名称）
+                getDisplayStatus(s) {
+                    if (s === 'applied' || s === 'paid') return 'paid';
+                    if (s === 'settled' || s === 'confirmed') return 'confirmed';
+                    return s || 'pending';
+                },
+                getRecordStatusClass(s) { 
+                    const status = this.getDisplayStatus(s);
+                    const classes = { 
+                        pending: 'bg-amber-100 text-amber-700 border border-amber-200', 
+                        paid: 'bg-blue-100 text-blue-700 border border-blue-200', 
+                        confirmed: 'bg-green-100 text-green-700 border border-green-200'
+                    }; 
+                    return classes[status] || 'bg-gray-100 text-gray-700'; 
+                },
+                getRecordStatusText(s) { 
+                    const status = this.getDisplayStatus(s);
+                    const texts = { 
+                        pending: '待付款', 
+                        paid: '已付款·待确认', 
+                        confirmed: '已确认收款'
+                    }; 
+                    return texts[status] || s; 
+                },
                 exportRecords(type) {
                     const data = type === 'filtered' ? this.filteredRecordList : this.recordList;
                     if (data.length === 0) { alert('没有可导出的数据'); return; }
@@ -1949,11 +1997,17 @@ async loadRecords(officeId, status) {
                     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `领水记录_${type}_${new Date().toISOString().slice(0,10)}.csv`; link.click();
                 },
                 async markAsPaid(recordId) {
+                    if (!confirm('确定已付款？付款后等待管理员确认收款。')) return;
                     try {
-                        const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, { method: 'POST' });
+                        const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, {
+                            method: 'POST',
+                            headers: this.getAuthHeaders(),
+                            body: JSON.stringify({ payment_method: 'cash', payment_note: '' })
+                        });
                         if (res.ok) {
-                            alert('已提交付款');
-                            this.loadData();
+                            const data = await res.json();
+                            alert('付款成功！等待管理员确认收款');
+                            await this.loadRecordList();
                             this.selectedRecords = [];
                         } else {
                             const e = await res.json();
@@ -1965,12 +2019,16 @@ async loadRecords(officeId, status) {
                 },
                 async batchMarkAsPaid() {
                     if (this.selectedRecords.length === 0) return;
-                    if (!confirm(`确定要将选中的 ${this.selectedRecords.length} 条记录标记为去付款吗？`)) return;
+                    if (!confirm(`确定将选中的 ${this.selectedRecords.length} 条记录标记为已付款？`)) return;
                     let successCount = 0;
                     let failCount = 0;
                     for (const recordId of this.selectedRecords) {
                         try {
-                            const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, { method: 'POST' });
+                            const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ payment_method: 'cash' })
+                            });
                             if (res.ok) {
                                 successCount++;
                             } else {
