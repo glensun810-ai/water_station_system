@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付确认 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: white;
+            cursor: pointer;
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .payment-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .booking-summary {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+        }
+        
+        .summary-label {
+            color: var(--text-secondary);
+        }
+        
+        .summary-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .fee-breakdown {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+        }
+        
+        .fee-total {
+            display: flex;
+            justify-content: space-between;
+            padding-top: var(--spacing-md);
+            border-top: 2px solid var(--border);
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .payment-method-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .payment-method-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .payment-method-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .payment-method-subtitle {
+            font-size: var(--font-size-base);
+            opacity: 0.9;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .payment-method-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .contact-info {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .contact-item:last-child {
+            border-bottom: none;
+        }
+        
+        .contact-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .contact-details {
+            flex: 1;
+        }
+        
+        .contact-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .contact-value {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .qr-code-placeholder {
+            width: 200px;
+            height: 200px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: var(--spacing-lg) auto;
+            color: var(--text-secondary);
+        }
+        
+        .instruction-section {
+            background: var(--warning-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .instruction-title {
+            font-weight: 600;
+            color: var(--warning);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .instruction-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .instruction-item {
+            padding: var(--spacing-sm) 0;
+            color: var(--text-primary);
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .instruction-number {
+            font-weight: 600;
+            color: var(--warning);
+        }
+        
+        .action-section {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: center;
+        }
+        
+        .action-btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            min-width: 150px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: white;
+            border: 2px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .success-message {
+            background: var(--success-light);
+            border: 2px solid var(--success);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .success-icon {
+            font-size: 48px;
+            color: var(--success);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .success-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .success-text {
+            color: var(--text-primary);
+        }
+        
+        @media (max-width: 768px) {
+            .action-section {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="back-btn" @click="goBack">
+                    <span>←</span>
+                    <span>返回</span>
+                </div>
+                <div class="page-title">支付确认</div>
+                <div></div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-container">
+            <!-- Success Message (已支付) -->
+            <div v-if="paymentCompleted" class="success-message">
+                <div class="success-icon">✅</div>
+                <div class="success-title">支付已确认！</div>
+                <div class="success-text">
+                    您的预约已生效，管理员正在为您安排空间资源。<br>
+                    请在预约时间前15分钟到达现场。
+                </div>
+            </div>
+            
+            <div class="payment-card">
+                <!-- Booking Summary -->
+                <section>
+                    <h2 class="section-title">
+                        <span>📋</span>
+                        预约信息确认
+                    </h2>
+                    <div class="booking-summary">
+                        <div class="summary-row">
+                            <span class="summary-label">预约编号</span>
+                            <span class="summary-value">{{ bookingInfo?.bookingNo }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">空间类型</span>
+                            <span class="summary-value">{{ bookingInfo?.spaceType }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">预约空间</span>
+                            <span class="summary-value">{{ bookingInfo?.spaceName }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">预约日期</span>
+                            <span class="summary-value">{{ bookingInfo?.bookingDate }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">预约时段</span>
+                            <span class="summary-value">{{ bookingInfo?.timeSlot }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">参会人数</span>
+                            <span class="summary-value">{{ bookingInfo?.attendeesCount }}人</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Fee Breakdown -->
+                <section>
+                    <h2 class="section-title">
+                        <span>💰</span>
+                        费用明细
+                    </h2>
+                    <div class="fee-breakdown">
+                        <div class="fee-row">
+                            <span class="summary-label">基础费用</span>
+                            <span class="summary-value">¥{{ feeDetail?.baseFee }}</span>
+                        </div>
+                        <div class="fee-row" v-if="feeDetail?.memberDiscount > 0">
+                            <span class="summary-label">会员优惠</span>
+                            <span class="summary-value" style="color: var(--success);">-¥{{ feeDetail?.memberDiscount }}</span>
+                        </div>
+                        <div class="fee-row" v-if="feeDetail?.freeHoursDiscount > 0">
+                            <span class="summary-label">免费时长抵扣</span>
+                            <span class="summary-value" style="color: var(--success);">-¥{{ feeDetail?.freeHoursDiscount }}</span>
+                        </div>
+                        <div class="fee-total">
+                            <span>应付金额</span>
+                            <span>¥{{ feeDetail?.totalFee }}</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Payment Method -->
+                <section class="payment-method-section" v-if="!paymentCompleted">
+                    <h2 class="section-title">
+                        <span>💳</span>
+                        支付方式（线下支付）
+                    </h2>
+                    
+                    <div class="payment-method-card">
+                        <div class="payment-method-icon">💵</div>
+                        <div class="payment-method-title">线下支付</div>
+                        <div class="payment-method-subtitle">
+                            请联系管理员完成支付，支付后管理员将为您确认预约
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <div class="contact-icon">📱</div>
+                            <div class="contact-details">
+                                <div class="contact-label">联系电话</div>
+                                <div class="contact-value">138-0000-0001</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">💬</div>
+                            <div class="contact-details">
+                                <div class="contact-label">微信号</div>
+                                <div class="contact-value">SpaceService_Admin</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">📧</div>
+                            <div class="contact-details">
+                                <div class="contact-label">邮箱</div>
+                                <div class="contact-value">space@example.com</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">📍</div>
+                            <div class="contact-details">
+                                <div class="contact-label">办公地址</div>
+                                <div class="contact-value">AI产业集群 - 行政服务中心（1楼）</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code Placeholder -->
+                    <div class="qr-code-placeholder">
+                        <div>
+                            <div style="margin-bottom: var(--spacing-sm);">微信支付二维码</div>
+                            <div style="font-size: 12px;">（扫码添加管理员好友）</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Payment Instructions -->
+                <section v-if="!paymentCompleted">
+                    <div class="instruction-section">
+                        <div class="instruction-title">⚠️ 支付流程说明</div>
+                        <ol class="instruction-list">
+                            <li class="instruction-item">
+                                <span class="instruction-number">1.</span>
+                                <span>联系管理员（电话/微信），说明您的预约编号</span>
+                            </li>
+                            <li class="instruction-item">
+                                <span class="instruction-number">2.</span>
+                                <span>通过微信转账、银行转账或现金支付费用</span>
+                            </li>
+                            <li class="instruction-item">
+                                <span class="instruction-number">3.</span>
+                                <span>管理员确认收款后，将在系统审批通过您的预约</span>
+                            </li>
+                            <li class="instruction-item">
+                                <span class="instruction-number">4.</span>
+                                <span>预约通过后，您将在"我的预约"中看到预约状态变更</span>
+                            </li>
+                            <li class="instruction-item">
+                                <span class="instruction-number">5.</span>
+                                <span>请在预约时间前15分钟到达现场，凭预约编号使用空间</span>
+                            </li>
+                        </ol>
+                    </div>
+                </section>
+                
+                <!-- Action Buttons -->
+                <section class="action-section" v-if="!paymentCompleted">
+                    <button class="action-btn btn-primary" @click="confirmPayment">
+                        已完成支付，通知管理员
+                    </button>
+                    <button class="action-btn btn-secondary" @click="goBack">
+                        返回预约列表
+                    </button>
+                </section>
+                
+                <!-- Completed Actions -->
+                <section class="action-section" v-if="paymentCompleted">
+                    <button class="action-btn btn-primary" @click="viewBooking">
+                        查看预约详情
+                    </button>
+                    <button class="action-btn btn-secondary" @click="goToIndex">
+                        返回首页
+                    </button>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentUser = ref(null);
+                const bookingId = ref(null);
+                const bookingInfo = ref(null);
+                const feeDetail = ref(null);
+                const paymentCompleted = ref(false);
+                
+                const loadPaymentInfo = async () => {
+                    try {
+                        // 检查登录状态
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = user;
+                            console.log('用户已登录:', currentUser.value);
+                            
+                            // 获取预约ID（从URL参数）
+                            const params = new URLSearchParams(window.location.search);
+                            bookingId.value = params.get('booking_id');
+                            
+                            if (!bookingId.value) {
+                                alert('预约信息缺失，请从"我的预约"进入');
+                                window.location.href = '/space-frontend/my-bookings.html';
+                                return;
+                            }
+                            
+                            // 加载预约信息（模拟数据）
+                            await loadBookingDetails();
+                        } else {
+                            window.location.href = '/portal/admin/login.html';
+                        }
+                    } catch (error) {
+                        console.error('加载支付信息失败:', error);
+                    }
+                };
+                
+                const loadBookingDetails = async () => {
+                    // 实际应该调用API获取预约详情
+                    // /api/v2/space/bookings/{bookingId.value}
+                    
+                    bookingInfo.value = {
+                        bookingNo: 'BK20260413001',
+                        spaceType: '会议室',
+                        spaceName: 'VIP会议室（5楼501）',
+                        bookingDate: '2026-04-15',
+                        timeSlot: '09:00-11:00',
+                        attendeesCount: 10
+                    };
+                    
+                    feeDetail.value = {
+                        baseFee: '200.00',
+                        memberDiscount: '40.00',
+                        freeHoursDiscount: '0.00',
+                        totalFee: '160.00'
+                    };
+                    
+                    console.log('预约信息加载完成:', bookingInfo.value);
+                };
+                
+                const confirmPayment = async () => {
+                    if (confirm('确认您已完成线下支付？\n\n点击确认后，系统将通知管理员审批您的预约。')) {
+                        try {
+                            // 实际应该调用API通知管理员
+                            // /api/v2/space/payments/notify-admin
+                            
+                            paymentCompleted.value = true;
+                            console.log('支付确认成功，已通知管理员');
+                            
+                            // 显示成功消息
+                        } catch (error) {
+                            console.error('支付确认失败:', error);
+                            alert('操作失败，请稍后重试或直接联系管理员');
+                        }
+                    }
+                };
+                
+                const viewBooking = () => {
+                    window.location.href = '/space-frontend/my-bookings.html';
+                };
+                
+                const goToIndex = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/space-frontend/my-bookings.html';
+                };
+                
+                onMounted(() => {
+                    loadPaymentInfo();
+                });
+                
+                return {
+                    currentUser,
+                    bookingInfo,
+                    feeDetail,
+                    paymentCompleted,
+                    confirmPayment,
+                    viewBooking,
+                    goToIndex,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="description" content="空间预约创建 - 分步预约流程，智能推荐时段">
+    
+    <title>创建预约 - 空间服务预约系统</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .booking-container {
+            min-height: 100vh;
+            background: var(--bg-secondary);
+        }
+        
+        .booking-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            min-height: var(--touch-min);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        
+        .header-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .booking-main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-active);
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+        
+        .step-number.active {
+            background: var(--primary);
+            color: var(--text-inverse);
+        }
+        
+        .step-number.completed {
+            background: var(--success);
+            color: var(--text-inverse);
+        }
+        
+        .step-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .step-label.active {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .step-divider {
+            width: 60px;
+            height: 2px;
+            background: var(--border);
+        }
+        
+        .booking-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-xl);
+        }
+        
+        .form-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .card-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .user-info-display {
+            background: var(--info-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+        }
+        
+        .resource-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .resource-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+            min-height: var(--touch-min);
+        }
+        
+        .resource-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .resource-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .resource-name {
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .resource-meta {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .time-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .time-slot {
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+            min-height: var(--touch-min);
+        }
+        
+        .time-slot:hover:not(.disabled) {
+            border-color: var(--primary);
+        }
+        
+        .time-slot.selected {
+            background: var(--primary);
+            color: var(--text-inverse);
+            font-weight: 600;
+        }
+        
+        .time-slot.disabled {
+            background: var(--bg-active);
+            color: var(--text-disabled);
+            cursor: not-allowed;
+        }
+        
+        .fee-calculator {
+            background: var(--warning-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+        }
+        
+        .fee-breakdown {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .fee-label {
+            color: var(--text-secondary);
+        }
+        
+        .fee-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .fee-total {
+            display: flex;
+            justify-content: space-between;
+            padding-top: var(--spacing-md);
+            border-top: 2px solid var(--border);
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .fee-total-value {
+            color: var(--primary);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: center;
+            padding-top: var(--spacing-xl);
+        }
+        
+        .action-btn {
+            min-width: 150px;
+            min-height: var(--touch-min);
+        }
+        
+        @media (max-width: 768px) {
+            .time-picker-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .resource-selector {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak class="booking-container" role="application" aria-label="预约创建页面">
+        
+        <header class="booking-header" role="banner">
+            <div class="header-content">
+                <a href="/space-frontend/index.html" class="back-btn" aria-label="返回首页">
+                    <span aria-hidden="true">←</span>
+                    <span>返回</span>
+                </a>
+                <h1 class="header-title">创建预约</h1>
+            </div>
+        </header>
+        
+        <main class="booking-main" role="main">
+            
+            <nav class="progress-steps" role="navigation" aria-label="预约步骤">
+                <div class="step-item">
+                    <div class="step-number active" :aria-label="currentStep === 1 ? '当前步骤' : '已完成步骤'">1</div>
+                    <span class="step-label active">选择空间</span>
+                </div>
+                <div class="step-divider" aria-hidden="true"></div>
+                <div class="step-item">
+                    <div class="step-number" :class="{ active: currentStep >= 2 }">2</div>
+                    <span class="step-label" :class="{ active: currentStep >= 2 }">选择时段</span>
+                </div>
+                <div class="step-divider" aria-hidden="true"></div>
+                <div class="step-item">
+                    <div class="step-number" :class="{ active: currentStep >= 3 }">3</div>
+                    <span class="step-label" :class="{ active: currentStep >= 3 }">填写信息</span>
+                </div>
+                <div class="step-divider" aria-hidden="true"></div>
+                <div class="step-item">
+                    <div class="step-number" :class="{ active: currentStep >= 4 }">4</div>
+                    <span class="step-label" :class="{ active: currentStep >= 4 }">确认提交</span>
+                </div>
+            </nav>
+            
+            <form class="booking-form" @submit.prevent="submitBooking" aria-label="预约表单">
+                
+                <section class="form-card" v-if="currentStep === 1">
+                    <h2 class="card-title">
+                        <span aria-hidden="true">📋</span>
+                        预约人信息（自动识别）
+                    </h2>
+                    
+                    <div class="user-info-display" role="status" aria-live="polite">
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">{{ currentUser?.name || '未登录' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">所属办公室</span>
+                            <span class="info-value">{{ currentUser?.department || '外部访客' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">用户类型</span>
+                            <span class="info-value">{{ userType === 'internal' ? '内部员工（会员价）' : '外部访客' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">剩余免费时长</span>
+                            <span class="info-value">{{ freeHoursRemaining }}小时</span>
+                        </div>
+                    </div>
+                    
+                    <h2 class="card-title" style="margin-top: var(--spacing-xl);">
+                        <span aria-hidden="true">🏢</span>
+                        选择空间
+                    </h2>
+                    
+                    <div class="resource-selector" role="radiogroup" aria-label="空间选择">
+                        <div 
+                            v-for="resource in availableResources" 
+                            :key="resource.id"
+                            class="resource-card"
+                            :class="{ selected: selectedResource?.id === resource.id }"
+                            role="radio"
+                            :aria-checked="selectedResource?.id === resource.id"
+                            tabindex="0"
+                            @click="selectResource(resource)"
+                            @keypress.enter="selectResource(resource)"
+                        >
+                            <div class="resource-name">{{ resource.name }}</div>
+                            <div class="resource-meta">
+                                <div>位置：{{ resource.location }}</div>
+                                <div>容量：{{ resource.capacity }}人</div>
+                                <div>价格：¥{{ resource.basePrice }}/{{ typeUnit }}</div>
+                            </div>
+                            <div v-if="resource.isFavorite" style="color: var(--warning); margin-top: var(--spacing-sm);">
+                                <span aria-hidden="true">★</span> 常用空间
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="form-card" v-if="currentStep === 2 && selectedResource">
+                    <h2 class="card-title">
+                        <span aria-hidden="true">📅</span>
+                        选择时段
+                    </h2>
+                    
+                    <div class="form-group" style="margin-bottom: var(--spacing-xl);">
+                        <label for="booking-date" class="form-label">预约日期</label>
+                        <input 
+                            type="date" 
+                            id="booking-date" 
+                            class="form-input"
+                            v-model="bookingDate"
+                            :min="minDate"
+                            :aria-describedby="dateHint"
+                        >
+                        <span id="dateHint" class="form-hint">可预约未来7天内的时段</span>
+                    </div>
+                    
+                    <div class="time-picker-grid" role="grid" aria-label="时段选择">
+                        <div 
+                            v-for="slot in timeSlots" 
+                            :key="slot.time"
+                            class="time-slot"
+                            :class="{ 
+                                selected: selectedTimeSlot?.time === slot.time,
+                                disabled: !slot.available 
+                            }"
+                            role="gridcell"
+                            tabindex="0"
+                            @click="selectTimeSlot(slot)"
+                            @keypress.enter="selectTimeSlot(slot)"
+                            :aria-disabled="!slot.available"
+                            :aria-label="`${slot.time} ${slot.available ? '可用' : '已被预约'}`"
+                        >
+                            {{ slot.time }}
+                            <div v-if="!slot.available" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                已预约
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="form-card" v-if="currentStep === 3 && selectedResource && selectedTimeSlot">
+                    <h2 class="card-title">
+                        <span aria-hidden="true">📝</span>
+                        填写预约信息
+                    </h2>
+                    
+                    <div class="form-group">
+                        <label for="meeting-title" class="form-label">会议主题 *</label>
+                        <input 
+                            type="text" 
+                            id="meeting-title" 
+                            class="form-input"
+                            v-model="meetingTitle"
+                            placeholder="例如：项目启动会"
+                            required
+                            aria-required="true"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="attendees-count" class="form-label">参会人数</label>
+                        <input 
+                            type="number" 
+                            id="attendees-count" 
+                            class="form-input"
+                            v-model.number="attendeesCount"
+                            :min="1"
+                            :max="selectedResource?.capacity || 20"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="special-requests" class="form-label">特殊需求</label>
+                        <textarea 
+                            id="special-requests" 
+                            class="form-input"
+                            v-model="specialRequests"
+                            rows="3"
+                            placeholder="例如：需要投影设备、茶水服务等"
+                            aria-describedby="requests-hint"
+                        ></textarea>
+                        <span id="requests-hint" class="form-hint">可选填写</span>
+                    </div>
+                    
+                    <div class="fee-calculator" role="region" aria-label="费用计算">
+                        <h3 class="card-title" style="margin-bottom: var(--spacing-lg);">
+                            <span aria-hidden="true">💰</span>
+                            费用明细
+                        </h3>
+                        
+                        <div class="fee-breakdown">
+                            <div class="fee-row">
+                                <span class="fee-label">基础费用</span>
+                                <span class="fee-value">¥{{ feeDetail.baseFee }}</span>
+                            </div>
+                            <div class="fee-row" v-if="feeDetail.memberDiscount > 0">
+                                <span class="fee-label">会员折扣 ({{ userType === 'internal' ? '20%' : '30%' }})</span>
+                                <span class="fee-value" style="color: var(--success);">-¥{{ feeDetail.memberDiscount }}</span>
+                            </div>
+                            <div class="fee-row" v-if="feeDetail.freeHoursUsed > 0">
+                                <span class="fee-label">免费时长抵扣</span>
+                                <span class="fee-value" style="color: var(--success);">-¥{{ feeDetail.freeHoursDiscount }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="fee-total">
+                            <span>应付金额</span>
+                            <span class="fee-total-value">¥{{ feeDetail.totalFee }}</span>
+                        </div>
+                        
+                        <div v-if="selectedResource?.requiresDeposit" style="margin-top: var(--spacing-md); color: var(--warning); font-size: var(--font-size-sm);">
+                            <span aria-hidden="true">⚠️</span>
+                            此类型需支付定金：¥{{ feeDetail.depositAmount }}（{{ feeDetail.depositPercentage }}%）
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="form-card" v-if="currentStep === 4">
+                    <h2 class="card-title">
+                        <span aria-hidden="true">✅</span>
+                        确认预约信息
+                    </h2>
+                    
+                    <div class="confirmation-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">预约空间</span>
+                            <span class="summary-value">{{ selectedResource?.name }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">预约日期</span>
+                            <span class="summary-value">{{ bookingDate }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">预约时段</span>
+                            <span class="summary-value">{{ selectedTimeSlot?.time }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">会议主题</span>
+                            <span class="summary-value">{{ meetingTitle }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">参会人数</span>
+                            <span class="summary-value">{{ attendeesCount }}人</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">应付金额</span>
+                            <span class="summary-value" style="color: var(--primary); font-weight: 700;">¥{{ feeDetail.totalFee }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline action-btn" @click="prevStep">
+                            上一步
+                        </button>
+                        <button type="submit" class="btn btn-primary action-btn" :disabled="submitting">
+                            {{ submitting ? '提交中...' : '确认提交' }}
+                        </button>
+                    </div>
+                </section>
+                
+                <div class="form-actions" v-if="currentStep < 4">
+                    <button 
+                        type="button" 
+                        class="btn btn-outline action-btn" 
+                        @click="prevStep" 
+                        v-if="currentStep > 1"
+                        :disabled="currentStep === 1"
+                    >
+                        上一步
+                    </button>
+                    <button 
+                        type="button" 
+                        class="btn btn-primary action-btn" 
+                        @click="nextStep"
+                        :disabled="!canProceedToNext"
+                    >
+                        下一步
+                    </button>
+                </div>
+                
+            </form>
+            
+        </main>
+        
+    </div>
+    
+    <script type="module">
+        import spaceAPI from './api.js';
+        
+        const { createApp, ref, computed, watch, onMounted } = Vue
+        
+        createApp({
+            setup() {
+                const currentStep = ref(1)
+                const currentUser = ref(null)
+                const userType = ref('external')
+                const freeHoursRemaining = ref(2)
+                
+                const spaceType = ref(null)
+                const availableResources = ref([])
+                const selectedResource = ref(null)
+                const typeUnit = ref('小时')
+                
+                const bookingDate = ref('')
+                const timeSlots = ref([])
+                const selectedTimeSlot = ref(null)
+                
+                const meetingTitle = ref('')
+                const attendeesCount = ref(1)
+                const specialRequests = ref('')
+                
+                const feeDetail = ref({
+                    baseFee: 0,
+                    memberDiscount: 0,
+                    freeHoursUsed: 0,
+                    freeHoursDiscount: 0,
+                    totalFee: 0,
+                    depositAmount: 0,
+                    depositPercentage: 0
+                })
+                
+                const submitting = ref(false)
+                
+                const minDate = computed(() => {
+                    const today = new Date()
+                    return today.toISOString().split('T')[0]
+                })
+                
+                const canProceedToNext = computed(() => {
+                    if (currentStep.value === 1) return selectedResource.value !== null
+                    if (currentStep.value === 2) return selectedTimeSlot.value !== null
+                    if (currentStep.value === 3) return meetingTitle.value.trim() !== ''
+                    return true
+                })
+                
+                const nextStep = () => {
+                    if (canProceedToNext.value && currentStep.value < 4) {
+                        currentStep.value++
+                        if (currentStep.value === 3) {
+                            calculateFee()
+                        }
+                    }
+                }
+                
+                const prevStep = () => {
+                    if (currentStep.value > 1) {
+                        currentStep.value--
+                    }
+                }
+                
+                const selectResource = (resource) => {
+                    selectedResource.value = resource
+                }
+                
+                const selectTimeSlot = (slot) => {
+                    if (slot.available) {
+                        selectedTimeSlot.value = slot
+                    }
+                }
+                
+                const calculateFee = async () => {
+                    if (!selectedResource.value || !selectedTimeSlot.value) return;
+                    
+                    try {
+                        const timeParts = selectedTimeSlot.value.time.split('-');
+                        const startTime = timeParts[0];
+                        const endTime = timeParts[1];
+                        
+                        const response = await spaceAPI.calculateFee({
+                            resource_id: selectedResource.value.id,
+                            booking_date: bookingDate.value,
+                            start_time: startTime,
+                            end_time: endTime,
+                            user_type: userType.value,
+                            member_level: userType.value === 'internal' ? 'vip' : 'regular'
+                        });
+                        
+                        const data = response.data;
+                        const feeSummary = data.fee_summary;
+                        const depositInfo = data.deposit_info;
+                        
+                        feeDetail.value = {
+                            baseFee: feeSummary.base_fee.toFixed(2),
+                            memberDiscount: feeSummary.discount_total.toFixed(2),
+                            freeHoursUsed: 0,
+                            freeHoursDiscount: '0.00',
+                            totalFee: feeSummary.final_fee.toFixed(2),
+                            depositAmount: depositInfo.deposit_amount.toFixed(2),
+                            depositPercentage: depositInfo.deposit_percentage || 0
+                        };
+                        
+                        console.log('费用计算完成:', feeDetail.value);
+                    } catch (error) {
+                        console.error('费用计算失败，使用本地计算:', error);
+                        
+                        const hours = 2;
+                        const baseFee = hours * selectedResource.value.basePrice;
+                        
+                        const discountRate = userType.value === 'internal' ? 0.8 : 1.0;
+                        const memberDiscount = baseFee * (1 - discountRate);
+                        
+                        const freeHoursUsed = Math.min(freeHoursRemaining.value, hours);
+                        const freeHoursDiscount = freeHoursUsed * selectedResource.value.basePrice;
+                        
+                        const totalFee = Math.max(0, baseFee - memberDiscount - freeHoursDiscount);
+                        
+                        feeDetail.value = {
+                            baseFee: baseFee.toFixed(2),
+                            memberDiscount: memberDiscount.toFixed(2),
+                            freeHoursUsed: freeHoursUsed,
+                            freeHoursDiscount: freeHoursDiscount.toFixed(2),
+                            totalFee: totalFee.toFixed(2),
+                            depositAmount: (totalFee * 0.3).toFixed(2),
+                            depositPercentage: 30
+                        };
+                    }
+                }
+                
+                const loadUserData = async () => {
+                    try {
+                        // 检查登录状态（使用统一认证工具）
+                        const user = await checkAuth({ requireAuth: false, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = {
+                                name: user.name || user.username,
+                                username: user.username,
+                                department: user.department || '系统管理部',
+                                id: user.id,
+                                role: user.role,
+                                roleName: user.roleName
+                            };
+                            userType.value = 'internal';
+                            console.log('用户已登录:', currentUser.value);
+                            console.log('预约人姓名:', currentUser.value.name);
+                            console.log('预约人办公室:', currentUser.value.department);
+                        } else {
+                            // 未登录或Token无效，显示游客状态
+                            currentUser.value = {
+                                name: '游客',
+                                department: '',
+                                id: null,
+                                role: 'guest'
+                            };
+                            userType.value = 'external';
+                            console.log('用户未登录');
+                        }
+                    } catch (error) {
+                        console.error('加载用户数据失败:', error);
+                        currentUser.value = {
+                            name: '游客',
+                            department: '',
+                            id: null,
+                            role: 'guest'
+                        };
+                    }
+                }
+                
+                const loadSpaceType = async () => {
+                    const typeCode = new URLSearchParams(window.location.search).get('type')
+                    
+                    try {
+                        const response = await spaceAPI.getResources({ type_code: typeCode || 'meeting_room' });
+                        const items = response.data.items || [];
+                        
+                        if (items.length > 0) {
+                            const firstItem = items[0];
+                            spaceType.value = {
+                                code: firstItem.type_code || typeCode || 'meeting_room',
+                                name: firstItem.type_name || '会议室',
+                                unit: '按小时'
+                            };
+                            typeUnit.value = '小时';
+                        } else {
+                            spaceType.value = {
+                                code: typeCode || 'meeting_room',
+                                name: '会议室',
+                                unit: '按小时'
+                            };
+                            typeUnit.value = '小时';
+                        }
+                        
+                        availableResources.value = items.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            location: item.location || '未知位置',
+                            capacity: item.capacity || 10,
+                            basePrice: item.base_price || 50,
+                            isFavorite: item.is_favorite || false,
+                            requiresDeposit: item.requires_deposit || false
+                        }));
+                        
+                        console.log('空间资源加载完成:', availableResources.value.length);
+                    } catch (error) {
+                        console.error('加载空间资源失败:', error);
+                        spaceType.value = {
+                            code: typeCode || 'meeting_room',
+                            name: '会议室',
+                            unit: '按小时'
+                        };
+                        typeUnit.value = '小时';
+                        
+                        availableResources.value = [
+                            {
+                                id: 1,
+                                name: '1号会议室',
+                                location: '3楼301',
+                                capacity: 10,
+                                basePrice: 50,
+                                isFavorite: true,
+                                requiresDeposit: false
+                            },
+                            {
+                                id: 2,
+                                name: 'VIP会议室',
+                                location: '5楼501',
+                                capacity: 20,
+                                basePrice: 80,
+                                isFavorite: false,
+                                requiresDeposit: true
+                            },
+                            {
+                                id: 3,
+                                name: '2号会议室',
+                                location: '3楼302',
+                                capacity: 15,
+                                basePrice: 60,
+                                isFavorite: false,
+                                requiresDeposit: false
+                            }
+                        ];
+                    }
+                }
+                
+                const loadTimeSlots = async () => {
+                    if (!selectedResource.value || !bookingDate.value) {
+                        timeSlots.value = [];
+                        return;
+                    }
+                    
+                    try {
+                        const response = await spaceAPI.getResourceAvailability(
+                            selectedResource.value.id,
+                            bookingDate.value
+                        );
+                        
+                        const availableSlots = response.data.available_slots || [];
+                        const bookedSlots = response.data.booked_slots || [];
+                        
+                        const allSlots = [
+                            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
+                            '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
+                            '17:00-18:00', '18:00-19:00', '19:00-20:00', '20:00-21:00'
+                        ];
+                        
+                        timeSlots.value = allSlots.map(time => {
+                            const isBooked = bookedSlots.some(booked => {
+                                const bookedTime = `${booked.start_time}-${booked.end_time}`;
+                                return bookedTime === time;
+                            });
+                            
+                            return {
+                                time: time,
+                                available: !isBooked
+                            };
+                        });
+                        
+                        console.log('时段加载完成:', timeSlots.value.length);
+                    } catch (error) {
+                        console.error('加载时段失败:', error);
+                        timeSlots.value = [
+                            { time: '08:00-09:00', available: true },
+                            { time: '09:00-10:00', available: false },
+                            { time: '10:00-11:00', available: true },
+                            { time: '11:00-12:00', available: true },
+                            { time: '13:00-14:00', available: false },
+                            { time: '14:00-15:00', available: true },
+                            { time: '15:00-16:00', available: true },
+                            { time: '16:00-17:00', available: true },
+                            { time: '17:00-18:00', available: true },
+                            { time: '18:00-19:00', available: false },
+                            { time: '19:00-20:00', available: true },
+                            { time: '20:00-21:00', available: true }
+                        ];
+                    }
+                    
+                    if (!bookingDate.value) {
+                        const today = new Date();
+                        bookingDate.value = today.toISOString().split('T')[0];
+                    }
+                }
+                
+                const submitBooking = async () => {
+                    submitting.value = true
+                    
+                    try {
+                        const timeParts = selectedTimeSlot.value.time.split('-');
+                        const startTime = timeParts[0];
+                        const endTime = timeParts[1];
+                        
+                        const bookingData = {
+                            resource_id: selectedResource.value.id,
+                            booking_date: bookingDate.value,
+                            start_time: startTime,
+                            end_time: endTime,
+                            title: meetingTitle.value,
+                            attendees_count: attendeesCount.value,
+                            special_requests: specialRequests.value,
+                            user_name: currentUser.value?.name || '访客',
+                            user_type: userType.value,
+                            user_phone: currentUser.value?.phone || '',
+                            user_email: currentUser.value?.email || '',
+                            department: currentUser.value?.department || ''
+                        };
+                        
+                        console.log('提交预约:', bookingData);
+                        
+                        const response = await spaceAPI.createBooking(bookingData);
+                        
+                        console.log('预约创建成功:', response);
+                        alert('预约提交成功！预约编号: ' + response.data.booking_no);
+                        window.location.href = '/space-frontend/my-bookings.html';
+                        
+                    } catch (error) {
+                        console.error('预约提交失败:', error);
+                        alert('预约提交失败：' + (error.message || '请稍后重试'));
+                    } finally {
+                        submitting.value = false;
+                    }
+                }
+                
+                watch(bookingDate, () => {
+                    loadTimeSlots();
+                    selectedTimeSlot.value = null;
+                });
+                
+                watch(selectedResource, () => {
+                    if (bookingDate.value) {
+                        loadTimeSlots();
+                        selectedTimeSlot.value = null;
+                    }
+                });
+                
+                onMounted(() => {
+                    loadUserData()
+                    loadSpaceType()
+                    loadTimeSlots()
+                })
+                
+                return {
+                    currentStep,
+                    currentUser,
+                    userType,
+                    freeHoursRemaining,
+                    spaceType,
+                    availableResources,
+                    selectedResource,
+                    typeUnit,
+                    bookingDate,
+                    minDate,
+                    timeSlots,
+                    selectedTimeSlot,
+                    meetingTitle,
+                    attendeesCount,
+                    specialRequests,
+                    feeDetail,
+                    submitting,
+                    canProceedToNext,
+                    nextStep,
+                    prevStep,
+                    selectResource,
+                    selectTimeSlot,
+                    submitBooking
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

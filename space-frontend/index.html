@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <meta name="description" content="AI产业集群空间服务预约系统 - 会议室、会场、大屏、展位、VIP餐厅一站式预约">
+    <meta name="keywords" content="空间预约,会议室,会场,大屏展位,VIP餐厅,AI产业集群">
+    <meta name="author" content="AI产业集群">
+    <meta name="robots" content="index, follow">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="空间服务预约系统">
+    <meta property="og:description" content="一站式空间服务预约平台，智能推荐，便捷预约">
+    
+    <title>空间服务预约系统 - 一站式空间预约平台</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .space-booking-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-inverse);
+            padding: var(--spacing-2xl) var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            letter-spacing: -0.5px;
+        }
+        
+        .hero-subtitle {
+            font-size: var(--font-size-lg);
+            opacity: 0.9;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .user-info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-sm);
+            backdrop-filter: blur(10px);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-xl) var(--spacing-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .section-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .section-title-icon {
+            font-size: 28px;
+        }
+        
+        .space-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .space-type-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+        
+        .space-type-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
+        }
+        
+        .space-type-card:focus {
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .space-type-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-theme-color, var(--primary));
+        }
+        
+        .space-type-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .space-type-name {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            text-align: center;
+        }
+        
+        .space-type-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            text-align: center;
+            flex: 1;
+        }
+        
+        .space-type-meta {
+            display: flex;
+            justify-content: space-around;
+            padding: var(--spacing-md) 0;
+            border-top: 1px solid var(--border-light);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .meta-item {
+            text-align: center;
+        }
+        
+        .meta-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .meta-value {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .space-type-action {
+            width: 100%;
+            min-height: var(--touch-min);
+        }
+        
+        .recommendations-section {
+            margin-top: var(--spacing-3xl);
+        }
+        
+        .recommendation-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .recommendation-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--success);
+        }
+        
+        .rec-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .rec-badge {
+            background: var(--success-light);
+            color: var(--success-dark);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .rec-space-name {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .rec-info {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .stats-overview {
+            background: linear-gradient(135deg, var(--info-light) 0%, white 100%);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-3xl);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: var(--spacing-md);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .bottom-nav {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: var(--safe-area-inset-bottom);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-md);
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            color: var(--text-secondary);
+            transition: color var(--transition-fast);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+        }
+        
+        .nav-label {
+            font-size: var(--font-size-xs);
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: var(--font-size-2xl);
+            }
+            
+            .space-types-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: var(--spacing-lg);
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .space-types-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak class="space-booking-container" role="application" aria-label="空间服务预约系统">
+        
+        <section class="hero-section" role="banner">
+            <h1 class="hero-title">空间服务预约系统</h1>
+            <p class="hero-subtitle">智能推荐 · 便捷预约 · 专业服务</p>
+            
+            <div class="user-info-badge" v-if="user" role="status" aria-live="polite">
+                <span aria-hidden="true">👤</span>
+                <span>{{ user.name }}</span>
+                <span v-if="user.department">| {{ user.department }}</span>
+                <span v-if="userType === 'internal'" class="badge-internal">内部员工</span>
+                <span v-else class="badge-external">访客用户</span>
+            </div>
+        </section>
+        
+        <main class="main-content" role="main">
+            
+            <section aria-labelledby="space-types-title">
+                <h2 id="space-types-title" class="section-title">
+                    <span class="section-title-icon" aria-hidden="true">🏢</span>
+                    选择空间类型
+                </h2>
+                
+                <div class="space-types-grid" role="list">
+                    <article 
+                        v-for="type in spaceTypes" 
+                        :key="type.id"
+                        class="space-type-card"
+                        :style="{ '--card-theme-color': type.themeColor }"
+                        role="listitem"
+                        tabindex="0"
+                        @click="selectSpaceType(type)"
+                        @keypress.enter="selectSpaceType(type)"
+                        :aria-label="`${type.name} - ${type.description} - ${type.unit}计价`"
+                    >
+                        <div class="space-type-icon" :aria-hidden="true">{{ type.icon }}</div>
+                        <h3 class="space-type-name">{{ type.name }}</h3>
+                        <p class="space-type-desc">{{ type.description }}</p>
+                        
+                        <div class="space-type-meta">
+                            <div class="meta-item">
+                                <div class="meta-label">计价单位</div>
+                                <div class="meta-value">{{ type.unit }}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">容量</div>
+                                <div class="meta-value">{{ type.capacityRange }}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">基础价格</div>
+                                <div class="meta-value">{{ type.priceFrom }}</div>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            class="btn btn-primary space-type-action"
+                            :aria-label="`立即预约${type.name}`"
+                        >
+                            立即预约
+                        </button>
+                    </article>
+                </div>
+            </section>
+            
+            <section class="recommendations-section" aria-labelledby="recommendations-title" v-if="recommendations.length > 0">
+                <h2 id="recommendations-title" class="section-title">
+                    <span class="section-title-icon" aria-hidden="true">💡</span>
+                    今日推荐空位
+                </h2>
+                
+                <div class="recommendation-list" role="list">
+                    <article 
+                        v-for="rec in recommendations" 
+                        :key="rec.id"
+                        class="recommendation-card"
+                        role="listitem"
+                        tabindex="0"
+                        @click="bookRecommendation(rec)"
+                        :aria-label="`${rec.spaceName} ${rec.timeSlot} 可用 - 点击预约`"
+                    >
+                        <div class="rec-header">
+                            <span class="rec-badge">空位</span>
+                            <span class="rec-space-name">{{ rec.spaceName }}</span>
+                        </div>
+                        <div class="rec-info">
+                            <div>{{ rec.timeSlot }}</div>
+                            <div>{{ rec.price }}</div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+            
+            <section class="stats-overview" aria-labelledby="stats-title" v-if="stats">
+                <h2 id="stats-title" class="section-title">
+                    <span class="section-title-icon" aria-hidden="true">📊</span>
+                    使用统计概览
+                </h2>
+                
+                <div class="stats-grid" role="list">
+                    <div class="stat-item" role="listitem">
+                        <div class="stat-value">{{ stats.totalBookings }}</div>
+                        <div class="stat-label">总预约次数</div>
+                    </div>
+                    <div class="stat-item" role="listitem">
+                        <div class="stat-value">{{ stats.thisMonth }}</div>
+                        <div class="stat-label">本月预约</div>
+                    </div>
+                    <div class="stat-item" role="listitem">
+                        <div class="stat-value">{{ stats.freeHoursRemaining }}h</div>
+                        <div class="stat-label">剩余免费时长</div>
+                    </div>
+                    <div class="stat-item" role="listitem">
+                        <div class="stat-value">{{ stats.savedAmount }}</div>
+                        <div class="stat-label">已节省费用</div>
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+        
+        <nav class="bottom-nav" role="navigation" aria-label="底部导航">
+            <a href="/space-frontend/index.html" class="nav-item active" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">首页</span>
+            </a>
+            <a href="/space-frontend/calendar.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📅</span>
+                <span class="nav-label">日历</span>
+            </a>
+            <a href="/space-frontend/my-bookings.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📋</span>
+                <span class="nav-label">预约</span>
+            </a>
+            <a href="/space-frontend/notifications.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🔔</span>
+                <span class="nav-label">通知</span>
+            </a>
+            <a href="/space-frontend/profile.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">👤</span>
+                <span class="nav-label">我的</span>
+            </a>
+        </nav>
+        
+    </div>
+    
+    <script type="module">
+        import spaceAPI from './api.js';
+        
+        const { createApp, ref, computed, onMounted } = Vue
+        
+        createApp({
+            setup() {
+                // 确保Vue的ref函数可用
+                if (!ref) {
+                    console.error('Vue ref函数不可用');
+                    return {};
+                }
+                
+                const user = ref(null)
+                const userInfo = ref(null)
+                const userType = ref('external')
+                
+                console.log('setup函数初始化完成，准备定义响应式变量');
+                const spaceTypes = ref([
+                    {
+                        id: 1,
+                        code: 'meeting_room',
+                        name: '会议室',
+                        icon: '🏢',
+                        description: '小型会议室，适合10-20人会议',
+                        unit: '按小时',
+                        capacityRange: '10-20人',
+                        priceFrom: '¥50/h',
+                        themeColor: '#2563EB',
+                        requiresApproval: false
+                    },
+                    {
+                        id: 2,
+                        code: 'auditorium',
+                        name: '会场/多功能厅',
+                        icon: '🎭',
+                        description: '大型会场，适合50-500人活动',
+                        unit: '按半天/全天',
+                        capacityRange: '50-500人',
+                        priceFrom: '¥500/半天',
+                        themeColor: '#7C3AED',
+                        requiresApproval: true
+                    },
+                    {
+                        id: 3,
+                        code: 'lobby_screen',
+                        name: '大堂大屏',
+                        icon: '📺',
+                        description: '大堂LED大屏，投放广告或展示',
+                        unit: '按时段',
+                        capacityRange: '不限',
+                        priceFrom: '¥200/时段',
+                        themeColor: '#F59E0B',
+                        requiresApproval: true
+                    },
+                    {
+                        id: 4,
+                        code: 'lobby_booth',
+                        name: '大堂展位',
+                        icon: '🏪',
+                        description: '大堂展示展位，产品展示促销',
+                        unit: '按天/周',
+                        capacityRange: '不限',
+                        priceFrom: '¥300/天',
+                        themeColor: '#10B981',
+                        requiresApproval: true
+                    },
+                    {
+                        id: 5,
+                        code: 'vip_dining',
+                        name: 'VIP餐厅',
+                        icon: '🍽️',
+                        description: 'VIP餐厅包厢，高端商务用餐',
+                        unit: '按餐段',
+                        capacityRange: '6-12人',
+                        priceFrom: '¥800/餐',
+                        themeColor: '#DC2626',
+                        requiresApproval: false
+                    }
+                ])
+                
+                const recommendations = ref([])
+                const stats = ref(null)
+                
+                const selectSpaceType = (type) => {
+                    sessionStorage.setItem('selectedSpaceType', JSON.stringify(type))
+                    window.location.href = `/space-frontend/booking.html?type=${type.code}`
+                }
+                
+                // 导航功能
+                const navigateToMyBookings = () => {
+                    window.location.href = '/space-frontend/my-bookings.html'
+                }
+                
+                const navigateToCalendar = () => {
+                    window.location.href = '/space-frontend/calendar.html'
+                }
+                
+                const navigateToNotifications = () => {
+                    window.location.href = '/space-frontend/notifications.html'
+                }
+                
+                const navigateToProfile = () => {
+                    window.location.href = '/space-frontend/profile.html'
+                }
+                
+                const navigateToResources = () => {
+                    window.location.href = '/space-frontend/resources.html'
+                }
+                
+                const handleLogout = async () => {
+                    if (confirm('确认退出登录？')) {
+                        await logout()
+                    }
+                }
+                
+                const bookRecommendation = (rec) => {
+                    sessionStorage.setItem('selectedRecommendation', JSON.stringify(rec))
+                    window.location.href = `/space-frontend/booking.html?recId=${rec.id}`
+                }
+                
+                const loadUserData = async () => {
+                    try {
+                        // 检查登录状态（使用统一认证工具）
+                        const currentUser = await checkAuth({ requireAuth: false, validateToken: true });
+                        
+                        if (currentUser) {
+                            user.value = currentUser;
+                            userInfo.value = {
+                                id: currentUser.id,
+                                name: currentUser.name || currentUser.username,
+                                department: currentUser.department,
+                                role: currentUser.role
+                            };
+                            console.log('用户已登录:', userInfo.value);
+                        } else {
+                            // 未登录或Token无效，显示游客状态
+                            userInfo.value = {
+                                id: null,
+                                name: '游客',
+                                department: '',
+                                role: 'guest'
+                            };
+                            console.log('用户未登录，显示游客页面');
+                        }
+                    } catch (error) {
+                        console.error('加载用户数据失败:', error);
+                        userInfo.value = {
+                            id: null,
+                            name: '游客',
+                            department: '',
+                            role: 'guest'
+                        };
+                    }
+                }
+                
+                const loadRecommendations = async () => {
+                    try {
+                        const response = await spaceAPI.getResources({ limit: 5 });
+                        const items = response.data.items || [];
+                        recommendations.value = items.slice(0, 3).map(item => ({
+                            id: item.id,
+                            spaceName: item.name,
+                            timeSlot: '推荐时段',
+                            price: `¥${item.base_price}/${item.duration_unit || '小时'}`
+                        }));
+                    } catch (error) {
+                        console.error('加载推荐失败:', error);
+                        recommendations.value = [
+                            {
+                                id: 1,
+                                spaceName: '1号会议室',
+                                timeSlot: '09:00-11:00',
+                                price: '¥100'
+                            },
+                            {
+                                id: 2,
+                                spaceName: 'VIP会议室',
+                                timeSlot: '14:00-16:00',
+                                price: '¥150'
+                            }
+                        ];
+                    }
+                };
+                
+                const loadStats = async () => {
+                    try {
+                        const response = await spaceAPI.getMyStatistics();
+                        stats.value = {
+                            totalBookings: response.data.total_bookings || 0,
+                            thisMonth: response.data.this_month || 0,
+                            freeHoursRemaining: response.data.free_hours_remaining || 0,
+                            savedAmount: `¥${response.data.saved_amount || 0}`
+                        };
+                    } catch (error) {
+                        console.error('加载统计失败:', error);
+                        stats.value = {
+                            totalBookings: 15,
+                            thisMonth: 3,
+                            freeHoursRemaining: 2,
+                            savedAmount: '¥280'
+                        };
+                    }
+                };
+                
+                onMounted(() => {
+                    loadUserData()
+                    loadRecommendations()
+                    loadStats()
+                })
+                
+return {
+                    userInfo,
+                    user,
+                    userType,
+                    spaceTypes,
+                    recommendations,
+                    stats,
+                    selectSpaceType,
+                    bookRecommendation,
+                    navigateToMyBookings,
+                    navigateToCalendar,
+                    navigateToNotifications,
+                    navigateToProfile,
+                    navigateToResources,
+                    handleLogout,
+                    loadUserData,
+                    loadRecommendations,
+                    loadStats
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

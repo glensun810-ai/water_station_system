@@ -25,6 +25,7 @@ class User(Base):
     """
 
     __tablename__ = "users"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(100), nullable=False, unique=True)
@@ -59,7 +60,7 @@ class User(Base):
     transactions = relationship(
         "Transaction", foreign_keys="Transaction.user_id", back_populates="user"
     )
-    notifications = relationship("Notification", back_populates="user")
+    notifications = relationship("models.system.Notification", back_populates="user")
 
     managed_offices = relationship(
         "OfficeAdminRelation",

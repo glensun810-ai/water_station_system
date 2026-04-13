@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -445,9 +446,9 @@
                     </div>
                 </div>
                 
-                <!-- 会议室管理 -->
+                <!-- 空间服务管理 -->
                 <div class="nav-section">
-                    <div class="nav-section-title">会议室管理</div>
+                    <div class="nav-section-title">空间服务管理</div>
                     <div 
                         v-for="item in meetingMenuItems" 
                         :key="item.id"
@@ -922,7 +923,7 @@
                     </div>
                 </div>
                 
-                <!-- 会议室Dashboard -->
+                <!-- 空间服务Dashboard -->
                 <div v-if="currentModule === 'meeting-dashboard' && !isLoading">
                     <div class="dashboard-grid">
                         <div class="dashboard-card">
@@ -949,7 +950,7 @@
                                 <span class="text-2xl">📊</span>
                             </div>
                             <div class="text-3xl font-bold text-success mb-xs">{{ stats.meeting.utilizationRate }}%</div>
-                            <div class="text-xs text-tertiary">会议室平均使用率</div>
+                            <div class="text-xs text-tertiary">空间平均使用率</div>
                         </div>
                         
                         <div class="dashboard-card">
@@ -965,7 +966,7 @@
                     <div class="quick-actions">
                         <button class="quick-action-btn" @click="goToModule('meeting-rooms')">
                             <span>🏠</span>
-                            <span>会议室管理</span>
+                            <span>资源配置</span>
                         </button>
                         <button class="quick-action-btn" @click="goToModule('meeting-bookings')">
                             <span>📋</span>
@@ -975,23 +976,23 @@
                             <span>✅</span>
                             <span>审批管理</span>
                         </button>
-                        <button class="quick-action-btn" @click="goToModule('meeting-finance')">
-                            <span>💰</span>
-                            <span>财务结算</span>
+                        <button class="quick-action-btn" @click="goToModule('meeting-statistics')">
+                            <span>📈</span>
+                            <span>统计报表</span>
                         </button>
                     </div>
                 </div>
                 
-                <!-- 会议室管理 -->
+                <!-- 资源配置 -->
                 <div v-if="currentModule === 'meeting-rooms' && !isLoading">
                     <div class="card">
                         <div class="flex items-center justify-between mb-lg">
-                            <div class="font-bold text-lg">会议室管理</div>
-                            <button class="btn btn-primary btn-sm">添加会议室</button>
+                            <div class="font-bold text-lg">资源配置管理</div>
+                            <button class="btn btn-primary btn-sm">添加资源</button>
                         </div>
                         
                         <div v-if="rooms.length === 0" class="text-center p-xl text-secondary">
-                            暂无会议室数据
+                            暂无资源数据
                         </div>
                         
                         <div v-else class="grid grid-cols-2 gap-md">
@@ -1219,9 +1220,10 @@
                 
                 const meetingMenuItems = ref([
                     { id: 'meeting-dashboard', icon: '📊', label: '概览' },
-                    { id: 'meeting-bookings', icon: '📋', label: '预约管理', url: '/portal/admin/meeting/bookings.html' },
-                    { id: 'meeting-approvals', icon: '✅', label: '审批中心', url: '/portal/admin/meeting/approvals.html' },
-                    { id: 'meeting-rooms', icon: '🏠', label: '会议室管理', url: '/portal/admin/meeting/rooms.html' }
+                    { id: 'meeting-bookings', icon: '📋', label: '预约管理', url: '/portal/admin/space/bookings.html' },
+                    { id: 'meeting-approvals', icon: '✅', label: '审批中心', url: '/portal/admin/space/approvals.html' },
+                    { id: 'meeting-rooms', icon: '🏠', label: '资源配置', url: '/portal/admin/space/resources.html' },
+                    { id: 'meeting-statistics', icon: '📈', label: '统计报表', url: '/portal/admin/space/statistics.html' }
                 ]);
                 
                 const systemMenuItems = ref([
@@ -1928,8 +1930,9 @@
                 };
                 
                 onMounted(async () => {
-                    const authOk = await checkAuth();
+                    const authOk = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
                     if (authOk) {
+                        currentUser.value = authOk;
                         await loadWaterDashboard();
                         await loadMeetingDashboard();
                     }

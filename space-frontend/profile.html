@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: white;
+            cursor: pointer;
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--spacing-xl);
+        }
+        
+        .profile-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .profile-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        .user-name {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .user-role {
+            color: var(--text-secondary);
+            font-size: var(--font-size-base);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .info-item {
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+        }
+        
+        .info-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            text-align: center;
+        }
+        
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+        }
+        
+        .menu-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .menu-item {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .menu-item:hover {
+            background: var(--bg-secondary);
+            transform: translateX(4px);
+        }
+        
+        .menu-icon {
+            font-size: 24px;
+        }
+        
+        .menu-text {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .menu-arrow {
+            color: var(--text-secondary);
+        }
+        
+        .menu-badge {
+            padding: 2px 8px;
+            background: var(--danger);
+            color: white;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            margin-top: var(--spacing-xl);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+        }
+        
+        .action-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="back-btn" @click="goBack">
+                    <span>←</span>
+                    <span>返回</span>
+                </div>
+                <div class="page-title">个人中心</div>
+                <button 
+                    style="padding: 6px 12px; background: rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer;"
+                    @click="handleLogout"
+                >
+                    退出登录
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-container">
+            <div class="profile-grid">
+                <!-- Left Panel: Profile Info -->
+                <div class="profile-card">
+                    <!-- Profile Header -->
+                    <div class="profile-header">
+                        <div class="avatar">👤</div>
+                        <div class="user-name">{{ userInfo?.name || '用户' }}</div>
+                        <div class="user-role">{{ userInfo?.roleName || '员工' }} | {{ userInfo?.department || '未知部门' }}</div>
+                    </div>
+                    
+                    <!-- User Stats -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-value">{{ stats.totalBookings }}</div>
+                            <div class="stat-label">总预约数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏰</div>
+                            <div class="stat-value">{{ stats.freeHours }}</div>
+                            <div class="stat-label">剩余免费时长</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Info -->
+                    <div class="section-title">个人信息</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">用户ID</div>
+                            <div class="info-value">{{ userInfo?.id }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">用户名</div>
+                            <div class="info-value">{{ userInfo?.username }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">所属部门</div>
+                            <div class="info-value">{{ userInfo?.department || '未设置' }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">角色</div>
+                            <div class="info-value">{{ userInfo?.roleName }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <button class="action-btn" @click="editProfile">
+                            编辑信息
+                        </button>
+                        <button class="action-btn" @click="changePassword">
+                            修改密码
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Menu -->
+                <div class="profile-card">
+                    <div class="section-title">功能菜单</div>
+                    
+                    <ul class="menu-list">
+                        <li class="menu-item" @click="goToMyBookings">
+                            <span class="menu-icon">📋</span>
+                            <span class="menu-text">我的预约</span>
+                            <span v-if="stats.pendingBookings > 0" class="menu-badge">{{ stats.pendingBookings }}</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToCalendar">
+                            <span class="menu-icon">📅</span>
+                            <span class="menu-text">预约日历</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToNotifications">
+                            <span class="menu-icon">🔔</span>
+                            <span class="menu-text">通知中心</span>
+                            <span v-if="stats.unreadNotifications > 0" class="menu-badge">{{ stats.unreadNotifications }}</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToResources">
+                            <span class="menu-icon">🏢</span>
+                            <span class="menu-text">空间资源</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToPaymentHistory">
+                            <span class="menu-icon">💰</span>
+                            <span class="menu-text">支付记录</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToInvoices">
+                            <span class="menu-icon">📄</span>
+                            <span class="menu-text">发票申请</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                        <li class="menu-item" @click="goToHelp">
+                            <span class="menu-icon">❓</span>
+                            <span class="menu-text">帮助中心</span>
+                            <span class="menu-arrow">→</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentUser = ref(null);
+                const userInfo = ref(null);
+                const stats = ref({
+                    totalBookings: 0,
+                    pendingBookings: 0,
+                    freeHours: 0,
+                    unreadNotifications: 0
+                });
+                
+                const loadProfile = async () => {
+                    try {
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = user;
+                            userInfo.value = {
+                                id: user.id,
+                                name: user.name || user.username,
+                                username: user.username,
+                                department: user.department || '系统管理部',
+                                role: user.role,
+                                roleName: user.roleName || '超级管理员'
+                            };
+                            
+                            console.log('用户信息:', userInfo.value);
+                            
+                            // 加载统计数据
+                            await loadStats();
+                        } else {
+                            window.location.href = '/portal/admin/login.html';
+                        }
+                    } catch (error) {
+                        console.error('加载个人中心失败:', error);
+                    }
+                };
+                
+                const loadStats = async () => {
+                    // 模拟统计数据
+                    stats.value = {
+                        totalBookings: 4,
+                        pendingBookings: 1,
+                        freeHours: 2,
+                        unreadNotifications: 2
+                    };
+                };
+                
+                const editProfile = () => {
+                    alert('个人信息编辑功能（待实现）');
+                };
+                
+                const changePassword = () => {
+                    window.location.href = '/portal/change-password.html';
+                };
+                
+                const goToMyBookings = () => {
+                    window.location.href = '/space-frontend/my-bookings.html';
+                };
+                
+                const goToCalendar = () => {
+                    window.location.href = '/space-frontend/calendar.html';
+                };
+                
+                const goToNotifications = () => {
+                    window.location.href = '/space-frontend/notifications.html';
+                };
+                
+                const goToResources = () => {
+                    window.location.href = '/space-frontend/resources.html';
+                };
+                
+                const goToPaymentHistory = () => {
+                    alert('支付记录功能（待实现）');
+                };
+                
+                const goToInvoices = () => {
+                    window.location.href = '/portal/invoices.html';
+                };
+                
+                const goToHelp = () => {
+                    alert('帮助中心功能（待实现）');
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                const handleLogout = async () => {
+                    if (confirm('确认退出登录？')) {
+                        await logout();
+                    }
+                };
+                
+                onMounted(() => {
+                    loadProfile();
+                });
+                
+                return {
+                    currentUser,
+                    userInfo,
+                    stats,
+                    editProfile,
+                    changePassword,
+                    goToMyBookings,
+                    goToCalendar,
+                    goToNotifications,
+                    goToResources,
+                    goToPaymentHistory,
+                    goToInvoices,
+                    goToHelp,
+                    goBack,
+                    handleLogout
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

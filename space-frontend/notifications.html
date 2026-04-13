@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通知中心 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: white;
+            cursor: pointer;
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .badge {
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            background: white;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+        }
+        
+        .filter-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+        }
+        
+        .filter-tab:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .notification-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            gap: var(--spacing-lg);
+            transition: all var(--transition-fast);
+            cursor: pointer;
+        }
+        
+        .notification-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .notification-card.unread {
+            border-left: 4px solid var(--primary);
+        }
+        
+        .notification-card.read {
+            opacity: 0.7;
+        }
+        
+        .notification-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .notification-time {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .notification-text {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .notification-action {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .unread-badge {
+            background: var(--primary);
+            color: white;
+            padding: 2px 6px;
+            border-radius: var(--radius-full);
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .notification-card {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .notification-icon {
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="back-btn" @click="goBack">
+                    <span>←</span>
+                    <span>返回</span>
+                </div>
+                <div class="page-title">
+                    通知中心
+                    <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
+                </div>
+                <button class="action-btn btn-secondary" @click="markAllRead" style="color: white; background: rgba(255,255,255,0.2);">
+                    全部标记已读
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-container">
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'all' }"
+                    @click="setFilter('all')"
+                >
+                    全部
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'unread' }"
+                    @click="setFilter('unread')"
+                >
+                    未读
+                    <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'booking' }"
+                    @click="setFilter('booking')"
+                >
+                    预约通知
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'approval' }"
+                    @click="setFilter('approval')"
+                >
+                    审批通知
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'reminder' }"
+                    @click="setFilter('reminder')"
+                >
+                    提醒通知
+                </div>
+            </div>
+            
+            <!-- Notification List -->
+            <div v-if="filteredNotifications.length > 0">
+                <div 
+                    v-for="notification in filteredNotifications" 
+                    :key="notification.id"
+                    class="notification-card"
+                    :class="{ unread: !notification.read, read: notification.read }"
+                    @click="handleNotificationClick(notification)"
+                >
+                    <div class="notification-icon">
+                        {{ notification.icon }}
+                    </div>
+                    
+                    <div class="notification-content">
+                        <div class="notification-header">
+                            <div class="notification-title">{{ notification.title }}</div>
+                            <div class="notification-time">{{ notification.time }}</div>
+                        </div>
+                        
+                        <div class="notification-text">{{ notification.text }}</div>
+                        
+                        <div class="notification-action">
+                            <button 
+                                v-if="notification.actionType === 'viewBooking'"
+                                class="action-btn btn-primary"
+                                @click.stop="viewBooking(notification.bookingId)"
+                            >
+                                查看预约
+                            </button>
+                            <button 
+                                v-if="notification.actionType === 'goToPayment'"
+                                class="action-btn btn-primary"
+                                @click.stop="goToPayment(notification.bookingId)"
+                            >
+                                确认支付
+                            </button>
+                            <button 
+                                v-if="!notification.read"
+                                class="action-btn btn-secondary"
+                                @click.stop="markAsRead(notification.id)"
+                            >
+                                标记已读
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">
+                    暂无通知
+                </div>
+                <div style="color: var(--text-secondary);">
+                    您的通知中心当前为空
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentUser = ref(null);
+                const activeFilter = ref('all');
+                const notifications = ref([]);
+                
+                const unreadCount = computed(() => {
+                    return notifications.value.filter(n => !n.read).length;
+                });
+                
+                const filteredNotifications = computed(() => {
+                    if (activeFilter.value === 'all') {
+                        return notifications.value;
+                    } else if (activeFilter.value === 'unread') {
+                        return notifications.value.filter(n => !n.read);
+                    } else {
+                        return notifications.value.filter(n => n.type === activeFilter.value);
+                    }
+                });
+                
+                const loadNotifications = async () => {
+                    try {
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = user;
+                            console.log('用户已登录:', currentUser.value);
+                            
+                            // 加载通知列表（模拟数据）
+                            await loadNotificationData();
+                        } else {
+                            window.location.href = '/portal/admin/login.html';
+                        }
+                    } catch (error) {
+                        console.error('加载通知失败:', error);
+                    }
+                };
+                
+                const loadNotificationData = async () => {
+                    // 实际应该调用API获取通知
+                    // /api/v2/space/notifications?user_id={currentUser.value.id}
+                    
+                    notifications.value = [
+                        {
+                            id: 1,
+                            type: 'approval',
+                            icon: '✅',
+                            title: '预约审批通过',
+                            text: '您的会议室预约（BK20260413002）已通过审批，请在预约前完成支付确认。',
+                            time: '10分钟前',
+                            read: false,
+                            actionType: 'goToPayment',
+                            bookingId: 2
+                        },
+                        {
+                            id: 2,
+                            type: 'booking',
+                            icon: '📋',
+                            title: '预约创建成功',
+                            text: '您的预约（BK20260413001）已提交成功，正在等待管理员审批。',
+                            time: '30分钟前',
+                            read: false,
+                            actionType: 'viewBooking',
+                            bookingId: 1
+                        },
+                        {
+                            id: 3,
+                            type: 'reminder',
+                            icon: '⏰',
+                            title: '预约即将开始',
+                            text: '您的预约（季度总结大会）将于明天14:00开始，请准时到达多功能厅（1楼）。',
+                            time: '1小时前',
+                            read: true,
+                            actionType: 'viewBooking',
+                            bookingId: 2
+                        },
+                        {
+                            id: 4,
+                            type: 'approval',
+                            icon: '❌',
+                            title: '预约审批拒绝',
+                            text: '您的VIP餐厅预约（BK20260410004）已被拒绝。原因：VIP餐厅该时段已有其他预约。',
+                            time: '1天前',
+                            read: true,
+                            actionType: 'viewBooking',
+                            bookingId: 4
+                        },
+                        {
+                            id: 5,
+                            type: 'reminder',
+                            icon: '💰',
+                            title: '支付提醒',
+                            text: '您有1笔预约待支付，请在预约前24小时内完成支付确认。',
+                            time: '2天前',
+                            read: true,
+                            actionType: 'goToPayment',
+                            bookingId: 2
+                        }
+                    ];
+                    
+                    console.log('通知加载完成:', notifications.value.length);
+                };
+                
+                const setFilter = (filter) => {
+                    activeFilter.value = filter;
+                };
+                
+                const handleNotificationClick = (notification) => {
+                    if (!notification.read) {
+                        markAsRead(notification.id);
+                    }
+                };
+                
+                const markAsRead = async (notificationId) => {
+                    try {
+                        // 实际应该调用API标记已读
+                        // /api/v2/space/notifications/{notificationId}/read
+                        
+                        const notification = notifications.value.find(n => n.id === notificationId);
+                        if (notification) {
+                            notification.read = true;
+                        }
+                        
+                        console.log('通知已标记已读:', notificationId);
+                    } catch (error) {
+                        console.error('标记已读失败:', error);
+                    }
+                };
+                
+                const markAllRead = async () => {
+                    try {
+                        // 实际应该调用API批量标记已读
+                        
+                        notifications.value.forEach(n => {
+                            n.read = true;
+                        });
+                        
+                        console.log('全部通知已标记已读');
+                    } catch (error) {
+                        console.error('批量标记已读失败:', error);
+                    }
+                };
+                
+                const viewBooking = (bookingId) => {
+                    window.location.href = `/space-frontend/my-bookings.html`;
+                };
+                
+                const goToPayment = (bookingId) => {
+                    window.location.href = `/space-frontend/payment.html?booking_id=${bookingId}`;
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                onMounted(() => {
+                    loadNotifications();
+                });
+                
+                return {
+                    currentUser,
+                    activeFilter,
+                    notifications,
+                    unreadCount,
+                    filteredNotifications,
+                    setFilter,
+                    handleNotificationClick,
+                    markAsRead,
+                    markAllRead,
+                    viewBooking,
+                    goToPayment,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

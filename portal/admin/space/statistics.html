@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计分析 - 空间服务管理系统</title>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .stats-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .filter-bar {
+            background: var(--bg-card);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-select, .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 150px;
+        }
+        
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .overview-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .overview-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .overview-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .overview-change {
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .change-up { color: var(--success); }
+        .change-down { color: var(--danger); }
+        
+        .section-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: var(--spacing-lg);
+        }
+        
+        .type-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .type-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .type-icon {
+            font-size: 32px;
+        }
+        
+        .type-info {
+            flex: 1;
+        }
+        
+        .type-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .type-stats {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .type-revenue {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--success);
+        }
+        
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .usage-table th {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .usage-table td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            font-size: var(--font-size-sm);
+        }
+        
+        .utilization-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        
+        .utilization-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width var(--transition-base);
+        }
+        
+        .utilization-high { background: var(--success); }
+        .utilization-medium { background: var(--warning); }
+        .utilization-low { background: var(--danger); }
+        
+        @media (max-width: 768px) {
+            .filter-bar {
+                flex-direction: column;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .chart-container {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- 顶部导航 -->
+        <nav style="background: var(--primary); color: white; padding: var(--spacing-lg);">
+            <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="font-size: var(--font-size-xl);">统计分析</h1>
+                <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+                    <a href="/portal/admin/space/dashboard.html" style="color: white; text-decoration: none;">Dashboard</a>
+                    <a href="/portal/admin/space/bookings.html" style="color: white; text-decoration: none;">预约管理</a>
+                    <a href="/portal/admin/space/resources.html" style="color: white; text-decoration: none;">资源配置</a>
+                    <a href="/portal/admin/index.html" style="color: white; text-decoration: none;">返回管理中心</a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="stats-container">
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <span class="filter-label">日期范围：</span>
+                    <input type="date" class="filter-input" v-model="filters.date_from" @change="loadAllData">
+                    <span>-</span>
+                    <input type="date" class="filter-input" v-model="filters.date_to" @change="loadAllData">
+                </div>
+                
+                <div class="filter-group">
+                    <span class="filter-label">空间类型：</span>
+                    <select class="filter-select" v-model="filters.type_code" @change="loadAllData">
+                        <option value="">全部类型</option>
+                        <option value="meeting_room">会议室</option>
+                        <option value="auditorium">会场</option>
+                        <option value="lobby_screen">大堂大屏</option>
+                        <option value="lobby_booth">展位</option>
+                        <option value="vip_dining">VIP餐厅</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary btn-sm" @click="loadAllData">刷新数据</button>
+                <button class="btn btn-outline btn-sm" @click="resetFilters">重置筛选</button>
+            </div>
+            
+            <!-- 统计概览 -->
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="overview-value">{{ overview.summary?.total_bookings || 0 }}</div>
+                    <div class="overview-label">总预约数</div>
+                </div>
+                <div class="overview-card" style="border-left-color: var(--success);">
+                    <div class="overview-value">{{ overview.summary?.total_hours || 0 }}h</div>
+                    <div class="overview-label">总使用时长</div>
+                </div>
+                <div class="overview-card" style="border-left-color: var(--warning);">
+                    <div class="overview-value">¥{{ (overview.summary?.total_revenue || 0).toFixed(2) }}</div>
+                    <div class="overview-label">总收入</div>
+                </div>
+                <div class="overview-card" style="border-left-color: var(--info);">
+                    <div class="overview-value">{{ (overview.summary?.booking_success_rate || 0).toFixed(1) }}%</div>
+                    <div class="overview-label">预约成功率</div>
+                </div>
+                <div class="overview-card" style="border-left-color: var(--danger);">
+                    <div class="overview-value">{{ (overview.summary?.cancellation_rate || 0).toFixed(1) }}%</div>
+                    <div class="overview-label">取消率</div>
+                </div>
+            </div>
+            
+            <!-- 各类型统计 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">各类型空间统计</h3>
+                </div>
+                
+                <div class="type-stats-grid">
+                    <div class="type-card" v-for="type in overview.by_type" :key="type.type_code">
+                        <div class="type-icon">{{ getTypeIcon(type.type_code) }}</div>
+                        <div class="type-info">
+                            <div class="type-name">{{ type.type_name }}</div>
+                            <div class="type-stats">
+                                预约 {{ type.booking_count }} 次 · {{ type.hours }} 小时
+                            </div>
+                        </div>
+                        <div class="type-revenue">¥{{ type.revenue.toFixed(2) }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 预约趋势 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">预约趋势（最近30天）</h3>
+                    <select class="filter-select" v-model="trendDays" @change="loadTrends" style="min-width: 100px;">
+                        <option value="7">最近7天</option>
+                        <option value="30">最近30天</option>
+                        <option value="60">最近60天</option>
+                        <option value="90">最近90天</option>
+                    </select>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas ref="trendChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 使用率统计 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">资源使用率</h3>
+                </div>
+                
+                <div v-if="usage.resources && usage.resources.length > 0">
+                    <table class="usage-table">
+                        <thead>
+                            <tr>
+                                <th>资源名称</th>
+                                <th>预约次数</th>
+                                <th>使用时长</th>
+                                <th>可用时长</th>
+                                <th>使用率</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="resource in usage.resources" :key="resource.resource_id">
+                                <td>{{ resource.resource_name }}</td>
+                                <td>{{ resource.bookings_count }}</td>
+                                <td>{{ resource.used_hours }}h</td>
+                                <td>{{ resource.available_hours }}h</td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                                        <div class="utilization-bar" style="width: 100px;">
+                                            <div 
+                                                class="utilization-fill"
+                                                :class="getUtilizationClass(resource.utilization)"
+                                                :style="{ width: Math.min(resource.utilization, 100) + '%' }"
+                                            ></div>
+                                        </div>
+                                        <span style="font-weight: 600;">{{ resource.utilization.toFixed(1) }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div v-else style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">
+                    暂无使用数据
+                </div>
+            </div>
+            
+            <!-- 收入分析 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">收入分析</h3>
+                </div>
+                
+                <div class="overview-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="overview-card" style="border-left-color: var(--success);">
+                        <div class="overview-value">¥{{ (revenue.total_revenue || 0).toFixed(2) }}</div>
+                        <div class="overview-label">总收入</div>
+                    </div>
+                    <div class="overview-card" style="border-left-color: var(--primary);">
+                        <div class="overview-value">¥{{ (revenue.base_revenue || 0).toFixed(2) }}</div>
+                        <div class="overview-label">基础费用收入</div>
+                    </div>
+                    <div class="overview-card" style="border-left-color: var(--info);">
+                        <div class="overview-value">¥{{ (revenue.addon_revenue || 0).toFixed(2) }}</div>
+                        <div class="overview-label">附加服务收入</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container" style="height: 200px;">
+                    <canvas ref="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+        
+        createApp({
+            setup() {
+                const loading = ref(false);
+                const filters = ref({
+                    date_from: '',
+                    date_to: '',
+                    type_code: ''
+                });
+                const trendDays = ref(30);
+                
+                const overview = ref({});
+                const usage = ref({});
+                const trends = ref([]);
+                const revenue = ref({});
+                
+                const trendChart = ref(null);
+                const revenueChart = ref(null);
+                let trendChartInstance = null;
+                let revenueChartInstance = null;
+                
+                const API_BASE = '/api/v2';
+                
+                const getTypeIcon = (typeCode) => {
+                    const icons = {
+                        'meeting_room': '🏢',
+                        'auditorium': '🎭',
+                        'lobby_screen': '📺',
+                        'lobby_booth': '🎪',
+                        'vip_dining': '🍽️'
+                    };
+                    return icons[typeCode] || '📍';
+                };
+                
+                const getUtilizationClass = (utilization) => {
+                    if (utilization >= 70) return 'utilization-high';
+                    if (utilization >= 40) return 'utilization-medium';
+                    return 'utilization-low';
+                };
+                
+                const loadOverview = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        if (filters.value.date_from) params.append('date_from', filters.value.date_from);
+                        if (filters.value.date_to) params.append('date_to', filters.value.date_to);
+                        if (filters.value.type_code) params.append('type_code', filters.value.type_code);
+                        
+                        const response = await fetch(`${API_BASE}/space/statistics/overview?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            overview.value = data.data;
+                        }
+                    } catch (error) {
+                        console.error('加载概览失败:', error);
+                    }
+                };
+                
+                const loadUsage = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        if (filters.value.date_from) params.append('date_from', filters.value.date_from);
+                        if (filters.value.date_to) params.append('date_to', filters.value.date_to);
+                        
+                        const response = await fetch(`${API_BASE}/space/statistics/usage?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            usage.value = data.data;
+                        }
+                    } catch (error) {
+                        console.error('加载使用率失败:', error);
+                    }
+                };
+                
+                const loadTrends = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        params.append('days', trendDays.value);
+                        if (filters.value.type_code) params.append('type_code', filters.value.type_code);
+                        
+                        const response = await fetch(`${API_BASE}/space/statistics/trends?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            trends.value = data.data.trends;
+                            renderTrendChart();
+                        }
+                    } catch (error) {
+                        console.error('加载趋势失败:', error);
+                    }
+                };
+                
+                const loadRevenue = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        if (filters.value.date_from) params.append('date_from', filters.value.date_from);
+                        if (filters.value.date_to) params.append('date_to', filters.value.date_to);
+                        
+                        const response = await fetch(`${API_BASE}/space/statistics/revenue?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            revenue.value = data.data;
+                            renderRevenueChart();
+                        }
+                    } catch (error) {
+                        console.error('加载收入统计失败:', error);
+                    }
+                };
+                
+                const renderTrendChart = () => {
+                    if (!trendChart.value || trends.value.length === 0) return;
+                    
+                    if (trendChartInstance) {
+                        trendChartInstance.destroy();
+                    }
+                    
+                    const ctx = trendChart.value.getContext('2d');
+                    trendChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: trends.value.map(t => t.date),
+                            datasets: [
+                                {
+                                    label: '预约数',
+                                    data: trends.value.map(t => t.bookings),
+                                    borderColor: '#2563EB',
+                                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                },
+                                {
+                                    label: '收入',
+                                    data: trends.value.map(t => t.revenue),
+                                    borderColor: '#10B981',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                };
+                
+                const renderRevenueChart = () => {
+                    if (!revenueChart.value) return;
+                    
+                    if (revenueChartInstance) {
+                        revenueChartInstance.destroy();
+                    }
+                    
+                    const paymentStatus = revenue.value.by_payment_status || {};
+                    const ctx = revenueChart.value.getContext('2d');
+                    
+                    revenueChartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['未付款', '已付定金', '已付全款', '已退款'],
+                            datasets: [{
+                                data: [
+                                    paymentStatus.unpaid || 0,
+                                    paymentStatus.deposit_paid || 0,
+                                    paymentStatus.fully_paid || 0,
+                                    paymentStatus.refunded || 0
+                                ],
+                                backgroundColor: [
+                                    '#F59E0B',
+                                    '#3B82F6',
+                                    '#10B981',
+                                    '#EF4444'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right'
+                                }
+                            }
+                        }
+                    });
+                };
+                
+                const loadAllData = async () => {
+                    loading.value = true;
+                    
+                    if (!filters.value.date_from) {
+                        const today = new Date();
+                        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        filters.value.date_from = thirtyDaysAgo.toISOString().split('T')[0];
+                        filters.value.date_to = today.toISOString().split('T')[0];
+                    }
+                    
+                    await Promise.all([
+                        loadOverview(),
+                        loadUsage(),
+                        loadTrends(),
+                        loadRevenue()
+                    ]);
+                    
+                    loading.value = false;
+                };
+                
+                const resetFilters = () => {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    filters.value = {
+                        date_from: thirtyDaysAgo.toISOString().split('T')[0],
+                        date_to: today.toISOString().split('T')[0],
+                        type_code: ''
+                    };
+                    trendDays.value = 30;
+                    loadAllData();
+                };
+                
+                onMounted(async () => {
+                    const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
+                    if (!user) return;
+                    
+                    await loadAllData();
+                });
+                
+                onUnmounted(() => {
+                    if (trendChartInstance) trendChartInstance.destroy();
+                    if (revenueChartInstance) revenueChartInstance.destroy();
+                });
+                
+                return {
+                    loading,
+                    filters,
+                    trendDays,
+                    overview,
+                    usage,
+                    trends,
+                    revenue,
+                    trendChart,
+                    revenueChart,
+                    getTypeIcon,
+                    getUtilizationClass,
+                    loadAllData,
+                    resetFilters,
+                    loadTrends
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

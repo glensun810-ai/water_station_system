@@ -14,6 +14,7 @@ class DeleteLog(Base):
     """删除日志"""
 
     __tablename__ = "delete_logs"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     table_name = Column(String(50), nullable=False)
@@ -27,7 +28,8 @@ class DeleteLog(Base):
 class Notification(Base):
     """通知"""
 
-    __tablename__ = "notifications"
+    __tablename__ = "water_notifications"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

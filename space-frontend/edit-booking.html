@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修改预约 - 空间服务</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .booking-info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .booking-no {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending_approval {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-approved, .status-confirmed {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: #666;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: #333;
+            flex: 1;
+        }
+
+        .edit-form {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-input:disabled {
+            background: #f5f5f5;
+            color: #999;
+        }
+
+        .time-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .fee-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .fee-total {
+            font-weight: 600;
+            font-size: 16px;
+            color: #667eea;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-cancel {
+            background: #f44336;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-edit"></i> 修改预约</h1>
+        <p>调整您的预约信息</p>
+    </div>
+
+    <div class="container">
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="successMessage" class="success-message" style="display: none;"></div>
+
+        <div id="bookingInfoCard" class="booking-info-card">
+            <div class="booking-header">
+                <div>
+                    <div class="booking-no" id="bookingNo"></div>
+                    <div style="font-weight: 600; margin-top: 5px;" id="resourceName"></div>
+                </div>
+                <span class="status-badge" id="statusBadge"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">预约日期</span>
+                <span class="info-value" id="bookingDate"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">预约时间</span>
+                <span class="info-value" id="bookingTime"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">预约时长</span>
+                <span class="info-value" id="duration"></span>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> 您可以修改预约的时间、标题、参会人数等信息
+        </div>
+
+        <form class="edit-form" id="editForm">
+            <div class="form-title">修改信息</div>
+
+            <div class="form-group">
+                <label class="form-label">预约标题 *</label>
+                <input type="text" class="form-input" id="title" placeholder="请输入预约标题" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">参会人数 *</label>
+                <input type="number" class="form-input" id="attendeesCount" min="1" max="100" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">预约日期</label>
+                <input type="date" class="form-input" id="editBookingDate" disabled>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">预约时间</label>
+                <div class="time-group">
+                    <input type="time" class="form-input" id="startTime">
+                    <input type="time" class="form-input" id="endTime">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">参会人员信息</label>
+                <textarea class="form-textarea" id="attendeesInfo" placeholder="请输入参会人员姓名、职务等信息"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">特殊需求</label>
+                <textarea class="form-textarea" id="specialRequests" placeholder="如有特殊需求请在此说明"></textarea>
+            </div>
+
+            <div class="fee-preview" id="feePreview" style="display: none;">
+                <div class="form-label">费用预估</div>
+                <div class="fee-row">
+                    <span>基础费用</span>
+                    <span id="baseFee">¥0.00</span>
+                </div>
+                <div class="fee-row">
+                    <span>时长</span>
+                    <span id="durationText">0小时</span>
+                </div>
+                <div class="fee-row fee-total">
+                    <span>合计</span>
+                    <span id="totalFee">¥0.00</span>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn btn-secondary" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-check"></i> 保存修改
+                </button>
+                <button type="button" class="btn btn-cancel" id="cancelBookingBtn" onclick="showCancelModal()">
+                    <i class="fas fa-times"></i> 取消预约
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 取消预约模态框 -->
+    <div class="modal-overlay" id="cancelModal">
+        <div class="modal-content">
+            <div class="modal-title">确认取消预约？</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #666;">取消后将无法恢复，请确认是否取消此预约。</p>
+                <div class="form-group">
+                    <label class="form-label">取消原因 *</label>
+                    <textarea class="form-textarea" id="cancelReason" placeholder="请输入取消原因" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideCancelModal()">暂不取消</button>
+                <button class="btn btn-cancel" onclick="confirmCancel()">确认取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import spaceAPI from './api.js';
+
+        let currentBooking = null;
+
+        async function loadBookingDetail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const bookingId = urlParams.get('id');
+
+            if (!bookingId) {
+                showError('缺少预约ID参数');
+                return;
+            }
+
+            try {
+                showLoading();
+                const response = await spaceAPI.getBooking(bookingId);
+                currentBooking = response.data;
+
+                if (!currentBooking.can_modify) {
+                    showError('此预约不可修改');
+                    setTimeout(() => {
+                        window.location.href = 'my-bookings.html';
+                    }, 2000);
+                    return;
+                }
+
+                displayBookingInfo();
+                populateForm();
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                showError('加载预约详情失败: ' + error.message);
+            }
+        }
+
+        function displayBookingInfo() {
+            document.getElementById('bookingNo').textContent = currentBooking.booking_no;
+            document.getElementById('resourceName').textContent = currentBooking.resource_name || '未知空间';
+            
+            const statusMap = {
+                'pending_approval': { text: '待审批', class: 'status-pending_approval' },
+                'approved': { text: '已通过', class: 'status-approved' },
+                'confirmed': { text: '已确认', class: 'status-confirmed' },
+            };
+            
+            const status = statusMap[currentBooking.status] || { text: currentBooking.status, class: '' };
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = status.text;
+            statusBadge.className = 'status-badge ' + status.class;
+
+            document.getElementById('bookingDate').textContent = currentBooking.booking_date;
+            document.getElementById('bookingTime').textContent = `${currentBooking.start_time} - ${currentBooking.end_time}`;
+            document.getElementById('duration').textContent = currentBooking.duration ? `${currentBooking.duration}小时` : '-';
+
+            if (!['pending_approval', 'approved', 'confirmed'].includes(currentBooking.status)) {
+                document.getElementById('cancelBookingBtn').style.display = 'none';
+            }
+        }
+
+        function populateForm() {
+            document.getElementById('title').value = currentBooking.title || '';
+            document.getElementById('attendeesCount').value = currentBooking.attendees_count || 1;
+            document.getElementById('editBookingDate').value = currentBooking.booking_date;
+            document.getElementById('startTime').value = currentBooking.start_time;
+            document.getElementById('endTime').value = currentBooking.end_time;
+            document.getElementById('attendeesInfo').value = currentBooking.attendees_info || '';
+            document.getElementById('specialRequests').value = currentBooking.special_requests || '';
+
+            updateFeePreview();
+        }
+
+        async function updateFeePreview() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!startTime || !endTime) {
+                document.getElementById('feePreview').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await spaceAPI.calculateFee({
+                    resource_id: currentBooking.resource_id,
+                    booking_date: currentBooking.booking_date,
+                    start_time: startTime,
+                    end_time: endTime,
+                });
+
+                const data = response.data;
+                document.getElementById('baseFee').textContent = `¥${data.fee_summary.base_fee.toFixed(2)}`;
+                document.getElementById('durationText').textContent = `${data.fee_summary.base_fee / (data.calculation_detail.base_fee.price_per_unit || 1)}小时`;
+                document.getElementById('totalFee').textContent = `¥${data.fee_summary.final_fee.toFixed(2)}`;
+                document.getElementById('feePreview').style.display = 'block';
+            } catch (error) {
+                console.error('计算费用失败:', error);
+            }
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!startTime || !endTime) {
+                showError('请选择预约时间');
+                return;
+            }
+
+            const updateData = {
+                title: document.getElementById('title').value.trim(),
+                attendees_count: parseInt(document.getElementById('attendeesCount').value),
+                start_time: startTime,
+                end_time: endTime,
+                attendees_info: document.getElementById('attendeesInfo').value.trim(),
+                special_requests: document.getElementById('specialRequests').value.trim(),
+            };
+
+            try {
+                showLoading();
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+
+                await spaceAPI.updateBooking(currentBooking.id, updateData);
+
+                hideLoading();
+                showSuccess('预约修改成功！');
+
+                setTimeout(() => {
+                    window.location.href = 'my-bookings.html';
+                }, 1500);
+            } catch (error) {
+                hideLoading();
+                document.getElementById('submitBtn').disabled = false;
+                showError('修改失败: ' + error.message);
+            }
+        });
+
+        document.getElementById('startTime').addEventListener('change', updateFeePreview);
+        document.getElementById('endTime').addEventListener('change', updateFeePreview);
+
+        window.showCancelModal = function() {
+            document.getElementById('cancelModal').classList.add('active');
+        };
+
+        window.hideCancelModal = function() {
+            document.getElementById('cancelModal').classList.remove('active');
+            document.getElementById('cancelReason').value = '';
+        };
+
+        window.confirmCancel = async function() {
+            const cancelReason = document.getElementById('cancelReason').value.trim();
+            
+            if (!cancelReason) {
+                alert('请输入取消原因');
+                return;
+            }
+
+            try {
+                showLoading();
+                await spaceAPI.cancelBooking(currentBooking.id, cancelReason);
+                hideLoading();
+                showSuccess('预约已取消');
+
+                setTimeout(() => {
+                    window.location.href = 'my-bookings.html';
+                }, 1500);
+            } catch (error) {
+                hideLoading();
+                showError('取消失败: ' + error.message);
+            }
+        };
+
+        window.goBack = function() {
+            window.history.back();
+        };
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        loadBookingDetail();
+    </script>
+</body>
+</html>

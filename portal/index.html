@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/shared/utils/api-client.js"></script>
     <script src="/shared/utils/api-endpoints.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
     <script src="/portal/components/GlobalHeader.js"></script>
     <style>
         [v-cloak] { display: none !important; }
@@ -583,7 +584,7 @@
                         
                         <div class="card">
                             <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">会议室免费时长</span>
+                                <span class="text-secondary text-sm">空间免费时长</span>
                                 <span class="text-2xl">🕐</span>
                             </div>
                             <div class="text-3xl font-bold text-success mb-xs">{{ freeHours }}小时</div>
@@ -617,14 +618,14 @@
                         </div>
                         </div>
                         
-                        <div class="service-card" @click="navigateTo('/meeting-frontend/index.html')">
-                            <div class="service-icon">📅</div>
+                        <div class="service-card" @click="navigateTo('/space-frontend/index.html')">
+                            <div class="service-icon">🏢</div>
                             <div class="service-name">空间服务</div>
                             <div class="service-desc">会议室/会场/餐厅/大屏/展位预约、审批</div>
                             <div class="service-actions">
-                                <a href="/meeting-frontend/index.html" class="service-btn service-btn-primary" @click.stop>预约</a>
-                                <a href="/meeting-frontend/my_bookings.html" class="service-btn" @click.stop>我的预约</a>
-                                <a href="/meeting-frontend/calendar.html" class="service-btn" @click.stop>日历</a>
+                                <a href="/space-frontend/index.html" class="service-btn service-btn-primary" @click.stop>预约</a>
+                                <a href="/space-frontend/my-bookings.html" class="service-btn" @click.stop>我的预约</a>
+                                <a href="/space-frontend/calendar.html" class="service-btn" @click.stop>日历</a>
                             </div>
                         </div>
                         
@@ -738,15 +739,15 @@
                             </div>
                         </div>
                         
-                        <!-- 会议室管理卡片 -->
+                        <!-- 空间服务管理卡片 -->
                         <div class="admin-service-card card">
                             <div class="card-header">
                                 <div class="flex items-center justify-between mb-md">
                                     <div class="flex items-center gap-md">
-                                        <span class="service-icon" style="font-size: 32px;">📅</span>
+                                        <span class="service-icon" style="font-size: 32px;">🏢</span>
                                         <div>
-                                            <div class="font-bold text-primary">会议室管理</div>
-                                            <div class="text-sm text-secondary">会议室、预约、审批、结算</div>
+                                            <div class="font-bold text-primary">空间服务管理</div>
+                                            <div class="text-sm text-secondary">会议室、会场、餐厅、大屏、展位</div>
                                         </div>
                                     </div>
                                 </div>
@@ -760,15 +761,18 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="quick-actions" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm);">
-<a href="/portal/admin/meeting/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;">
-    预约管理
-</a>
-                                <a href="/portal/admin/meeting/approvals.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                            <div class="quick-actions" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-sm);">
+                                <a href="/portal/admin/space/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                    预约管理
+                                </a>
+                                <a href="/portal/admin/space/approvals.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     审批中心
                                 </a>
-                                <a href="/portal/admin/meeting/rooms.html" class="btn btn-outline btn-sm" style="justify-content: center;">
-                                    会议室管理
+                                <a href="/portal/admin/space/resources.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                    资源配置
+                                </a>
+                                <a href="/portal/admin/space/statistics.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                    统计报表
                                 </a>
                             </div>
                         </div>
@@ -895,9 +899,9 @@
                     <span class="bottom-nav-icon">💧</span>
                     <span class="bottom-nav-label">{{ waterNavLabel }}</span>
                 </a>
-                <a href="/meeting-frontend/index.html" class="bottom-nav-item">
-                    <span class="bottom-nav-icon">📅</span>
-                    <span class="bottom-nav-label">会议室</span>
+<a :href="spaceNavHref" class="bottom-nav-item">
+                    <span class="bottom-nav-icon">🏢</span>
+                    <span class="bottom-nav-label">{{ spaceNavLabel }}</span>
                 </a>
                 <a href="#" class="bottom-nav-item" @click.prevent="showMobileMenu = true">
                     <span class="bottom-nav-icon">👤</span>
@@ -921,7 +925,7 @@
                 </div>
                 <div style="padding: var(--spacing-md);">
                     <a href="/water/index.html?tab=records" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">领水记录</a>
-                    <a href="/meeting-frontend/my_bookings.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">预约记录</a>
+                    <a href="/space-frontend/my-bookings.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">预约记录</a>
                     <a href="/portal/settlement.html" class="btn btn-outline btn-md" style="width: 100%; margin-bottom: var(--spacing-sm);">我的余额</a>
                     <a v-if="userInfo && userInfo.is_admin" href="/portal/admin/index.html" class="btn btn-warning btn-md" style="width: 100%; margin-bottom: var(--spacing-sm); background: #FCD34D; color: #78350F; border-color: #F59E0B;">进入管理后台</a>
                     <button @click="handleLogout" class="btn btn-danger btn-md" style="width: 100%;">退出登录</button>
@@ -971,14 +975,18 @@
                 const appliedSettlement = ref(0);
                 
                 // 水站导航计算属性
-                const waterNavLabel = computed(() => {
-                    return userInfo.value && userInfo.value.is_admin ? '水站管理' : '水站';
+const waterNavLabel = computed(() => {
+                    return userInfo.value && userInfo.value.id ? '领水' : '水站';
+                });
+                const waterNavHref = computed(() => {
+                    return userInfo.value && userInfo.value.id ? '/water/index.html' : '/portal/admin/login.html';
                 });
                 
-                const waterNavHref = computed(() => {
-                    return userInfo.value && userInfo.value.is_admin 
-                        ? '/portal/admin/water/dashboard.html' 
-                        : '/portal/water/index.html';
+                const spaceNavLabel = computed(() => {
+                    return userInfo.value && userInfo.value.id ? '预约' : '空间服务';
+                });
+                const spaceNavHref = computed(() => {
+                    return userInfo.value && userInfo.value.id ? '/space-frontend/index.html' : '/portal/admin/login.html';
                 });
                 
                 // 获取API基础地址
@@ -995,31 +1003,33 @@
                     try {
                         loading.value = true;
                         
-                        // 从localStorage获取用户信息
-                        const storedUserInfo = localStorage.getItem('userInfo');
-                        if (storedUserInfo) {
-                            const parsed = JSON.parse(storedUserInfo);
-                            userInfo.value = {
-                                ...parsed,
-                                is_admin: parsed.role === '超级管理员' || parsed.role === 'admin' || parsed.role === 'super_admin' || parsed.is_admin === true
-                            };
-                            console.log('用户信息:', userInfo.value);
-                        }
+                        // 使用统一的认证检查（不强制要求登录）
+                        const user = await checkAuth({ requireAuth: false, validateToken: true });
                         
-                        // 如果没有用户信息，尝试从token获取
-                        if (!userInfo.value || !userInfo.value.id) {
-                            const token = localStorage.getItem('token');
-                            if (token) {
-                                // TODO: 调用API获取用户信息
-                                // 暂时使用默认值
-                                userInfo.value = {
-                                    id: 1,
-                                    name: '测试用户',
-                                    department: '技术部',
-                                    role: 'staff',
-                                    is_admin: false
-                                };
-                            }
+                        if (user && user.id) {
+                            userInfo.value = {
+                                id: user.id,
+                                name: user.name || user.username,
+                                username: user.username,
+                                department: user.department,
+                                role: user.role,
+                                roleName: user.roleName,
+                                is_admin: user.role === '超级管理员' || user.role === 'admin' || user.role === 'super_admin' || user.is_admin === true
+                            };
+                            console.log('用户已登录:', userInfo.value);
+                            console.log('userInfo.id:', userInfo.value.id);
+                        } else {
+                            // 未登录或Token无效，使用游客状态
+                            userInfo.value = {
+                                id: null,
+                                name: '游客',
+                                username: 'guest',
+                                department: '',
+                                role: 'guest',
+                                roleName: '游客',
+                                is_admin: false
+                            };
+                            console.log('用户未登录，设置为游客状态');
                         }
                         
 // 加载用户数据（仅已登录用户，API可能失败，但不影响页面显示）
@@ -1184,7 +1194,7 @@
                     }
                 });
                 
-                return {
+return {
                     loading,
                     showMobileMenu,
                     userInfo,
@@ -1211,7 +1221,11 @@
                     adminCount,
                     staffCount,
                     pendingSettlement,
-                    appliedSettlement
+                    appliedSettlement,
+                    waterNavLabel,
+                    waterNavHref,
+                    spaceNavLabel,
+                    spaceNavHref,
                 };
             }
         });

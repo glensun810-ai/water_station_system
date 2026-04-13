@@ -222,8 +222,11 @@ const GlobalHeader = {
                    this.managedOffices.length === 0;
         },
         
-        // 是否是外部用户
+        // 是否是外部用户（优先判断管理员身份）
         isExternalUser() {
+            if (this.isSuperOrAdmin) return false;
+            if (this.isOfficeAdmin) return false;
+            if (this.isInternalUser) return false;
             return !this.userInfo?.department && 
                    !this.userInfo?.is_admin && 
                    this.managedOffices.length === 0;
@@ -282,8 +285,10 @@ const GlobalHeader = {
                         ...parsed,
                         avatar: parsed.avatar || '👤',
                         is_admin: parsed.role === '超级管理员' || 
+                                 parsed.role === 'super_admin' ||
                                  parsed.role === '管理员' || 
                                  parsed.role === 'admin' ||
+                                 parsed.role === 'office_admin' ||
                                  parsed.is_admin
                     };
                     console.log('用户信息已加载:', this.userInfo);

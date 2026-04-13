@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="description" content="审批中心 - 空间服务预约审批管理">
+    
+    <title>审批中心 - 空间服务管理系统</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .approval-center-container {
+            min-height: 100vh;
+            background: var(--bg-secondary);
+        }
+        
+        .approval-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .approval-stats {
+            display: flex;
+            gap: var(--spacing-xl);
+        }
+        
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+        }
+        
+        .stat-badge.pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .stat-badge.processed {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .approval-main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .filter-bar {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .approval-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+        
+        .approval-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-base);
+            border-left: 4px solid var(--border-light);
+        }
+        
+        .approval-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .approval-card.urgent {
+            border-left-color: var(--danger);
+        }
+        
+        .approval-card.pending {
+            border-left-color: var(--warning);
+        }
+        
+        .approval-card.processed {
+            border-left-color: var(--success);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .approval-info {
+            flex: 1;
+        }
+        
+        .approval-no {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .approval-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .approval-meta {
+            display: flex;
+            gap: var(--spacing-xl);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            min-height: var(--touch-min);
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .status-badge.pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-badge.approved {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-badge.rejected {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+        }
+        
+        .approval-details {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-lg);
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .approval-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .action-btn {
+            min-height: var(--touch-min);
+            min-width: 100px;
+        }
+        
+        .reject-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .reject-dialog {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-2xl);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .dialog-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .dialog-icon {
+            font-size: 32px;
+            color: var(--danger);
+        }
+        
+        .dialog-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .dialog-content {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: block;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-family: var(--font-family);
+            transition: border-color var(--transition-fast);
+            min-height: var(--touch-min);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .required-marker {
+            color: var(--danger);
+            font-weight: 700;
+        }
+        
+        .alternatives-section {
+            background: var(--info-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+        
+        .alternatives-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .alternative-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            min-height: var(--touch-min);
+        }
+        
+        .alternative-card:hover {
+            border-color: var(--info);
+        }
+        
+        .alternative-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .dialog-footer {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: flex-end;
+            padding-top: var(--spacing-xl);
+            border-top: 1px solid var(--border);
+        }
+        
+        .dialog-btn {
+            min-width: 120px;
+            min-height: var(--touch-min);
+        }
+        
+        .batch-actions {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-lg);
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .batch-info {
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .approval-meta {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .approval-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+            }
+            
+            .reject-dialog {
+                width: 95%;
+                max-height: 90vh;
+                margin: var(--spacing-md);
+            }
+            
+            .dialog-footer {
+                flex-direction: column;
+            }
+            
+            .dialog-btn {
+                width: 100%;
+            }
+        }
+    </style>
+    <script src="/portal/assets/js/auth.js"></script></head>
+<body>
+    <div id="app" v-cloak class="approval-center-container" role="application" aria-label="审批中心">
+        
+        <header class="approval-header" role="banner">
+            <div class="header-content">
+                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+                    <a href="/portal/admin/index.html" style="text-decoration: none; color: var(--text-primary); display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span>←</span>
+                        <span>管理中心</span>
+                    </a>
+                    <h1 class="header-title">
+                        <span aria-hidden="true">📋</span>
+                        审批中心
+                    </h1>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+                    <div class="approval-stats" role="status" aria-live="polite">
+                        <div class="stat-badge pending">
+                            <span aria-hidden="true">⏳</span>
+                            <span>待审批 {{ pendingCount }}</span>
+                        </div>
+                        <div class="stat-badge processed">
+                            <span aria-hidden="true">✅</span>
+                            <span>已处理 {{ processedCount }}</span>
+                        </div>
+                    </div>
+                    <a href="/portal/index.html" style="text-decoration: none; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                        用户端首页
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <main class="approval-main" role="main">
+            
+            <div class="batch-actions" v-if="selectedApprovals.length > 0">
+                <div class="batch-info">
+                    已选择 {{ selectedApprovals.length }} 项审批
+                </div>
+                <button class="btn btn-success action-btn" @click="batchApprove">
+                    批量通过
+                </button>
+                <button class="btn btn-outline action-btn" @click="clearSelection">
+                    取消选择
+                </button>
+            </div>
+            
+            <div class="filter-bar" role="search" aria-label="审批筛选">
+                <div class="filter-group">
+                    <label class="filter-label" for="status-filter">状态：</label>
+                    <select id="status-filter" class="form-input" v-model="filterStatus">
+                        <option value="">全部</option>
+                        <option value="pending">待审批</option>
+                        <option value="approved">已通过</option>
+                        <option value="rejected">已拒绝</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="type-filter">类型：</label>
+                    <select id="type-filter" class="form-input" v-model="filterType">
+                        <option value="">全部</option>
+                        <option value="meeting_room">会议室</option>
+                        <option value="auditorium">会场</option>
+                        <option value="lobby_screen">大屏</option>
+                        <option value="lobby_booth">展位</option>
+                        <option value="vip_dining">VIP餐厅</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="date-filter">日期：</label>
+                    <input id="date-filter" type="date" class="form-input" v-model="filterDate">
+                </div>
+                
+                <button class="btn btn-outline" @click="clearFilters">清除筛选</button>
+            </div>
+            
+            <div class="approval-list" role="list" aria-label="审批列表">
+                <article 
+                    v-for="approval in filteredApprovals" 
+                    :key="approval.id"
+                    class="approval-card"
+                    :class="{
+                        urgent: approval.isUrgent,
+                        pending: approval.status === 'pending',
+                        processed: approval.status !== 'pending'
+                    }"
+                    role="listitem"
+                >
+                    <div class="card-header">
+                        <div class="approval-info">
+                            <div class="approval-no">{{ approval.approvalNo }}</div>
+                            <h2 class="approval-title">{{ approval.title }}</h2>
+                            <div class="approval-meta">
+                                <div class="meta-item">
+                                    <span aria-hidden="true">👤</span>
+                                    <span>{{ approval.userName }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span aria-hidden="true">🏢</span>
+                                    <span>{{ approval.spaceName }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span aria-hidden="true">📅</span>
+                                    <span>{{ approval.bookingDate }}</span>
+                                </div>
+                                <div class="meta-item" v-if="approval.isUrgent">
+                                    <span aria-hidden="true">⚡</span>
+                                    <span style="color: var(--danger); font-weight: 600;">紧急</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="status-badge" :class="approval.status">
+                            {{ getStatusText(approval.status) }}
+                        </div>
+                    </div>
+                    
+                    <div class="approval-details">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">预约时段</div>
+                                <div class="detail-value">{{ approval.timeSlot }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">预估费用</div>
+                                <div class="detail-value">{{ approval.fee }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">参会人数</div>
+                                <div class="detail-value">{{ approval.attendeesCount }}人</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">提交时间</div>
+                                <div class="detail-value">{{ approval.submittedAt }}</div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="approval.specialRequests" style="margin-top: var(--spacing-lg);">
+                            <div class="detail-label">特殊需求</div>
+                            <div class="detail-value">{{ approval.specialRequests }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="approval-actions" v-if="approval.status === 'pending'">
+                        <input 
+                            type="checkbox" 
+                            :id="`select-${approval.id}`"
+                            v-model="selectedApprovals"
+                            :value="approval.id"
+                            style="margin-right: var(--spacing-sm);"
+                        >
+                        <label :for="`select-${approval.id}`" style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                            批量选择
+                        </label>
+                        
+                        <button 
+                            class="btn btn-success action-btn"
+                            @click="approveApproval(approval)"
+                            :aria-label="`通过审批 ${approval.title}`"
+                        >
+                            <span aria-hidden="true">✓</span>
+                            通过
+                        </button>
+                        
+                        <button 
+                            class="btn btn-danger action-btn"
+                            @click="openRejectDialog(approval)"
+                            :aria-label="`拒绝审批 ${approval.title}`"
+                        >
+                            <span aria-hidden="true">✗</span>
+                            拒绝
+                        </button>
+                        
+                        <button 
+                            class="btn btn-outline action-btn"
+                            @click="requestModify(approval)"
+                            :aria-label="`要求修改 ${approval.title}`"
+                        >
+                            要求修改
+                        </button>
+                    </div>
+                    
+                    <div v-if="approval.status !== 'pending'" style="margin-top: var(--spacing-lg); padding: var(--spacing-lg); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div class="detail-label">处理结果</div>
+                        <div class="detail-value">
+                            <div v-if="approval.status === 'approved'">
+                                <span style="color: var(--success); font-weight: 600;">✓ 审批通过</span>
+                                <div style="margin-top: var(--spacing-sm); color: var(--text-secondary);">
+                                    审批人：{{ approval.approvedBy }} | 审批时间：{{ approval.approvedAt }}
+                                </div>
+                                <div v-if="approval.approvalNotes" style="margin-top: var(--spacing-sm); color: var(--text-secondary);">
+                                    备注：{{ approval.approvalNotes }}
+                                </div>
+                            </div>
+                            <div v-if="approval.status === 'rejected'">
+                                <span style="color: var(--danger); font-weight: 600;">✗ 审批拒绝</span>
+                                <div style="margin-top: var(--spacing-sm); color: var(--text-secondary);">
+                                    审批人：{{ approval.rejectedBy }} | 拒绝时间：{{ approval.rejectedAt }}
+                                </div>
+                                <div style="margin-top: var(--spacing-md); color: var(--text-primary); font-weight: 500;">
+                                    拒绝原因：{{ approval.rejectionReason }}
+                                </div>
+                                <div v-if="approval.rejectionDetail" style="margin-top: var(--spacing-sm); color: var(--text-secondary);">
+                                    详细说明：{{ approval.rejectionDetail }}
+                                </div>
+                                <div v-if="approval.alternatives && approval.alternatives.length > 0" style="margin-top: var(--spacing-lg);">
+                                    <div class="detail-label">推荐的备选方案：</div>
+                                    <div v-for="alt in approval.alternatives" :key="alt.id" style="margin-top: var(--spacing-sm); color: var(--info-dark);">
+                                        {{ alt.spaceName }} - {{ alt.availableDates.join(', ') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </article>
+            </div>
+            
+        </main>
+        
+        <div 
+            v-if="showRejectDialog" 
+            class="reject-dialog-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-title"
+            @click.self="closeRejectDialog"
+        >
+            <div class="reject-dialog" @click.stop>
+                <div class="dialog-header">
+                    <div class="dialog-icon" aria-hidden="true">⚠️</div>
+                    <h2 id="dialog-title" class="dialog-title">审批拒绝</h2>
+                </div>
+                
+                <div class="dialog-content">
+                    <div style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                        <div style="font-weight: 600; color: var(--text-primary);">{{ currentApproval?.title }}</div>
+                        <div style="margin-top: var(--spacing-sm); font-size: var(--font-size-sm); color: var(--text-secondary);">
+                            {{ currentApproval?.userName }} | {{ currentApproval?.spaceName }} | {{ currentApproval?.bookingDate }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="rejection-reason">
+                            拒绝原因 <span class="required-marker" aria-label="必填">*</span>
+                        </label>
+                        <select id="rejection-reason" class="form-input" v-model="rejectionReason" required aria-required="true">
+                            <option value="">请选择拒绝原因</option>
+                            <option value="时间冲突">时间冲突，时段已被预约</option>
+                            <option value="不符合审批条件">不符合审批条件</option>
+                            <option value="信息不完整">申请信息不完整或不准确</option>
+                            <option value="预算限制">超出预算限制</option>
+                            <option value="其他原因">其他原因</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="rejection-detail">详细说明</label>
+                        <textarea 
+                            id="rejection-detail" 
+                            class="form-input form-textarea"
+                            v-model="rejectionDetail"
+                            placeholder="请详细说明拒绝原因，帮助申请人理解并改进..."
+                            rows="4"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" style="display: flex; align-items: center; gap: var(--spacing-md);">
+                            <input 
+                                type="checkbox" 
+                                v-model="allowResubmit"
+                                style="width: 20px; height: 20px;"
+                            >
+                            <span>允许申请人重新提交</span>
+                        </label>
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">
+                            勾选后，申请人可以根据拒绝原因修改申请后重新提交
+                        </div>
+                    </div>
+                    
+                    <div class="alternatives-section" v-if="allowResubmit">
+                        <h3 class="alternatives-title">
+                            <span aria-hidden="true">💡</span>
+                            推荐备选方案（智能推荐）
+                        </h3>
+                        
+                        <div class="form-group" style="margin-top: var(--spacing-md);">
+                            <label class="form-label">选择推荐的备选空间：</label>
+                            <div v-for="alt in suggestedAlternatives" :key="alt.id" class="alternative-card">
+                                <div style="font-weight: 600; margin-bottom: var(--spacing-sm);">{{ alt.spaceName }}</div>
+                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                    位置：{{ alt.location }} | 容量：{{ alt.capacity }}人 | 价格：¥{{ alt.price }}
+                                </div>
+                                <div style="margin-top: var(--spacing-sm); font-size: var(--font-size-sm); color: var(--info-dark);">
+                                    可用日期：{{ alt.availableDates.join(', ') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dialog-footer">
+                    <button 
+                        class="btn btn-outline dialog-btn"
+                        @click="closeRejectDialog"
+                        aria-label="取消拒绝操作"
+                    >
+                        取消
+                    </button>
+                    <button 
+                        class="btn btn-danger dialog-btn"
+                        @click="confirmReject"
+                        :disabled="!rejectionReason"
+                        aria-label="确认拒绝审批"
+                    >
+                        <span aria-hidden="true">✗</span>
+                        确认拒绝
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, watch, onMounted } = Vue
+        
+        createApp({
+            setup() {
+                const pendingCount = ref(3)
+                const processedCount = ref(12)
+                
+                const approvals = ref([])
+                const selectedApprovals = ref([])
+                
+                const filterStatus = ref('')
+                const filterType = ref('')
+                const filterDate = ref('')
+                
+                const showRejectDialog = ref(false)
+                const currentApproval = ref(null)
+                
+                const rejectionReason = ref('')
+                const rejectionDetail = ref('')
+                const allowResubmit = ref(false)
+                const suggestedAlternatives = ref([])
+                
+                const filteredApprovals = computed(() => {
+                    let result = approvals.value
+                    
+                    if (filterStatus.value) {
+                        result = result.filter(a => a.status === filterStatus.value)
+                    }
+                    
+                    if (filterType.value) {
+                        result = result.filter(a => a.typeCode === filterType.value)
+                    }
+                    
+                    if (filterDate.value) {
+                        result = result.filter(a => a.bookingDate === filterDate.value)
+                    }
+                    
+                    return result
+                })
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        pending: '待审批',
+                        approved: '已通过',
+                        rejected: '已拒绝',
+                        need_modify: '需修改'
+                    }
+                    return statusMap[status] || status
+                }
+                
+                const approveApproval = async (approval) => {
+                    try {
+                        const response = await fetch(`/api/v2/space/approvals/${approval.id}/approve`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                approval_notes: '审批通过'
+                            })
+                        })
+                        
+                        if (response.ok) {
+                            approval.status = 'approved'
+                            approval.approvedBy = '管理员'
+                            approval.approvedAt = new Date().toLocaleString()
+                            pendingCount.value--
+                            processedCount.value++
+                            
+                            alert('审批通过成功！')
+                        }
+                    } catch (error) {
+                        alert('审批通过失败：' + error.message)
+                    }
+                }
+                
+                const openRejectDialog = (approval) => {
+                    currentApproval.value = approval
+                    rejectionReason.value = ''
+                    rejectionDetail.value = ''
+                    allowResubmit.value = false
+                    
+                    suggestedAlternatives.value = [
+                        {
+                            id: 1,
+                            spaceName: '2号会议室',
+                            location: '3楼302',
+                            capacity: 15,
+                            price: 60,
+                            availableDates: ['2026-04-14', '2026-04-15']
+                        },
+                        {
+                            id: 2,
+                            spaceName: 'VIP会议室',
+                            location: '5楼501',
+                            capacity: 20,
+                            price: 80,
+                            availableDates: ['2026-04-16']
+                        }
+                    ]
+                    
+                    showRejectDialog.value = true
+                }
+                
+                const closeRejectDialog = () => {
+                    showRejectDialog.value = false
+                    currentApproval.value = null
+                }
+                
+                const confirmReject = async () => {
+                    if (!rejectionReason.value) {
+                        alert('请选择拒绝原因')
+                        return
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/v2/space/approvals/${currentApproval.value.id}/reject`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                rejection_reason: rejectionReason.value,
+                                rejection_detail: rejectionDetail.value,
+                                allow_resubmit: allowResubmit.value,
+                                suggest_alternatives: allowResubmit.value ? suggestedAlternatives.value : []
+                            })
+                        })
+                        
+                        if (response.ok) {
+                            const approval = currentApproval.value
+                            approval.status = 'rejected'
+                            approval.rejectedBy = '管理员'
+                            approval.rejectedAt = new Date().toLocaleString()
+                            approval.rejectionReason = rejectionReason.value
+                            approval.rejectionDetail = rejectionDetail.value
+                            approval.alternatives = allowResubmit.value ? suggestedAlternatives.value : []
+                            
+                            pendingCount.value--
+                            processedCount.value++
+                            
+                            closeRejectDialog()
+                            alert('审批拒绝成功！申请人将收到通知。')
+                        }
+                    } catch (error) {
+                        alert('审批拒绝失败：' + error.message)
+                    }
+                }
+                
+                const requestModify = async (approval) => {
+                    try {
+                        const response = await fetch(`/api/v2/space/approvals/${approval.id}/request-modify`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                modify_suggestions: '请补充会议详细议程和参会人员名单'
+                            })
+                        })
+                        
+                        if (response.ok) {
+                            approval.status = 'need_modify'
+                            alert('已要求申请人修改申请')
+                        }
+                    } catch (error) {
+                        alert('操作失败：' + error.message)
+                    }
+                }
+                
+                const batchApprove = async () => {
+                    if (selectedApprovals.value.length === 0) return
+                    
+                    try {
+                        const response = await fetch('/api/v2/space/approvals/batch-approve', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                approval_ids: selectedApprovals.value,
+                                approval_notes: '批量审批通过'
+                            })
+                        })
+                        
+                        if (response.ok) {
+                            selectedApprovals.value.forEach(id => {
+                                const approval = approvals.value.find(a => a.id === id)
+                                if (approval) {
+                                    approval.status = 'approved'
+                                    approval.approvedBy = '管理员'
+                                    approval.approvedAt = new Date().toLocaleString()
+                                }
+                            })
+                            
+                            pendingCount.value -= selectedApprovals.value.length
+                            processedCount.value += selectedApprovals.value.length
+                            
+                            clearSelection()
+                            alert('批量审批通过成功！')
+                        }
+                    } catch (error) {
+                        alert('批量审批失败：' + error.message)
+                    }
+                }
+                
+                const clearSelection = () => {
+                    selectedApprovals.value = []
+                }
+                
+                const clearFilters = () => {
+                    filterStatus.value = ''
+                    filterType.value = ''
+                    filterDate.value = ''
+                }
+                
+                const loadApprovals = async () => {
+                    const token = localStorage.getItem('token')
+                    if (!token) {
+                        alert('请先登录')
+                        window.location.href = '/portal/admin/login.html'
+                        return
+                    }
+                    
+                    approvals.value = [
+                        {
+                            id: 1,
+                            approvalNo: 'AP20260413001',
+                            title: '项目启动会',
+                            userName: '张三',
+                            spaceName: 'VIP会议室',
+                            bookingDate: '2026-04-14',
+                            timeSlot: '09:00-11:00',
+                            fee: '¥160',
+                            attendeesCount: 10,
+                            status: 'pending',
+                            isUrgent: true,
+                            submittedAt: '2026-04-13 08:30',
+                            specialRequests: '需要投影设备和茶水服务',
+                            typeCode: 'meeting_room'
+                        },
+                        {
+                            id: 2,
+                            approvalNo: 'AP20260413002',
+                            title: '季度总结大会',
+                            userName: '李四',
+                            spaceName: '多功能厅',
+                            bookingDate: '2026-04-15',
+                            timeSlot: '14:00-17:00',
+                            fee: '¥1500',
+                            attendeesCount: 50,
+                            status: 'pending',
+                            isUrgent: false,
+                            submittedAt: '2026-04-13 10:15',
+                            specialRequests: '',
+                            typeCode: 'auditorium'
+                        },
+                        {
+                            id: 3,
+                            approvalNo: 'AP20260413003',
+                            title: '产品展示活动',
+                            userName: '王五',
+                            spaceName: '大堂展位A',
+                            bookingDate: '2026-04-16',
+                            timeSlot: '全天',
+                            fee: '¥300',
+                            attendeesCount: 0,
+                            status: 'pending',
+                            isUrgent: false,
+                            submittedAt: '2026-04-13 11:20',
+                            specialRequests: '需要3x3米展位空间',
+                            typeCode: 'lobby_booth'
+                        }
+                    ]
+                }
+                
+                onMounted(async () => {
+                        const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
+                        if (user) {
+                            loadApprovals();
+                        }
+                    })
+                
+                return {
+                    pendingCount,
+                    processedCount,
+                    approvals,
+                    filteredApprovals,
+                    selectedApprovals,
+                    filterStatus,
+                    filterType,
+                    filterDate,
+                    showRejectDialog,
+                    currentApproval,
+                    rejectionReason,
+                    rejectionDetail,
+                    allowResubmit,
+                    suggestedAlternatives,
+                    getStatusText,
+                    approveApproval,
+                    openRejectDialog,
+                    closeRejectDialog,
+                    confirmReject,
+                    requestModify,
+                    batchApprove,
+                    clearSelection,
+                    clearFilters
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

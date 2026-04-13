@@ -15,7 +15,12 @@ from config.settings import settings
 from models.user import User
 from models.office import Office
 from models.office_admin import OfficeAdminRelation
-from depends.auth import get_current_user, get_admin_user, get_super_admin_user
+from depends.auth import (
+    get_current_user,
+    get_current_user_required,
+    get_admin_user,
+    get_super_admin_user,
+)
 from schemas.system import UserResponse, OfficeResponse, AuthResponse
 from utils.jwt import create_access_token, verify_token
 from utils.password import (
@@ -362,7 +367,7 @@ def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
 @router.post("/auth/logout")
 def logout(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
     db: Session = Depends(get_db),
 ):
     """
@@ -422,7 +427,7 @@ def logout(
 def change_password(
     password_data: dict,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
     db: Session = Depends(get_db),
 ):
     """
@@ -487,7 +492,7 @@ def change_password(
 
 
 @router.get("/auth/profile")
-def get_profile(current_user: User = Depends(get_current_user)):
+def get_profile(current_user: User = Depends(get_current_user_required)):
     """获取当前用户个人信息"""
     return {
         "user_id": current_user.id,
@@ -510,7 +515,8 @@ def get_profile(current_user: User = Depends(get_current_user)):
 
 @router.get("/auth/sessions")
 def get_active_sessions(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db),
 ):
     """获取用户活跃会话"""
 
@@ -543,7 +549,7 @@ def get_active_sessions(
 @router.delete("/auth/sessions/{session_id}")
 def revoke_session(
     session_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
     db: Session = Depends(get_db),
 ):
     """撤销特定会话"""

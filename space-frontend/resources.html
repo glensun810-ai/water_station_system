@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空间资源列表 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: white;
+            cursor: pointer;
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .filter-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .type-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+        }
+        
+        .type-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .type-card.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .type-icon {
+            font-size: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .type-name {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+        
+        .search-section {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        .search-btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .resource-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            border-left: 4px solid transparent;
+        }
+        
+        .resource-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-left-color: var(--primary);
+        }
+        
+        .resource-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .resource-name {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .resource-status {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-sm);
+        }
+        
+        .status-available {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .status-busy {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
+        .status-unavailable {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .resource-info {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .info-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) 0;
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .resource-tags {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .tag {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+        }
+        
+        .resource-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .price {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .price-unit {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .book-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .book-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        @media (max-width: 768px) {
+            .resources-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .search-section {
+                flex-direction: column;
+            }
+            
+            .resource-footer {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .book-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="back-btn" @click="goBack">
+                    <span>←</span>
+                    <span>返回</span>
+                </div>
+                <div class="page-title">空间资源列表</div>
+                <div>{{ currentUser?.name || '用户' }}</div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-container">
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-title">按空间类型筛选</div>
+                <div class="filter-grid">
+                    <div 
+                        v-for="type in spaceTypes" 
+                        :key="type.code"
+                        class="type-card"
+                        :class="{ active: selectedType === type.code }"
+                        @click="filterByType(type.code)"
+                    >
+                        <div class="type-icon">{{ type.icon }}</div>
+                        <div class="type-name">{{ type.name }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Section -->
+            <div class="search-section">
+                <input 
+                    type="text"
+                    class="search-input"
+                    v-model="searchKeyword"
+                    placeholder="搜索空间名称、位置、设备..."
+                    @input="searchResources"
+                >
+                <button class="search-btn" @click="searchResources">搜索</button>
+            </div>
+            
+            <!-- Resources Grid -->
+            <div v-if="filteredResources.length > 0" class="resources-grid">
+                <div 
+                    v-for="resource in filteredResources" 
+                    :key="resource.id"
+                    class="resource-card"
+                    @click="viewResourceDetail(resource)"
+                >
+                    <div class="resource-header">
+                        <div class="resource-name">{{ resource.name }}</div>
+                        <div 
+                            class="resource-status"
+                            :class="'status-' + resource.statusClass"
+                        >
+                            {{ resource.statusText }}
+                        </div>
+                    </div>
+                    
+                    <div class="resource-info">
+                        <div class="info-row">
+                            <span class="info-label">位置：</span>
+                            <span class="info-value">{{ resource.location }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">容量：</span>
+                            <span class="info-value">{{ resource.capacity }}人</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">类型：</span>
+                            <span class="info-value">{{ resource.typeName }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-tags">
+                        <span 
+                            v-for="tag in resource.tags" 
+                            :key="tag"
+                            class="tag"
+                        >
+                            {{ tag }}
+                        </span>
+                    </div>
+                    
+                    <div class="resource-footer">
+                        <div>
+                            <div class="price">¥{{ resource.price }}</div>
+                            <div class="price-unit">{{ resource.priceUnit }}</div>
+                        </div>
+                        <button 
+                            class="book-btn"
+                            @click.stop="bookResource(resource)"
+                        >
+                            立即预约
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+                <div class="empty-icon">🏢</div>
+                <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">
+                    暂无符合条件的空间资源
+                </div>
+                <div style="color: var(--text-secondary);">
+                    请调整筛选条件或联系管理员添加空间资源
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentUser = ref(null);
+                const selectedType = ref('all');
+                const searchKeyword = ref('');
+                const resources = ref([]);
+                
+                const spaceTypes = [
+                    { code: 'all', name: '全部', icon: '📋' },
+                    { code: 'meeting_room', name: '会议室', icon: '🏢' },
+                    { code: 'auditorium', name: '会场', icon: '🎭' },
+                    { code: 'screen', name: '大屏', icon: '📺' },
+                    { code: 'booth', name: '展位', icon: '🏪' },
+                    { code: 'vip_dining', name: 'VIP餐厅', icon: '🍽️' }
+                ];
+                
+                const filteredResources = computed(() => {
+                    let filtered = resources.value;
+                    
+                    // Filter by type
+                    if (selectedType.value !== 'all') {
+                        filtered = filtered.filter(r => r.typeCode === selectedType.value);
+                    }
+                    
+                    // Filter by search keyword
+                    if (searchKeyword.value) {
+                        const keyword = searchKeyword.value.toLowerCase();
+                        filtered = filtered.filter(r => 
+                            r.name.toLowerCase().includes(keyword) ||
+                            r.location.toLowerCase().includes(keyword) ||
+                            r.tags.some(t => t.toLowerCase().includes(keyword))
+                        );
+                    }
+                    
+                    return filtered;
+                });
+                
+                const loadResources = async () => {
+                    try {
+                        const user = await checkAuth({ requireAuth: false, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = user;
+                            console.log('用户已登录:', currentUser.value);
+                        }
+                        
+                        // 加载资源数据（模拟数据）
+                        await loadResourceData();
+                    } catch (error) {
+                        console.error('加载资源失败:', error);
+                    }
+                };
+                
+                const loadResourceData = async () => {
+                    resources.value = [
+                        {
+                            id: 1,
+                            name: 'VIP会议室',
+                            location: '5楼501',
+                            capacity: 20,
+                            typeCode: 'meeting_room',
+                            typeName: '会议室',
+                            price: 80,
+                            priceUnit: '小时',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['投影仪', '白板', 'WiFi', '茶水服务']
+                        },
+                        {
+                            id: 2,
+                            name: '1号会议室',
+                            location: '3楼301',
+                            capacity: 10,
+                            typeCode: 'meeting_room',
+                            typeName: '会议室',
+                            price: 50,
+                            priceUnit: '小时',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['投影仪', '白板']
+                        },
+                        {
+                            id: 3,
+                            name: '2号会议室',
+                            location: '3楼302',
+                            capacity: 15,
+                            typeCode: 'meeting_room',
+                            typeName: '会议室',
+                            price: 60,
+                            priceUnit: '小时',
+                            status: 'busy',
+                            statusText: '已预约',
+                            statusClass: 'busy',
+                            tags: ['投影仪', '视频会议']
+                        },
+                        {
+                            id: 4,
+                            name: '多功能厅',
+                            location: '1楼大厅',
+                            capacity: 500,
+                            typeCode: 'auditorium',
+                            typeName: '会场',
+                            price: 500,
+                            priceUnit: '半天',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['舞台', '音响', '灯光', 'LED大屏']
+                        },
+                        {
+                            id: 5,
+                            name: '大堂LED大屏',
+                            location: '大堂东侧',
+                            capacity: '不限',
+                            typeCode: 'screen',
+                            typeName: '大屏',
+                            price: 200,
+                            priceUnit: '时段',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['LED', '高清', '定时播放']
+                        },
+                        {
+                            id: 6,
+                            name: '大堂展位A',
+                            location: '大堂西侧',
+                            capacity: '不限',
+                            typeCode: 'booth',
+                            typeName: '展位',
+                            price: 100,
+                            priceUnit: '天',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['产品展示', '促销']
+                        },
+                        {
+                            id: 7,
+                            name: 'VIP包厢A',
+                            location: 'VIP餐厅',
+                            capacity: 8,
+                            typeCode: 'vip_dining',
+                            typeName: 'VIP餐厅',
+                            price: 500,
+                            priceUnit: '餐段',
+                            status: 'busy',
+                            statusText: '已预约',
+                            statusClass: 'busy',
+                            tags: ['包厢', '专人服务']
+                        },
+                        {
+                            id: 8,
+                            name: 'VIP包厢B',
+                            location: 'VIP餐厅',
+                            capacity: 10,
+                            typeCode: 'vip_dining',
+                            typeName: 'VIP餐厅',
+                            price: 600,
+                            priceUnit: '餐段',
+                            status: 'available',
+                            statusText: '空闲',
+                            statusClass: 'available',
+                            tags: ['包厢', '专人服务']
+                        }
+                    ];
+                };
+                
+                const filterByType = (typeCode) => {
+                    selectedType.value = typeCode;
+                };
+                
+                const searchResources = () => {
+                    // Search is handled by computed property
+                };
+                
+                const viewResourceDetail = (resource) => {
+                    alert(`空间详情：\n\n名称：${resource.name}\n位置：${resource.location}\n容量：${resource.capacity}\n价格：¥${resource.price}/${resource.priceUnit}\n状态：${resource.statusText}\n设备：${resource.tags.join(', ')}`);
+                };
+                
+                const bookResource = (resource) => {
+                    window.location.href = `/space-frontend/booking.html?type=${resource.typeCode}&resource=${resource.id}`;
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                onMounted(() => {
+                    loadResources();
+                });
+                
+                return {
+                    currentUser,
+                    selectedType,
+                    searchKeyword,
+                    spaceTypes,
+                    resources,
+                    filteredResources,
+                    filterByType,
+                    searchResources,
+                    viewResourceDetail,
+                    bookResource,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的预约 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: white;
+            cursor: pointer;
+            font-size: var(--font-size-base);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            background: white;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+        }
+        
+        .filter-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+            border: 2px solid transparent;
+        }
+        
+        .filter-tab:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .booking-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid transparent;
+        }
+        
+        .booking-card.pending {
+            border-left-color: var(--warning);
+        }
+        
+        .booking-card.approved {
+            border-left-color: var(--success);
+        }
+        
+        .booking-card.rejected {
+            border-left-color: var(--danger);
+        }
+        
+        .booking-card.completed {
+            border-left-color: var(--text-secondary);
+        }
+        
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .booking-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .booking-status {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
+        .status-approved {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .status-rejected {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .status-completed {
+            background: var(--bg-active);
+            color: var(--text-secondary);
+        }
+        
+        .booking-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .info-item {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .booking-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+        }
+        
+        .action-btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .action-btn-secondary {
+            background: white;
+            border-color: var(--border);
+            color: var(--text-primary);
+        }
+        
+        .action-btn-danger {
+            background: white;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl) var(--spacing-lg);
+            color: var(--text-secondary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .booking-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .booking-footer {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="back-btn" @click="goBack">
+                    <span>←</span>
+                    <span>返回</span>
+                </div>
+                <div class="page-title">我的预约</div>
+                <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                    <span>{{ currentUser?.name || '用户' }}</span>
+                    <button class="action-btn action-btn-secondary" @click="handleLogout" style="padding: 6px 12px; font-size: 12px;">
+                        退出
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-container">
+            <!-- Stats Summary -->
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.pending }}</div>
+                    <div class="stat-label">待审批</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.approved }}</div>
+                    <div class="stat-label">已通过</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.completed }}</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.total }}</div>
+                    <div class="stat-label">总预约</div>
+                </div>
+            </div>
+            
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'all' }"
+                    @click="setFilter('all')"
+                >
+                    全部
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'pending' }"
+                    @click="setFilter('pending')"
+                >
+                    待审批
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'approved' }"
+                    @click="setFilter('approved')"
+                >
+                    已通过
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'rejected' }"
+                    @click="setFilter('rejected')"
+                >
+                    已拒绝
+                </div>
+                <div 
+                    class="filter-tab"
+                    :class="{ active: activeFilter === 'completed' }"
+                    @click="setFilter('completed')"
+                >
+                    已完成
+                </div>
+            </div>
+            
+            <!-- Booking List -->
+            <div v-if="filteredBookings.length > 0">
+                <div 
+                    v-for="booking in filteredBookings" 
+                    :key="booking.id"
+                    class="booking-card"
+                    :class="booking.status"
+                >
+                    <div class="booking-header">
+                        <div class="booking-title">{{ booking.title }}</div>
+                        <div 
+                            class="booking-status"
+                            :class="'status-' + booking.status"
+                        >
+                            {{ getStatusText(booking.status) }}
+                        </div>
+                    </div>
+                    
+                    <div class="booking-info">
+                        <div class="info-item">
+                            <span class="info-label">预约编号：</span>
+                            <span class="info-value">{{ booking.bookingNo }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">空间类型：</span>
+                            <span class="info-value">{{ booking.spaceType }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">预约空间：</span>
+                            <span class="info-value">{{ booking.spaceName }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">预约日期：</span>
+                            <span class="info-value">{{ booking.bookingDate }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">预约时段：</span>
+                            <span class="info-value">{{ booking.timeSlot }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">参会人数：</span>
+                            <span class="info-value">{{ booking.attendeesCount }}人</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">预估费用：</span>
+                            <span class="info-value" style="color: var(--primary); font-weight: 600;">¥{{ booking.fee }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">提交时间：</span>
+                            <span class="info-value">{{ booking.submittedAt }}</span>
+                        </div>
+                    </div>
+                    
+                    <div v-if="booking.rejectionReason" style="background: var(--danger-light); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                        <div style="font-weight: 600; color: var(--danger); margin-bottom: var(--spacing-sm);">拒绝原因：</div>
+                        <div style="color: var(--text-primary);">{{ booking.rejectionReason }}</div>
+                    </div>
+                    
+                    <div class="booking-footer">
+                        <button 
+                            v-if="booking.status === 'approved'"
+                            class="action-btn action-btn-primary"
+                            @click="viewDetails(booking)"
+                        >
+                            查看详情
+                        </button>
+                        <button 
+                            v-if="booking.status === 'pending'"
+                            class="action-btn action-btn-secondary"
+                            @click="editBooking(booking)"
+                        >
+                            修改预约
+                        </button>
+                        <button 
+                            v-if="booking.status === 'pending'"
+                            class="action-btn action-btn-danger"
+                            @click="cancelBooking(booking)"
+                        >
+                            取消预约
+                        </button>
+                        <button 
+                            v-if="booking.status === 'approved' && booking.paymentStatus === 'unpaid'"
+                            class="action-btn action-btn-primary"
+                            @click="goToPayment(booking)"
+                        >
+                            确认支付
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">
+                    暂无预约记录
+                </div>
+                <div style="margin-bottom: var(--spacing-lg);">
+                    您还没有预约任何空间服务
+                </div>
+                <button class="action-btn action-btn-primary" @click="goToBooking">
+                    立即预约
+                </button>
+            </div>
+        </main>
+    </div>
+    
+    <script type="module">
+        import spaceAPI from './api.js';
+        
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentUser = ref(null);
+                const activeFilter = ref('all');
+                const bookings = ref([]);
+                
+                const stats = computed(() => {
+                    const pending = bookings.value.filter(b => b.status === 'pending' || b.status === 'pending_approval').length;
+                    const approved = bookings.value.filter(b => b.status === 'approved' || b.status === 'confirmed').length;
+                    const completed = bookings.value.filter(b => b.status === 'completed').length;
+                    return {
+                        pending,
+                        approved,
+                        completed,
+                        total: bookings.value.length
+                    };
+                });
+                
+                const filteredBookings = computed(() => {
+                    if (activeFilter.value === 'all') {
+                        return bookings.value;
+                    }
+                    return bookings.value.filter(b => b.status === activeFilter.value);
+                });
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待审批',
+                        'approved': '已通过',
+                        'rejected': '已拒绝',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const mapBookingStatus = (apiStatus) => {
+                    const statusMap = {
+                        'pending_approval': 'pending',
+                        'approved': 'approved',
+                        'confirmed': 'approved',
+                        'rejected': 'rejected',
+                        'completed': 'completed',
+                        'cancelled': 'cancelled',
+                        'in_use': 'approved'
+                    };
+                    return statusMap[apiStatus] || apiStatus;
+                };
+                
+                const formatDateTime = (dateTimeStr) => {
+                    if (!dateTimeStr) return '';
+                    const date = new Date(dateTimeStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                const loadUserAndBookings = async () => {
+                    try {
+                        // 检查登录状态
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
+                        
+                        if (user) {
+                            currentUser.value = user;
+                            console.log('用户已登录:', currentUser.value);
+                            
+                            // 加载用户的预约列表
+                            await loadBookings();
+                        } else {
+                            // 未登录，跳转到登录页
+                            window.location.href = '/portal/admin/login.html';
+                        }
+                    } catch (error) {
+                        console.error('加载用户数据失败:', error);
+                        window.location.href = '/portal/admin/login.html';
+                    }
+                };
+                
+                const loadBookings = async () => {
+                    try {
+                        const response = await spaceAPI.getMyBookings();
+                        
+                        const items = response.data.items || [];
+                        bookings.value = items.map(item => ({
+                            id: item.id,
+                            bookingNo: item.booking_no,
+                            title: item.title || '未命名预约',
+                            spaceType: item.type_name || '未知类型',
+                            spaceName: item.resource_name || '未知空间',
+                            bookingDate: item.booking_date,
+                            timeSlot: `${item.start_time}-${item.end_time}`,
+                            attendeesCount: item.attendees_count,
+                            fee: item.total_fee ? item.total_fee.toFixed(2) : '0.00',
+                            status: mapBookingStatus(item.status),
+                            paymentStatus: item.payment_status || 'unpaid',
+                            submittedAt: formatDateTime(item.created_at),
+                            rejectionReason: item.rejected_reason || null,
+                            canModify: item.can_modify,
+                            canCancel: item.can_cancel
+                        }));
+                        
+                        console.log('预约列表加载完成:', bookings.value.length);
+                    } catch (error) {
+                        console.error('加载预约列表失败:', error);
+                        bookings.value = [];
+                    }
+                };
+                
+                const setFilter = (filter) => {
+                    activeFilter.value = filter;
+                };
+                
+                const viewDetails = (booking) => {
+                    alert(`预约详情：\n\n预约编号：${booking.bookingNo}\n空间：${booking.spaceName}\n日期：${booking.bookingDate}\n时段：${booking.timeSlot}\n费用：¥${booking.fee}`);
+                };
+                
+                const editBooking = (booking) => {
+                    if (!booking.canModify) {
+                        alert('此预约不可修改');
+                        return;
+                    }
+                    window.location.href = `/space-frontend/edit-booking.html?id=${booking.id}`;
+                };
+                
+                const cancelBooking = async (booking) => {
+                    if (!booking.canCancel) {
+                        alert('此预约不可取消');
+                        return;
+                    }
+                    
+                    const reason = prompt('请输入取消原因：');
+                    if (!reason || !reason.trim()) {
+                        return;
+                    }
+                    
+                    if (confirm(`确认取消预约 "${booking.title}"？`)) {
+                        try {
+                            await spaceAPI.cancelBooking(booking.id, reason.trim());
+                            
+                            bookings.value = bookings.value.filter(b => b.id !== booking.id);
+                            alert('预约已取消');
+                            console.log('预约取消成功:', booking.bookingNo);
+                        } catch (error) {
+                            console.error('取消预约失败:', error);
+                            alert('取消失败: ' + (error.message || '请稍后重试'));
+                        }
+                    }
+                };
+                
+                const goToPayment = (booking) => {
+                    // 跳转到线下支付确认页面
+                    window.location.href = `/space-frontend/payment.html?booking_id=${booking.id}`;
+                };
+                
+                const goToBooking = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                const goBack = () => {
+                    window.location.href = '/space-frontend/index.html';
+                };
+                
+                const handleLogout = async () => {
+                    if (confirm('确认退出登录？')) {
+                        await logout();
+                    }
+                };
+                
+                onMounted(() => {
+                    loadUserAndBookings();
+                });
+                
+                return {
+                    currentUser,
+                    activeFilter,
+                    bookings,
+                    stats,
+                    filteredBookings,
+                    getStatusText,
+                    setFilter,
+                    viewDetails,
+                    editBooking,
+                    cancelBooking,
+                    goToPayment,
+                    goToBooking,
+                    goBack,
+                    handleLogout
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

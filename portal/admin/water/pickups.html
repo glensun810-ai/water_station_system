@@ -543,6 +543,11 @@
             color: white;
         }
         
+        .btn-action.btn-secondary {
+            background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+            color: white;
+        }
+        
         .btn-placeholder {
             visibility: hidden;
             min-width: 50px;
@@ -752,6 +757,11 @@
             to { transform: rotate(360deg); }
         }
         
+        /* 移动端卡片布局 - 桌面端隐藏 */
+        .mobile-card-list {
+            display: none;
+        }
+        
         /* ==================== 移动端深度优化 ==================== */
         @media (max-width: 768px) {
             .module-container {
@@ -851,7 +861,7 @@
                 display: none;
             }
             
-            /* 移动端卡片布局 */
+/* 移动端卡片布局 */
             .mobile-card-list {
                 display: block;
             }
@@ -1020,6 +1030,11 @@
             
             .btn-action-mobile.btn-danger {
                 background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: white;
+            }
+            
+            .btn-action-mobile.btn-secondary {
+                background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
                 color: white;
             }
             
@@ -1318,16 +1333,22 @@
                                     </td>
                                     <td>
                                         <div class="action-btns-compact">
-                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'">
-                                                确认
+                                            <button class="btn-action btn-warning" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'" title="发送付款提醒">
+                                                提醒付款
                                             </button>
-                                            <button class="btn-action btn-warning" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'">
-                                                提醒
+                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'pending'" title="手动确认线下收款">
+                                                确认收款
                                             </button>
-                                            <button class="btn-action btn-info" @click="showPickupDetail(pickup)">
-                                                详情
+                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'" title="确认用户付款申请">
+                                                确认收款
                                             </button>
-                                            <button class="btn-action btn-danger" @click="deleteSinglePickup(pickup.id)">
+                                            <button class="btn-action btn-secondary" @click="revertToPending(pickup.id)" v-if="pickup.settlement_status === 'applied'" title="退回到待付款状态">
+                                                退回
+                                            </button>
+                                            <button class="btn-action btn-danger" @click="deleteSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'settled'" title="删除历史记录">
+                                                删除
+                                            </button>
+                                            <button class="btn-action btn-danger" @click="deleteSinglePickup(pickup.id)" v-if="pickup.settlement_status !== 'settled'" title="删除此记录">
                                                 删除
                                             </button>
                                         </div>
@@ -1403,6 +1424,20 @@
                                 </div>
                                 <div class="card-actions">
                                     <button 
+                                        class="btn-action-mobile btn-warning" 
+                                        @click="sendRemindForPickup(pickup)" 
+                                        v-if="pickup.settlement_status === 'pending'"
+                                    >
+                                        提醒付款
+                                    </button>
+                                    <button 
+                                        class="btn-action-mobile btn-success" 
+                                        @click="confirmSinglePickup(pickup.id)" 
+                                        v-if="pickup.settlement_status === 'pending'"
+                                    >
+                                        确认收款
+                                    </button>
+                                    <button 
                                         class="btn-action-mobile btn-success" 
                                         @click="confirmSinglePickup(pickup.id)" 
                                         v-if="pickup.settlement_status === 'applied'"
@@ -1410,23 +1445,17 @@
                                         确认收款
                                     </button>
                                     <button 
-                                        class="btn-action-mobile btn-warning" 
-                                        @click="sendRemindForPickup(pickup)" 
-                                        v-if="pickup.settlement_status === 'pending'"
+                                        class="btn-action-mobile btn-secondary" 
+                                        @click="revertToPending(pickup.id)" 
+                                        v-if="pickup.settlement_status === 'applied'"
                                     >
-                                        发送提醒
-                                    </button>
-                                    <button 
-                                        class="btn-action-mobile btn-info" 
-                                        @click="showPickupDetail(pickup)"
-                                    >
-                                        查看详情
+                                        退回待付
                                     </button>
                                     <button 
                                         class="btn-action-mobile btn-danger" 
                                         @click="deleteSinglePickup(pickup.id)"
                                     >
-                                        删除
+                                        删除记录
                                     </button>
                                 </div>
                             </div>
@@ -1907,6 +1936,30 @@
                     }
                 };
                 
+                const revertToPending = async (id) => {
+                    if (!confirm('确定将此记录退回到待付款状态？')) return;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const headers = { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        };
+                        const res = await fetch(`${API_BASE}/office-pickup/${id}/revert`, { 
+                            method: 'POST',
+                            headers
+                        });
+                        if (res.ok) {
+                            alert('已退回到待付款状态');
+                            loadOfficePickups();
+                        } else {
+                            const err = await res.json();
+                            alert(err.detail || '退回失败');
+                        }
+                    } catch (e) {
+                        alert('退回失败: ' + e.message);
+                    }
+                };
+                
                 const sendRemindForPickup = async (pickup) => {
                     if (!confirm(`确定向 ${pickup.pickup_person || '该用户'} 发送付款提醒？`)) return;
                     try {
@@ -2137,6 +2190,7 @@
                     editPickup,
                     savePickup,
                     confirmSinglePickup,
+                    revertToPending,
                     sendRemindForPickup,
                     deleteSinglePickup,
                     batchConfirmPickups,
@@ -2147,8 +2201,7 @@
                     sortField,
                     sortOrder,
                     toggleSort,
-                    getSortIcon,
-                    showPickupDetail
+                    getSortIcon
                 };
             }
         }).mount('#app');

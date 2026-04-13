@@ -65,6 +65,367 @@ def get_meeting_stats_today(
     }
 
 
+@router.get("/stats/usage-rate")
+def get_usage_rate(
+    start_date: Optional[date] = Query(None, description="开始日期"),
+    end_date: Optional[date] = Query(None, description="结束日期"),
+    room_id: Optional[int] = Query(None, description="会议室ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """计算会议室使用率：实际使用小时/可用总小时 * 100"""
+
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    if not start_date:
+        start_date = date.today() - timedelta(days=7)
+    if not end_date:
+        end_date = date.today()
+
+    query = db.query(MeetingBooking).filter(
+        MeetingBooking.booking_date >= start_date,
+        MeetingBooking.booking_date <= end_date,
+        MeetingBooking.status == BookingStatus.CONFIRMED,
+    )
+
+    if room_id:
+        query = query.filter(MeetingBooking.room_id == room_id)
+
+    bookings = query.all()
+
+    total_used_hours = sum([b.duration or 0 for b in bookings])
+
+    days_diff = (end_date - start_date).days + 1
+
+    if room_id:
+        room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
+        available_hours_per_day = 15  # 假设每天可用15小时（07:00-22:00）
+        total_available_hours = days_diff * available_hours_per_day
+    else:
+        active_rooms = (
+            db.query(MeetingRoom).filter(MeetingRoom.is_active == True).count()
+        )
+        available_hours_per_day = 15
+        total_available_hours = days_diff * available_hours_per_day * active_rooms
+
+    usage_rate = (
+        (total_used_hours / total_available_hours * 100)
+        if total_available_hours > 0
+        else 0
+    )
+
+    return {
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "room_id": room_id,
+        "total_used_hours": total_used_hours,
+        "total_available_hours": total_available_hours,
+        "usage_rate": round(usage_rate, 2),
+        "booking_count": len(bookings),
+    }
+
+
+@router.get("/stats/weekly")
+def get_weekly_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取本周统计数据"""
+
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+
+    booking_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_week,
+            MeetingBooking.booking_date <= end_of_week,
+        )
+        .scalar()
+        or 0
+    )
+
+    confirmed_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_week,
+            MeetingBooking.booking_date <= end_of_week,
+            MeetingBooking.status == BookingStatus.CONFIRMED,
+        )
+        .scalar()
+        or 0
+    )
+
+    total_revenue = (
+        db.query(func.sum(MeetingBooking.actual_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_of_week,
+            MeetingBooking.booking_date <= end_of_week,
+            MeetingBooking.status.in_(
+                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+            ),
+        )
+        .scalar()
+        or 0.0
+    )
+
+    return {
+        "week_start": start_of_week.isoformat(),
+        "week_end": end_of_week.isoformat(),
+        "booking_count": booking_count,
+        "confirmed_count": confirmed_count,
+        "total_revenue": float(total_revenue),
+        "avg_daily_bookings": round(booking_count / 7, 1) if booking_count > 0 else 0,
+    }
+
+
+@router.get("/stats/monthly")
+def get_monthly_stats(
+    month: Optional[int] = Query(None, description="月份（1-12）"),
+    year: Optional[int] = Query(None, description="年份"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取月度统计数据"""
+
+    from calendar import monthrange
+    from sqlalchemy import func
+
+    today = date.today()
+    target_year = year or today.year
+    target_month = month or today.month
+
+    start_of_month = date(target_year, target_month, 1)
+    _, last_day = monthrange(target_year, target_month)
+    end_of_month = date(target_year, target_month, last_day)
+
+    booking_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+        )
+        .scalar()
+        or 0
+    )
+
+    confirmed_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+            MeetingBooking.status == BookingStatus.CONFIRMED,
+        )
+        .scalar()
+        or 0
+    )
+
+    completed_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+            MeetingBooking.status == BookingStatus.COMPLETED,
+        )
+        .scalar()
+        or 0
+    )
+
+    cancelled_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+            MeetingBooking.status == BookingStatus.CANCELLED,
+        )
+        .scalar()
+        or 0
+    )
+
+    total_revenue = (
+        db.query(func.sum(MeetingBooking.actual_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+            MeetingBooking.status.in_(
+                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+            ),
+        )
+        .scalar()
+        or 0.0
+    )
+
+    pending_revenue = (
+        db.query(func.sum(MeetingBooking.total_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_of_month,
+            MeetingBooking.booking_date <= end_of_month,
+            MeetingBooking.status == BookingStatus.PENDING,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    days_in_month = last_day
+
+    return {
+        "month": target_month,
+        "year": target_year,
+        "month_start": start_of_month.isoformat(),
+        "month_end": end_of_month.isoformat(),
+        "days_in_month": days_in_month,
+        "booking_count": booking_count,
+        "confirmed_count": confirmed_count,
+        "completed_count": completed_count,
+        "cancelled_count": cancelled_count,
+        "total_revenue": float(total_revenue),
+        "pending_revenue": float(pending_revenue),
+        "avg_daily_bookings": round(booking_count / days_in_month, 1)
+        if booking_count > 0
+        else 0,
+        "completion_rate": round(confirmed_count / booking_count * 100, 1)
+        if booking_count > 0
+        else 0,
+    }
+
+
+@router.get("/stats/revenue")
+def get_revenue_stats(
+    start_date: Optional[date] = Query(None, description="开始日期"),
+    end_date: Optional[date] = Query(None, description="结束日期"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取收入统计数据"""
+
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    if not start_date:
+        start_date = date.today() - timedelta(days=30)
+    if not end_date:
+        end_date = date.today()
+
+    total_revenue = (
+        db.query(func.sum(MeetingBooking.actual_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_date,
+            MeetingBooking.booking_date <= end_date,
+            MeetingBooking.status.in_(
+                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+            ),
+        )
+        .scalar()
+        or 0.0
+    )
+
+    pending_revenue = (
+        db.query(func.sum(MeetingBooking.total_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_date,
+            MeetingBooking.booking_date <= end_date,
+            MeetingBooking.status == BookingStatus.PENDING,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    cancelled_revenue = (
+        db.query(func.sum(MeetingBooking.total_fee))
+        .filter(
+            MeetingBooking.booking_date >= start_date,
+            MeetingBooking.booking_date <= end_date,
+            MeetingBooking.status == BookingStatus.CANCELLED,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    booking_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.booking_date >= start_date,
+            MeetingBooking.booking_date <= end_date,
+            MeetingBooking.status.in_(
+                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+            ),
+        )
+        .scalar()
+        or 0
+    )
+
+    return {
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "total_revenue": float(total_revenue),
+        "pending_revenue": float(pending_revenue),
+        "cancelled_revenue": float(cancelled_revenue),
+        "paid_booking_count": booking_count,
+        "avg_revenue_per_booking": round(float(total_revenue) / booking_count, 2)
+        if booking_count > 0
+        else 0,
+    }
+
+
+@router.get("/stats/trend")
+def get_booking_trend(
+    days: int = Query(7, description="统计天数"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取预约趋势数据（用于ECharts图表）"""
+
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days - 1)
+
+    trend_data = []
+
+    for i in range(days):
+        current_date = start_date + timedelta(days=i)
+
+        booking_count = (
+            db.query(func.count(MeetingBooking.id))
+            .filter(MeetingBooking.booking_date == current_date)
+            .scalar()
+            or 0
+        )
+
+        revenue = (
+            db.query(func.sum(MeetingBooking.actual_fee))
+            .filter(
+                MeetingBooking.booking_date == current_date,
+                MeetingBooking.status.in_(
+                    [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                ),
+            )
+            .scalar()
+            or 0.0
+        )
+
+        trend_data.append(
+            {
+                "date": current_date.isoformat(),
+                "booking_count": booking_count,
+                "revenue": float(revenue),
+            }
+        )
+
+    return {
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "days": days,
+        "trend_data": trend_data,
+    }
+
+
 # ==================== Pydantic Schemas ====================
 
 
@@ -137,6 +498,16 @@ class MeetingBookingBase(BaseModel):
 
 class MeetingBookingCreate(MeetingBookingBase):
     pass
+
+
+class MeetingBookingUpdate(BaseModel):
+    booking_date: Optional[date] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    meeting_title: Optional[str] = None
+    attendees_count: Optional[int] = None
+    user_phone: Optional[str] = None
+    department: Optional[str] = None
 
 
 class MeetingBookingResponse(BaseModel):
@@ -295,6 +666,11 @@ def get_bookings(
     current_user: User = Depends(get_current_user),
 ):
     """获取预约列表"""
+
+    # 如果用户未登录，抛出401错误
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或token已过期")
+
     query = db.query(MeetingBooking)
 
     if room_id:
@@ -436,6 +812,10 @@ def get_booking(
     current_user: User = Depends(get_current_user),
 ):
     """获取预约详情"""
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或token已过期")
+
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="预约不存在")
@@ -461,6 +841,10 @@ def cancel_booking(
     current_user: User = Depends(get_current_user),
 ):
     """取消预约"""
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或token已过期")
+
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="预约不存在")
@@ -481,6 +865,128 @@ def cancel_booking(
 
     db.commit()
     return {"message": "预约已取消"}
+
+
+@router.put("/bookings/{booking_id}", response_model=MeetingBookingResponse)
+def update_booking(
+    booking_id: int,
+    booking_update: MeetingBookingUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """修改预约信息（时间、人数、主题等）"""
+    import random
+    from datetime import datetime as dt
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或token已过期")
+
+    booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    # 权限检查：普通用户只能修改自己的预约
+    if (
+        current_user.role not in ["admin", "super_admin"]
+        and booking.user_id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="无权限修改此预约")
+
+    # 检查预约状态（只能修改待审批或已确认的预约）
+    if booking.status not in [
+        BookingStatus.pending.value,
+        BookingStatus.confirmed.value,
+    ]:
+        raise HTTPException(status_code=400, detail="该预约状态不允许修改")
+
+    # 获取修改数据
+    update_data = booking_update.model_dump(exclude_unset=True)
+
+    # 如果修改了时间，需要重新验证和冲突检测
+    if (
+        "start_time" in update_data
+        or "end_time" in update_data
+        or "booking_date" in update_data
+    ):
+        new_start_time = update_data.get("start_time", booking.start_time)
+        new_end_time = update_data.get("end_time", booking.end_time)
+        new_booking_date = update_data.get("booking_date", booking.booking_date)
+
+        # 检查时间格式并解析
+        try:
+            start_time_obj = dt.strptime(new_start_time, "%H:%M").time()
+            end_time_obj = dt.strptime(new_end_time, "%H:%M").time()
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="时间格式错误，请使用 HH:MM 格式"
+            )
+
+        if start_time_obj >= end_time_obj:
+            raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
+
+        # 检查时长范围（30分钟-8小时）
+        start_dt = dt.combine(new_booking_date, start_time_obj)
+        end_dt = dt.combine(new_booking_date, end_time_obj)
+        duration = (end_dt - start_dt).total_seconds() / 3600
+
+        if duration < 0.5:
+            raise HTTPException(status_code=400, detail="预约时长最少30分钟")
+        if duration > 8:
+            raise HTTPException(status_code=400, detail="预约时长最多8小时")
+
+        # 检查该时间段是否有冲突（排除当前预约）
+        conflicting = (
+            db.query(MeetingBooking)
+            .filter(
+                MeetingBooking.room_id == booking.room_id,
+                MeetingBooking.booking_date == new_booking_date,
+                MeetingBooking.id != booking_id,
+                MeetingBooking.status.in_(
+                    [BookingStatus.confirmed.value, BookingStatus.pending.value]
+                ),
+            )
+            .all()
+        )
+
+        for existing in conflicting:
+            try:
+                existing_start = dt.strptime(existing.start_time, "%H:%M").time()
+                existing_end = dt.strptime(existing.end_time, "%H:%M").time()
+            except ValueError:
+                continue
+
+            if not (end_time_obj <= existing_start or start_time_obj >= existing_end):
+                raise HTTPException(status_code=400, detail="该时间段已被预约")
+
+        # 更新时长和费用
+        room = db.query(MeetingRoom).filter(MeetingRoom.id == booking.room_id).first()
+        price = room.price_per_hour if room else 0
+
+        update_data["duration"] = duration
+        update_data["total_fee"] = duration * price
+        update_data["actual_fee"] = duration * price
+
+    # 验证参会人数
+    if "attendees_count" in update_data:
+        if update_data["attendees_count"] <= 0:
+            raise HTTPException(status_code=400, detail="参会人数必须大于0")
+
+        room = db.query(MeetingRoom).filter(MeetingRoom.id == booking.room_id).first()
+        if room and update_data["attendees_count"] > room.capacity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"参会人数超出会议室容量（最大{room.capacity}人）",
+            )
+
+    # 应用修改
+    for key, value in update_data.items():
+        if hasattr(booking, key):
+            setattr(booking, key, value)
+
+    db.commit()
+    db.refresh(booking)
+
+    return booking
 
 
 @router.put("/bookings/{booking_id}/approve")
