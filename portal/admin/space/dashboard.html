@@ -3,144 +3,499 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>空间服务管理 - 统一管理后台</title>
+    <title>空间服务管理Dashboard - 统一管理后台</title>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
-    <script src="/portal/assets/js/auth.js"></script></head>
+    <script src="/portal/assets/js/auth.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .dashboard-container {
+            min-height: 100vh;
+            background: var(--bg-secondary);
+        }
+        
+        .header-nav {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .breadcrumb {
+            font-size: var(--font-size-xs);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .breadcrumb a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+        }
+        
+        .breadcrumb span {
+            color: rgba(255,255,255,0.5);
+            margin: 0 var(--spacing-xs);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .header-title h1 {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .header-links {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+        
+        .header-link {
+            color: white;
+            text-decoration: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            background: rgba(255,255,255,0.2);
+            transition: all var(--transition-fast);
+        }
+        
+        .header-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        
+        .stat-card.pending::before { background: var(--warning); }
+        .stat-card.approved::before { background: var(--success); }
+        .stat-card.today::before { background: var(--primary); }
+        .stat-card.revenue::before { background: var(--info); }
+        
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.success { color: var(--success); }
+        .stat-value.primary { color: var(--primary); }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .quick-links-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .quick-link-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            text-decoration: none;
+            transition: all var(--transition-base);
+            text-align: center;
+            position: relative;
+        }
+        
+        .quick-link-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .quick-link-card.pending {
+            border-left: 4px solid var(--warning);
+        }
+        
+        .quick-link-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .quick-link-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .quick-link-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .quick-link-badge {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            background: var(--danger);
+            color: white;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .types-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .type-card {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .type-icon {
+            font-size: 32px;
+        }
+        
+        .type-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .type-desc {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .related-links-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-lg);
+        }
+        
+        .related-link-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .related-link-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
+        .related-icon {
+            font-size: 32px;
+        }
+        
+        .related-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .quick-links-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .types-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .related-links-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-links {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
 <body>
-    <div id="app" v-cloak>
-        <nav style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: var(--spacing-lg); position: sticky; top: 0; z-index: 100;">
-            <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
-                    <span style="font-size: 28px;">🏢</span>
+    <div id="app" v-cloak class="dashboard-container">
+        <!-- 顶部导航 -->
+        <nav class="header-nav">
+            <!-- 面包屑导航 -->
+            <div class="breadcrumb" style="max-width: 1400px; margin: 0 auto;">
+                <a href="/portal/index.html">Portal首页</a>
+                <span>></span>
+                <a href="/portal/admin/index.html">系统管理后台</a>
+                <span>></span>
+                <span style="color: white;">空间服务Dashboard</span>
+            </div>
+            
+            <div class="header-content">
+                <div class="header-title">
+                    <span style="font-size: 32px;">🏢</span>
                     <div>
-                        <h1 style="font-size: var(--font-size-xl); font-weight: 700;">空间服务管理</h1>
+                        <h1>空间服务管理</h1>
                         <p style="font-size: var(--font-size-sm); opacity: 0.9;">统一管理后台</p>
                     </div>
                 </div>
-                <div style="display: flex; gap: var(--spacing-lg);">
-                    <a href="/portal/index.html" style="color: white; text-decoration: none; font-size: var(--font-size-sm);">
-                        ← 用户端首页
-                    </a>
-                    <a href="/portal/admin/index.html" style="color: white; text-decoration: none; font-size: var(--font-size-sm);">
-                        系统管理后台
-                    </a>
+                
+                <div class="header-links">
+                    <a href="/portal/index.html" class="header-link">← 用户端首页</a>
+                    <a href="/portal/admin/index.html" class="header-link">系统管理后台</a>
                 </div>
             </div>
         </nav>
         
-        <main style="max-width: 1400px; margin: var(--spacing-xl) auto; padding: var(--spacing-lg);">
-            <section style="margin-bottom: var(--spacing-2xl);">
-                <h2 style="font-size: var(--font-size-xl); font-weight: 700; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
-                    📊 快捷入口
-                </h2>
-                
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-lg);">
-                    <a href="/portal/admin/space/approvals.html" class="card" style="text-align: center; padding: var(--spacing-xl); text-decoration: none; transition: all 0.2s;">
-                        <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📋</div>
-                        <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">审批中心</div>
-                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">审批预约申请</p>
-                    </a>
-                    
-                    <a href="/portal/admin/space/bookings.html" class="card" style="text-align: center; padding: var(--spacing-xl); text-decoration: none; transition: all 0.2s;">
-                        <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📅</div>
-                        <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">预约管理</div>
-                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">查看所有预约</p>
-                    </a>
-                    
-                    <a href="/portal/admin/space/resources.html" class="card" style="text-align: center; padding: var(--spacing-xl); text-decoration: none; transition: all 0.2s;">
-                        <div style="font-size: 48px; margin-bottom: var(--spacing-md);">🏢</div>
-                        <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">资源配置</div>
-                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">管理空间资源</p>
-                    </a>
-                    
-                    <a href="/portal/admin/space/statistics.html" class="card" style="text-align: center; padding: var(--spacing-xl); text-decoration: none; transition: all 0.2s;">
-                        <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📈</div>
-                        <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">统计分析</div>
-                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">使用率与收入</p>
-                    </a>
-                </div>
-            </section>
-            
-            <section style="margin-bottom: var(--spacing-2xl);">
-                <h2 style="font-size: var(--font-size-xl); font-weight: 700; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
-                    🎯 空间类型
-                </h2>
-                
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--spacing-lg);">
-                    <div class="card" style="text-align: center; padding: var(--spacing-lg);">
-                        <div style="font-size: 32px;">🏢</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">会议室</div>
-                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">按小时</div>
-                    </div>
-                    <div class="card" style="text-align: center; padding: var(--spacing-lg);">
-                        <div style="font-size: 32px;">🎭</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">会场</div>
-                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">按半天/全天</div>
-                    </div>
-                    <div class="card" style="text-align: center; padding: var(--spacing-lg);">
-                        <div style="font-size: 32px;">📺</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">大屏</div>
-                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">按时段</div>
-                    </div>
-                    <div class="card" style="text-align: center; padding: var(--spacing-lg);">
-                        <div style="font-size: 32px;">🏪</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">展位</div>
-                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">按天/周</div>
-                    </div>
-                    <div class="card" style="text-align: center; padding: var(--spacing-lg);">
-                        <div style="font-size: 32px;">🍽️</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">VIP餐厅</div>
-                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">按餐段</div>
-                    </div>
-                </div>
-            </section>
-            
+        <!-- 主内容 -->
+        <main class="main-content">
+            <!-- 今日统计 -->
             <section>
-                <h2 style="font-size: var(--font-size-xl); font-weight: 700; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
-                    🔗 相关管理功能
+                <h2 class="section-title">
+                    <span>📊</span>
+                    <span>今日概况</span>
                 </h2>
                 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg);">
-                    <a href="/portal/admin/offices.html" class="card" style="text-align: center; padding: var(--spacing-lg); text-decoration: none;">
-                        <div style="font-size: 32px;">🏢</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">办公室管理</div>
+                <div class="stats-grid">
+                    <div class="stat-card pending">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-value warning">{{ stats.pendingApprovals || 0 }}</div>
+                        <div class="stat-label">待审批预约</div>
+                    </div>
+                    
+                    <div class="stat-card approved">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value success">{{ stats.todayApproved || 0 }}</div>
+                        <div class="stat-label">今日已通过</div>
+                    </div>
+                    
+                    <div class="stat-card today">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-value primary">{{ stats.todayBookings || 0 }}</div>
+                        <div class="stat-label">今日预约总数</div>
+                    </div>
+                    
+                    <div class="stat-card revenue">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value">¥{{ (stats.todayRevenue || 0).toFixed(2) }}</div>
+                        <div class="stat-label">今日收入</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 快捷入口 -->
+            <section>
+                <h2 class="section-title">
+                    <span>🎯</span>
+                    <span>快捷入口</span>
+                </h2>
+                
+                <div class="quick-links-grid">
+                    <a href="/portal/admin/space/approvals.html" class="quick-link-card pending">
+                        <div class="quick-link-badge" v-if="stats.pendingApprovals > 0">{{ stats.pendingApprovals }} 待审批</div>
+                        <div class="quick-link-icon">📋</div>
+                        <div class="quick-link-title">审批中心</div>
+                        <div class="quick-link-desc">审批预约申请，通过/拒绝</div>
                     </a>
-                    <a href="/portal/admin/users.html" class="card" style="text-align: center; padding: var(--spacing-lg); text-decoration: none;">
-                        <div style="font-size: 32px;">👥</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">用户管理</div>
+                    
+                    <a href="/portal/admin/space/bookings.html" class="quick-link-card">
+                        <div class="quick-link-icon">📅</div>
+                        <div class="quick-link-title">预约管理</div>
+                        <div class="quick-link-desc">查看所有预约，管理状态</div>
                     </a>
-                    <a href="/portal/admin/settlements.html" class="card" style="text-align: center; padding: var(--spacing-lg); text-decoration: none;">
-                        <div style="font-size: 32px;">💰</div>
-                        <div style="font-weight: 600; color: var(--text-primary);">结算管理</div>
+                    
+                    <a href="/portal/admin/space/resources.html" class="quick-link-card">
+                        <div class="quick-link-icon">🏢</div>
+                        <div class="quick-link-title">资源配置</div>
+                        <div class="quick-link-desc">管理空间资源，查看使用率</div>
+                    </a>
+                    
+                    <a href="/portal/admin/space/statistics.html" class="quick-link-card">
+                        <div class="quick-link-icon">📈</div>
+                        <div class="quick-link-title">统计分析</div>
+                        <div class="quick-link-desc">使用率统计，收入报表</div>
+                    </a>
+                </div>
+            </section>
+            
+            <!-- 空间类型 -->
+            <section>
+                <h2 class="section-title">
+                    <span>🏠</span>
+                    <span>空间类型概览</span>
+                </h2>
+                
+                <div class="types-grid">
+                    <div class="type-card">
+                        <div class="type-icon">🏢</div>
+                        <div class="type-name">会议室</div>
+                        <div class="type-desc">按小时计费</div>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">🎭</div>
+                        <div class="type-name">会场</div>
+                        <div class="type-desc">按半天/全天</div>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">📺</div>
+                        <div class="type-name">大屏</div>
+                        <div class="type-desc">按时段计费</div>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">🏪</div>
+                        <div class="type-name">展位</div>
+                        <div class="type-desc">按天/周计费</div>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">🍽️</div>
+                        <div class="type-name">VIP餐厅</div>
+                        <div class="type-desc">按餐段计费</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 相关管理功能 -->
+            <section>
+                <h2 class="section-title">
+                    <span>🔗</span>
+                    <span>相关管理功能</span>
+                </h2>
+                
+                <div class="related-links-grid">
+                    <a href="/portal/admin/offices.html" class="related-link-card">
+                        <div class="related-icon">🏢</div>
+                        <div class="related-title">办公室管理</div>
+                    </a>
+                    <a href="/portal/admin/users.html" class="related-link-card">
+                        <div class="related-icon">👥</div>
+                        <div class="related-title">用户管理</div>
+                    </a>
+                    <a href="/portal/admin/settlements.html" class="related-link-card">
+                        <div class="related-icon">💰</div>
+                        <div class="related-title">结算管理</div>
                     </a>
                 </div>
             </section>
         </main>
     </div>
     
-    <style>
-        [v-cloak] { display: none !important; }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-    </style>
-    
     <script>
-        const { createApp, onMounted } = Vue
+        const { createApp, ref, onMounted } = Vue;
         
         createApp({
             setup() {
+                const stats = ref({
+                    pendingApprovals: 0,
+                    todayApproved: 0,
+                    todayBookings: 0,
+                    todayRevenue: 0
+                });
+                
+                const loadDashboardData = async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
+                    
+                    try {
+                        const response = await fetch('/api/v2/space/statistics/dashboard', {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            stats.value = {
+                                pendingApprovals: data.data.today.pending_approvals || 0,
+                                todayApproved: data.data.today.completed || 0,
+                                todayBookings: data.data.today.bookings || 0,
+                                todayRevenue: data.data.today.revenue || 0
+                            };
+                        }
+                    } catch (error) {
+                        console.error('加载Dashboard数据失败:', error);
+                    }
+                };
+                
                 onMounted(async () => {
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
                     if (!user) return;
-                    // 加载仪表盘数据
+                    
+                    loadDashboardData();
                 });
                 
-                return {};
+                return {
+                    stats
+                };
             }
-        }).mount('#app')
+        }).mount('#app');
     </script>
 </body>
 </html>
