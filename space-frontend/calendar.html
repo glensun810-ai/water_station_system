@@ -559,54 +559,32 @@
                 };
                 
                 const loadBookingData = async () => {
-                    bookings.value = [
-                        {
-                            id: 1,
-                            bookingNo: 'BK20260413001',
-                            title: '产品启动会',
-                            spaceName: 'VIP会议室',
-                            typeCode: 'meeting_room',
-                            bookingDate: '2026-04-15',
-                            timeSlot: '09:00-11:00',
-                            status: '待审批'
-                        },
-                        {
-                            id: 2,
-                            bookingNo: 'BK20260413002',
-                            title: '季度总结大会',
-                            spaceName: '多功能厅',
-                            typeCode: 'auditorium',
-                            bookingDate: '2026-04-14',
-                            timeSlot: '14:00-17:00',
-                            status: '已通过'
-                        },
-                        {
-                            id: 3,
-                            bookingNo: 'BK20260413003',
-                            title: '技术分享会',
-                            spaceName: '2号会议室',
-                            typeCode: 'meeting_room',
-                            bookingDate: '2026-04-20',
-                            timeSlot: '15:00-17:00',
-                            status: '已完成'
-                        },
-                        {
-                            id: 4,
-                            bookingNo: 'BK20260413004',
-                            title: '客户洽谈',
-                            spaceName: 'VIP包厢A',
-                            typeCode: 'vip_dining',
-                            bookingDate: '2026-04-15',
-                            timeSlot: '12:00-14:00',
-                            status: '待审批'
-                        },
-                        {
-                            id: 5,
-                            bookingNo: 'BK20260413005',
-                            title: '产品发布会',
-                            spaceName: '多功能厅',
-                            typeCode: 'auditorium',
-                            bookingDate: '2026-04-25',
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
+                    
+                    try {
+                        const response = await fetch(`/api/v2/space/bookings/my`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200 && data.data.items) {
+                            bookings.value = data.data.items.map(b => ({
+                                id: b.id,
+                                bookingNo: b.booking_no,
+                                title: b.title,
+                                spaceName: b.resource_name,
+                                typeCode: b.type_code,
+                                bookingDate: b.booking_date,
+                                timeSlot: `${b.start_time}-${b.end_time}`,
+                                status: getStatusText(b.status)
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('加载预约数据失败:', error);
+                    }
+                };
                             timeSlot: '09:00-12:00',
                             status: '待审批'
                         }

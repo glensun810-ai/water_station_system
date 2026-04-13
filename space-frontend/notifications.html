@@ -378,68 +378,72 @@
                 };
                 
                 const loadNotificationData = async () => {
-                    // 实际应该调用API获取通知
-                    // /api/v2/space/notifications?user_id={currentUser.value.id}
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
                     
-                    notifications.value = [
-                        {
-                            id: 1,
-                            type: 'approval',
-                            icon: '✅',
-                            title: '预约审批通过',
-                            text: '您的会议室预约（BK20260413002）已通过审批，请在预约前完成支付确认。',
-                            time: '10分钟前',
-                            read: false,
-                            actionType: 'goToPayment',
-                            bookingId: 2
-                        },
-                        {
-                            id: 2,
-                            type: 'booking',
-                            icon: '📋',
-                            title: '预约创建成功',
-                            text: '您的预约（BK20260413001）已提交成功，正在等待管理员审批。',
-                            time: '30分钟前',
-                            read: false,
-                            actionType: 'viewBooking',
-                            bookingId: 1
-                        },
-                        {
-                            id: 3,
-                            type: 'reminder',
-                            icon: '⏰',
-                            title: '预约即将开始',
-                            text: '您的预约（季度总结大会）将于明天14:00开始，请准时到达多功能厅（1楼）。',
-                            time: '1小时前',
-                            read: true,
-                            actionType: 'viewBooking',
-                            bookingId: 2
-                        },
-                        {
-                            id: 4,
-                            type: 'approval',
-                            icon: '❌',
-                            title: '预约审批拒绝',
-                            text: '您的VIP餐厅预约（BK20260410004）已被拒绝。原因：VIP餐厅该时段已有其他预约。',
-                            time: '1天前',
-                            read: true,
-                            actionType: 'viewBooking',
-                            bookingId: 4
-                        },
-                        {
-                            id: 5,
-                            type: 'reminder',
-                            icon: '💰',
-                            title: '支付提醒',
-                            text: '您有1笔预约待支付，请在预约前24小时内完成支付确认。',
-                            time: '2天前',
-                            read: true,
-                            actionType: 'goToPayment',
-                            bookingId: 2
+                    try {
+                        const response = await fetch(`/api/v2/space/bookings/my`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200 && data.data.items) {
+                            notifications.value = data.data.items.map(b => {
+                                let type = 'booking';
+                                let icon = '📋';
+                                let title = '';
+                                let text = '';
+                                let actionType = 'viewBooking';
+                                
+                                if (b.status === 'approved') {
+                                    type = 'approval';
+                                    icon = '✅';
+                                    title = '预约审批通过';
+                                    text = `您的预约（${b.booking_no}）已通过审批`;
+                                    if (b.payment_status === 'unpaid') {
+                                        actionType = 'goToPayment';
+                                        text += '，请完成支付确认。';
+                                    }
+                                } else if (b.status === 'rejected') {
+                                    type = 'approval';
+                                    icon = '❌';
+                                    title = '预约审批拒绝';
+                                    text = `您的预约（${b.booking_no}）已被拒绝`;
+                                } else if (b.status === 'pending_approval') {
+                                    type = 'booking';
+                                    icon = '📋';
+                                    title = '预约创建成功';
+                                    text = `您的预约（${b.booking_no}）已提交，等待审批`;
+                                } else if (b.status === 'completed') {
+                                    type = 'reminder';
+                                    icon = '✅';
+                                    title = '预约已完成';
+                                    text = `您的预约（${b.title}）已完成`;
+                                } else {
+                                    title = '预约状态更新';
+                                    text = `您的预约（${b.booking_no}）状态已更新`;
+                                }
+                                
+                                return {
+                                    id: b.id,
+                                    type,
+                                    icon,
+                                    title,
+                                    text,
+                                    time: b.created_at ? new Date(b.created_at).toLocaleDateString() : '',
+                                    read: b.status !== 'pending_approval',
+                                    actionType,
+                                    bookingId: b.id
+                                };
+                            });
+                            
+                            unreadCount.value = notifications.value.filter(n => !n.read).length;
                         }
-                    ];
-                    
-                    console.log('通知加载完成:', notifications.value.length);
+                    } catch (error) {
+                        console.error('加载通知失败:', error);
+                        notifications.value = [];
+                    }
                 };
                 
                 const setFilter = (filter) => {

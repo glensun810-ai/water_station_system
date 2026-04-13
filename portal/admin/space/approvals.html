@@ -984,56 +984,51 @@
                         return
                     }
                     
-                    approvals.value = [
-                        {
-                            id: 1,
-                            approvalNo: 'AP20260413001',
-                            title: '项目启动会',
-                            userName: '张三',
-                            spaceName: 'VIP会议室',
-                            bookingDate: '2026-04-14',
-                            timeSlot: '09:00-11:00',
-                            fee: '¥160',
-                            attendeesCount: 10,
-                            status: 'pending',
-                            isUrgent: true,
-                            submittedAt: '2026-04-13 08:30',
-                            specialRequests: '需要投影设备和茶水服务',
-                            typeCode: 'meeting_room'
-                        },
-                        {
-                            id: 2,
-                            approvalNo: 'AP20260413002',
-                            title: '季度总结大会',
-                            userName: '李四',
-                            spaceName: '多功能厅',
-                            bookingDate: '2026-04-15',
-                            timeSlot: '14:00-17:00',
-                            fee: '¥1500',
-                            attendeesCount: 50,
-                            status: 'pending',
-                            isUrgent: false,
-                            submittedAt: '2026-04-13 10:15',
-                            specialRequests: '',
-                            typeCode: 'auditorium'
-                        },
-                        {
-                            id: 3,
-                            approvalNo: 'AP20260413003',
-                            title: '产品展示活动',
-                            userName: '王五',
-                            spaceName: '大堂展位A',
-                            bookingDate: '2026-04-16',
-                            timeSlot: '全天',
-                            fee: '¥300',
-                            attendeesCount: 0,
-                            status: 'pending',
-                            isUrgent: false,
-                            submittedAt: '2026-04-13 11:20',
-                            specialRequests: '需要3x3米展位空间',
-                            typeCode: 'lobby_booth'
+                    try {
+                        const params = new URLSearchParams()
+                        if (filterStatus.value) params.append('status', filterStatus.value)
+                        if (filterType.value) params.append('approval_type', filterType.value)
+                        params.append('limit', '50')
+                        
+                        const response = await fetch(`/api/v2/space/approvals?${params}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        })
+                        
+                        const data = await response.json()
+                        
+                        if (data.code === 200 && data.data.items) {
+                            approvals.value = data.data.items.map(a => {
+                                const booking = a.booking_info || {}
+                                return {
+                                    id: a.id,
+                                    approvalNo: a.approval_no,
+                                    title: booking.title || '未知',
+                                    userName: booking.user_name || '未知',
+                                    spaceName: booking.resource_name || '未知',
+                                    bookingDate: booking.booking_date || '',
+                                    timeSlot: '',
+                                    fee: '',
+                                    attendeesCount: 0,
+                                    status: a.status,
+                                    isUrgent: false,
+                                    submittedAt: a.submitted_at || '',
+                                    specialRequests: a.approval_content || '',
+                                    typeCode: a.approval_type || ''
+                                }
+                            })
+                            
+                            pendingCount.value = approvals.value.filter(a => a.status === 'pending').length
+                            processedCount.value = approvals.value.filter(a => a.status !== 'pending').length
+                        } else {
+                            console.error('加载审批列表失败:', data)
+                            approvals.value = []
                         }
-                    ]
+                    } catch (error) {
+                        console.error('加载审批列表失败:', error)
+                        approvals.value = []
+                    }
                 }
                 
                 onMounted(async () => {

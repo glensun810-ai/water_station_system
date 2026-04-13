@@ -212,7 +212,7 @@ async def create_booking(
     )
 
     booking = SpaceBooking(
-        **booking_data.model_dump(),
+        **booking_data.model_dump(exclude={"type_code", "end_date", "booking_days"}),
         booking_no=booking_no,
         duration=duration,
         duration_unit=space_type.min_duration_unit if space_type else "hour",
@@ -226,6 +226,8 @@ async def create_booking(
         requires_deposit=space_type.requires_deposit if space_type else False,
         deposit_amount=total_fee * (space_type.deposit_percentage if space_type else 0),
         status=initial_status,
+        payment_status="unpaid",
+        settlement_status="unsettled",
         confirmed_at=datetime.now() if initial_status == "confirmed" else None,
         confirmed_by="system" if initial_status == "confirmed" else None,
     )
@@ -364,6 +366,66 @@ async def cancel_booking(
     db.commit()
 
     return ApiResponse(message="预约已取消", data=_format_booking(booking, db))
+
+
+@router.put("/{booking_id}/approve", response_model=ApiResponse)
+async def approve_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """审批预约（管理员）"""
+
+    booking = (
+        db.query(SpaceBooking)
+        .filter(SpaceBooking.id == booking_id, SpaceBooking.is_deleted == 0)
+        .first()
+    )
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "pending_approval":
+        raise HTTPException(status_code=400, detail="只能审批待审批的预约")
+
+    booking.status = "approved"
+    booking.approved_by = current_user.name
+    booking.approved_at = datetime.now()
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(message="预约审批通过", data=_format_booking(booking, db))
+
+
+@router.put("/{booking_id}/complete", response_model=ApiResponse)
+async def complete_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """完成预约（管理员）"""
+
+    booking = (
+        db.query(SpaceBooking)
+        .filter(SpaceBooking.id == booking_id, SpaceBooking.is_deleted == 0)
+        .first()
+    )
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status not in ["approved", "confirmed", "in_use"]:
+        raise HTTPException(status_code=400, detail="只能完成已审批/确认/使用中的预约")
+
+    booking.status = "completed"
+    booking.completed_at = datetime.now()
+    booking.completed_by = current_user.name
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(message="预约已完成", data=_format_booking(booking, db))
 
 
 @router.delete("/{booking_id}", response_model=ApiResponse)

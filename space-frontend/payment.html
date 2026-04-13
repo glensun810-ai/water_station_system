@@ -539,38 +539,63 @@
                 };
                 
                 const loadBookingDetails = async () => {
-                    // 实际应该调用API获取预约详情
-                    // /api/v2/space/bookings/{bookingId.value}
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
                     
-                    bookingInfo.value = {
-                        bookingNo: 'BK20260413001',
-                        spaceType: '会议室',
-                        spaceName: 'VIP会议室（5楼501）',
-                        bookingDate: '2026-04-15',
-                        timeSlot: '09:00-11:00',
-                        attendeesCount: 10
-                    };
-                    
-                    feeDetail.value = {
-                        baseFee: '200.00',
-                        memberDiscount: '40.00',
-                        freeHoursDiscount: '0.00',
-                        totalFee: '160.00'
-                    };
-                    
-                    console.log('预约信息加载完成:', bookingInfo.value);
+                    try {
+                        const response = await fetch(`/api/v2/space/bookings/${bookingId.value}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200 && data.data) {
+                            const b = data.data;
+                            bookingInfo.value = {
+                                bookingNo: b.booking_no,
+                                spaceType: b.type_code || '会议室',
+                                spaceName: b.resource_name,
+                                bookingDate: b.booking_date,
+                                timeSlot: `${b.start_time}-${b.end_time}`,
+                                attendeesCount: b.attendees_count || 0
+                            };
+                            
+                            feeDetail.value = {
+                                baseFee: b.base_fee.toFixed(2),
+                                memberDiscount: '0.00',
+                                freeHoursDiscount: '0.00',
+                                totalFee: b.actual_fee.toFixed(2)
+                            };
+                        }
+                    } catch (error) {
+                        console.error('加载预约详情失败:', error);
+                    }
                 };
                 
                 const confirmPayment = async () => {
                     if (confirm('确认您已完成线下支付？\n\n点击确认后，系统将通知管理员审批您的预约。')) {
                         try {
-                            // 实际应该调用API通知管理员
-                            // /api/v2/space/payments/notify-admin
+                            const token = localStorage.getItem('token');
                             
-                            paymentCompleted.value = true;
-                            console.log('支付确认成功，已通知管理员');
+                            const response = await fetch(`/api/v2/space/bookings/${bookingId.value}/confirm-payment`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    payment_method: 'offline',
+                                    payment_notes: '用户确认线下支付完成'
+                                })
+                            });
                             
-                            // 显示成功消息
+                            const data = await response.json();
+                            
+                            if (data.code === 200) {
+                                paymentCompleted.value = true;
+                            } else {
+                                alert(data.message || '操作失败，请稍后重试');
+                            }
                         } catch (error) {
                             console.error('支付确认失败:', error);
                             alert('操作失败，请稍后重试或直接联系管理员');
