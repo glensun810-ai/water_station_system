@@ -32,15 +32,47 @@ class SpaceAPI {
 
         try {
             const response = await fetch(url, config);
+            
+            // 检查响应的Content-Type
+            const contentType = response.headers.get('content-type');
+            
+            // 如果响应不是JSON格式，尝试读取文本并抛出友好错误
+            if (!contentType || !contentType.includes('application/json')) {
+                const textResponse = await response.text();
+                console.error('非JSON响应:', textResponse.substring(0, 200));
+                
+                // 射取有用的错误信息
+                let errorMsg = '服务器返回非预期格式';
+                if (textResponse.includes('Internal Server Error')) {
+                    errorMsg = '服务器内部错误，请联系管理员';
+                } else if (textResponse.includes('Not Found')) {
+                    errorMsg = '请求的资源不存在';
+                } else if (response.status === 401) {
+                    errorMsg = '登录已过期，请重新登录';
+                } else if (response.status === 403) {
+                    errorMsg = '无权限执行此操作';
+                }
+                
+                throw new Error(errorMsg);
+            }
+            
+            // 解析JSON响应
             const data = await response.json();
 
+            // 处理错误状态
             if (!response.ok) {
-                throw new Error(data.detail || data.message || '请求失败');
+                // 优先使用detail字段（FastAPI标准），其次使用message
+                const errorMsg = data.detail || data.message || data.error?.message || '请求失败';
+                throw new Error(errorMsg);
             }
 
             return data;
         } catch (error) {
-            console.error('API请求错误:', error);
+            console.error('API请求错误:', {
+                url: url,
+                error: error.message,
+                type: error.constructor.name
+            });
             throw error;
         }
     }

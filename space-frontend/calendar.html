@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
     <title>预约日历 - AI产业集群空间服务</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -14,68 +15,224 @@
         
         body {
             background: var(--bg-secondary);
+            font-family: var(--font-family);
         }
         
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: var(--spacing-lg);
             position: sticky;
             top: 0;
             z-index: 100;
         }
         
+        .header-top {
+            background: rgba(255,255,255,0.1);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: var(--font-size-xs);
+        }
+        
+        .header-top a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+        }
+        
         .header-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: var(--spacing-lg);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            color: white;
-            cursor: pointer;
-        }
-        
-        .page-title {
+        .header-title {
             font-size: var(--font-size-xl);
             font-weight: 700;
         }
         
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            color: white;
+            font-size: var(--font-size-sm);
+        }
+        
+        .header-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
         .main-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: var(--spacing-xl) var(--spacing-lg);
         }
         
-        .calendar-card {
-            background: white;
+        .calendar-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: var(--spacing-xl);
+        }
+        
+        .sidebar {
+            background: var(--bg-card);
             border-radius: var(--radius-xl);
             padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .sidebar-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .sidebar-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .view-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .view-tab {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+        
+        .view-tab:hover {
+            border-color: var(--primary);
+        }
+        
+        .view-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .type-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-sm);
+        }
+        
+        .type-filter-btn {
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .type-filter-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .type-filter-btn.active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+        
+        .type-icon {
+            font-size: 24px;
+        }
+        
+        .type-name {
+            font-weight: 500;
+        }
+        
+        .type-count {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .resource-select {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: white;
+        }
+        
+        .legend-section {
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-sm);
+        }
+        
+        .legend-dot.pending { background: var(--warning); }
+        .legend-dot.approved { background: var(--success); }
+        .legend-dot.confirmed { background: var(--primary); }
+        .legend-dot.in-use { background: var(--info); }
+        .legend-dot.completed { background: var(--text-tertiary); }
+        
+        .calendar-main {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
             box-shadow: var(--shadow-lg);
+            overflow: hidden;
         }
         
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-lg);
-            padding-bottom: var(--spacing-md);
-            border-bottom: 2px solid var(--border);
+            padding: var(--spacing-lg);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
         }
         
         .calendar-nav {
             display: flex;
+            align-items: center;
             gap: var(--spacing-md);
         }
         
         .nav-btn {
-            background: var(--bg-secondary);
-            border: none;
+            background: white;
+            border: 1px solid var(--border);
             width: 40px;
             height: 40px;
             border-radius: var(--radius-md);
@@ -84,11 +241,13 @@
             align-items: center;
             justify-content: center;
             transition: all var(--transition-fast);
+            font-size: 18px;
         }
         
         .nav-btn:hover {
             background: var(--primary);
             color: white;
+            border-color: var(--primary);
         }
         
         .month-title {
@@ -104,6 +263,33 @@
             border-radius: var(--radius-md);
             cursor: pointer;
             font-weight: 500;
+            border: none;
+        }
+        
+        .calendar-body {
+            padding: var(--spacing-md);
+        }
+        
+        .weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .weekday-cell {
+            text-align: center;
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            padding: var(--spacing-sm);
+        }
+        
+        .weekday-cell.weekend {
+            color: var(--danger);
         }
         
         .calendar-grid {
@@ -112,32 +298,21 @@
             gap: var(--spacing-xs);
         }
         
-        .weekday-header {
-            text-align: center;
-            padding: var(--spacing-md);
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-size: var(--font-size-sm);
-        }
-        
-        .weekday-header:first-child,
-        .weekday-header:last-child {
-            color: var(--danger);
-        }
-        
         .calendar-day {
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
-            padding: var(--spacing-sm);
-            min-height: 80px;
+            min-height: 100px;
             cursor: pointer;
             transition: all var(--transition-fast);
             background: white;
+            position: relative;
+            overflow: hidden;
         }
         
         .calendar-day:hover {
             border-color: var(--primary);
-            transform: translateY(-1px);
+            transform: scale(1.02);
+            z-index: 10;
         }
         
         .calendar-day.today {
@@ -145,318 +320,738 @@
             border-color: var(--primary);
         }
         
-        .calendar-day.selected {
+        .calendar-day.today .day-number {
             background: var(--primary);
             color: white;
         }
         
-        .calendar-day.other-month {
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
+        .calendar-day.selected {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
         }
         
-        .calendar-day.has-booking {
-            background: linear-gradient(135deg, var(--success-light) 0%, var(--success) 100%);
-            border-color: var(--success);
+        .calendar-day.other-month {
+            background: var(--bg-secondary);
+            color: var(--text-tertiary);
+        }
+        
+        .calendar-day.past {
+            opacity: 0.6;
+        }
+        
+        .day-header {
+            padding: var(--spacing-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .day-number {
             font-size: var(--font-size-base);
             font-weight: 600;
-            margin-bottom: var(--spacing-xs);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
         }
         
-        .day-bookings {
+        .day-badge {
+            font-size: var(--font-size-xs);
+            background: var(--danger);
+            color: white;
+            padding: 2px 6px;
+            border-radius: var(--radius-full);
+        }
+        
+        .day-booking-list {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .day-booking-item {
+            font-size: var(--font-size-xs);
+            padding: 2px 4px;
+            margin-bottom: 2px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .day-booking-item.pending { background: var(--warning-light); color: var(--warning-dark); }
+        .day-booking-item.approved { background: var(--success-light); color: var(--success-dark); }
+        .day-booking-item.confirmed { background: var(--primary-light); color: var(--primary-dark); }
+        .day-booking-item.in-use { background: var(--info-light); color: var(--info-dark); }
+        .day-booking-item.completed { background: var(--bg-secondary); color: var(--text-tertiary); }
+        
+        .day-summary {
+            position: absolute;
+            bottom: var(--spacing-sm);
+            left: var(--spacing-sm);
+            right: var(--spacing-sm);
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .timeline-view {
+            padding: var(--spacing-lg);
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .timeline-date {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: white;
+        }
+        
+        .time-column {
+            border-right: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        
+        .time-slot {
+            height: 60px;
+            padding: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-light);
+            text-align: center;
+        }
+        
+        .booking-column {
+            position: relative;
+        }
+        
+        .booking-slot {
+            height: 60px;
+            border-bottom: 1px solid var(--border-light);
+            position: relative;
+        }
+        
+        .timeline-booking {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            background: var(--primary-light);
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-xs);
+            overflow: hidden;
+            cursor: pointer;
+            z-index: 5;
+        }
+        
+        .timeline-booking:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .timeline-booking.pending {
+            background: var(--warning-light);
+            border-color: var(--warning);
+        }
+        
+        .timeline-booking.approved {
+            background: var(--success-light);
+            border-color: var(--success);
+        }
+        
+        .timeline-booking.confirmed {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+        
+        .timeline-booking-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .timeline-booking-info {
             font-size: 10px;
             color: var(--text-secondary);
         }
         
-        .booking-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--success);
-            display: inline-block;
-            margin-right: 2px;
+        .empty-slot {
+            height: 60px;
+            border-bottom: 1px solid var(--border-light);
+            position: relative;
         }
         
-        .side-panel {
-            background: white;
-            border-radius: var(--radius-xl);
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-md);
+        .empty-slot:hover {
+            background: var(--bg-hover);
         }
         
-        .panel-title {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            margin-bottom: var(--spacing-md);
+        .empty-slot::after {
+            content: '+';
+            position: absolute;
+            right: var(--spacing-sm);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
         }
         
-        .space-type-filter {
+        .empty-slot:hover::after {
+            opacity: 1;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
             display: flex;
-            gap: var(--spacing-sm);
-            flex-wrap: wrap;
-            margin-bottom: var(--spacing-lg);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
         }
         
-        .type-filter-btn {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-md);
-            border: 2px solid var(--border);
-            background: white;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            font-size: var(--font-size-sm);
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
         }
         
-        .type-filter-btn:hover {
-            border-color: var(--primary);
-        }
-        
-        .type-filter-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-        
-        .booking-list-item {
-            background: var(--bg-secondary);
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-            margin-bottom: var(--spacing-md);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        
-        .booking-list-item:hover {
-            transform: translateX(4px);
-            background: var(--bg-active);
-        }
-        
-        .booking-item-header {
+        .modal-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
-            margin-bottom: var(--spacing-sm);
+            align-items: center;
         }
         
-        .booking-item-title {
-            font-weight: 600;
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
             color: var(--text-primary);
         }
         
-        .booking-item-time {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
-        }
-        
-        .booking-item-details {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
-        }
-        
-        .quick-booking-btn {
-            width: 100%;
-            padding: var(--spacing-md);
-            background: var(--primary);
-            color: white;
-            border-radius: var(--radius-md);
-            font-weight: 600;
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
             cursor: pointer;
-            margin-top: var(--spacing-lg);
+            color: var(--text-tertiary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .booking-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .detail-item {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-mini-card {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+        
+        .stat-mini-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-mini-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 1024px) {
+            .calendar-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
         }
         
         @media (max-width: 768px) {
             .calendar-day {
                 min-height: 60px;
-                padding: var(--spacing-xs);
             }
             
-            .day-number {
-                font-size: 12px;
+            .day-booking-list {
+                max-height: 30px;
             }
             
-            .day-bookings {
-                display: none;
+            .day-booking-item {
+                font-size: 10px;
             }
-        }
-        
-        @media (min-width: 769px) {
-            .main-container {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: var(--spacing-xl);
+            
+            .type-filter-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .booking-detail-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
-        <!-- Header -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        
         <header class="header">
-            <!-- 面包屑导航 -->
-            <div style="background: rgba(255,255,255,0.1); padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-xs);">
-                <a href="/portal/index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Portal首页</a>
+            <div class="header-top">
+                <a href="/portal/index.html">Portal首页</a>
                 <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <a href="/space-frontend/index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">空间服务</a>
+                <a href="/space-frontend/index.html">空间服务</a>
                 <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
                 <span style="color: white;">预约日历</span>
             </div>
             
             <div class="header-content">
-                <div class="back-btn" @click="goBack">
-                    <span>←</span>
-                    <span>返回首页</span>
+                <h1 class="header-title">📅 预约日历</h1>
+                <div class="header-actions">
+                    <button class="header-btn" @click="goToMyBookings">我的预约</button>
+                    <button class="header-btn" @click="quickBooking">快速预约</button>
                 </div>
-                <div class="page-title">预约日历</div>
-                <div>{{ currentUser?.name || '用户' }}</div>
             </div>
         </header>
         
-        <!-- Main Content -->
         <main class="main-container">
-            <!-- Calendar -->
-            <div class="calendar-card">
-                <div class="calendar-header">
-                    <div class="calendar-nav">
-                        <button class="nav-btn" @click="prevMonth">←</button>
-                        <button class="nav-btn" @click="nextMonth">→</button>
-                    </div>
-                    <div class="month-title">{{ currentMonthYear }}</div>
-                    <button class="today-btn" @click="goToToday">今天</button>
+            <div class="stats-mini">
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">{{ stats.totalBookings }}</div>
+                    <div class="stat-mini-label">本月预约</div>
                 </div>
-                
-                <div class="calendar-grid">
-                    <!-- Weekday Headers -->
-                    <div class="weekday-header">日</div>
-                    <div class="weekday-header">一</div>
-                    <div class="weekday-header">二</div>
-                    <div class="weekday-header">三</div>
-                    <div class="weekday-header">四</div>
-                    <div class="weekday-header">五</div>
-                    <div class="weekday-header">六</div>
-                    
-                    <!-- Calendar Days -->
-                    <div 
-                        v-for="day in calendarDays" 
-                        :key="day.date"
-                        class="calendar-day"
-                        :class="{
-                            today: day.isToday,
-                            selected: day.date === selectedDate,
-                            other-month: day.isOtherMonth,
-                            has-booking: day.hasBooking
-                        }"
-                        @click="selectDate(day)"
-                    >
-                        <div class="day-number">{{ day.dayNumber }}</div>
-                        <div v-if="day.bookingCount > 0" class="day-bookings">
-                            <span 
-                                v-for="n in Math.min(day.bookingCount, 3)" 
-                                :key="n"
-                                class="booking-dot"
-                            ></span>
-                            <span v-if="day.bookingCount > 3">+{{ day.bookingCount - 3 }}</span>
-                        </div>
-                    </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">{{ stats.pendingCount }}</div>
+                    <div class="stat-mini-label">待审批</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">{{ stats.confirmedCount }}</div>
+                    <div class="stat-mini-label">已确认</div>
                 </div>
             </div>
             
-            <!-- Side Panel -->
-            <div class="side-panel">
-                <div class="panel-title">预约筛选</div>
-                
-                <!-- Space Type Filter -->
-                <div class="space-type-filter">
-                    <button 
-                        v-for="type in spaceTypes" 
-                        :key="type.code"
-                        class="type-filter-btn"
-                        :class="{ active: selectedType === type.code }"
-                        @click="filterByType(type.code)"
-                    >
-                        {{ type.icon }} {{ type.name }}
-                    </button>
-                </div>
-                
-                <!-- Selected Date Info -->
-                <div v-if="selectedDate" style="margin-bottom: var(--spacing-lg);">
-                    <div style="font-size: var(--font-size-base); color: var(--text-secondary);">
-                        {{ selectedDateFormatted }}
-                    </div>
-                    <div style="font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--spacing-xs);">
-                        当天预约数: {{ selectedDayBookings.length }}
-                    </div>
-                </div>
-                
-                <!-- Booking List for Selected Date -->
-                <div v-if="selectedDayBookings.length > 0">
-                    <div class="panel-title" style="font-size: var(--font-size-base);">
-                        当天预约列表
+            <div class="calendar-layout">
+                <aside class="sidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">📐 视图模式</div>
+                        <div class="view-tabs">
+                            <button class="view-tab" :class="{ active: viewMode === 'month' }" @click="setViewMode('month')">月视图</button>
+                            <button class="view-tab" :class="{ active: viewMode === 'timeline' }" @click="setViewMode('timeline')">时间线</button>
+                        </div>
                     </div>
                     
-                    <div 
-                        v-for="booking in selectedDayBookings" 
-                        :key="booking.id"
-                        class="booking-list-item"
-                        @click="viewBooking(booking)"
-                    >
-                        <div class="booking-item-header">
-                            <div class="booking-item-title">{{ booking.title }}</div>
-                            <div class="booking-item-time">{{ booking.timeSlot }}</div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">🏠 空间类型</div>
+                        <div class="type-filter-grid">
+                            <button 
+                                class="type-filter-btn"
+                                :class="{ active: selectedType === 'all' }"
+                                @click="filterByType('all')"
+                            >
+                                <span class="type-icon">📋</span>
+                                <span class="type-name">全部</span>
+                                <span class="type-count">{{ typeCounts.all || 0 }}</span>
+                            </button>
+                            <button 
+                                v-for="type in spaceTypes" 
+                                :key="type.code"
+                                class="type-filter-btn"
+                                :class="{ active: selectedType === type.code }"
+                                @click="filterByType(type.code)"
+                            >
+                                <span class="type-icon">{{ type.icon }}</span>
+                                <span class="type-name">{{ type.name }}</span>
+                                <span class="type-count">{{ typeCounts[type.code] || 0 }}</span>
+                            </button>
                         </div>
-                        <div class="booking-item-details">
-                            {{ booking.spaceName }} | {{ booking.status }}
+                    </div>
+                    
+                    <div class="sidebar-section" v-if="selectedType !== 'all'">
+                        <div class="sidebar-title">🏢 选择资源</div>
+                        <select class="resource-select" v-model="selectedResource" @change="loadResourceBookings">
+                            <option value="">全部资源</option>
+                            <option v-for="r in filteredResources" :key="r.id" :value="r.id">
+                                {{ r.name }} ({{ r.location }})
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="sidebar-section legend-section">
+                        <div class="sidebar-title">📊 状态说明</div>
+                        <div class="legend-item">
+                            <span class="legend-dot pending"></span>
+                            <span>待审批</span>
                         </div>
+                        <div class="legend-item">
+                            <span class="legend-dot approved"></span>
+                            <span>已通过</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot confirmed"></span>
+                            <span>已确认</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot in-use"></span>
+                            <span>使用中</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot completed"></span>
+                            <span>已完成</span>
+                        </div>
+                    </div>
+                </aside>
+                
+                <section class="calendar-main">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button class="nav-btn" @click="prevPeriod">←</button>
+                            <div class="month-title">{{ periodTitle }}</div>
+                            <button class="nav-btn" @click="nextPeriod">→</button>
+                        </div>
+                        <button class="today-btn" @click="goToToday">今天</button>
+                    </div>
+                    
+                    <div v-if="viewMode === 'month'" class="calendar-body">
+                        <div class="weekday-header">
+                            <div class="weekday-cell weekend">日</div>
+                            <div class="weekday-cell">一</div>
+                            <div class="weekday-cell">二</div>
+                            <div class="weekday-cell">三</div>
+                            <div class="weekday-cell">四</div>
+                            <div class="weekday-cell">五</div>
+                            <div class="weekday-cell weekend">六</div>
+                        </div>
+                        
+                        <div class="calendar-grid">
+                            <div 
+                                v-for="day in calendarDays" 
+                                :key="day.date"
+                                class="calendar-day"
+                                :class="[
+                                    day.isToday ? 'today' : '',
+                                    day.date === selectedDate ? 'selected' : '',
+                                    day.isOtherMonth ? 'other-month' : '',
+                                    day.isPast ? 'past' : ''
+                                ]"
+                                @click="selectDate(day)"
+                            >
+                                <div class="day-header">
+                                    <span class="day-number">{{ day.dayNumber }}</span>
+                                    <span v-if="day.bookingCount > 0" class="day-badge">{{ day.bookingCount }}</span>
+                                </div>
+                                
+                                <div class="day-booking-list" v-if="day.bookings.length > 0">
+                                    <div 
+                                        v-for="booking in day.bookings.slice(0, 3)" 
+                                        :key="booking.id"
+                                        class="day-booking-item"
+                                        :class="booking.statusClass"
+                                        @click.stop="showBookingDetail(booking)"
+                                    >
+                                        {{ booking.timeSlot }} {{ booking.title.slice(0, 10) }}
+                                    </div>
+                                    <div v-if="day.bookings.length > 3" class="day-booking-item" style="background: var(--bg-secondary); color: var(--text-tertiary);">
+                                        +{{ day.bookings.length - 3 }} 更多
+                                    </div>
+                                </div>
+                                
+                                <div class="day-summary" v-if="day.bookings.length > 0">
+                                    {{ day.bookings.length }}个预约
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else-if="viewMode === 'timeline'" class="timeline-view">
+                        <div class="timeline-header">
+                            <div class="timeline-date">{{ selectedDateFormatted }}</div>
+                            <button class="header-btn" @click="quickBookingForDate(selectedDate)">+ 预约此日期</button>
+                        </div>
+                        
+                        <div class="timeline-grid">
+                            <div class="time-column">
+                                <div v-for="hour in timeSlots" :key="hour" class="time-slot">
+                                    {{ hour }}
+                                </div>
+                            </div>
+                            
+                            <div class="booking-column">
+                                <div 
+                                    v-for="hour in timeSlots" 
+                                    :key="hour"
+                                    class="empty-slot"
+                                    @click="quickBookingForTime(selectedDate, hour)"
+                                ></div>
+                                
+                                <div 
+                                    v-for="booking in timelineBookings" 
+                                    :key="booking.id"
+                                    class="timeline-booking"
+                                    :class="booking.statusClass"
+                                    :style="getBookingStyle(booking)"
+                                    @click.stop="showBookingDetail(booking)"
+                                >
+                                    <div class="timeline-booking-title">{{ booking.title }}</div>
+                                    <div class="timeline-booking-info">{{ booking.timeSlot }} | {{ booking.spaceName }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">预约详情</div>
+                    <button class="modal-close" @click="closeDetailModal">✕</button>
+                </div>
+                
+                <div class="modal-body" v-if="selectedBooking">
+                    <div class="booking-detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">预约编号</div>
+                            <div class="detail-value">{{ selectedBooking.bookingNo }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">预约状态</div>
+                            <div class="detail-value">
+                                <span class="status-badge" :class="'status-' + selectedBooking.statusClass">{{ selectedBooking.statusText }}</span>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">空间资源</div>
+                            <div class="detail-value">{{ selectedBooking.spaceName }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">空间类型</div>
+                            <div class="detail-value">{{ selectedBooking.typeName }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">预约日期</div>
+                            <div class="detail-value">{{ selectedBooking.bookingDate }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">预约时段</div>
+                            <div class="detail-value">{{ selectedBooking.timeSlot }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">参会人数</div>
+                            <div class="detail-value">{{ selectedBooking.attendeesCount }}人</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">预估费用</div>
+                            <div class="detail-value">¥{{ selectedBooking.totalFee }}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: var(--spacing-lg);">
+                        <div class="detail-label">预约主题</div>
+                        <div class="detail-value" style="font-weight: 600;">{{ selectedBooking.title }}</div>
+                    </div>
+                    
+                    <div v-if="selectedBooking.specialRequests" style="margin-top: var(--spacing-md);">
+                        <div class="detail-label">特殊需求</div>
+                        <div class="detail-value">{{ selectedBooking.specialRequests }}</div>
                     </div>
                 </div>
                 
-                <div v-else-if="selectedDate" style="text-align: center; color: var(--text-secondary); padding: var(--spacing-lg);">
-                    当天暂无预约
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="closeDetailModal">关闭</button>
+                    <button class="btn btn-primary" @click="viewBookingDetail">查看完整详情</button>
+                    <button v-if="selectedBooking?.canModify" class="btn btn-outline" @click="editBooking">修改预约</button>
+                    <button v-if="selectedBooking?.canCancel" class="btn btn-danger" @click="cancelBooking">取消预约</button>
                 </div>
-                
-                <!-- Quick Booking Button -->
-                <button 
-                    v-if="selectedDate"
-                    class="quick-booking-btn"
-                    @click="quickBooking"
-                >
-                    📅 快速预约此日期
-                </button>
             </div>
-        </main>
+        </div>
     </div>
     
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, watch, onMounted } = Vue;
         
         createApp({
             setup() {
+                const loading = ref(false);
                 const currentUser = ref(null);
                 const currentDate = ref(new Date());
-                const selectedDate = ref(null);
+                const selectedDate = ref(new Date().toISOString().split('T')[0]);
                 const selectedType = ref('all');
+                const selectedResource = ref('');
+                const viewMode = ref('month');
                 const bookings = ref([]);
+                const resources = ref([]);
+                const showDetailModal = ref(false);
+                const selectedBooking = ref(null);
+                
+                const stats = ref({
+                    totalBookings: 0,
+                    pendingCount: 0,
+                    confirmedCount: 0
+                });
                 
                 const spaceTypes = [
-                    { code: 'all', name: '全部', icon: '📋' },
-                    { code: 'meeting_room', name: '会议室', icon: '🏢' },
-                    { code: 'auditorium', name: '会场', icon: '🎭' },
-                    { code: 'screen', name: '大屏', icon: '📺' },
-                    { code: 'booth', name: '展位', icon: '🏪' },
-                    { code: 'vip_dining', name: 'VIP餐厅', icon: '🍽️' }
+                    { code: 'meeting_room', name: '会议室', icon: '🏢', requiresApproval: false },
+                    { code: 'auditorium', name: '会场', icon: '🎭', requiresApproval: true },
+                    { code: 'lobby_screen', name: '大屏', icon: '📺', requiresApproval: true },
+                    { code: 'lobby_booth', name: '展位', icon: '🏪', requiresApproval: true },
+                    { code: 'vip_dining', name: 'VIP餐厅', icon: '🍽️', requiresApproval: false }
                 ];
                 
-                const currentMonthYear = computed(() => {
-                    const year = currentDate.value.getFullYear();
-                    const month = currentDate.value.getMonth() + 1;
-                    return `${year}年${month}月`;
+                const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+                
+                const API_BASE = '/api/v2';
+                
+                const getStatusInfo = (status) => {
+                    const statusMap = {
+                        'pending_approval': { text: '待审批', class: 'pending', canModify: true, canCancel: true },
+                        'approved': { text: '已通过', class: 'approved', canModify: false, canCancel: true },
+                        'confirmed': { text: '已确认', class: 'confirmed', canModify: false, canCancel: true },
+                        'in_use': { text: '使用中', class: 'in-use', canModify: false, canCancel: false },
+                        'completed': { text: '已完成', class: 'completed', canModify: false, canCancel: false },
+                        'rejected': { text: '已拒绝', class: 'rejected', canModify: false, canCancel: false },
+                        'cancelled': { text: '已取消', class: 'cancelled', canModify: false, canCancel: false }
+                    };
+                    return statusMap[status] || { text: status, class: '', canModify: false, canCancel: false };
+                };
+                
+                const getTypeInfo = (typeCode) => {
+                    return spaceTypes.find(t => t.code === typeCode) || { name: '未知', icon: '❓' };
+                };
+                
+                const periodTitle = computed(() => {
+                    if (viewMode.value === 'month') {
+                        const year = currentDate.value.getFullYear();
+                        const month = currentDate.value.getMonth() + 1;
+                        return `${year}年${month}月`;
+                    } else {
+                        const d = new Date(selectedDate.value);
+                        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                    }
                 });
                 
                 const selectedDateFormatted = computed(() => {
-                    if (!selectedDate.value) return '';
                     const d = new Date(selectedDate.value);
-                    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+                });
+                
+                const typeCounts = computed(() => {
+                    const counts = { all: bookings.value.length };
+                    spaceTypes.forEach(type => {
+                        counts[type.code] = bookings.value.filter(b => b.typeCode === type.code).length;
+                    });
+                    return counts;
+                });
+                
+                const filteredResources = computed(() => {
+                    if (selectedType.value === 'all') return [];
+                    return resources.value.filter(r => r.typeCode === selectedType.value);
+                });
+                
+                const filteredBookings = computed(() => {
+                    let result = bookings.value;
+                    
+                    if (selectedType.value !== 'all') {
+                        result = result.filter(b => b.typeCode === selectedType.value);
+                    }
+                    
+                    if (selectedResource.value) {
+                        result = result.filter(b => b.resourceId === parseInt(selectedResource.value));
+                    }
+                    
+                    return result;
                 });
                 
                 const calendarDays = computed(() => {
@@ -472,7 +1067,6 @@
                     
                     const days = [];
                     
-                    // Previous month days
                     const prevMonthLastDay = new Date(year, month, 0).getDate();
                     for (let i = startingDay - 1; i >= 0; i--) {
                         const day = prevMonthLastDay - i;
@@ -480,190 +1074,329 @@
                         const prevYear = month === 0 ? year - 1 : year;
                         const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         
-                        days.push({
-                            date: dateStr,
-                            dayNumber: day,
-                            isToday: false,
-                            isOtherMonth: true,
-                            hasBooking: hasBookingOnDate(dateStr),
-                            bookingCount: countBookingsOnDate(dateStr)
-                        });
+                        days.push(createDayObject(dateStr, day, true, todayStr));
                     }
                     
-                    // Current month days
                     for (let day = 1; day <= daysInMonth; day++) {
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                        
-                        days.push({
-                            date: dateStr,
-                            dayNumber: day,
-                            isToday: dateStr === todayStr,
-                            isOtherMonth: false,
-                            hasBooking: hasBookingOnDate(dateStr),
-                            bookingCount: countBookingsOnDate(dateStr)
-                        });
+                        days.push(createDayObject(dateStr, day, false, todayStr));
                     }
                     
-                    // Next month days
-                    const remainingDays = 42 - days.length; // 6 weeks * 7 days
+                    const remainingDays = 42 - days.length;
                     const nextMonth = month === 11 ? 0 : month + 1;
                     const nextYear = month === 11 ? year + 1 : year;
                     for (let day = 1; day <= remainingDays; day++) {
                         const dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                        
-                        days.push({
-                            date: dateStr,
-                            dayNumber: day,
-                            isToday: false,
-                            isOtherMonth: true,
-                            hasBooking: hasBookingOnDate(dateStr),
-                            bookingCount: countBookingsOnDate(dateStr)
-                        });
+                        days.push(createDayObject(dateStr, day, true, todayStr));
                     }
                     
                     return days;
                 });
                 
-                const selectedDayBookings = computed(() => {
-                    if (!selectedDate.value) return [];
+                const createDayObject = (dateStr, dayNumber, isOtherMonth, todayStr) => {
+                    const dayBookings = filteredBookings.value.filter(b => b.bookingDate === dateStr);
+                    const statusInfo = getStatusInfo;
                     
-                    return bookings.value.filter(b => {
-                        const matchDate = b.bookingDate === selectedDate.value;
-                        const matchType = selectedType.value === 'all' || b.typeCode === selectedType.value;
-                        return matchDate && matchType;
-                    });
-                });
-                
-                const hasBookingOnDate = (dateStr) => {
-                    return bookings.value.some(b => b.bookingDate === dateStr);
+                    return {
+                        date: dateStr,
+                        dayNumber: dayNumber,
+                        isToday: dateStr === todayStr,
+                        isOtherMonth: isOtherMonth,
+                        isPast: new Date(dateStr) < new Date(todayStr),
+                        bookingCount: dayBookings.length,
+                        bookings: dayBookings.map(b => ({
+                            ...b,
+                            statusClass: getStatusInfo(b.status).class
+                        }))
+                    };
                 };
                 
-                const countBookingsOnDate = (dateStr) => {
-                    return bookings.value.filter(b => b.bookingDate === dateStr).length;
+                const timelineBookings = computed(() => {
+                    return filteredBookings.value
+                        .filter(b => b.bookingDate === selectedDate.value)
+                        .map(b => ({
+                            ...b,
+                            statusClass: getStatusInfo(b.status).class,
+                            startHour: parseInt(b.startTime.split(':')[0]),
+                            endHour: parseInt(b.endTime.split(':')[0])
+                        }));
+                });
+                
+                const getBookingStyle = (booking) => {
+                    const startIndex = timeSlots.findIndex(t => t === booking.startTime.split(':')[0] + ':00');
+                    const endIndex = timeSlots.findIndex(t => parseInt(t.split(':')[0]) >= booking.endHour);
+                    
+                    const top = startIndex >= 0 ? startIndex * 60 : 0;
+                    const height = ((booking.endHour - booking.startHour) || 1) * 60 - 8;
+                    
+                    return {
+                        top: `${top}px`,
+                        height: `${height}px`
+                    };
                 };
                 
                 const loadCalendarData = async () => {
+                    loading.value = true;
+                    
                     try {
-                        const user = await checkAuth({ requireAuth: false, validateToken: true });
-                        
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
                         if (user) {
                             currentUser.value = user;
-                            console.log('用户已登录:', currentUser.value);
                         }
                         
-                        // 加载预约数据（模拟数据）
-                        await loadBookingData();
-                    } catch (error) {
-                        console.error('加载日历数据失败:', error);
-                    }
-                };
-                
-                const loadBookingData = async () => {
-                    const token = localStorage.getItem('token');
-                    if (!token) return;
-                    
-                    try {
-                        const response = await fetch(`/api/v2/space/bookings/my`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
+                        const token = localStorage.getItem('token');
+                        if (!token) {
+                            window.location.href = '/portal/admin/login.html';
+                            return;
+                        }
                         
-                        const data = await response.json();
+                        const year = currentDate.value.getFullYear();
+                        const month = currentDate.value.getMonth() + 1;
+                        const dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
+                        const dateTo = `${year}-${String(month).padStart(2, '0')}-31`;
                         
-                        if (data.code === 200 && data.data.items) {
-                            bookings.value = data.data.items.map(b => ({
-                                id: b.id,
-                                bookingNo: b.booking_no,
-                                title: b.title,
-                                spaceName: b.resource_name,
-                                typeCode: b.type_code,
-                                bookingDate: b.booking_date,
-                                timeSlot: `${b.start_time}-${b.end_time}`,
-                                status: getStatusText(b.status)
+                        const [bookingsRes, resourcesRes] = await Promise.all([
+                            fetch(`${API_BASE}/space/bookings?date_from=${dateFrom}&date_to=${dateTo}&limit=100`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            }),
+                            fetch(`${API_BASE}/space/resources`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            })
+                        ]);
+                        
+                        const bookingsData = await bookingsRes.json();
+                        const resourcesData = await resourcesRes.json();
+                        
+                        if (bookingsData.code === 200 && bookingsData.data.items) {
+                            bookings.value = bookingsData.data.items.map(b => {
+                                const statusInfo = getStatusInfo(b.status);
+                                const typeInfo = getTypeInfo(b.type_code);
+                                
+                                return {
+                                    id: b.id,
+                                    bookingNo: b.booking_no,
+                                    title: b.title,
+                                    spaceName: b.resource_name,
+                                    resourceId: b.resource_id,
+                                    typeCode: b.type_code,
+                                    typeName: typeInfo.name,
+                                    bookingDate: b.booking_date,
+                                    startTime: b.start_time,
+                                    endTime: b.end_time,
+                                    timeSlot: `${b.start_time}-${b.end_time}`,
+                                    status: b.status,
+                                    statusText: statusInfo.text,
+                                    statusClass: statusInfo.class,
+                                    attendeesCount: b.attendees_count || 0,
+                                    totalFee: b.total_fee || 0,
+                                    specialRequests: b.special_requests || '',
+                                    canModify: statusInfo.canModify,
+                                    canCancel: statusInfo.canCancel,
+                                    userId: b.user_id
+                                };
+                            });
+                            
+                            stats.value = {
+                                totalBookings: bookings.value.length,
+                                pendingCount: bookings.value.filter(b => b.status === 'pending_approval').length,
+                                confirmedCount: bookings.value.filter(b => b.status === 'confirmed').length
+                            };
+                        }
+                        
+                        if (resourcesData.code === 200 && resourcesData.data.items) {
+                            resources.value = resourcesData.data.items.map(r => ({
+                                id: r.id,
+                                name: r.name,
+                                location: r.location,
+                                typeCode: r.type_code,
+                                capacity: r.capacity
                             }));
                         }
+                        
                     } catch (error) {
-                        console.error('加载预约数据失败:', error);
+                        console.error('加载日历数据失败:', error);
+                    } finally {
+                        loading.value = false;
                     }
                 };
-                            timeSlot: '09:00-12:00',
-                            status: '待审批'
-                        }
-                    ];
-                    
-                    // 默认选中今天
-                    const today = new Date().toISOString().split('T')[0];
-                    selectedDate.value = today;
+                
+                const prevPeriod = () => {
+                    if (viewMode.value === 'month') {
+                        currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1);
+                    } else {
+                        const d = new Date(selectedDate.value);
+                        selectedDate.value = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1).toISOString().split('T')[0];
+                    }
                 };
                 
-                const prevMonth = () => {
-                    currentDate.value = new Date(
-                        currentDate.value.getFullYear(),
-                        currentDate.value.getMonth() - 1,
-                        1
-                    );
-                };
-                
-                const nextMonth = () => {
-                    currentDate.value = new Date(
-                        currentDate.value.getFullYear(),
-                        currentDate.value.getMonth() + 1,
-                        1
-                    );
+                const nextPeriod = () => {
+                    if (viewMode.value === 'month') {
+                        currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1);
+                    } else {
+                        const d = new Date(selectedDate.value);
+                        selectedDate.value = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString().split('T')[0];
+                    }
                 };
                 
                 const goToToday = () => {
                     currentDate.value = new Date();
-                    const today = new Date().toISOString().split('T')[0];
-                    selectedDate.value = today;
+                    selectedDate.value = new Date().toISOString().split('T')[0];
                 };
                 
                 const selectDate = (day) => {
+                    selectedDate.value = day.date;
+                    
                     if (day.isOtherMonth) {
                         currentDate.value = new Date(day.date);
                     }
-                    selectedDate.value = day.date;
+                    
+                    if (viewMode.value === 'timeline' || day.bookingCount > 3) {
+                        viewMode.value = 'timeline';
+                    }
+                };
+                
+                const setViewMode = (mode) => {
+                    viewMode.value = mode;
                 };
                 
                 const filterByType = (typeCode) => {
                     selectedType.value = typeCode;
+                    selectedResource.value = '';
                 };
                 
-                const viewBooking = (booking) => {
-                    window.location.href = '/space-frontend/my-bookings.html';
+                const loadResourceBookings = () => {
+                };
+                
+                const showBookingDetail = (booking) => {
+                    selectedBooking.value = booking;
+                    showDetailModal.value = true;
+                };
+                
+                const closeDetailModal = () => {
+                    showDetailModal.value = false;
+                    selectedBooking.value = null;
                 };
                 
                 const quickBooking = () => {
-                    if (selectedDate.value) {
-                        window.location.href = `/space-frontend/booking.html?date=${selectedDate.value}&type=${selectedType.value}`;
+                    const params = new URLSearchParams();
+                    if (selectedDate.value) params.append('date', selectedDate.value);
+                    if (selectedType.value !== 'all') params.append('type', selectedType.value);
+                    
+                    window.location.href = `/space-frontend/booking.html?${params.toString()}`;
+                };
+                
+                const quickBookingForDate = (date) => {
+                    const params = new URLSearchParams();
+                    params.append('date', date);
+                    if (selectedType.value !== 'all') params.append('type', selectedType.value);
+                    
+                    window.location.href = `/space-frontend/booking.html?${params.toString()}`;
+                };
+                
+                const quickBookingForTime = (date, hour) => {
+                    const params = new URLSearchParams();
+                    params.append('date', date);
+                    params.append('start_time', hour);
+                    params.append('end_time', parseInt(hour.split(':')[0]) + 1 + ':00');
+                    if (selectedType.value !== 'all') params.append('type', selectedType.value);
+                    
+                    window.location.href = `/space-frontend/booking.html?${params.toString()}`;
+                };
+                
+                const goToMyBookings = () => {
+                    window.location.href = '/space-frontend/my-bookings.html';
+                };
+                
+                const viewBookingDetail = () => {
+                    if (selectedBooking.value) {
+                        window.location.href = `/space-frontend/my-bookings.html?id=${selectedBooking.value.id}`;
                     }
                 };
                 
-                const goBack = () => {
-                    window.location.href = '/portal/index.html';
+                const editBooking = () => {
+                    if (selectedBooking.value) {
+                        window.location.href = `/space-frontend/edit-booking.html?id=${selectedBooking.value.id}`;
+                    }
                 };
+                
+                const cancelBooking = async () => {
+                    if (!selectedBooking.value) return;
+                    
+                    if (!confirm(`确认取消预约「${selectedBooking.value.title}」？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${selectedBooking.value.id}/cancel`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ cancel_reason: '用户主动取消' })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('预约已取消');
+                            closeDetailModal();
+                            loadCalendarData();
+                        } else {
+                            alert('取消失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('取消预约失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                watch(currentDate, () => {
+                    loadCalendarData();
+                });
                 
                 onMounted(() => {
                     loadCalendarData();
                 });
                 
                 return {
+                    loading,
                     currentUser,
                     currentDate,
                     selectedDate,
                     selectedType,
+                    selectedResource,
+                    viewMode,
+                    bookings,
+                    resources,
+                    showDetailModal,
+                    selectedBooking,
+                    stats,
                     spaceTypes,
-                    currentMonthYear,
+                    timeSlots,
+                    periodTitle,
                     selectedDateFormatted,
+                    typeCounts,
+                    filteredResources,
+                    filteredBookings,
                     calendarDays,
-                    selectedDayBookings,
-                    prevMonth,
-                    nextMonth,
+                    timelineBookings,
+                    getBookingStyle,
+                    prevPeriod,
+                    nextPeriod,
                     goToToday,
                     selectDate,
+                    setViewMode,
                     filterByType,
-                    viewBooking,
+                    loadResourceBookings,
+                    showBookingDetail,
+                    closeDetailModal,
                     quickBooking,
-                    goBack
+                    quickBookingForDate,
+                    quickBookingForTime,
+                    goToMyBookings,
+                    viewBookingDetail,
+                    editBooking,
+                    cancelBooking
                 };
             }
         }).mount('#app');

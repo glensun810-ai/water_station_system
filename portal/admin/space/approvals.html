@@ -415,6 +415,50 @@
                 width: 100%;
             }
         }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .empty-state-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .empty-state-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     <script src="/portal/assets/js/auth.js"></script></head>
 <body>
@@ -463,7 +507,13 @@
         
         <main class="approval-main" role="main">
             
-            <div class="batch-actions" v-if="selectedApprovals.length > 0">
+            <div class="loading-state" v-if="loading">
+                <div class="loading-spinner"></div>
+                <p style="color: var(--text-secondary);">加载审批数据...</p>
+            </div>
+            
+            <template v-else>
+                <div class="batch-actions" v-if="selectedApprovals.length > 0">
                 <div class="batch-info">
                     已选择 {{ selectedApprovals.length }} 项审批
                 </div>
@@ -648,6 +698,16 @@
                 </article>
             </div>
             
+            <div class="empty-state" v-if="filteredApprovals.length === 0 && !loading">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-title">暂无审批记录</div>
+                <div class="empty-state-desc">
+                    当前没有需要审批的预约申请。<br>
+                    用户预约会场、大屏、展位等需要审批的空间后，审批记录会显示在这里。
+                </div>
+            </div>
+        </template>
+            
         </main>
         
         <div 
@@ -760,8 +820,9 @@
         
         createApp({
             setup() {
-                const pendingCount = ref(3)
-                const processedCount = ref(12)
+                const loading = ref(true)
+                const pendingCount = ref(0)
+                const processedCount = ref(0)
                 
                 const approvals = ref([])
                 const selectedApprovals = ref([])
@@ -977,6 +1038,7 @@
                 }
                 
                 const loadApprovals = async () => {
+                    loading.value = true
                     const token = localStorage.getItem('token')
                     if (!token) {
                         alert('请先登录')
@@ -1029,6 +1091,8 @@
                     } catch (error) {
                         console.error('加载审批列表失败:', error)
                         approvals.value = []
+                    } finally {
+                        loading.value = false
                     }
                 }
                 
@@ -1040,6 +1104,7 @@
                     })
                 
                 return {
+                    loading,
                     pendingCount,
                     processedCount,
                     approvals,

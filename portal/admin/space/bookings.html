@@ -90,6 +90,41 @@
             background: var(--bg-card);
             border-radius: var(--radius-lg);
             overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        
+        .bookings-table table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        
+        .bookings-table thead {
+            background: linear-gradient(to bottom, #f8f9fa, #f1f3f5);
+        }
+        
+        .bookings-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        .bookings-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        
+        .bookings-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .bookings-table tbody tr:last-child td {
+            border-bottom: none;
         }
         
         .table-header {
@@ -100,17 +135,36 @@
             font-size: var(--font-size-sm);
         }
         
-        .booking-row {
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border);
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr 1fr 1fr 1fr auto;
-            gap: var(--spacing-md);
-            align-items: center;
+        .booking-no {
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: var(--font-size-sm);
         }
         
-        .booking-row:hover {
-            background: var(--bg-hover);
+        .booking-title {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .booking-subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+        
+        .booking-time {
+            font-size: var(--font-size-sm);
+        }
+        
+        .booking-time-range {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+        
+        .booking-price {
+            font-weight: 600;
+            color: var(--primary);
         }
         
         .status-badge {
@@ -216,9 +270,12 @@
         }
         
         @media (max-width: 768px) {
-            .booking-row {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-sm);
+            .bookings-table {
+                overflow-x: auto;
+            }
+            
+            .bookings-table table {
+                min-width: 700px;
             }
             
             .filter-bar {
@@ -318,50 +375,63 @@
                     共 {{ bookings.length }} 条预约记录
                 </div>
                 
-                <div v-if="bookings.length > 0">
-                    <div class="booking-row" v-for="booking in bookings" :key="booking.id">
-                        <div>
-                            <strong>{{ booking.booking_no || 'BK' + booking.id }}</strong>
-                        </div>
-                        <div>
-                            <div style="font-weight: 600; color: var(--primary);">{{ booking.title }}</div>
-                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ booking.space_name }}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: var(--font-size-sm);">{{ booking.booking_date }}</div>
-                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ booking.start_time }}-{{ booking.end_time }}</div>
-                        </div>
-                        <div style="font-size: var(--font-size-sm);">
-                            {{ booking.user_name }}
-                        </div>
-                        <div>
-                            <span class="status-badge" :class="'status-' + booking.status">
-                                {{ getStatusText(booking.status) }}
-                            </span>
-                        </div>
-                        <div style="font-size: var(--font-size-sm);">
-                            ¥{{ booking.total_price || 0 }}
-                        </div>
-                        <div class="action-btns">
-                            <button class="btn btn-outline btn-sm" @click="viewDetail(booking)">查看</button>
-                            <button 
-                                v-if="booking.status === 'pending_approval'" 
-                                class="btn btn-primary btn-sm" 
-                                @click="approveBooking(booking)"
-                            >审批</button>
-                            <button 
-                                v-if="booking.status === 'approved'" 
-                                class="btn btn-success btn-sm"
-                                @click="completeBooking(booking)"
-                            >完成</button>
-                            <button 
-                                v-if="booking.status === 'pending_approval' || booking.status === 'approved'" 
-                                class="btn btn-danger btn-sm"
-                                @click="cancelBooking(booking)"
-                            >取消</button>
-                        </div>
-                    </div>
-                </div>
+                <table v-if="bookings.length > 0">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">预约编号</th>
+                            <th style="width: 220px;">预约主题</th>
+                            <th style="width: 140px;">预约时间</th>
+                            <th style="width: 100px;">预约人</th>
+                            <th style="width: 90px;">状态</th>
+                            <th style="width: 80px;">费用</th>
+                            <th style="width: 160px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="booking in bookings" :key="booking.id">
+                            <td>
+                                <span class="booking-no">{{ booking.booking_no || 'BK' + booking.id }}</span>
+                            </td>
+                            <td>
+                                <div class="booking-title">{{ booking.title }}</div>
+                                <div class="booking-subtitle">{{ booking.space_name }}</div>
+                            </td>
+                            <td>
+                                <div class="booking-time">{{ booking.booking_date }}</div>
+                                <div class="booking-time-range">{{ booking.start_time }}-{{ booking.end_time }}</div>
+                            </td>
+                            <td>{{ booking.user_name }}</td>
+                            <td>
+                                <span class="status-badge" :class="'status-' + booking.status">
+                                    {{ getStatusText(booking.status) }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="booking-price">¥{{ booking.total_price || 0 }}</span>
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn btn-outline btn-sm" @click="viewDetail(booking)">查看</button>
+                                    <button 
+                                        v-if="booking.status === 'pending_approval'" 
+                                        class="btn btn-primary btn-sm" 
+                                        @click="approveBooking(booking)"
+                                    >审批</button>
+                                    <button 
+                                        v-if="booking.status === 'approved'" 
+                                        class="btn btn-success btn-sm"
+                                        @click="completeBooking(booking)"
+                                    >完成</button>
+                                    <button 
+                                        v-if="booking.status === 'pending_approval' || booking.status === 'approved'" 
+                                        class="btn btn-danger btn-sm"
+                                        @click="cancelBooking(booking)"
+                                    >取消</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 
                 <div v-else class="empty-state">
                     <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📋</div>
