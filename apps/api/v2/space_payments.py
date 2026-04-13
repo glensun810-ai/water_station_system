@@ -25,6 +25,71 @@ from shared.schemas.space.response import ApiResponse, PaginatedResponse
 router = APIRouter(prefix="/space/payments", tags=["空间支付管理"])
 
 
+@router.post("/confirm-offline", response_model=ApiResponse)
+async def confirm_offline_payment(
+    booking_id: int = Query(..., description="预约ID"),
+    payment_method: str = Query("offline", description="支付方式"),
+    payment_notes: Optional[str] = Query(None, description="支付备注"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
+    """用户确认线下支付完成（通知管理员审核）"""
+
+    booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只能确认自己的预约支付")
+
+    if booking.status not in ["approved", "pending_approval"]:
+        raise HTTPException(status_code=400, detail="预约状态不允许支付确认")
+
+    payment_no = (
+        f"SP{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+    )
+
+    payment = SpacePayment(
+        payment_no=payment_no,
+        booking_id=booking_id,
+        booking_no=booking.booking_no,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        payment_type="full",
+        payment_purpose="预约全款支付",
+        amount=booking.actual_fee or 0,
+        currency="CNY",
+        payment_method=payment_method,
+        payment_channel="offline",
+        status="pending_verification",
+        initiated_at=datetime.now(),
+        notes=payment_notes or "用户确认线下支付完成，等待管理员审核",
+    )
+
+    db.add(payment)
+
+    booking.payment_status = "pending_verification"
+    booking.user_payment_confirmed = True
+    booking.user_payment_confirmed_at = datetime.now()
+
+    db.commit()
+    db.refresh(payment)
+
+    return ApiResponse(
+        message="支付确认已提交，管理员将审核收款后确认预约生效",
+        data={
+            "payment_id": payment.id,
+            "payment_no": payment.payment_no,
+            "booking_id": booking_id,
+            "booking_no": booking.booking_no,
+            "status": "pending_verification",
+            "amount": payment.amount,
+            "message": "请等待管理员确认收款，确认后预约将生效",
+        },
+    )
+
+
 @router.get("", response_model=ApiResponse)
 async def get_payments(
     status: Optional[str] = Query(None, description="支付状态过滤"),
@@ -241,16 +306,19 @@ async def verify_payment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """审核支付（线下支付审核）"""
+    """审核支付（线下支付审核）- 管理员确认收款后自动审批预约"""
 
     payment = db.query(SpacePayment).filter(SpacePayment.id == payment_id).first()
 
     if not payment:
         raise HTTPException(status_code=404, detail="支付记录不存在")
 
+    if payment.status not in ["pending", "pending_verification"]:
+        raise HTTPException(status_code=400, detail="支付状态不允许审核")
+
     payment.status = "success"
     payment.completed_at = datetime.now()
-    payment.verified_by = verify_data.verified_by
+    payment.verified_by = verify_data.verified_by or current_user.name
     payment.verified_at = datetime.now()
     payment.verification_notes = verify_data.verification_notes
 
@@ -258,6 +326,21 @@ async def verify_payment(
         db.query(SpaceBooking).filter(SpaceBooking.id == payment.booking_id).first()
     )
     if booking:
+        booking.payment_status = "fully_paid"
+        booking.admin_payment_verified = True
+        booking.admin_payment_verified_at = datetime.now()
+        booking.admin_payment_verified_by = current_user.name
+
+        if booking.status == "pending_approval":
+            booking.status = "approved"
+            booking.approved_by = current_user.name
+            booking.approved_at = datetime.now()
+            booking.approval_notes = "支付已确认，自动审批通过"
+        elif booking.status == "approved":
+            booking.status = "confirmed"
+            booking.confirmed_at = datetime.now()
+            booking.confirmed_by = current_user.name
+
         if payment.payment_type == "deposit":
             booking.deposit_paid = True
             booking.deposit_paid_at = datetime.now()
@@ -265,11 +348,18 @@ async def verify_payment(
         elif payment.payment_type == "full":
             booking.status = "confirmed"
             booking.confirmed_at = datetime.now()
-            booking.confirmed_by = verify_data.verified_by
+            booking.confirmed_by = current_user.name
 
     db.commit()
 
-    return ApiResponse(message="支付审核成功", data=_format_payment(payment))
+    return ApiResponse(
+        message="支付审核成功，预约已自动审批通过并生效",
+        data={
+            "payment": _format_payment(payment),
+            "booking_status": booking.status if booking else None,
+            "booking_confirmed": booking.status == "confirmed" if booking else False,
+        },
+    )
 
 
 @router.post("/{payment_id}/refund", response_model=ApiResponse)

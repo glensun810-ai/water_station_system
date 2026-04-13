@@ -233,6 +233,29 @@ async def create_booking(
     )
 
     db.add(booking)
+    db.flush()
+
+    if initial_status == "pending_approval":
+        from shared.models.space.space_approval import SpaceApproval
+
+        approval_no = (
+            f"SA{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+        )
+
+        approval = SpaceApproval(
+            approval_no=approval_no,
+            booking_id=booking.id,
+            booking_no=booking.booking_no,
+            approval_type="booking_approval",
+            approval_stage="initial",
+            approval_content=f"空间预约审批：{booking.title}",
+            status="pending",
+            submitted_at=datetime.now(),
+        )
+
+        db.add(approval)
+        booking.approval_id = approval.id
+
     db.commit()
     db.refresh(booking)
 

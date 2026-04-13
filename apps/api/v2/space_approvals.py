@@ -467,6 +467,27 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
         db.query(SpaceBooking).filter(SpaceBooking.id == approval.booking_id).first()
     )
 
+    booking_info = None
+    if booking:
+        booking_info = {
+            "resource_name": booking.resource_name,
+            "user_name": booking.user_name,
+            "title": booking.title,
+            "booking_date": booking.booking_date.isoformat()
+            if booking.booking_date
+            else None,
+            "time_slot": f"{booking.start_time}-{booking.end_time}",
+            "total_fee": booking.actual_fee,
+            "attendees_count": booking.attendees_count,
+            "user_payment_confirmed": booking.user_payment_confirmed,
+            "user_payment_confirmed_at": booking.user_payment_confirmed_at.isoformat()
+            if booking.user_payment_confirmed_at
+            else None,
+            "payment_status": booking.payment_status,
+            "status": booking.status,
+            "special_requests": booking.special_requests,
+        }
+
     return {
         "id": approval.id,
         "approval_no": approval.approval_no,
@@ -482,7 +503,9 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
         "approver_department": approval.approver_department,
         "status": approval.status,
         "result": approval.result,
-        "submitted_at": approval.submitted_at.isoformat(),
+        "submitted_at": approval.submitted_at.isoformat()
+        if approval.submitted_at
+        else None,
         "reviewed_at": approval.reviewed_at.isoformat()
         if approval.reviewed_at
         else None,
@@ -499,14 +522,7 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
         "is_overdue": approval.is_overdue,
         "created_at": approval.created_at.isoformat(),
         "updated_at": approval.updated_at.isoformat(),
-        "booking_info": {
-            "resource_name": booking.resource_name if booking else None,
-            "user_name": booking.user_name if booking else None,
-            "title": booking.title if booking else None,
-            "booking_date": booking.booking_date.isoformat() if booking else None,
-        }
-        if booking
-        else None,
+        "booking_info": booking_info,
     }
 
 

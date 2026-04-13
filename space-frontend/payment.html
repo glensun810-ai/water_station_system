@@ -573,25 +573,20 @@
                 };
                 
                 const confirmPayment = async () => {
-                    if (confirm('确认您已完成线下支付？\n\n点击确认后，系统将通知管理员审批您的预约。')) {
+                    if (confirm('确认您已完成线下支付？\n\n点击确认后，系统将通知管理员审核收款，确认后预约将生效。')) {
                         try {
                             const token = localStorage.getItem('token');
                             
-                            const response = await fetch(`/api/v2/space/bookings/${bookingId.value}/confirm-payment`, {
-                                method: 'PUT',
+                            const response = await fetch(`/api/v2/space/payments/confirm-offline?booking_id=${bookingId.value}`, {
+                                method: 'POST',
                                 headers: {
-                                    'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({
-                                    payment_method: 'offline',
-                                    payment_notes: '用户确认线下支付完成'
-                                })
+                                }
                             });
                             
                             const data = await response.json();
                             
-                            if (data.code === 200) {
+                            if (data.code === 200 || data.code === 201) {
                                 paymentCompleted.value = true;
                             } else {
                                 alert(data.message || '操作失败，请稍后重试');

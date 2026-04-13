@@ -174,6 +174,12 @@ class SpaceBooking(Base, TimestampMixin):
     cancel_deadline = Column(DateTime)
     modify_deadline = Column(DateTime)
 
+    user_payment_confirmed = Column(Boolean, default=False)
+    user_payment_confirmed_at = Column(DateTime)
+    admin_payment_verified = Column(Boolean, default=False)
+    admin_payment_verified_at = Column(DateTime)
+    admin_payment_verified_by = Column(String(100))
+
     is_deleted = Column(Integer, default=0, index=True)
     deleted_at = Column(DateTime)
     deleted_by = Column(String(100))

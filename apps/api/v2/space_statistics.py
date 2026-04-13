@@ -195,6 +195,16 @@ async def get_dashboard_data(
         .count()
     )
 
+    pending_payment_confirm = (
+        db.query(SpaceBooking)
+        .filter(
+            SpaceBooking.user_payment_confirmed == True,
+            SpaceBooking.admin_payment_verified == False,
+            SpaceBooking.is_deleted == 0,
+        )
+        .count()
+    )
+
     completed_today = (
         db.query(SpaceBooking)
         .filter(
@@ -251,6 +261,7 @@ async def get_dashboard_data(
             "today": {
                 "bookings": today_bookings,
                 "pending_approvals": pending_approvals,
+                "pending_payment_confirm": pending_payment_confirm,
                 "completed": completed_today,
                 "revenue": today_revenue,
             },

@@ -317,18 +317,24 @@
         
         <!-- 主内容 -->
         <main class="main-content">
-            <!-- 今日统计 -->
+<!-- 今日统计 -->
             <section>
                 <h2 class="section-title">
                     <span>📊</span>
                     <span>今日概况</span>
                 </h2>
                 
-                <div class="stats-grid">
+                <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
                     <div class="stat-card pending">
                         <div class="stat-icon">⏳</div>
                         <div class="stat-value warning">{{ stats.pendingApprovals || 0 }}</div>
-                        <div class="stat-label">待审批预约</div>
+                        <div class="stat-label">待审批</div>
+                    </div>
+                    
+                    <div class="stat-card" style="border-left-color: #8B5CF6;">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" style="color: #8B5CF6;">{{ stats.pendingPaymentConfirm || 0 }}</div>
+                        <div class="stat-label">待支付确认</div>
                     </div>
                     
                     <div class="stat-card approved">
@@ -340,11 +346,11 @@
                     <div class="stat-card today">
                         <div class="stat-icon">📅</div>
                         <div class="stat-value primary">{{ stats.todayBookings || 0 }}</div>
-                        <div class="stat-label">今日预约总数</div>
+                        <div class="stat-label">今日预约</div>
                     </div>
                     
                     <div class="stat-card revenue">
-                        <div class="stat-icon">💰</div>
+                        <div class="stat-icon">💵</div>
                         <div class="stat-value">¥{{ (stats.todayRevenue || 0).toFixed(2) }}</div>
                         <div class="stat-label">今日收入</div>
                     </div>
@@ -454,6 +460,7 @@
             setup() {
                 const stats = ref({
                     pendingApprovals: 0,
+                    pendingPaymentConfirm: 0,
                     todayApproved: 0,
                     todayBookings: 0,
                     todayRevenue: 0
@@ -474,6 +481,7 @@
                         if (data.code === 200) {
                             stats.value = {
                                 pendingApprovals: data.data.today.pending_approvals || 0,
+                                pendingPaymentConfirm: data.data.today.pending_payment_confirm || 0,
                                 todayApproved: data.data.today.completed || 0,
                                 todayBookings: data.data.today.bookings || 0,
                                 todayRevenue: data.data.today.revenue || 0
