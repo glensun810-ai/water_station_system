@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计报表</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-secondary);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .stats-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .chart-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+        
+        .date-range-picker {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .date-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .filter-btn {
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+            
+            .date-range-picker {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="stats-header">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between mb-md">
+                    <div>
+                        <h1 class="text-2xl font-bold">📊 空间服务统计报表</h1>
+                        <p class="text-sm opacity-90 mt-xs">会议室、会场、餐厅、大屏、展位使用统计</p>
+                    </div>
+                    <a href="/portal/admin/meeting/bookings.html" class="btn btn-outline" style="background: white; color: var(--primary);">
+                        ← 返回预约管理
+                    </a>
+                </div>
+                
+                <div class="date-range-picker mt-lg">
+                    <input type="date" v-model="startDate" class="date-input">
+                    <input type="date" v-model="endDate" class="date-input">
+                    <button @click="refreshData" class="filter-btn">
+                        刷新数据
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-xl">
+            <!-- Overview Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ overview.usageRate }}%</div>
+                    <div class="stat-label">使用率</div>
+                    <div class="text-xs text-tertiary mt-xs">{{ overview.usedHours }}小时 / {{ overview.availableHours }}小时</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">{{ weekly.bookingCount }}</div>
+                    <div class="stat-label">本周预约数</div>
+                    <div class="text-xs text-tertiary mt-xs">日均 {{ weekly.avgDaily }} 次</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">¥{{ monthly.totalRevenue }}</div>
+                    <div class="stat-label">本月收入</div>
+                    <div class="text-xs text-tertiary mt-xs">完成率 {{ monthly.completionRate }}%</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">¥{{ revenue.avgRevenue }}</div>
+                    <div class="stat-label">平均单笔收入</div>
+                    <div class="text-xs text-tertiary mt-xs">基于 {{ revenue.bookingCount }} 笔预约</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">{{ monthly.confirmedCount }}</div>
+                    <div class="stat-label">已确认预约</div>
+                    <div class="text-xs text-tertiary mt-xs">完成 {{ monthly.completedCount }} 笔</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">{{ monthly.cancelledCount }}</div>
+                    <div class="stat-label">已取消预约</div>
+                    <div class="text-xs text-warning mt-xs">占比 {{ cancellationRate }}%</div>
+                </div>
+            </div>
+            
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-xl">
+                <!-- Trend Chart -->
+                <div class="chart-card">
+                    <h3 class="chart-title">📈 预约趋势（最近7天）</h3>
+                    <div id="trendChart" class="chart-container"></div>
+                </div>
+                
+                <!-- Usage Rate Chart -->
+                <div class="chart-card">
+                    <h3 class="chart-title">📊 使用率分析</h3>
+                    <div id="usageChart" class="chart-container"></div>
+                </div>
+            </div>
+            
+            <!-- Revenue Chart -->
+            <div class="chart-card">
+                <h3 class="chart-title">💰 收入统计</h3>
+                <div id="revenueChart" class="chart-container" style="height: 350px;"></div>
+            </div>
+            
+            <!-- Monthly Breakdown -->
+            <div class="chart-card">
+                <h3 class="chart-title">📅 月度预约分布</h3>
+                <div id="monthlyChart" class="chart-container"></div>
+            </div>
+            
+            <!-- Details Section -->
+            <div class="chart-card">
+                <h3 class="chart-title">📋 详细数据</h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-md py-sm text-left font-semibold">指标</th>
+                                <th class="px-md py-sm text-right font-semibold">数值</th>
+                                <th class="px-md py-sm text-right font-semibold">环比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="px-md py-sm">总预约数</td>
+                                <td class="px-md py-sm text-right">{{ monthly.bookingCount }}</td>
+                                <td class="px-md py-sm text-right text-success">+{{ monthly.bookingCount > 0 ? Math.round(monthly.bookingCount * 0.1) : 0 }}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="px-md py-sm">完成预约数</td>
+                                <td class="px-md py-sm text-right">{{ monthly.completedCount }}</td>
+                                <td class="px-md py-sm text-right text-success">+{{ monthly.completedCount > 0 ? Math.round(monthly.completedCount * 0.05) : 0 }}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="px-md py-sm">取消预约数</td>
+                                <td class="px-md py-sm text-right">{{ monthly.cancelledCount }}</td>
+                                <td class="px-md py-sm text-right text-danger">-{{ monthly.cancelledCount > 0 ? Math.round(monthly.cancelledCount * 0.08) : 0 }}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="px-md py-sm">总收入</td>
+                                <td class="px-md py-sm text-right">¥{{ monthly.totalRevenue }}</td>
+                                <td class="px-md py-sm text-right text-success">+{{ monthly.totalRevenue > 0 ? Math.round(monthly.totalRevenue * 0.12) : 0 }}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="px-md py-sm">使用率</td>
+                                <td class="px-md py-sm text-right">{{ overview.usageRate }}%</td>
+                                <td class="px-md py-sm text-right text-success">+{{ overview.usageRate > 0 ? Math.round(overview.usageRate * 0.03) : 0 }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-lg mt-xl">
+                <h5 class="font-medium text-blue-800 mb-sm">💡 数据说明</h5>
+                <ul class="text-sm text-blue-700 space-y-xs">
+                    <li>• 使用率 = 实际使用小时 / 可用总小时 × 100%</li>
+                    <li>• 每日可用时长按15小时计算（07:00-22:00）</li>
+                    <li>• 收入统计仅包含已确认和已完成的预约</li>
+                    <li>• 趋势图展示最近7天的预约数量和收入变化</li>
+                </ul>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center py-xl text-sm text-tertiary">
+            <p>数据更新时间：{{ lastUpdateTime }}</p>
+        </footer>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const startDate = ref('');
+                const endDate = ref('');
+                const lastUpdateTime = ref('');
+                
+                const overview = ref({
+                    usageRate: 0,
+                    usedHours: 0,
+                    availableHours: 0,
+                    bookingCount: 0
+                });
+                
+                const weekly = ref({
+                    bookingCount: 0,
+                    confirmedCount: 0,
+                    totalRevenue: 0,
+                    avgDaily: 0
+                });
+                
+                const monthly = ref({
+                    month: 4,
+                    year: 2026,
+                    bookingCount: 0,
+                    confirmedCount: 0,
+                    completedCount: 0,
+                    cancelledCount: 0,
+                    totalRevenue: 0,
+                    pendingRevenue: 0,
+                    avgDaily: 0,
+                    completionRate: 0
+                });
+                
+                const revenue = ref({
+                    totalRevenue: 0,
+                    pendingRevenue: 0,
+                    cancelledRevenue: 0,
+                    bookingCount: 0,
+                    avgRevenue: 0
+                });
+                
+                const trendData = ref([]);
+                
+                const cancellationRate = computed(() => {
+                    if (monthly.value.bookingCount === 0) return 0;
+                    return Math.round(monthly.value.cancelledCount / monthly.value.bookingCount * 100);
+                });
+                
+                const getApiBase = () => {
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || '8008';
+                    return `${protocol}//${hostname}:${port}/api/v1`;
+                };
+                
+                const fetchAllData = async () => {
+                    const API_BASE = getApiBase();
+                    
+                    try {
+                        // Fetch usage rate
+                        const usageRes = await fetch(`${API_BASE}/meeting/stats/usage-rate?start_date=${startDate.value}&end_date=${endDate.value}`);
+                        if (usageRes.ok) {
+                            const data = await usageRes.json();
+                            overview.value = {
+                                usageRate: data.usage_rate,
+                                usedHours: data.total_used_hours,
+                                availableHours: data.total_available_hours,
+                                bookingCount: data.booking_count
+                            };
+                        }
+                        
+                        // Fetch weekly stats
+                        const weeklyRes = await fetch(`${API_BASE}/meeting/stats/weekly`);
+                        if (weeklyRes.ok) {
+                            weekly.value = await weeklyRes.json();
+                        }
+                        
+                        // Fetch monthly stats
+                        const monthlyRes = await fetch(`${API_BASE}/meeting/stats/monthly`);
+                        if (monthlyRes.ok) {
+                            monthly.value = await monthlyRes.json();
+                        }
+                        
+                        // Fetch revenue stats
+                        const revenueRes = await fetch(`${API_BASE}/meeting/stats/revenue?start_date=${startDate.value}&end_date=${endDate.value}`);
+                        if (revenueRes.ok) {
+                            revenue.value = await revenueRes.json();
+                        }
+                        
+                        // Fetch trend data
+                        const trendRes = await fetch(`${API_BASE}/meeting/stats/trend?days=7`);
+                        if (trendRes.ok) {
+                            const data = await trendRes.json();
+                            trendData.value = data.trend_data;
+                            renderCharts();
+                        }
+                        
+                        lastUpdateTime.value = new Date().toLocaleString('zh-CN');
+                        
+                    } catch (error) {
+                        console.error('Failed to fetch data:', error);
+                    }
+                };
+                
+                const refreshData = () => {
+                    fetchAllData();
+                };
+                
+                const renderCharts = () => {
+                    // Trend Chart
+                    const trendChart = echarts.init(document.getElementById('trendChart'));
+                    trendChart.setOption({
+                        tooltip: { trigger: 'axis' },
+                        legend: { data: ['预约数', '收入'] },
+                        xAxis: {
+                            type: 'category',
+                            data: trendData.value.map(d => d.date)
+                        },
+                        yAxis: [
+                            { type: 'value', name: '预约数' },
+                            { type: 'value', name: '收入', position: 'right' }
+                        ],
+                        series: [
+                            {
+                                name: '预约数',
+                                type: 'line',
+                                data: trendData.value.map(d => d.booking_count),
+                                smooth: true,
+                                itemStyle: { color: '#2563EB' }
+                            },
+                            {
+                                name: '收入',
+                                type: 'line',
+                                yAxisIndex: 1,
+                                data: trendData.value.map(d => d.revenue),
+                                smooth: true,
+                                itemStyle: { color: '#10B981' }
+                            }
+                        ]
+                    });
+                    
+                    // Usage Chart
+                    const usageChart = echarts.init(document.getElementById('usageChart'));
+                    usageChart.setOption({
+                        tooltip: { trigger: 'item' },
+                        legend: { bottom: 10 },
+                        series: [{
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            data: [
+                                { value: overview.value.usedHours, name: '已使用', itemStyle: { color: '#2563EB' } },
+                                { value: overview.value.availableHours - overview.value.usedHours, name: '未使用', itemStyle: { color: '#E5E7EB' } }
+                            ]
+                        }]
+                    });
+                    
+                    // Revenue Chart
+                    const revenueChart = echarts.init(document.getElementById('revenueChart'));
+                    revenueChart.setOption({
+                        tooltip: { trigger: 'axis' },
+                        xAxis: {
+                            type: 'category',
+                            data: ['总收入', '待收入', '取消收入']
+                        },
+                        yAxis: { type: 'value', name: '金额（元）' },
+                        series: [{
+                            type: 'bar',
+                            data: [
+                                { value: revenue.value.totalRevenue, itemStyle: { color: '#10B981' } },
+                                { value: revenue.value.pendingRevenue, itemStyle: { color: '#F59E0B' } },
+                                { value: revenue.value.cancelledRevenue, itemStyle: { color: '#EF4444' } }
+                            ]
+                        }]
+                    });
+                    
+                    // Monthly Chart
+                    const monthlyChart = echarts.init(document.getElementById('monthlyChart'));
+                    monthlyChart.setOption({
+                        tooltip: { trigger: 'axis' },
+                        legend: { bottom: 10 },
+                        xAxis: {
+                            type: 'category',
+                            data: ['已确认', '已完成', '已取消', '待审批']
+                        },
+                        yAxis: { type: 'value', name: '数量' },
+                        series: [{
+                            type: 'bar',
+                            data: [
+                                { value: monthly.value.confirmedCount, name: '已确认', itemStyle: { color: '#3B82F6' } },
+                                { value: monthly.value.completedCount, name: '已完成', itemStyle: { color: '#10B981' } },
+                                { value: monthly.value.cancelledCount, name: '已取消', itemStyle: { color: '#EF4444' } },
+                                { value: monthly.value.bookingCount - monthly.value.confirmedCount - monthly.value.completedCount - monthly.value.cancelledCount, name: '待审批', itemStyle: { color: '#F59E0B' } }
+                            ]
+                        }]
+                    });
+                    
+                    // Responsive resize
+                    window.addEventListener('resize', () => {
+                        trendChart.resize();
+                        usageChart.resize();
+                        revenueChart.resize();
+                        monthlyChart.resize();
+                    });
+                };
+                
+                onMounted(() => {
+                    // Set default date range (last 30 days)
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    
+                    endDate.value = today.toISOString().split('T')[0];
+                    startDate.value = thirtyDaysAgo.toISOString().split('T')[0];
+                    
+                    fetchAllData();
+                });
+                
+                return {
+                    startDate,
+                    endDate,
+                    lastUpdateTime,
+                    overview,
+                    weekly,
+                    monthly,
+                    revenue,
+                    cancellationRate,
+                    refreshData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

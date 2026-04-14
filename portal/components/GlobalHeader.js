@@ -84,9 +84,9 @@ const GlobalHeader = {
 
                         <!-- 超级管理员/系统管理员菜单 -->
                         <template v-if="isSuperOrAdmin">
-                            <a href="/portal/admin/index.html" class="menu-item">
+                            <a href="/portal/index.html#system-management-section" class="menu-item">
                                 <span class="menu-icon">📊</span>
-                                <span class="menu-text">管理后台</span>
+                                <span class="menu-text">管理中心</span>
                             </a>
                             <a href="/portal/admin/login-logs.html" class="menu-item">
                                 <span class="menu-icon">📝</span>
@@ -97,11 +97,11 @@ const GlobalHeader = {
 
                         <!-- 办公室管理员菜单 -->
                         <template v-else-if="isOfficeAdmin">
-                            <a href="/water/admin.html" class="menu-item">
+                            <a href="/portal/admin/water/dashboard.html" class="menu-item">
                                 <span class="menu-icon">💧</span>
                                 <span class="menu-text">水站管理</span>
                             </a>
-                            <a href="/meeting-frontend/admin.html" class="menu-item">
+                            <a href="/portal/admin/meeting/bookings.html" class="menu-item">
                                 <span class="menu-icon">📅</span>
                                 <span class="menu-text">会议室管理</span>
                             </a>

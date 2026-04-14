@@ -681,3 +681,349 @@ def confirm_settlement(
         "confirmed_by": pickup.confirmed_by_name,
         "status": "confirmed",
     }
+
+
+@router.get("/settlements/summary")
+def get_settlements_summary_v2(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    获取结算汇总数据（新版）
+
+    返回结构兼容前端dashboard数据格式
+    """
+
+    from sqlalchemy import func
+    from datetime import date
+
+    today = date.today()
+    month_start = date(today.year, today.month, 1)
+
+    pending_query = db.query(OfficePickup).filter(
+        OfficePickup.settlement_status == "pending",
+        OfficePickup.is_deleted == False,
+    )
+    pending_count = pending_query.count()
+    pending_amount = (
+        pending_query.with_entities(func.sum(OfficePickup.total_amount)).scalar() or 0.0
+    )
+
+    applied_query = db.query(OfficePickup).filter(
+        OfficePickup.settlement_status == "applied",
+        OfficePickup.is_deleted == False,
+    )
+    applied_count = applied_query.count()
+    applied_amount = (
+        applied_query.with_entities(func.sum(OfficePickup.total_amount)).scalar() or 0.0
+    )
+
+    settled_query = db.query(OfficePickup).filter(
+        OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+        OfficePickup.is_deleted == False,
+    )
+    settled_count = settled_query.count()
+    settled_amount = (
+        settled_query.with_entities(func.sum(OfficePickup.total_amount)).scalar() or 0.0
+    )
+
+    last_month_start = date(today.year, today.month - 1 if today.month > 1 else 12, 1)
+    last_month_settled = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.is_deleted == False,
+            OfficePickup.confirmed_time >= last_month_start,
+            OfficePickup.confirmed_time < month_start,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    current_month_settled = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.is_deleted == False,
+            OfficePickup.confirmed_time >= month_start,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    if last_month_settled > 0:
+        growth_rate = (
+            (current_month_settled - last_month_settled) / last_month_settled
+        ) * 100
+    else:
+        growth_rate = 0 if current_month_settled == 0 else 100
+
+    return {
+        "water": {
+            "pending_count": pending_count,
+            "pending_amount": float(pending_amount),
+            "applied_count": applied_count,
+            "applied_amount": float(applied_amount),
+            "settled_count": settled_count,
+            "settled_amount": float(settled_amount),
+            "settled_growth_rate": round(growth_rate, 1),
+        }
+    }
+
+
+@router.get("/dashboard")
+def get_water_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    获取水站工作台完整统计数据
+
+    一次性返回所有dashboard需要的数据，减少前端API调用次数
+    """
+
+    from sqlalchemy import func
+    from datetime import date
+    from collections import defaultdict
+
+    today = date.today()
+    month_start = date(today.year, today.month, 1)
+
+    products = db.query(Product).filter(Product.is_active == 1).all()
+
+    inventory_alerts = []
+    low_stock_count = 0
+    for p in products:
+        alert_threshold = p.stock_alert if p.stock_alert is not None else 10
+        if p.stock is not None and p.stock <= alert_threshold:
+            inventory_alerts.append(
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "stock": p.stock,
+                    "unit": p.unit,
+                    "stock_alert": alert_threshold,
+                }
+            )
+            low_stock_count += 1
+
+    all_pickups = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.is_deleted == False,
+            OfficePickup.pickup_time >= month_start,
+        )
+        .all()
+    )
+
+    unit_stats = defaultdict(
+        lambda: {"quantity": 0, "stock": 0, "transaction_count": 0}
+    )
+    for pickup in all_pickups:
+        unit = pickup.product_name.split()[-1] if pickup.product_name else "桶"
+        for char in ["桶", "瓶", "箱", "提", "件"]:
+            if char in pickup.product_name or (
+                hasattr(pickup, "product_specification")
+                and char in str(pickup.product_specification)
+            ):
+                unit = char
+                break
+        unit_stats[unit]["quantity"] += pickup.quantity or 0
+        unit_stats[unit]["transaction_count"] += 1
+
+    for p in products:
+        unit = p.unit or "桶"
+        if unit in unit_stats:
+            unit_stats[unit]["stock"] += p.stock or 0
+        else:
+            unit_stats[unit]["stock"] = p.stock or 0
+
+    by_unit = []
+    for unit, stats in unit_stats.items():
+        by_unit.append(
+            {
+                "unit": unit,
+                "quantity": stats["quantity"],
+                "stock": stats["stock"],
+                "transaction_count": stats["transaction_count"],
+            }
+        )
+
+    pending_count = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.settlement_status == "pending",
+            OfficePickup.is_deleted == False,
+        )
+        .count()
+    )
+
+    applied_count = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.settlement_status == "applied",
+            OfficePickup.is_deleted == False,
+        )
+        .count()
+    )
+
+    pending_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status == "pending",
+            OfficePickup.is_deleted == False,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    applied_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status == "applied",
+            OfficePickup.is_deleted == False,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    settled_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.is_deleted == False,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    last_month_start = date(today.year, today.month - 1 if today.month > 1 else 12, 1)
+    if today.month == 1:
+        last_month_start = date(today.year - 1, 12, 1)
+
+    last_month_settled = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.is_deleted == False,
+            OfficePickup.confirmed_time >= last_month_start,
+            OfficePickup.confirmed_time < month_start,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    current_month_settled = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.is_deleted == False,
+            OfficePickup.confirmed_time >= month_start,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    if last_month_settled > 0:
+        growth_rate = (
+            (current_month_settled - last_month_settled) / last_month_settled
+        ) * 100
+    else:
+        growth_rate = 0 if current_month_settled == 0 else 100
+
+    office_stats = defaultdict(
+        lambda: {"total_qty": 0, "total_amount": 0, "pickup_count": 0}
+    )
+    all_pickups_for_ranking = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.is_deleted == False,
+        )
+        .limit(10000)
+        .all()
+    )
+
+    for pickup in all_pickups_for_ranking:
+        office_name = pickup.office_name or "未知办公室"
+        office_stats[office_name]["total_qty"] += pickup.quantity or 0
+        office_stats[office_name]["total_amount"] += float(pickup.total_amount or 0)
+        office_stats[office_name]["pickup_count"] += 1
+
+    office_ranking = sorted(
+        [{"office_name": k, **v} for k, v in office_stats.items()],
+        key=lambda x: x["total_qty"],
+        reverse=True,
+    )[:10]
+
+    total_pickup_count = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.is_deleted == False,
+        )
+        .count()
+    )
+
+    today_pickups = (
+        db.query(OfficePickup)
+        .filter(
+            OfficePickup.is_deleted == False,
+            OfficePickup.pickup_time >= today,
+        )
+        .count()
+    )
+
+    today_amount = (
+        db.query(func.sum(OfficePickup.total_amount))
+        .filter(
+            OfficePickup.is_deleted == False,
+            OfficePickup.pickup_time >= today,
+        )
+        .scalar()
+        or 0.0
+    )
+
+    return {
+        "pending_tasks": {
+            "applications_count": pending_count + applied_count,
+            "pending_office_settlements": pending_count,
+            "low_stock_count": low_stock_count,
+        },
+        "metrics": {
+            "settled_amount": float(settled_amount),
+            "settled_growth_rate": round(growth_rate, 1),
+            "unsettled_amount": float(pending_amount),
+            "applied_amount": float(applied_amount),
+            "today_pickups": today_pickups,
+            "today_amount": float(today_amount),
+        },
+        "quick_stats": {
+            "pending": {
+                "unsettled_count": pending_count,
+                "unsettled_amount": float(pending_amount),
+                "applied_count": applied_count,
+                "applied_amount": float(applied_amount),
+            }
+        },
+        "usage_stats": {
+            "by_unit": by_unit,
+            "total_quantity": sum(s["quantity"] for s in by_unit),
+        },
+        "inventory_alerts": inventory_alerts,
+        "office_ranking": office_ranking,
+        "total_pickup_count": total_pickup_count,
+        "summary": {
+            "water": {
+                "pending_count": pending_count,
+                "pending_amount": float(pending_amount),
+                "applied_count": applied_count,
+                "applied_amount": float(applied_amount),
+                "settled_count": db.query(OfficePickup)
+                .filter(
+                    OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+                    OfficePickup.is_deleted == False,
+                )
+                .count(),
+                "settled_amount": float(settled_amount),
+            }
+        },
+    }

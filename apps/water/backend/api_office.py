@@ -1178,8 +1178,12 @@ def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/office-pickup/{pickup_id}")
-def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
-    """删除办公室领水记录"""
+def delete_office_pickup(
+    pickup_id: int,
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """删除办公室领水记录（需要管理员权限）"""
     pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
@@ -1204,21 +1208,29 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
                 after_stock=product.stock,
                 reference_type="office_pickup_delete",
                 reference_id=pickup.id,
-                note=f"删除领水记录回退库存: {pickup.office_name}",
+                note=f"删除领水记录回退库存: {pickup.office_name} (操作人: {current_user.username})",
             )
             db.add(inventory_record)
         except Exception as e:
             print(f"创建库存流水失败: {e}")
 
-    db.delete(pickup)
+    # 记录删除操作
+    pickup.is_deleted = 1
+    pickup.deleted_at = datetime.now()
+    pickup.deleted_by = current_user.id
+
     db.commit()
 
-    return {"message": "删除成功"}
+    return {"message": "删除成功", "deleted_by": current_user.username}
 
 
 @router.post("/office-pickups/batch-delete")
-def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db)):
-    """批量删除办公室领水记录"""
+def batch_delete_office_pickups(
+    pickup_ids: List[int],
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """批量删除办公室领水记录（需要管理员权限）"""
     deleted_count = 0
     from main import InventoryRecord
 
@@ -1243,19 +1255,23 @@ def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get
                         after_stock=product.stock,
                         reference_type="office_pickup_batch_delete",
                         reference_id=pickup.id,
-                        note=f"批量删除领水记录回退库存: {pickup.office_name}",
+                        note=f"批量删除领水记录回退库存: {pickup.office_name} (操作人: {current_user.username})",
                     )
                     db.add(inventory_record)
                 except Exception as e:
                     print(f"创建库存流水失败: {e}")
 
-            db.delete(pickup)
+            # 软删除
+            pickup.is_deleted = 1
+            pickup.deleted_at = datetime.now()
+            pickup.deleted_by = current_user.id
             deleted_count += 1
 
     db.commit()
     return {
         "deleted_count": deleted_count,
         "message": f"成功删除 {deleted_count} 条记录",
+        "deleted_by": current_user.username,
     }
 
 
@@ -1286,8 +1302,12 @@ def user_pay_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickup/{pickup_id}/confirm")
-def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db)):
-    """管理员确认收款 - 支持pending和applied两种状态的确认
+def admin_confirm_payment(
+    pickup_id: int,
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """管理员确认收款 - 支持pending和applied两种状态的确认（需要管理员权限）
     - pending: 待付款状态，直接确认收款（用户可能线下已付款但未在系统操作）
     - applied: 付款待确认状态，确认后转为已结清
     """
@@ -1302,9 +1322,38 @@ def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db)):
         )
 
     pickup.settlement_status = "settled"
+    pickup.confirmed_time = datetime.now()
+    pickup.confirmed_by = current_user.id
+    pickup.confirmed_by_name = current_user.username
     db.commit()
 
-    return {"message": "确认收款成功"}
+    return {"message": "确认收款成功", "confirmed_by": current_user.username}
+
+
+@router.post("/office-pickup/{pickup_id}/revert")
+def revert_to_pending(
+    pickup_id: int,
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """退回到待付款状态（需要管理员权限）
+    - 仅支持 applied 状态退回
+    - 用于处理用户错误付款申请或信息填写错误
+    """
+    pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
+    if not pickup:
+        raise HTTPException(status_code=404, detail="领水记录不存在")
+
+    if pickup.settlement_status != "applied":
+        raise HTTPException(status_code=400, detail="只有付款待确认状态才能退回")
+
+    pickup.settlement_status = "pending"
+    pickup.payment_time = None
+    pickup.payment_method = None
+    pickup.payment_note = None
+    db.commit()
+
+    return {"message": "已退回到待付款状态", "reverted_by": current_user.username}
 
 
 @router.post("/office-pickups/batch-pay")

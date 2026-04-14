@@ -7,6 +7,7 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
 
 # Import the unified v1 API routes
 from apps.api.v1.water import router as water_router
@@ -16,6 +17,7 @@ from apps.api.v1.products import router as products_router
 from apps.api.v1.products import category_router as product_categories_router
 from apps.api.v1.offices import router as offices_router
 from apps.api.v1.accounts import router as accounts_router
+from apps.api.v1.membership import router as membership_router
 
 # Import the unified v2 API routes (Space Service)
 from apps.api.v2.space_types import router as space_types_router
@@ -25,8 +27,15 @@ from apps.api.v2.space_approvals import router as space_approvals_router
 from apps.api.v2.space_payments import router as space_payments_router
 from apps.api.v2.space_statistics import router as space_statistics_router
 
+# Import exception handlers
+from apps.error_handlers import register_exception_handlers
+
 # 导入space模型以确保表被创建
 from shared.models.space import *
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create main application
 app = FastAPI(
@@ -36,6 +45,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Register exception handlers FIRST - ensure all errors return JSON
+register_exception_handlers(app)
+logger.info("Exception handlers registered successfully")
 
 # Configure CORS
 app.add_middleware(
@@ -57,6 +70,7 @@ v1_router.include_router(products_router, tags=["产品管理"])
 v1_router.include_router(product_categories_router, tags=["产品分类"])
 v1_router.include_router(offices_router, tags=["办公室管理"])
 v1_router.include_router(accounts_router, tags=["办公室账户管理"])
+v1_router.include_router(membership_router, tags=["会员套餐"])
 
 # Create v2 version router (Space Service - 新架构)
 v2_router = APIRouter(prefix="/api/v2")

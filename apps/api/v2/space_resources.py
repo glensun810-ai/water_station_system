@@ -235,7 +235,7 @@ async def check_resource_availability(
             resource_id=resource_id,
             resource_name=resource.name,
             date=date.isoformat(),
-            operating_hours={"start": "08:00", "end": "22:00"},
+            operating_hours={"start": "08:00", "end": "23:00"},
             booked_slots=booked_slots,
             available_slots=available_slots,
             total_available_hours=total_available_hours,
@@ -247,7 +247,7 @@ def _calculate_available_slots(booked_slots: List[dict]) -> List[dict]:
     """计算可用时段"""
 
     if not booked_slots:
-        return [{"start_time": "08:00", "end_time": "22:00", "duration": 14}]
+        return [{"start_time": "08:00", "end_time": "23:00", "duration": 15}]
 
     available = []
     current_start = "08:00"
@@ -268,13 +268,13 @@ def _calculate_available_slots(booked_slots: List[dict]) -> List[dict]:
 
         current_start = booked["end_time"]
 
-    if current_start < "22:00":
+    if current_start < "23:00":
         start_dt = dt.strptime(current_start, "%H:%M")
-        end_dt = dt.strptime("22:00", "%H:%M")
+        end_dt = dt.strptime("23:00", "%H:%M")
         duration = (end_dt - start_dt).seconds / 3600
 
         available.append(
-            {"start_time": current_start, "end_time": "22:00", "duration": duration}
+            {"start_time": current_start, "end_time": "23:00", "duration": duration}
         )
 
     return available

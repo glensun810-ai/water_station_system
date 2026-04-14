@@ -6,11 +6,13 @@
     <meta name="theme-color" content="#2563EB">
     <meta name="description" content="审批中心 - 空间服务预约审批管理">
     
-    <title>审批中心 - 空间服务管理系统</title>
+    <title>审批中心</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
     
     <style>
         [v-cloak] { display: none !important; }
@@ -464,48 +466,26 @@
 <body>
     <div id="app" v-cloak class="approval-center-container" role="application" aria-label="审批中心">
         
-        <header class="approval-header" role="banner">
-            <!-- 面包屑导航 -->
-            <div style="max-width: 1400px; margin: 0 auto; margin-bottom: var(--spacing-sm);">
-                <nav aria-label="面包屑导航" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
-                    <a href="/portal/index.html" style="color: var(--text-secondary); text-decoration: none;">Portal首页</a>
-                    <span style="margin: 0 var(--spacing-xs);">></span>
-                    <a href="/portal/admin/space/dashboard.html" style="color: var(--text-secondary); text-decoration: none;">空间服务Dashboard</a>
-                    <span style="margin: 0 var(--spacing-xs);">></span>
-                    <span style="color: var(--text-tertiary);">审批中心</span>
-                </nav>
-            </div>
-            
-            <div class="header-content">
-                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
-                    <h1 class="header-title">
-                        <span aria-hidden="true">📋</span>
-                        审批中心
-                    </h1>
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
-                    <div class="approval-stats" role="status" aria-live="polite">
-                        <div class="stat-badge pending">
-                            <span aria-hidden="true">⏳</span>
-                            <span>待审批 {{ pendingCount }}</span>
-                        </div>
-                        <div class="stat-badge processed">
-                            <span aria-hidden="true">✅</span>
-                            <span>已处理 {{ processedCount }}</span>
-                        </div>
-                    </div>
-                    <a href="/portal/admin/space/dashboard.html" style="text-decoration: none; color: var(--text-secondary); font-size: var(--font-size-sm); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); background: var(--bg-secondary);">
-                        ← 返回Dashboard
-                    </a>
-                    <a href="/portal/index.html" style="text-decoration: none; color: var(--text-secondary); font-size: var(--font-size-sm);">
-                        用户端首页
-                    </a>
-                </div>
-            </div>
-        </header>
+        <global-header :breadcrumbs="[
+            { text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html' },
+            { text: '审批中心', icon: '✅', url: '/portal/admin/space/approvals.html' }
+        ]"></global-header>
         
         <main class="approval-main" role="main">
+            <!-- 页面标题 -->
+            <div class="header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
+                <h1 style="font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary);">📋 审批中心</h1>
+                <div class="approval-stats" role="status" aria-live="polite">
+                    <div class="stat-badge pending">
+                        <span>⏳</span>
+                        <span>待审批 {{ pendingCount }}</span>
+                    </div>
+                    <div class="stat-badge processed">
+                        <span>✅</span>
+                        <span>已处理 {{ processedCount }}</span>
+                    </div>
+                </div>
+            </div>
             
             <div class="loading-state" v-if="loading">
                 <div class="loading-spinner"></div>
@@ -819,6 +799,9 @@
         const { createApp, ref, computed, watch, onMounted } = Vue
         
         createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
             setup() {
                 const loading = ref(true)
                 const pendingCount = ref(0)

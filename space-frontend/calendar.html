@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#2563EB">
-    <title>预约日历 - AI产业集群空间服务</title>
+    <title>预约日历 - AI产业集群</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
     <script src="/portal/assets/js/auth.js"></script>
     
     <style>
@@ -1689,33 +1691,30 @@
             <div class="loading-text">加载日历数据...</div>
         </div>
         
-        <header class="header">
-            <div class="header-top">
-                <a href="/portal/index.html">Portal首页</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <a href="/space-frontend/index.html">空间服务</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <span style="color: white;">预约日历</span>
-            </div>
-            
-            <div class="header-content">
-                <h1 class="header-title">
-                    <span>📅</span>
-                    <span>预约日历</span>
-                </h1>
-                <div class="header-actions">
-                    <button class="header-btn" @click="refreshData" title="刷新数据 (快捷键: R)">
-                        🔄 刷新
-                    </button>
-                    <button class="header-btn" @click="goToMyBookings">📋 我的预约</button>
-                    <button class="header-btn" @click="quickBooking">➕ 快速预约</button>
-                    <button class="header-btn" @click="printCalendar" title="打印日历 (快捷键: P)">🖨️ 打印</button>
-                    <button class="header-btn" @click="exportCalendar" v-if="isAdmin">📥 导出</button>
-                </div>
-            </div>
-        </header>
+        <!-- 全局导航栏 -->
+        <global-header :breadcrumbs="[{text: '空间服务', icon: '🏢', url: '/space-frontend/index.html'}, {text: '预约日历', icon: '📅', url: '/space-frontend/calendar.html'}]"></global-header>
         
         <main class="main-container">
+            <!-- 页面标题和操作按钮 -->
+            <div class="page-header-section" style="background: white; padding: var(--spacing-lg); border-radius: var(--radius-lg); margin-bottom: var(--spacing-xl); box-shadow: var(--shadow-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-md);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                    <span style="font-size: 28px;">📅</span>
+                    <div>
+                        <h1 style="font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary); margin: 0;">预约日历</h1>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin: 0;">可视化查看和管理所有预约</p>
+                    </div>
+                </div>
+                <div class="header-actions" style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <button class="btn btn-outline btn-sm" @click="refreshData" title="刷新数据 (快捷键: R)">
+                        🔄 刷新
+                    </button>
+                    <button class="btn btn-outline btn-sm" @click="goToMyBookings">📋 我的预约</button>
+                    <button class="btn btn-primary btn-sm" @click="quickBooking">➕ 快速预约</button>
+                    <button class="btn btn-outline btn-sm" @click="printCalendar" title="打印日历 (快捷键: P)">🖨️ 打印</button>
+                    <button class="btn btn-outline btn-sm" @click="exportCalendar" v-if="isAdmin">📥 导出</button>
+                </div>
+            </div>
+            
             <div class="stats-mini">
                 <div class="stat-mini-card" @click="filterByStatus('all')">
                     <div class="stat-mini-value primary">{{ stats.totalBookings }}</div>
@@ -2236,6 +2235,9 @@
         const { createApp, ref, computed, watch, onMounted } = Vue;
         
         createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
             setup() {
                 const loading = ref(false);
                 const currentUser = ref(null);

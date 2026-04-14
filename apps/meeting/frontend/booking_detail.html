@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预约详情 - AI产业集群空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="config.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background-color: #F1F5F9;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .detail-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+        }
+        
+        #qrcode {
+            margin: 16px 0;
+        }
+        
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status-pending { background: #FEF3C7; color: #92400E; }
+        .status-confirmed { background: #D1FAE5; color: #065F46; }
+        .status-completed { background: #DBEAFE; color: #1E40AF; }
+        .status-cancelled { background: #FEE2E2; color: #991B1B; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .detail-card { box-shadow: none; border: 1px solid #E5E7EB; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-6 sticky top-0 z-50 no-print">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button @click="goBack" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-bold">预约详情</h1>
+                        <p class="text-sm opacity-90">预约凭证与详细信息</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button @click="handleShare" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                        </svg>
+                        分享
+                    </button>
+                    <button @click="handlePrint" class="bg-white hover:bg-gray-100 px-4 py-2 rounded-lg text-sm text-blue-600 font-medium transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        打印
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="max-w-4xl mx-auto px-4 py-6">
+            <div v-if="loading" class="flex justify-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+            
+            <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <p class="text-red-600 font-medium">{{ error }}</p>
+                <button @click="goBack" class="mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">
+                    返回列表
+                </button>
+            </div>
+            
+            <div v-else>
+                <!-- QR Code Section -->
+                <div class="qr-container mb-6">
+                    <div class="text-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800">预约凭证</h2>
+                        <p class="text-sm text-gray-500 mt-1">扫描二维码快速查看预约信息</p>
+                    </div>
+                    
+                    <div id="qrcode" class="border-4 border-blue-100 rounded-lg p-2"></div>
+                    
+                    <div class="text-center mt-4">
+                        <p class="text-lg font-bold text-blue-600">{{ booking.booking_no }}</p>
+                        <p class="text-xs text-gray-400 mt-1">预约编号</p>
+                    </div>
+                </div>
+                
+                <!-- Status Banner -->
+                <div class="detail-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">{{ booking.room_name }}</h3>
+                            <p class="text-sm text-gray-500 mt-1">{{ booking.location || '位置信息' }}</p>
+                        </div>
+                        <span :class="'status-badge status-' + booking.status">
+                            {{ getStatusText(booking.status) }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Booking Details -->
+                <div class="detail-card">
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        预约信息
+                    </h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">预约日期</p>
+                            <p class="font-medium text-gray-800">{{ booking.booking_date }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">时间段</p>
+                            <p class="font-medium text-gray-800">{{ booking.start_time }} - {{ booking.end_time }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">时长</p>
+                            <p class="font-medium text-gray-800">{{ booking.duration }} 小时</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">参会人数</p>
+                            <p class="font-medium text-gray-800">{{ booking.attendees_count }} 人</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <p class="text-sm text-gray-500">会议主题</p>
+                        <p class="font-medium text-gray-800">{{ booking.meeting_title || '未填写' }}</p>
+                    </div>
+                </div>
+                
+                <!-- User Info -->
+                <div class="detail-card">
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        预约人信息
+                    </h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">预约人</p>
+                            <p class="font-medium text-gray-800">{{ booking.user_name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">联系电话</p>
+                            <p class="font-medium text-gray-800">{{ booking.user_phone || '未填写' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">部门/单位</p>
+                            <p class="font-medium text-gray-800">{{ booking.department || '未填写' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">用户类型</p>
+                            <p class="font-medium text-gray-800">{{ getUserTypeText(booking.user_type) }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fee Info -->
+                <div class="detail-card">
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        费用信息
+                    </h4>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-500">标准费用</span>
+                            <span class="font-medium text-gray-800">¥{{ booking.total_fee.toFixed(2) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-500">实际费用</span>
+                            <span class="font-medium text-blue-600">¥{{ booking.actual_fee.toFixed(2) }}</span>
+                        </div>
+                        <div class="flex justify-between pt-3 border-t border-gray-100">
+                            <span class="text-sm text-gray-500">支付状态</span>
+                            <span :class="'font-medium ' + getPaymentStatusColor(booking.payment_status)">
+                                {{ getPaymentStatusText(booking.payment_status) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline -->
+                <div class="detail-card">
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        时间线
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <div class="flex gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                            <div class="flex-grow">
+                                <p class="text-sm text-gray-500">{{ formatDateTime(booking.created_at) }}</p>
+                                <p class="text-sm font-medium text-gray-800">创建预约</p>
+                            </div>
+                        </div>
+                        
+                        <div v-if="booking.status === 'confirmed'" class="flex gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                            <div class="flex-grow">
+                                <p class="text-sm text-gray-500">审批通过</p>
+                                <p class="text-sm font-medium text-gray-800">预约已确认</p>
+                            </div>
+                        </div>
+                        
+                        <div v-if="booking.status === 'cancelled'" class="flex gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 bg-red-600 rounded-full mt-2"></div>
+                            <div class="flex-grow">
+                                <p class="text-sm text-gray-500">{{ formatDateTime(booking.cancelled_at) }}</p>
+                                <p class="text-sm font-medium text-gray-800">预约已取消</p>
+                                <p v-if="booking.cancel_reason" class="text-xs text-gray-500 mt-1">
+                                    原因：{{ booking.cancel_reason }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions (no-print) -->
+                <div v-if="canCancel" class="detail-card no-print">
+                    <button @click="handleCancel" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg transition">
+                        取消预约
+                    </button>
+                </div>
+                
+                <!-- Share Link Info -->
+                <div class="detail-card no-print">
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                        分享链接
+                    </h4>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-500 mb-2">预约详情链接</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" :value="shareLink" readonly 
+                                   class="flex-grow bg-white border border-gray-200 rounded px-3 py-2 text-sm">
+                            <button @click="copyShareLink" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+                                复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tips -->
+                <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-6 no-print">
+                    <h5 class="font-medium text-blue-800 mb-2">温馨提示</h5>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• 请提前10分钟到达会议室</li>
+                        <li>• 如需取消预约，请至少提前2小时操作</li>
+                        <li>• 本凭证可用于入场验证</li>
+                        <li>• 如有问题请联系管理员</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Cancel Modal -->
+        <div v-if="showCancelModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">取消预约</h3>
+                <p class="text-sm text-gray-600 mb-4">请填写取消原因（可选）：</p>
+                
+                <textarea v-model="cancelReason" 
+                          class="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none"
+                          rows="3"
+                          placeholder="例如：临时有事，无法参加"></textarea>
+                
+                <div class="flex gap-3 mt-6">
+                    <button @click="showCancelModal = false" 
+                            class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg">
+                        取消
+                    </button>
+                    <button @click="confirmCancel" 
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">
+                        确认取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const booking = ref({});
+                const loading = ref(true);
+                const error = ref('');
+                const showCancelModal = ref(false);
+                const cancelReason = ref('');
+                
+                const bookingId = computed(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    return params.get('id');
+                });
+                
+                const shareLink = computed(() => {
+                    return `${window.location.origin}/meeting-frontend/booking_detail.html?id=${bookingId.value}`;
+                });
+                
+                const canCancel = computed(() => {
+                    if (!booking.value || booking.value.status === 'cancelled' || booking.value.status === 'completed') {
+                        return false;
+                    }
+                    
+                    // 检查是否可提前2小时取消
+                    const bookingDate = new Date(booking.value.booking_date);
+                    const now = new Date();
+                    const startTime = booking.value.start_time.split(':');
+                    bookingDate.setHours(parseInt(startTime[0]), parseInt(startTime[1]));
+                    
+                    const hoursDiff = (bookingDate - now) / (1000 * 60 * 60);
+                    return hoursDiff >= 2;
+                });
+                
+                const getApiBase = () => {
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                    return `${protocol}//${hostname}:${port}/api/v1`;
+                };
+                
+                const fetchBooking = async () => {
+                    if (!bookingId.value) {
+                        error.value = '缺少预约ID参数';
+                        loading.value = false;
+                        return;
+                    }
+                    
+                    try {
+                        const API_BASE = getApiBase();
+                        const response = await fetch(`${API_BASE}/meeting/bookings/${bookingId.value}`);
+                        
+                        if (!response.ok) {
+                            throw new Error('预约不存在或无权限查看');
+                        }
+                        
+                        const data = await response.json();
+                        booking.value = data;
+                        
+                        // 生成二维码
+                        generateQRCode();
+                        
+                    } catch (err) {
+                        error.value = err.message;
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const generateQRCode = () => {
+                    const qrData = JSON.stringify({
+                        booking_no: booking.value.booking_no,
+                        room: booking.value.room_name,
+                        date: booking.value.booking_date,
+                        time: `${booking.value.start_time}-${booking.value.end_time}`,
+                        url: shareLink.value
+                    });
+                    
+                    const qrContainer = document.getElementById('qrcode');
+                    if (qrContainer) {
+                        qrContainer.innerHTML = '';
+                        new QRCode(qrContainer, {
+                            text: qrData,
+                            width: 200,
+                            height: 200,
+                            colorDark: '#1E40AF',
+                            colorLight: '#ffffff',
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    }
+                };
+                
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待审批',
+                        'confirmed': '已确认',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const getUserTypeText = (type) => {
+                    const typeMap = {
+                        'internal': '内部员工',
+                        'external': '外部访客',
+                        'member': '会员用户'
+                    };
+                    return typeMap[type] || type;
+                };
+                
+                const getPaymentStatusText = (status) => {
+                    const statusMap = {
+                        'unpaid': '待支付',
+                        'paid': '已支付',
+                        'confirmed': '已确认',
+                        'refunded': '已退款'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const getPaymentStatusColor = (status) => {
+                    const colorMap = {
+                        'unpaid': 'text-orange-600',
+                        'paid': 'text-green-600',
+                        'confirmed': 'text-blue-600',
+                        'refunded': 'text-gray-600'
+                    };
+                    return colorMap[status] || 'text-gray-600';
+                };
+                
+                const formatDateTime = (datetime) => {
+                    if (!datetime) return '';
+                    return new Date(datetime).toLocaleString('zh-CN');
+                };
+                
+                const goBack = () => {
+                    window.history.back();
+                };
+                
+                const handleShare = async () => {
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: '会议室预约凭证',
+                                text: `预约编号：${booking.value.booking_no}`,
+                                url: shareLink.value
+                            });
+                        } catch (err) {
+                            console.log('分享失败:', err);
+                        }
+                    } else {
+                        copyShareLink();
+                    }
+                };
+                
+                const copyShareLink = async () => {
+                    try {
+                        await navigator.clipboard.writeText(shareLink.value);
+                        alert('链接已复制到剪贴板');
+                    } catch (err) {
+                        // fallback
+                        const input = document.querySelector('input[value="' + shareLink.value + '"]');
+                        input.select();
+                        document.execCommand('copy');
+                        alert('链接已复制到剪贴板');
+                    }
+                };
+                
+                const handlePrint = () => {
+                    window.print();
+                };
+                
+                const handleCancel = () => {
+                    showCancelModal.value = true;
+                };
+                
+                const confirmCancel = async () => {
+                    try {
+                        const API_BASE = getApiBase();
+                        const response = await fetch(`${API_BASE}/meeting/bookings/${bookingId.value}/cancel`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ reason: cancelReason.value || '用户主动取消' })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('取消失败');
+                        }
+                        
+                        alert('预约已取消');
+                        showCancelModal.value = false;
+                        fetchBooking();
+                        
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                };
+                
+                onMounted(() => {
+                    fetchBooking();
+                });
+                
+                return {
+                    booking,
+                    loading,
+                    error,
+                    showCancelModal,
+                    cancelReason,
+                    shareLink,
+                    canCancel,
+                    getStatusText,
+                    getUserTypeText,
+                    getPaymentStatusText,
+                    getPaymentStatusColor,
+                    formatDateTime,
+                    goBack,
+                    handleShare,
+                    copyShareLink,
+                    handlePrint,
+                    handleCancel,
+                    confirmCancel
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -218,3 +218,37 @@ class FeeCalculationResponse(BaseModel):
     fee_summary: dict
     deposit_info: dict
     payment_methods: List[str]
+
+
+class BatchOperationRequest(BaseModel):
+    """批量操作请求"""
+
+    booking_ids: List[int]
+    operation: str
+    reason: Optional[str] = None
+
+    @field_validator("booking_ids")
+    def booking_ids_must_not_be_empty(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("预约ID列表不能为空")
+        if len(v) > 100:
+            raise ValueError("单次批量操作最多100条记录")
+        return v
+
+    @field_validator("operation")
+    def operation_must_be_valid(cls, v):
+        valid_operations = ["delete", "approve", "cancel", "complete"]
+        if v not in valid_operations:
+            raise ValueError(f"操作类型必须是: {', '.join(valid_operations)}")
+        return v
+
+
+class BatchOperationResult(BaseModel):
+    """批量操作结果"""
+
+    total: int
+    success_count: int
+    failed_count: int
+    success_ids: List[int]
+    failed_items: List[dict]
+    message: str
