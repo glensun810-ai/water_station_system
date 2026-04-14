@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#2563EB">
+    <meta name="theme-color" content="#667eea">
     <meta name="description" content="空间预约创建 - 分步预约流程，智能推荐时段">
     
     <title>创建预约 - 空间服务预约系统</title>
@@ -16,413 +16,1099 @@
     <style>
         [v-cloak] { display: none !important; }
         
-        .booking-container {
-            min-height: 100vh;
-            background: var(--bg-secondary);
+        * {
+            box-sizing: border-box;
         }
         
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .booking-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* ===== 顶部导航 ===== */
         .booking-header {
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            padding: var(--spacing-lg);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding: var(--spacing-sm) var(--spacing-lg);
             position: sticky;
             top: 0;
             z-index: 100;
         }
         
-        .header-content {
+        .breadcrumb {
             max-width: 1200px;
             margin: 0 auto;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-lg);
-        }
-        
-        .back-btn {
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
-            min-height: var(--touch-min);
-            color: var(--text-secondary);
-            cursor: pointer;
+            font-size: var(--font-size-sm);
+            color: rgba(255,255,255,0.9);
         }
         
-        .header-title {
-            font-size: var(--font-size-xl);
-            font-weight: 600;
-            color: var(--text-primary);
+        .breadcrumb a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: color 0.2s;
         }
         
+        .breadcrumb a:hover {
+            color: white;
+        }
+        
+        .breadcrumb-divider {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .breadcrumb-current {
+            color: white;
+            font-weight: 500;
+        }
+        
+        /* ===== 主内容区域 ===== */
         .booking-main {
-            max-width: 1200px;
+            max-width: 900px;
+            width: 100%;
             margin: 0 auto;
             padding: var(--spacing-xl) var(--spacing-lg);
+            flex: 1;
+        }
+        
+        /* ===== 进度指示器 ===== */
+        .progress-container {
+            background: white;
+            border-radius: 24px;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
         
         .progress-steps {
             display: flex;
-            justify-content: center;
-            gap: var(--spacing-lg);
-            margin-bottom: var(--spacing-3xl);
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
         }
         
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            right: 40px;
+            height: 3px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+        
+        .progress-line-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+        
+        .progress-line-fill[data-step="1"] { width: 0%; }
+        .progress-line-fill[data-step="2"] { width: 33%; }
+        .progress-line-fill[data-step="3"] { width: 66%; }
+        .progress-line-fill[data-step="4"] { width: 100%; }
+        
         .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-sm);
+            z-index: 1;
+            flex: 1;
+        }
+        
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: #999;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .step-circle.active {
+            border-color: #667eea;
+            color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+        
+        .step-circle.completed {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+        
+        .step-circle.completed::after {
+            content: '✓';
+            font-size: 18px;
+        }
+        
+        .step-label {
+            font-size: var(--font-size-sm);
+            color: #999;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .step-label.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .step-label.completed {
+            color: #764ba2;
+        }
+        
+        /* ===== 表单卡片 ===== */
+        .form-card {
+            background: white;
+            border-radius: 24px;
+            padding: var(--spacing-2xl);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .card-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: -0.5px;
+        }
+        
+        .card-subtitle {
+            font-size: var(--font-size-sm);
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* ===== 用户信息展示 ===== */
+        .user-info-card {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            border-radius: 16px;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .user-info-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .user-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .user-name-display {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .user-type-badge {
+            display: inline-flex;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .user-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            font-size: var(--font-size-xs);
+            color: #999;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-size: var(--font-size-sm);
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+        
+        /* ===== 空间选择 ===== */
+        .resource-section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: var(--spacing-lg);
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
         }
         
-        .step-number {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--bg-active);
-            color: var(--text-tertiary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: var(--font-size-sm);
-        }
-        
-        .step-number.active {
-            background: var(--primary);
-            color: var(--text-inverse);
-        }
-        
-        .step-number.completed {
-            background: var(--success);
-            color: var(--text-inverse);
-        }
-        
-        .step-label {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
-        }
-        
-        .step-label.active {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-        
-        .step-divider {
-            width: 60px;
-            height: 2px;
-            background: var(--border);
-        }
-        
-        .booking-form {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: var(--spacing-xl);
-        }
-        
-        .form-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-xl);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .card-title {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-xl);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-        }
-        
-        .user-info-display {
-            background: var(--info-light);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
-            margin-bottom: var(--spacing-xl);
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .info-label {
-            color: var(--text-secondary);
-            font-size: var(--font-size-sm);
-        }
-        
-        .info-value {
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: var(--font-size-sm);
-        }
-        
         .resource-selector {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: var(--spacing-lg);
         }
         
         .resource-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
+            background: white;
+            border-radius: 16px;
             padding: var(--spacing-lg);
             cursor: pointer;
-            transition: all var(--transition-fast);
-            border: 2px solid transparent;
-            min-height: var(--touch-min);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #e8e8e8;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .resource-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: transparent;
+            transition: background 0.3s;
         }
         
         .resource-card:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
+            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+        }
+        
+        .resource-card:hover::before {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         }
         
         .resource-card.selected {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            box-shadow: var(--shadow-md);
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2);
+        }
+        
+        .resource-card.selected::before {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .resource-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .resource-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .resource-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
         }
         
         .resource-name {
+            font-size: var(--font-size-lg);
             font-weight: 600;
-            margin-bottom: var(--spacing-sm);
+            color: #1a1a1a;
+        }
+        
+        .resource-favorite {
+            color: #ffd700;
+            font-size: 16px;
         }
         
         .resource-meta {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
         }
         
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: #666;
+        }
+        
+        .meta-icon {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .resource-price {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .price-label {
+            font-size: var(--font-size-sm);
+            color: #999;
+        }
+        
+        .price-value {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        /* ===== 日期选择 ===== */
+        .date-picker-container {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .date-picker-wrapper {
+            position: relative;
+        }
+        
+        .date-input {
+            width: 100%;
+            padding: var(--spacing-lg);
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: var(--font-size-lg);
+            font-weight: 500;
+            color: #1a1a1a;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .date-input:hover {
+            border-color: #667eea;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .date-hint {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: #999;
+        }
+        
+        .hint-icon {
+            color: #667eea;
+        }
+        
+        /* ===== 时段选择 ===== */
+        .time-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .time-stats {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .stat-dot.available { background: #52c41a; }
+        .stat-dot.booked { background: #ff4d4f; }
+        
+        .stat-text {
+            font-size: var(--font-size-sm);
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        /* ===== 时段网格 ===== */
         .time-picker-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: var(--spacing-md);
         }
         
-.time-slot {
-             background: var(--bg-card);
-             border: 2px solid var(--border);
-             border-radius: var(--radius-lg);
-             padding: var(--spacing-lg);
-             text-align: center;
-             font-size: var(--font-size-lg);
-             font-weight: 600;
-             color: var(--text-primary);
-             cursor: pointer;
-             transition: all var(--transition-base);
-             position: relative;
-             min-height: var(--touch-min);
-         }
-         
-         .time-slot:hover:not(.disabled) {
-             border-color: var(--primary);
-             background: var(--primary-light);
-             transform: translateY(-2px);
-             box-shadow: var(--shadow-md);
-         }
-         
-         .time-slot.selected {
-             background: var(--primary);
-             color: var(--text-inverse);
-             border-color: var(--primary-dark);
-             box-shadow: var(--shadow-lg);
-         }
-         
-         .time-slot.disabled {
-             background: var(--danger-light);
-             border-color: var(--danger);
-             color: var(--danger);
-             cursor: not-allowed;
-             opacity: 0.8;
-         }
-         
-         .time-slot.conflict {
-             background: var(--warning-light);
-             border-color: var(--warning);
-         }
-         
-         .time-slot-info {
-             font-size: var(--font-size-xs);
-             color: var(--text-tertiary);
-             margin-top: var(--spacing-xs);
-         }
-         
-         .time-slot-info.conflict-info {
-             color: var(--danger);
-             font-weight: 500;
-         }
-         
-         .conflict-tooltip {
-             position: absolute;
-             bottom: 100%;
-             left: 50%;
-             transform: translateX(-50%);
-             background: var(--bg-card);
-             border: 1px solid var(--border);
-             border-radius: var(--radius-md);
-             padding: var(--spacing-sm) var(--spacing-md);
-             font-size: var(--font-size-xs);
-             white-space: nowrap;
-             box-shadow: var(--shadow-lg);
-             z-index: 100;
-             display: none;
-         }
-         
-         .time-slot.disabled:hover .conflict-tooltip {
-             display: block;
-         }
-         
-         .conflict-warning-box {
-             background: var(--danger-light);
-             border: 2px solid var(--danger);
-             border-radius: var(--radius-lg);
-             padding: var(--spacing-lg);
-             margin-bottom: var(--spacing-lg);
-             display: flex;
-             align-items: flex-start;
-             gap: var(--spacing-md);
-         }
-         
-         .conflict-warning-icon {
-             font-size: 24px;
-         }
-         
-         .conflict-warning-content {
-             flex: 1;
-         }
-         
-         .conflict-warning-title {
-             font-weight: 600;
-             color: var(--danger-dark);
-             margin-bottom: var(--spacing-sm);
-         }
-         
-         .conflict-warning-detail {
-             font-size: var(--font-size-sm);
-             color: var(--danger);
-         }
-         
-         .time-legend {
-             display: flex;
-             gap: var(--spacing-lg);
-             margin-bottom: var(--spacing-md);
-             font-size: var(--font-size-sm);
-         }
-         
-         .legend-item {
-             display: flex;
-             align-items: center;
-             gap: var(--spacing-sm);
-         }
-         
-         .legend-dot {
-             width: 16px;
-             height: 16px;
-             border-radius: var(--radius-sm);
-         }
-         
-         .legend-dot.available { background: var(--success-light); border: 2px solid var(--success); }
-         .legend-dot.selected { background: var(--primary); border: 2px solid var(--primary); }
-         .legend-dot.booked { background: var(--danger-light); border: 2px solid var(--danger); }
-         .legend-dot.pending { background: var(--warning-light); border: 2px solid var(--warning); }
-         
-         .time-slot.selected::after {
-             content: '';
-             position: absolute;
-             top: 8px;
-             right: 8px;
-             width: 20px;
-             height: 20px;
-             background: var(--success);
-             border-radius: 50%;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-         }
-         
-         .time-slot.in-range {
-             background: var(--primary-light);
-             border-color: var(--primary);
-             color: var(--primary-dark);
-         }
-         
-         .time-slot.disabled {
-             background: var(--bg-secondary);
-             color: var(--text-tertiary);
-             border-color: var(--border);
-             cursor: not-allowed;
-             opacity: 0.6;
-         }
+        .time-slot {
+            background: white;
+            border-radius: 12px;
+            padding: var(--spacing-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #e8e8e8;
+            position: relative;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
         
         .time-slot:hover:not(.disabled) {
-            border-color: var(--primary);
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.1);
+        }
+        
+        .time-slot.available {
+            background: linear-gradient(135deg, #f8fff8 0%, #f0fff0 100%);
+            border-color: #b7eb8f;
+        }
+        
+        .time-slot.available:hover {
+            background: linear-gradient(135deg, #e6f7e6 0%, #d9f0d9 100%);
         }
         
         .time-slot.selected {
-            background: var(--primary);
-            color: var(--text-inverse);
-            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.25);
+            transform: scale(1.02);
+        }
+        
+        .time-slot.selected .slot-time {
+            color: white;
+        }
+        
+        .time-slot.selected .slot-status {
+            color: rgba(255,255,255,0.9);
         }
         
         .time-slot.disabled {
-            background: var(--bg-active);
-            color: var(--text-disabled);
+            background: linear-gradient(135deg, #fff1f0 0%, #ffe7e6 100%);
+            border-color: #ffa39e;
             cursor: not-allowed;
+            opacity: 0.7;
         }
         
-        .fee-calculator {
-            background: var(--warning-light);
-            border-radius: var(--radius-lg);
+        .slot-time {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        
+        .slot-status {
+            font-size: var(--font-size-xs);
+            color: #999;
+            font-weight: 500;
+        }
+        
+        .time-slot.disabled .slot-status {
+            color: #ff4d4f;
+        }
+        
+        .slot-check {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        /* ===== 冲突提示 ===== */
+        .conflict-banner {
+            background: linear-gradient(135deg, #fff1f0 0%, #ffe7e6 100%);
+            border-radius: 16px;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-lg);
+            border: 1px solid #ffa39e;
+        }
+        
+        .conflict-icon {
+            width: 48px;
+            height: 48px;
+            background: #ff4d4f;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .conflict-content {
+            flex: 1;
+        }
+        
+        .conflict-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #cf1322;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .conflict-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .conflict-item {
+            font-size: var(--font-size-sm);
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .conflict-time {
+            font-weight: 600;
+            color: #cf1322;
+        }
+        
+        /* ===== 时段图例 ===== */
+        .time-legend {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-md);
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: #666;
+        }
+        
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 6px;
+        }
+        
+        .legend-dot.available {
+            background: linear-gradient(135deg, #f8fff8 0%, #f0fff0 100%);
+            border: 2px solid #b7eb8f;
+        }
+        
+        .legend-dot.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .legend-dot.booked {
+            background: linear-gradient(135deg, #fff1f0 0%, #ffe7e6 100%);
+            border: 2px solid #ffa39e;
+        }
+        
+        /* ===== 选择摘要 ===== */
+        .selection-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+            color: white;
+        }
+        
+        .summary-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .summary-icon {
+            font-size: 24px;
+        }
+        
+        .summary-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+        
+        .summary-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-slots {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+        }
+        
+        .summary-hours {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .summary-hours-unit {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+            margin-left: 4px;
+        }
+        
+        /* ===== 表单输入 ===== */
+        .form-group {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .form-label-required {
+            color: #ff4d4f;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-lg);
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: var(--font-size-base);
+            color: #1a1a1a;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .form-input:hover {
+            border-color: #d0d0d0;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #999;
+        }
+        
+        .form-hint {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-xs);
+            color: #999;
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        /* ===== 费用计算 ===== */
+        .fee-card {
+            background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+            border-radius: 16px;
             padding: var(--spacing-xl);
+            margin-top: var(--spacing-xl);
+            border: 1px solid #ffd666;
+        }
+        
+        .fee-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .fee-icon {
+            width: 40px;
+            height: 40px;
+            background: #faad14;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+        
+        .fee-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #1a1a1a;
         }
         
         .fee-breakdown {
-            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
         }
         
         .fee-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: var(--spacing-sm);
+            align-items: center;
         }
         
-        .fee-label {
-            color: var(--text-secondary);
+        .fee-row-label {
+            font-size: var(--font-size-sm);
+            color: #666;
         }
         
-        .fee-value {
-            font-weight: 500;
-            color: var(--text-primary);
+        .fee-row-value {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .fee-row-value.discount {
+            color: #52c41a;
         }
         
         .fee-total {
             display: flex;
             justify-content: space-between;
-            padding-top: var(--spacing-md);
-            border-top: 2px solid var(--border);
+            align-items: center;
+            padding-top: var(--spacing-lg);
+            border-top: 2px solid #ffd666;
+        }
+        
+        .fee-total-label {
             font-size: var(--font-size-lg);
-            font-weight: 700;
+            font-weight: 600;
+            color: #1a1a1a;
         }
         
         .fee-total-value {
-            color: var(--primary);
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: #667eea;
         }
         
+        .fee-total-value::before {
+            content: '¥';
+            font-size: var(--font-size-lg);
+        }
+        
+        /* ===== 确认页面 ===== */
+        .confirm-card {
+            background: white;
+            border-radius: 24px;
+            padding: var(--spacing-2xl);
+        }
+        
+        .confirm-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .confirm-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-lg);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            animation: bounce 0.6s;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .confirm-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .confirm-subtitle {
+            font-size: var(--font-size-sm);
+            color: #666;
+        }
+        
+        .confirm-details {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: #999;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-sm);
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+        
+        .detail-value.highlight {
+            color: #667eea;
+            font-size: var(--font-size-lg);
+        }
+        
+        /* ===== 操作按钮 ===== */
         .form-actions {
             display: flex;
             gap: var(--spacing-lg);
             justify-content: center;
+            margin-top: var(--spacing-xl);
             padding-top: var(--spacing-xl);
+            border-top: 2px solid #f0f0f0;
         }
         
         .action-btn {
-            min-width: 150px;
-            min-height: var(--touch-min);
+            min-width: 160px;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-radius: 12px;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
         }
         
+        .btn-secondary {
+            background: white;
+            border: 2px solid #e8e8e8;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-danger {
+            background: #ff4d4f;
+            border: none;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #ff7875;
+            transform: translateY(-2px);
+        }
+        
+        /* ===== 加载状态 ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            color: #666;
+        }
+        
+        /* ===== 响应式设计 ===== */
         @media (max-width: 768px) {
+            .booking-main {
+                padding: var(--spacing-md);
+            }
+            
+            .progress-container {
+                padding: var(--spacing-md);
+            }
+            
+            .progress-steps {
+                flex-wrap: wrap;
+                gap: var(--spacing-sm);
+            }
+            
+            .progress-line {
+                display: none;
+            }
+            
+            .form-card {
+                padding: var(--spacing-lg);
+                border-radius: 16px;
+            }
+            
             .time-picker-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
@@ -437,6 +1123,54 @@
             
             .action-btn {
                 width: 100%;
+                min-width: auto;
+            }
+            
+            .user-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-legend {
+                flex-wrap: wrap;
+                gap: var(--spacing-md);
+            }
+            
+            .time-stats {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .time-picker-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .step-item {
+                flex: none;
+                width: 50%;
+            }
+            
+            .step-item:nth-child(n+5) {
+                display: none;
+            }
+        }
+        
+        /* ===== 打印样式 ===== */
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .booking-header,
+            .progress-container,
+            .form-actions {
+                display: none;
+            }
+            
+            .form-card {
+                box-shadow: none;
+                border: 1px solid #e8e8e8;
             }
         }
     </style>
@@ -444,82 +1178,99 @@
 <body>
     <div id="app" v-cloak class="booking-container" role="application" aria-label="预约创建页面">
         
-        <header class="booking-header" role="banner">
-            <!-- 面包屑导航 -->
-            <div style="background: rgba(255,255,255,0.1); padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-xs);">
-                <a href="/portal/index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Portal首页</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <a href="/space-frontend/index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">空间服务</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <span style="color: white;">创建预约</span>
-            </div>
-            
-            <div class="header-content">
-                <a href="/portal/index.html" class="back-btn" aria-label="返回Portal首页">
-                    <span aria-hidden="true">←</span>
-                    <span>返回首页</span>
-                </a>
-                <h1 class="header-title">创建预约</h1>
+        <div v-if="submitting" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">正在提交预约...</div>
+        </div>
+        
+        <!-- 顶部导航 -->
+        <header class="booking-header">
+            <div class="breadcrumb">
+                <a href="/portal/index.html">Portal首页</a>
+                <span class="breadcrumb-divider">›</span>
+                <a href="/space-frontend/index.html">空间服务</a>
+                <span class="breadcrumb-divider">›</span>
+                <span class="breadcrumb-current">创建预约</span>
             </div>
         </header>
         
-        <main class="booking-main" role="main">
+        <main class="booking-main">
             
-            <nav class="progress-steps" role="navigation" aria-label="预约步骤">
-                <div class="step-item">
-                    <div class="step-number active" :aria-label="currentStep === 1 ? '当前步骤' : '已完成步骤'">1</div>
-                    <span class="step-label active">选择空间</span>
-                </div>
-                <div class="step-divider" aria-hidden="true"></div>
-                <div class="step-item">
-                    <div class="step-number" :class="{ active: currentStep >= 2 }">2</div>
-                    <span class="step-label" :class="{ active: currentStep >= 2 }">选择时段</span>
-                </div>
-                <div class="step-divider" aria-hidden="true"></div>
-                <div class="step-item">
-                    <div class="step-number" :class="{ active: currentStep >= 3 }">3</div>
-                    <span class="step-label" :class="{ active: currentStep >= 3 }">填写信息</span>
-                </div>
-                <div class="step-divider" aria-hidden="true"></div>
-                <div class="step-item">
-                    <div class="step-number" :class="{ active: currentStep >= 4 }">4</div>
-                    <span class="step-label" :class="{ active: currentStep >= 4 }">确认提交</span>
-                </div>
-            </nav>
-            
-            <form class="booking-form" @submit.prevent="submitBooking" aria-label="预约表单">
-                
-                <section class="form-card" v-if="currentStep === 1">
-                    <h2 class="card-title">
-                        <span aria-hidden="true">📋</span>
-                        预约人信息（自动识别）
-                    </h2>
+            <!-- 进度指示器 -->
+            <div class="progress-container">
+                <div class="progress-steps">
+                    <div class="progress-line">
+                        <div class="progress-line-fill" :data-step="currentStep"></div>
+                    </div>
                     
-                    <div class="user-info-display" role="status" aria-live="polite">
-                        <div class="info-row">
-                            <span class="info-label">姓名</span>
-                            <span class="info-value">{{ currentUser?.name || '未登录' }}</span>
+                    <div class="step-item">
+                        <div class="step-circle" :class="{ active: currentStep === 1, completed: currentStep > 1 }">
+                            <span v-if="currentStep <= 1">1</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">所属办公室</span>
-                            <span class="info-value">{{ currentUser?.department || '外部访客' }}</span>
+                        <span class="step-label" :class="{ active: currentStep === 1, completed: currentStep > 1 }">选择空间</span>
+                    </div>
+                    
+                    <div class="step-item">
+                        <div class="step-circle" :class="{ active: currentStep === 2, completed: currentStep > 2 }">
+                            <span v-if="currentStep <= 2">2</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">用户类型</span>
-                            <span class="info-value">{{ userType === 'internal' ? '内部员工（会员价）' : '外部访客' }}</span>
+                        <span class="step-label" :class="{ active: currentStep === 2, completed: currentStep > 2 }">选择时段</span>
+                    </div>
+                    
+                    <div class="step-item">
+                        <div class="step-circle" :class="{ active: currentStep === 3, completed: currentStep > 3 }">
+                            <span v-if="currentStep <= 3">3</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">剩余免费时长</span>
-                            <span class="info-value">{{ freeHoursRemaining }}小时</span>
+                        <span class="step-label" :class="{ active: currentStep === 3, completed: currentStep > 3 }">填写信息</span>
+                    </div>
+                    
+                    <div class="step-item">
+                        <div class="step-circle" :class="{ active: currentStep === 4, completed: currentStep >= 4 }">
+                            <span v-if="currentStep <= 4">4</span>
+                        </div>
+                        <span class="step-label" :class="{ active: currentStep === 4 }">确认提交</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form @submit.prevent="submitBooking">
+                
+                <!-- 步骤1：选择空间 -->
+                <section class="form-card" v-if="currentStep === 1">
+                    <div class="card-header">
+                        <div class="card-icon">👤</div>
+                        <div>
+                            <div class="card-title">预约人信息</div>
+                            <div class="card-subtitle">系统已自动识别您的身份</div>
                         </div>
                     </div>
                     
-                    <h2 class="card-title" style="margin-top: var(--spacing-xl);">
-                        <span aria-hidden="true">🏢</span>
-                        选择空间
-                    </h2>
+                    <div class="user-info-card">
+                        <div class="user-info-header">
+                            <div class="user-avatar">{{ currentUser?.name?.charAt(0) || '访' }}</div>
+                            <div>
+                                <div class="user-name-display">{{ currentUser?.name || '访客' }}</div>
+                                <span class="user-type-badge">{{ userType === 'internal' ? '内部员工' : '外部访客' }}</span>
+                            </div>
+                        </div>
+                        <div class="user-info-grid">
+                            <div class="info-item">
+                                <span class="info-label">所属部门</span>
+                                <span class="info-value">{{ currentUser?.department || '外部访客' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">免费时长</span>
+                                <span class="info-value">{{ freeHoursRemaining }} 小时</span>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <div class="resource-selector" role="radiogroup" aria-label="空间选择">
+                    <div class="resource-section-title">
+                        <span>🏢</span>
+                        <span>选择预约空间</span>
+                    </div>
+                    
+                    <div class="resource-selector" role="radiogroup">
                         <div 
                             v-for="resource in availableResources" 
                             :key="resource.id"
@@ -531,53 +1282,100 @@
                             @click="selectResource(resource)"
                             @keypress.enter="selectResource(resource)"
                         >
-                            <div class="resource-name">{{ resource.name }}</div>
-                            <div class="resource-meta">
-                                <div>位置：{{ resource.location }}</div>
-                                <div>容量：{{ resource.capacity }}人</div>
-                                <div>价格：¥{{ resource.basePrice }}/{{ typeUnit }}</div>
+                            <div class="resource-header">
+                                <div class="resource-icon">📍</div>
+                                <div class="resource-name">{{ resource.name }}</div>
+                                <span v-if="resource.isFavorite" class="resource-favorite">★</span>
                             </div>
-                            <div v-if="resource.isFavorite" style="color: var(--warning); margin-top: var(--spacing-sm);">
-                                <span aria-hidden="true">★</span> 常用空间
+                            <div class="resource-meta">
+                                <div class="meta-item">
+                                    <span class="meta-icon">📍</span>
+                                    <span>{{ resource.location }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-icon">👥</span>
+                                    <span>容纳 {{ resource.capacity }} 人</span>
+                                </div>
+                            </div>
+                            <div class="resource-price">
+                                <span class="price-label">基础价格</span>
+                                <span class="price-value">¥{{ resource.basePrice }}/{{ typeUnit }}</span>
                             </div>
                         </div>
                     </div>
                 </section>
                 
+                <!-- 步骤2：选择时段 -->
                 <section class="form-card" v-if="currentStep === 2 && selectedResource">
-                    <h2 class="card-title">
-                        <span aria-hidden="true">📅</span>
-                        选择时段
-                    </h2>
-                    
-<div class="form-group" style="margin-bottom: var(--spacing-xl);">
-                        <label for="booking-date" class="form-label">预约日期</label>
-                        <input 
-                            type="date" 
-                            id="booking-date" 
-                            class="form-input"
-                            v-model="bookingDate"
-                            :min="minDate"
-                            :aria-describedby="dateHint"
-                            @change="loadTimeSlots"
-                        >
-                        <span id="dateHint" class="form-hint">可预约未来7天内的时段</span>
+                    <div class="card-header">
+                        <div class="card-icon">📅</div>
+                        <div>
+                            <div class="card-title">选择预约时段</div>
+                            <div class="card-subtitle">已选择 {{ selectedResource?.name }} | 可连续选择多个时段</div>
+                        </div>
                     </div>
                     
-                    <!-- 实时冲突检测状态 -->
-                    <div v-if="conflictDetected" class="conflict-warning-box">
-                        <div class="conflict-warning-icon">⚠️</div>
-                        <div class="conflict-warning-content">
-                            <div class="conflict-warning-title">时段冲突提示</div>
-                            <div class="conflict-warning-detail">
-                                <div v-for="conflict in conflictBookings" :key="conflict.booking_id" style="margin-bottom: var(--spacing-xs);">
-                                    <strong>{{ conflict.time_range }}</strong> 已被预约：
-                                    <span style="color: var(--danger-dark);">{{ conflict.title }}</span>
-                                    <span style="color: var(--text-tertiary);">({{ conflict.user_name }})</span>
+                    <!-- 选择提示 -->
+                    <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%); border-radius: 12px; padding: var(--spacing-lg); margin-bottom: var(--spacing-xl); border: 1px solid rgba(102, 126, 234, 0.2);">
+                        <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                            <span style="font-size: 20px;">💡</span>
+                            <div>
+                                <div style="font-weight: 600; color: #667eea; margin-bottom: 4px;">时段选择说明</div>
+                                <div style="font-size: var(--font-size-sm); color: #666;">
+                                    点击时段卡片即可选择，可连续选择多个时段（如08:00-12:00共4小时）。
+                                    <span v-if="selectedTimeSlots.length > 0" style="color: #52c41a; font-weight: 500;">
+                                        已选择 {{ selectedTimeSlots.length }} 个时段，共 {{ totalSelectedHours }} 小时
+                                    </span>
                                 </div>
-                                <div style="margin-top: var(--spacing-sm); color: var(--primary);">
-                                    请选择其他可用时段或更换日期
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="date-picker-container">
+                        <label class="form-label">
+                            <span>预约日期</span>
+                        </label>
+                        <div class="date-picker-wrapper">
+                            <input 
+                                type="date" 
+                                class="date-input"
+                                v-model="bookingDate"
+                                :min="minDate"
+                                @change="loadTimeSlots"
+                            >
+                        </div>
+                        <div class="date-hint">
+                            <span class="hint-icon">💡</span>
+                            <span>可预约未来7天内的时段</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 冲突提示 -->
+                    <div v-if="conflictDetected" class="conflict-banner">
+                        <div class="conflict-icon">⚠️</div>
+                        <div class="conflict-content">
+                            <div class="conflict-title">部分时段已被预约</div>
+                            <div class="conflict-list">
+                                <div v-for="conflict in conflictBookings" :key="conflict.booking_id" class="conflict-item">
+                                    <span class="conflict-time">{{ conflict.time_range }}</span>
+                                    <span>{{ conflict.title }} ({{ conflict.user_name }})</span>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时段统计 -->
+                    <div class="time-section-header">
+                        <div class="time-stats">
+                            <div class="stat-item">
+                                <div class="stat-dot available"></div>
+                                <span class="stat-text">可用</span>
+                                <span class="stat-value">{{ availableHoursCount }}h</span>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-dot booked"></div>
+                                <span class="stat-text">已预约</span>
+                                <span class="stat-value">{{ bookedHoursCount }}h</span>
                             </div>
                         </div>
                     </div>
@@ -586,245 +1384,234 @@
                     <div class="time-legend">
                         <div class="legend-item">
                             <div class="legend-dot available"></div>
-                            <span>可用</span>
+                            <span>可预约</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot.selected"></div>
-                            <span>已选</span>
+                            <div class="legend-dot selected"></div>
+                            <span>已选中</span>
                         </div>
                         <div class="legend-item">
                             <div class="legend-dot booked"></div>
                             <span>已被预约</span>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-dot pending"></div>
-                            <span>待审批</span>
+                    </div>
+                    
+                    <!-- 时段网格 -->
+                    <div class="time-picker-grid">
+                        <div 
+                            v-for="slot in timeSlots" 
+                            :key="slot.time"
+                            class="time-slot"
+                            :class="{
+                                available: slot.available && !isSlotSelected(slot),
+                                selected: isSlotSelected(slot),
+                                disabled: !slot.available
+                            }"
+                            @click="toggleTimeSlot(slot)"
+                        >
+                            <span class="slot-time">{{ slot.time.split('-')[0] }}</span>
+                            <span class="slot-status">
+                                <span v-if="isSlotSelected(slot)">已选中</span>
+                                <span v-else-if="slot.available">可预约</span>
+                                <span v-else>已预约</span>
+                            </span>
+                            <span v-if="isSlotSelected(slot)" class="slot-check">✓</span>
                         </div>
                     </div>
                     
-                    <!-- 可用时段摘要 -->
-                    <div v-if="timeSlots.length > 0" style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); font-size: var(--font-size-sm);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>
-                                <strong>当日可用时段：</strong>
-                                {{ availableHoursCount }} 小时
-                                <span v-if="availableHoursCount < 4" style="color: var(--warning);">（时段紧张，建议尽早预约）</span>
-                            </span>
-                            <span style="color: var(--text-tertiary);">
-                                已预约 {{ bookedHoursCount }} 小时
+                    <!-- 选择摘要 -->
+                    <div v-if="selectedTimeSlots.length > 0" class="selection-summary">
+                        <div class="summary-header">
+                            <span class="summary-icon">✓</span>
+                            <span class="summary-title">已选择时段</span>
+                        </div>
+                        <div class="summary-content">
+                            <span class="summary-slots">{{ formatSelectedSlots() }}</span>
+                            <span class="summary-hours">
+                                {{ totalSelectedHours }}
+                                <span class="summary-hours-unit">小时</span>
                             </span>
                         </div>
                     </div>
-                    
- <!-- 时间段选择说明 -->
-                      <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md); font-size: var(--font-size-sm); color: var(--primary-dark);">
-                          <strong>💡 选择提示：</strong>可连续选择多个时间段（如上午连续2小时、3小时）。点击时段即可选中/取消，系统会自动验证连续性。
-                          <div v-if="selectedTimeSlots.length > 0" style="margin-top: var(--spacing-sm); color: var(--success);">
-                              已选择 {{ selectedTimeSlots.length }} 个时段，共 {{ totalSelectedHours }} 小时
-                          </div>
-                      </div>
-                      
-                      <div class="time-picker-grid" role="grid" aria-label="时段选择">
-                          <div 
-                              v-for="slot in timeSlots" 
-                              :key="slot.time"
-                              class="time-slot"
-                              :class="{ 
-                                  selected: isSlotSelected(slot),
-                                  disabled: !slot.available,
-                                  conflict: slot.hasConflict,
-                                  'in-range': isInSelectedRange(slot)
-                              }"
-                              role="gridcell"
-                              tabindex="0"
-                              @click="toggleTimeSlot(slot)"
-                              @keypress.enter="toggleTimeSlot(slot)"
-                              :aria-disabled="!slot.available"
-                              :aria-label="`${slot.time} ${slot.available ? '可用' : '已被预约'} ${isSlotSelected(slot) ? '已选中' : ''}`"
-                          >
-                              {{ slot.time }}
-                              <div v-if="isSlotSelected(slot)" class="time-slot-info" style="color: var(--success);">✓ 已选</div>
-                              <div v-else-if="!slot.available && slot.bookingInfo" class="time-slot-info conflict-info">
-                                  已预约
-                                  <div class="conflict-tooltip">
-                                      <strong>{{ slot.bookingInfo.title }}</strong><br>
-                                      预约人: {{ slot.bookingInfo.user_name }}
-                                  </div>
-                              </div>
-                              <div v-else-if="slot.available" class="time-slot-info">可预约</div>
-                          </div>
-                      </div>
-                     
-                     <!-- 操作按钮 -->
-                     <div v-if="selectedTimeSlots.length > 0" style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); justify-content: center;">
-                         <button class="btn btn-outline btn-sm" @click="clearTimeSlots" aria-label="清除所有选择">
-                             🔄 清除选择
-                         </button>
-                         <button v-if="!isConsecutive" class="btn btn-warning btn-sm" disabled aria-label="时间段不连续提示">
-                             ⚠️ 请选择连续时段
-                         </button>
-                     </div>
                 </section>
                 
-<section class="form-card" v-if="currentStep === 3 && selectedResource && selectedTimeSlots.length > 0">
-                     <h2 class="card-title">
-                         <span aria-hidden="true">📝</span>
-                         填写预约信息
-                     </h2>
-                     
-                     <!-- 显示选中的时间段 -->
-                     <div style="background: var(--success-light); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
-                         <div style="font-weight: 600; color: var(--success-dark); margin-bottom: var(--spacing-sm);">
-                             已选择时段：
-                         </div>
-                         <div style="font-size: var(--font-size-sm); color: var(--success);">
-                             {{ formatSelectedSlots() }}
-                             <span style="margin-left: var(--spacing-md);">共 {{ totalSelectedHours }} 小时</span>
-                         </div>
-                     </div>
-                    
-                    <div class="form-group">
-                        <label for="meeting-title" class="form-label">会议主题 *</label>
-                        <input 
-                            type="text" 
-                            id="meeting-title" 
-                            class="form-input"
-                            v-model="meetingTitle"
-                            placeholder="例如：项目启动会"
-                            required
-                            aria-required="true"
-                        >
+                <!-- 步骤3：填写信息 -->
+                <section class="form-card" v-if="currentStep === 3 && selectedResource && selectedTimeSlots.length > 0">
+                    <div class="card-header">
+                        <div class="card-icon">📝</div>
+                        <div>
+                            <div class="card-title">填写预约信息</div>
+                            <div class="card-subtitle">完善预约详情</div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="attendees-count" class="form-label">参会人数</label>
+                        <label class="form-label">
+                            <span>会议主题</span>
+                            <span class="form-label-required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-input"
+                            v-model="meetingTitle"
+                            placeholder="例如：项目启动会、客户洽谈..."
+                            required
+                        >
+                        <div class="form-hint">
+                            <span>💡</span>
+                            <span>请输入简洁明了的主题名称</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span>参会人数</span>
+                        </label>
                         <input 
                             type="number" 
-                            id="attendees-count" 
                             class="form-input"
                             v-model.number="attendeesCount"
                             :min="1"
-                            :max="selectedResource?.capacity || 20"
+                            :max="selectedResource?.capacity || 100"
+                            placeholder="预计参会人数"
                         >
+                        <div class="form-hint">
+                            <span>📍</span>
+                            <span>{{ selectedResource?.name }}最多容纳 {{ selectedResource?.capacity }} 人</span>
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="special-requests" class="form-label">特殊需求</label>
+                        <label class="form-label">
+                            <span>特殊需求</span>
+                        </label>
                         <textarea 
-                            id="special-requests" 
-                            class="form-input"
+                            class="form-input form-textarea"
                             v-model="specialRequests"
-                            rows="3"
-                            placeholder="例如：需要投影设备、茶水服务等"
-                            aria-describedby="requests-hint"
+                            placeholder="如有特殊需求请在此说明（如设备需求、餐饮安排等）..."
                         ></textarea>
-                        <span id="requests-hint" class="form-hint">可选填写</span>
                     </div>
                     
-                    <div class="fee-calculator" role="region" aria-label="费用计算">
-                        <h3 class="card-title" style="margin-bottom: var(--spacing-lg);">
-                            <span aria-hidden="true">💰</span>
-                            费用明细
-                        </h3>
-                        
+                    <!-- 费用预览 -->
+                    <div class="fee-card">
+                        <div class="fee-header">
+                            <div class="fee-icon">💰</div>
+                            <span class="fee-title">费用预估</span>
+                        </div>
                         <div class="fee-breakdown">
                             <div class="fee-row">
-                                <span class="fee-label">基础费用</span>
-                                <span class="fee-value">¥{{ feeDetail.baseFee }}</span>
+                                <span class="fee-row-label">基础费用</span>
+                                <span class="fee-row-value">¥{{ feeDetail.baseFee }}</span>
                             </div>
                             <div class="fee-row" v-if="feeDetail.memberDiscount > 0">
-                                <span class="fee-label">会员折扣 ({{ userType === 'internal' ? '20%' : '30%' }})</span>
-                                <span class="fee-value" style="color: var(--success);">-¥{{ feeDetail.memberDiscount }}</span>
+                                <span class="fee-row-label">会员折扣</span>
+                                <span class="fee-row-value discount">-¥{{ feeDetail.memberDiscount }}</span>
                             </div>
-                            <div class="fee-row" v-if="feeDetail.freeHoursUsed > 0">
-                                <span class="fee-label">免费时长抵扣</span>
-                                <span class="fee-value" style="color: var(--success);">-¥{{ feeDetail.freeHoursDiscount }}</span>
+                            <div class="fee-row" v-if="feeDetail.freeHoursDiscount > 0">
+                                <span class="fee-row-label">免费时长抵扣</span>
+                                <span class="fee-row-value discount">-¥{{ feeDetail.freeHoursDiscount }}</span>
                             </div>
                         </div>
-                        
                         <div class="fee-total">
-                            <span>应付金额</span>
-                            <span class="fee-total-value">¥{{ feeDetail.totalFee }}</span>
-                        </div>
-                        
-                        <div v-if="selectedResource?.requiresDeposit" style="margin-top: var(--spacing-md); color: var(--warning); font-size: var(--font-size-sm);">
-                            <span aria-hidden="true">⚠️</span>
-                            此类型需支付定金：¥{{ feeDetail.depositAmount }}（{{ feeDetail.depositPercentage }}%）
+                            <span class="fee-total-label">预估总费用</span>
+                            <span class="fee-total-value">{{ feeDetail.totalFee }}</span>
                         </div>
                     </div>
                 </section>
                 
+                <!-- 步骤4：确认提交 -->
                 <section class="form-card" v-if="currentStep === 4">
-                    <h2 class="card-title">
-                        <span aria-hidden="true">✅</span>
-                        确认预约信息
-                    </h2>
+                    <div class="confirm-header">
+                        <div class="confirm-icon">✓</div>
+                        <div class="confirm-title">预约信息确认</div>
+                        <div class="confirm-subtitle">请核对以下信息后提交</div>
+                    </div>
                     
-                    <div class="confirmation-summary">
-                        <div class="summary-item">
-                            <span class="summary-label">预约空间</span>
-                            <span class="summary-value">{{ selectedResource?.name }}</span>
+                    <div class="confirm-details">
+                        <div class="detail-row">
+                            <span class="detail-label">预约空间</span>
+                            <span class="detail-value">{{ selectedResource?.name }}</span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">预约日期</span>
-                            <span class="summary-value">{{ bookingDate }}</span>
+                        <div class="detail-row">
+                            <span class="detail-label">预约日期</span>
+                            <span class="detail-value">{{ bookingDate }}</span>
                         </div>
-<div class="summary-item">
-                             <span class="summary-label">预约时段</span>
-                             <span class="summary-value">{{ formatSelectedSlots() }}</span>
-                         </div>
-                         <div class="summary-item">
-                             <span class="summary-label">预约时长</span>
-                             <span class="summary-value">{{ totalSelectedHours }} 小时</span>
-                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">会议主题</span>
-                            <span class="summary-value">{{ meetingTitle }}</span>
+                        <div class="detail-row">
+                            <span class="detail-label">预约时段</span>
+                            <span class="detail-value">{{ formatSelectedSlots() }}</span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">参会人数</span>
-                            <span class="summary-value">{{ attendeesCount }}人</span>
+                        <div class="detail-row">
+                            <span class="detail-label">预约时长</span>
+                            <span class="detail-value">{{ totalSelectedHours }} 小时</span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">应付金额</span>
-                            <span class="summary-value" style="color: var(--primary); font-weight: 700;">¥{{ feeDetail.totalFee }}</span>
+                        <div class="detail-row">
+                            <span class="detail-label">会议主题</span>
+                            <span class="detail-value">{{ meetingTitle }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">参会人数</span>
+                            <span class="detail-value">{{ attendeesCount }} 人</span>
+                        </div>
+                        <div class="detail-row" v-if="specialRequests">
+                            <span class="detail-label">特殊需求</span>
+                            <span class="detail-value">{{ specialRequests }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">预估费用</span>
+                            <span class="detail-value highlight">¥{{ feeDetail.totalFee }}</span>
                         </div>
                     </div>
                     
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-outline action-btn" @click="prevStep">
-                            上一步
-                        </button>
-                        <button type="submit" class="btn btn-primary action-btn" :disabled="submitting">
-                            {{ submitting ? '提交中...' : '确认提交' }}
-                        </button>
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: var(--spacing-lg); text-align: center;">
+                        <div style="font-size: var(--font-size-sm); color: #999;">
+                            提交后将发送预约确认通知
+                        </div>
                     </div>
                 </section>
                 
+                <!-- 操作按钮 -->
                 <div class="form-actions" v-if="currentStep < 4">
                     <button 
                         type="button" 
-                        class="btn btn-outline action-btn" 
-                        @click="prevStep" 
+                        class="action-btn btn-secondary"
+                        @click="prevStep"
                         v-if="currentStep > 1"
-                        :disabled="currentStep === 1"
                     >
-                        上一步
+                        <span>←</span>
+                        <span>上一步</span>
                     </button>
                     <button 
                         type="button" 
-                        class="btn btn-primary action-btn" 
+                        class="action-btn btn-primary"
                         @click="nextStep"
                         :disabled="!canProceedToNext"
                     >
-                        下一步
+                        <span>下一步</span>
+                        <span>→</span>
+                    </button>
+                </div>
+                
+                <div class="form-actions" v-if="currentStep === 4">
+                    <button 
+                        type="button" 
+                        class="action-btn btn-secondary"
+                        @click="prevStep"
+                    >
+                        <span>←</span>
+                        <span>返回修改</span>
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="action-btn btn-primary"
+                        :disabled="submitting"
+                    >
+                        <span>✓</span>
+                        <span>{{ submitting ? '提交中...' : '确认提交' }}</span>
                     </button>
                 </div>
                 
             </form>
-            
         </main>
-        
     </div>
     
     <script type="module">
@@ -844,20 +1631,19 @@
                 const selectedResource = ref(null)
                 const typeUnit = ref('小时')
                 
-const bookingDate = ref('')
-                 const timeSlots = ref([])
-                 const selectedTimeSlots = ref([]) // 改为数组支持多选
-                 
-                 // 冲突检测相关状态
-                 const conflictDetected = ref(false)
-                 const conflictBookings = ref([])
-                 const bookedSlotsInfo = ref([])
-                 const availableHoursCount = ref(0)
-                 const bookedHoursCount = ref(0)
-                 
-                 const meetingTitle = ref('')
-                 const attendeesCount = ref(1)
-                 const specialRequests = ref('')
+                const bookingDate = ref('')
+                const timeSlots = ref([])
+                const selectedTimeSlots = ref([])
+                
+                const conflictDetected = ref(false)
+                const conflictBookings = ref([])
+                const bookedSlotsInfo = ref([])
+                const availableHoursCount = ref(0)
+                const bookedHoursCount = ref(0)
+                
+                const meetingTitle = ref('')
+                const attendeesCount = ref(1)
+                const specialRequests = ref('')
                 
                 const feeDetail = ref({
                     baseFee: 0,
@@ -876,208 +1662,136 @@ const bookingDate = ref('')
                     return today.toISOString().split('T')[0]
                 })
                 
-const canProceedToNext = computed(() => {
-                     if (currentStep.value === 1) return selectedResource.value !== null
-                     if (currentStep.value === 2) return selectedTimeSlots.value.length > 0 && isConsecutive.value
-                     if (currentStep.value === 3) return meetingTitle.value.trim() !== ''
-                     return true
-                 })
-                 
-                 // 计算总选中的小时数
-                 const totalSelectedHours = computed(() => {
-                     return selectedTimeSlots.value.length
-                 })
-                 
-                 // 检查时间段是否连续
-                 const isConsecutive = computed(() => {
-                     if (selectedTimeSlots.value.length <= 1) return true
-                     
-                     const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                         const aStart = parseInt(a.time.split(':')[0])
-                         const bStart = parseInt(b.time.split(':')[0])
-                         return aStart - bStart
-                     })
-                     
-                     for (let i = 1; i < slots.length; i++) {
-                         const prevEnd = parseInt(slots[i-1].time.split('-')[1].split(':')[0])
-                         const currStart = parseInt(slots[i].time.split(':')[0])
-                         if (currStart !== prevEnd) return false
-                     }
-                     return true
-                 })
-                 
-                 const nextStep = () => {
-                     if (canProceedToNext.value && currentStep.value < 4) {
-                         currentStep.value++
-                         if (currentStep.value === 3) {
-                             calculateFee()
-                         }
-                     }
-                 }
-                 
-                 const prevStep = () => {
-                     if (currentStep.value > 1) {
-                         currentStep.value--
-                     }
-                 }
-                 
-                 const selectResource = (resource) => {
-                     selectedResource.value = resource
-                 }
-                 
-                 const toggleFavorite = (resourceId) => {
-                     const resource = availableResources.value.find(r => r.id === resourceId)
-                     if (resource) {
-                         resource.isFavorite = !resource.isFavorite
-                         console.log('收藏状态切换:', resource.name, resource.isFavorite)
-                     }
-                 }
-                 
-                 // 新增：判断时段是否被选中
-                 const isSlotSelected = (slot) => {
-                     return selectedTimeSlots.value.some(s => s.time === slot.time)
-                 }
-                 
-                 // 新增：判断时段是否在选中范围内（用于UI高亮）
-                 const isInSelectedRange = (slot) => {
-                     if (selectedTimeSlots.value.length === 0) return false
-                     
-                     const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                         const aStart = parseInt(a.time.split(':')[0])
-                         const bStart = parseInt(b.time.split(':')[0])
-                         return aStart - bStart
-                     })
-                     
-                     const slotStart = parseInt(slot.time.split(':')[0])
-                     const firstStart = parseInt(slots[0].time.split(':')[0])
-                     const lastEnd = parseInt(slots[slots.length - 1].time.split('-')[1].split(':')[0])
-                     
-                     return slotStart >= firstStart && slotStart < lastEnd
-                 }
-                 
-                 // 新增：切换时段选中状态（支持多选）
-                 const toggleTimeSlot = (slot) => {
-                     if (!slot.available) return
-                     
-                     const index = selectedTimeSlots.value.findIndex(s => s.time === slot.time)
-                     
-                     if (index > -1) {
-                         // 已选中，则取消选中
-                         selectedTimeSlots.value.splice(index, 1)
-                     } else {
-                         // 未选中，则添加选中
-                         selectedTimeSlots.value.push(slot)
-                     }
-                     
-                     // 自动排序
-                     selectedTimeSlots.value.sort((a, b) => {
-                         const aStart = parseInt(a.time.split(':')[0])
-                         const bStart = parseInt(b.time.split(':')[0])
-                         return aStart - bStart
-                     })
-                     
-                     console.log('已选中时段:', selectedTimeSlots.value.map(s => s.time))
-                 }
-                 
-                 // 新增：清除所有选中的时段
-                 const clearTimeSlots = () => {
-                     selectedTimeSlots.value = []
-                 }
-                 
-                 // 新增：格式化显示选中的时段
-                 const formatSelectedSlots = () => {
-                     if (selectedTimeSlots.value.length === 0) return ''
-                     
-                     const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                         const aStart = parseInt(a.time.split(':')[0])
-                         const bStart = parseInt(b.time.split(':')[0])
-                         return aStart - bStart
-                     })
-                     
-                     if (slots.length === 1) return slots[0].time
-                     
-                     const startTime = slots[0].time.split('-')[0]
-                     const endTime = slots[slots.length - 1].time.split('-')[1]
-                     
-                     return `${startTime}-${endTime}`
-                 }
+                const canProceedToNext = computed(() => {
+                    if (currentStep.value === 1) return selectedResource.value !== null
+                    if (currentStep.value === 2) return selectedTimeSlots.value.length > 0 && isConsecutive.value
+                    if (currentStep.value === 3) return meetingTitle.value.trim() !== ''
+                    return true
+                })
                 
-const calculateFee = async () => {
-                     if (!selectedResource.value || selectedTimeSlots.value.length === 0) return;
-                     
-                     try {
-                         const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                             const aStart = parseInt(a.time.split(':')[0])
-                             const bStart = parseInt(b.time.split(':')[0])
-                             return aStart - bStart
-                         })
-                         
-                         const startTime = slots[0].time.split('-')[0]
-                         const endTime = slots[slots.length - 1].time.split('-')[1]
-                         const hours = slots.length
-                         
-                         const response = await spaceAPI.calculateFee({
-                             resource_id: selectedResource.value.id,
-                             booking_date: bookingDate.value,
-                             start_time: startTime,
-                             end_time: endTime,
-                             user_type: userType.value,
-                             member_level: userType.value === 'internal' ? 'vip' : 'regular'
-                         });
-                         
-                         const data = response.data;
-                         const feeSummary = data.fee_summary;
-                         const depositInfo = data.deposit_info;
-                         
-                         feeDetail.value = {
-                             baseFee: feeSummary.base_fee.toFixed(2),
-                             memberDiscount: feeSummary.discount_total.toFixed(2),
-                             freeHoursUsed: 0,
-                             freeHoursDiscount: '0.00',
-                             totalFee: feeSummary.final_fee.toFixed(2),
-                             depositAmount: depositInfo.deposit_amount.toFixed(2),
-                             depositPercentage: depositInfo.deposit_percentage || 0,
-                             hours: hours
-                         };
-                         
-                         console.log('费用计算完成:', feeDetail.value);
-                     } catch (error) {
-                         console.error('费用计算失败，使用本地计算:', error);
-                         
-                         const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                             const aStart = parseInt(a.time.split(':')[0])
-                             const bStart = parseInt(b.time.split(':')[0])
-                             return aStart - bStart
-                         })
-                         
-                         const hours = slots.length;
-                         const baseFee = hours * selectedResource.value.basePrice;
-                         
-                         const discountRate = userType.value === 'internal' ? 0.8 : 1.0;
-                         const memberDiscount = baseFee * (1 - discountRate);
-                         
-                         const freeHoursUsed = Math.min(freeHoursRemaining.value, hours);
-                         const freeHoursDiscount = freeHoursUsed * selectedResource.value.basePrice;
-                         
-                         const totalFee = Math.max(0, baseFee - memberDiscount - freeHoursDiscount);
-                         
-                         feeDetail.value = {
-                             baseFee: baseFee.toFixed(2),
-                             memberDiscount: memberDiscount.toFixed(2),
-                             freeHoursUsed: freeHoursUsed,
-                             freeHoursDiscount: freeHoursDiscount.toFixed(2),
-                             totalFee: totalFee.toFixed(2),
-                             depositAmount: (totalFee * 0.3).toFixed(2),
-                             depositPercentage: 30,
-                             hours: hours
-                         };
-                     }
-                 }
+                const totalSelectedHours = computed(() => {
+                    return selectedTimeSlots.value.length
+                })
+                
+                const isConsecutive = computed(() => {
+                    if (selectedTimeSlots.value.length <= 1) return true
+                    
+                    const slots = [...selectedTimeSlots.value].sort((a, b) => {
+                        const aStart = parseInt(a.time.split(':')[0])
+                        const bStart = parseInt(b.time.split(':')[0])
+                        return aStart - bStart
+                    })
+                    
+                    for (let i = 1; i < slots.length; i++) {
+                        const prevEnd = parseInt(slots[i-1].time.split('-')[1].split(':')[0])
+                        const currStart = parseInt(slots[i].time.split(':')[0])
+                        if (currStart !== prevEnd) return false
+                    }
+                    
+                    return true
+                })
+                
+                const nextStep = () => {
+                    if (canProceedToNext.value && currentStep.value < 4) {
+                        currentStep.value++
+                    }
+                }
+                
+                const prevStep = () => {
+                    if (currentStep.value > 1) {
+                        currentStep.value--
+                    }
+                }
+                
+                const selectResource = (resource) => {
+                    selectedResource.value = resource
+                    console.log('选中资源:', resource.name)
+                }
+                
+                const isSlotSelected = (slot) => {
+                    return selectedTimeSlots.value.some(s => s.time === slot.time)
+                }
+                
+                const toggleTimeSlot = (slot) => {
+                    if (!slot.available) return
+                    
+                    const index = selectedTimeSlots.value.findIndex(s => s.time === slot.time)
+                    
+                    if (index > -1) {
+                        selectedTimeSlots.value.splice(index, 1)
+                    } else {
+                        selectedTimeSlots.value.push(slot)
+                    }
+                    
+                    calculateFee()
+                }
+                
+                const clearTimeSlots = () => {
+                    selectedTimeSlots.value = []
+                    calculateFee()
+                }
+                
+                const formatSelectedSlots = () => {
+                    if (selectedTimeSlots.value.length === 0) return ''
+                    
+                    const slots = [...selectedTimeSlots.value].sort((a, b) => {
+                        const aStart = parseInt(a.time.split(':')[0])
+                        const bStart = parseInt(b.time.split(':')[0])
+                        return aStart - bStart
+                    })
+                    
+                    return `${slots[0].time.split('-')[0]} - ${slots[slots.length-1].time.split('-')[1]}`
+                }
+                
+                const calculateFee = () => {
+                    if (!selectedResource.value || selectedTimeSlots.value.length === 0) {
+                        feeDetail.value = {
+                            baseFee: 0,
+                            memberDiscount: 0,
+                            freeHoursUsed: 0,
+                            freeHoursDiscount: 0,
+                            totalFee: 0,
+                            depositAmount: 0,
+                            depositPercentage: 0
+                        }
+                        return
+                    }
+                    
+                    const hours = totalSelectedHours.value
+                    const basePrice = selectedResource.value.basePrice
+                    const baseFee = hours * basePrice
+                    
+                    let memberDiscount = 0
+                    if (userType.value === 'internal') {
+                        memberDiscount = baseFee * 0.2
+                    }
+                    
+                    const feeAfterMemberDiscount = baseFee - memberDiscount
+                    
+                    let freeHoursUsed = 0
+                    let freeHoursDiscount = 0
+                    
+                    if (userType.value === 'internal' && freeHoursRemaining.value > 0) {
+                        freeHoursUsed = Math.min(freeHoursRemaining.value, hours)
+                        freeHoursDiscount = freeHoursUsed * basePrice
+                    }
+                    
+                    const totalFee = Math.max(0, feeAfterMemberDiscount - freeHoursDiscount)
+                    
+                    feeDetail.value = {
+                        baseFee,
+                        memberDiscount,
+                        freeHoursUsed,
+                        freeHoursDiscount,
+                        totalFee,
+                        depositAmount: 0,
+                        depositPercentage: 0
+                    }
+                }
                 
                 const loadUserData = async () => {
                     try {
-                        // 检查登录状态（使用统一认证工具）
-                        const user = await checkAuth({ requireAuth: false, validateToken: true });
+                        const user = await checkAuth({ requireAuth: false, validateToken: true })
                         
                         if (user) {
                             currentUser.value = {
@@ -1087,106 +1801,95 @@ const calculateFee = async () => {
                                 id: user.id,
                                 role: user.role,
                                 roleName: user.roleName
-                            };
-                            userType.value = 'internal';
-                            console.log('用户已登录:', currentUser.value);
-                            console.log('预约人姓名:', currentUser.value.name);
-                            console.log('预约人办公室:', currentUser.value.department);
+                            }
+                            userType.value = 'internal'
                         } else {
-                            // 未登录或Token无效，显示游客状态
                             currentUser.value = {
-                                name: '游客',
+                                name: '访客',
                                 department: '',
                                 id: null,
                                 role: 'guest'
-                            };
-                            userType.value = 'external';
-                            console.log('用户未登录');
+                            }
+                            userType.value = 'external'
                         }
                     } catch (error) {
-                        console.error('加载用户数据失败:', error);
+                        console.error('加载用户数据失败:', error)
                         currentUser.value = {
-                            name: '游客',
+                            name: '访客',
                             department: '',
                             id: null,
                             role: 'guest'
-                        };
+                        }
                     }
                 }
                 
-const loadSpaceType = async () => {
-                     const params = new URLSearchParams(window.location.search);
-                     const typeCode = params.get('type')
-                     const resourceId = params.get('resourceId')
-                     const dateParam = params.get('date')
-                     const timeParam = params.get('time')
-                     
-                     if (dateParam) {
-                         bookingDate.value = dateParam
-                     }
-                     
-                     if (timeParam) {
-                         const startTime = timeParam
-                         const hour = parseInt(startTime.split(':')[0])
-                         const endTime = `${hour + 1}:00`
-                         const slotTime = `${startTime}-${endTime}`
-                         
-                         selectedTimeSlots.value = [{
-                             time: slotTime,
-                             available: true
-                         }]
-                     }
-                     
-                     try {
-                         const response = await spaceAPI.getResources({ type_code: typeCode || 'meeting_room' });
-                         const items = response.data.items || [];
-                         
-                         if (items.length > 0) {
-                             const firstItem = items[0];
-                             spaceType.value = {
-                                 code: firstItem.type_code || typeCode || 'meeting_room',
-                                 name: firstItem.type_name || '会议室',
-                                 unit: '按小时'
-                             };
-                             typeUnit.value = '小时';
-                         } else {
-                             spaceType.value = {
-                                 code: typeCode || 'meeting_room',
-                                 name: '会议室',
-                                 unit: '按小时'
-                             };
-                             typeUnit.value = '小时';
-                         }
-                         
-                         availableResources.value = items.map(item => ({
-                             id: item.id,
-                             name: item.name,
-                             location: item.location || '未知位置',
-                             capacity: item.capacity || 10,
-                             basePrice: item.base_price || 50,
-                             isFavorite: item.is_favorite || false,
-                             requiresDeposit: item.requires_deposit || false
-                         }));
-                         
-                         // 如果URL中有resourceId，自动选中该资源
-                         if (resourceId) {
-                             const selectedRes = availableResources.value.find(r => r.id == resourceId)
-                             if (selectedRes) {
-                                 selectedResource.value = selectedRes
-                                 console.log('已自动选中资源:', selectedRes.name)
-                                 
-                                 // 自动进入下一步
-                                 setTimeout(() => {
-                                     if (currentStep.value === 1) {
-                                         nextStep()
-                                     }
-                                 }, 500)
-                             }
-                         }
-                         
-                         console.log('空间资源加载完成:', availableResources.value.length);
-                     } catch (error) {
-                         console.error('加载空间资源失败:', error);
+                const loadSpaceType = async () => {
+                    const params = new URLSearchParams(window.location.search);
+                    const typeCode = params.get('type')
+                    const resourceId = params.get('resourceId')
+                    const dateParam = params.get('date')
+                    const timeParam = params.get('time')
+                    
+                    if (dateParam) {
+                        bookingDate.value = dateParam
+                    }
+                    
+                    if (timeParam) {
+                        const startTime = timeParam
+                        const hour = parseInt(startTime.split(':')[0])
+                        const endTime = `${hour + 1}:00`
+                        const slotTime = `${startTime}-${endTime}`
+                        
+                        selectedTimeSlots.value = [{
+                            time: slotTime,
+                            available: true
+                        }]
+                    }
+                    
+                    try {
+                        const response = await spaceAPI.getResources({ type_code: typeCode || 'meeting_room' });
+                        const items = response.data.items || [];
+                        
+                        if (items.length > 0) {
+                            spaceType.value = {
+                                code: typeCode || items[0].type_code,
+                                name: items[0].type_name || '会议室',
+                                unit: '按小时'
+                            };
+                            typeUnit.value = '小时';
+                        } else {
+                            spaceType.value = {
+                                code: typeCode || 'meeting_room',
+                                name: '会议室',
+                                unit: '按小时'
+                            };
+                            typeUnit.value = '小时';
+                        }
+                        
+                        availableResources.value = items.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            location: item.location || '未知位置',
+                            capacity: item.capacity || 10,
+                            basePrice: item.base_price || 50,
+                            isFavorite: item.is_favorite || false,
+                            requiresDeposit: item.requires_deposit || false
+                        }));
+                        
+                        if (resourceId) {
+                            const selectedRes = availableResources.value.find(r => r.id == resourceId)
+                            if (selectedRes) {
+                                selectedResource.value = selectedRes
+                                setTimeout(() => {
+                                    if (currentStep.value === 1) {
+                                        nextStep()
+                                    }
+                                }, 500)
+                            }
+                        }
+                        
+                    } catch (error) {
+                        console.error('加载空间资源失败:', error);
                         spaceType.value = {
                             code: typeCode || 'meeting_room',
                             name: '会议室',
@@ -1243,10 +1946,8 @@ const loadSpaceType = async () => {
                         const availableSlots = response.data.available_slots || [];
                         const bookedSlots = response.data.booked_slots || [];
                         
-                        // 存储已预约时段详细信息
                         bookedSlotsInfo.value = bookedSlots;
                         
-                        // 计算可用和已预约小时数
                         availableHoursCount.value = response.data.total_available_hours || 0;
                         bookedHoursCount.value = bookedSlots.reduce((sum, b) => {
                             const start = parseInt(b.start_time.split(':')[0]);
@@ -1256,15 +1957,15 @@ const loadSpaceType = async () => {
                         
                         const allSlots = [
                             '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
-                            '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
-                            '17:00-18:00', '18:00-19:00', '19:00-20:00', '20:00-21:00'
+                            '12:00-13:00', '13:00-14:00', '14:00-15:00', '15:00-16:00',
+                            '16:00-17:00', '17:00-18:00', '18:00-19:00', '19:00-20:00',
+                            '20:00-21:00', '21:00-22:00', '22:00-23:00'
                         ];
                         
                         timeSlots.value = allSlots.map(time => {
                             const slotStart = parseInt(time.split('-')[0].split(':')[0]);
                             const slotEnd = parseInt(time.split('-')[1].split(':')[0]);
                             
-                            // 检查是否与任何已预约时段重叠
                             const matchingBooking = bookedSlots.find(booked => {
                                 const bookedStart = parseInt(booked.start_time.split(':')[0]);
                                 const bookedEnd = parseInt(booked.end_time.split(':')[0]);
@@ -1287,7 +1988,6 @@ const loadSpaceType = async () => {
                             };
                         });
                         
-                        // 检测并设置冲突信息
                         if (bookedSlots.length > 0) {
                             conflictDetected.value = true;
                             conflictBookings.value = bookedSlots.map(b => ({
@@ -1301,21 +2001,15 @@ const loadSpaceType = async () => {
                             conflictBookings.value = [];
                         }
                         
-                        console.log('时段加载完成:', {
-                            total: timeSlots.value.length,
-                            available: timeSlots.value.filter(s => s.available).length,
-                            booked: timeSlots.value.filter(s => !s.available).length
-                        });
-                        
                     } catch (error) {
                         console.error('加载时段失败:', error);
                         
-                        // 使用模拟数据
                         timeSlots.value = [
                             { time: '08:00-09:00', available: true, hasConflict: false, bookingInfo: null },
                             { time: '09:00-10:00', available: false, hasConflict: true, bookingInfo: { title: '项目会议', user_name: '张三' } },
                             { time: '10:00-11:00', available: true, hasConflict: false, bookingInfo: null },
                             { time: '11:00-12:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '12:00-13:00', available: true, hasConflict: false, bookingInfo: null },
                             { time: '13:00-14:00', available: false, hasConflict: true, bookingInfo: { title: '客户洽谈', user_name: '李四' } },
                             { time: '14:00-15:00', available: true, hasConflict: false, bookingInfo: null },
                             { time: '15:00-16:00', available: true, hasConflict: false, bookingInfo: null },
@@ -1323,7 +2017,9 @@ const loadSpaceType = async () => {
                             { time: '17:00-18:00', available: true, hasConflict: false, bookingInfo: null },
                             { time: '18:00-19:00', available: false, hasConflict: true, bookingInfo: { title: '团队复盘', user_name: '王五' } },
                             { time: '19:00-20:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '20:00-21:00', available: true, hasConflict: false, bookingInfo: null }
+                            { time: '20:00-21:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '21:00-22:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '22:00-23:00', available: true, hasConflict: false, bookingInfo: null }
                         ];
                         
                         conflictDetected.value = true;
@@ -1333,11 +2029,10 @@ const loadSpaceType = async () => {
                             { time_range: '18:00-19:00', title: '团队复盘', user_name: '王五' }
                         ];
                         
-                        availableHoursCount.value = 9;
+                        availableHoursCount.value = 12;
                         bookedHoursCount.value = 3;
                     }
                     
-                    // 清空之前选择的时段
                     selectedTimeSlots.value = [];
                 }
                 
@@ -1345,14 +2040,12 @@ const loadSpaceType = async () => {
                     submitting.value = true
                     
                     try {
-                        // 验证是否有选中的时段
                         if (selectedTimeSlots.value.length === 0) {
                             alert('请选择预约时段');
                             submitting.value = false;
                             return;
                         }
                         
-                        // 从选中的时段数组获取开始和结束时间
                         const slots = [...selectedTimeSlots.value].sort((a, b) => {
                             const aStart = parseInt(a.time.split(':')[0]);
                             const bStart = parseInt(b.time.split(':')[0]);
@@ -1379,21 +2072,14 @@ const loadSpaceType = async () => {
                             duration_hours: durationHours
                         };
                         
-                        console.log('提交预约:', bookingData);
-                        console.log('预约时长:', durationHours, '小时');
-                        
                         const response = await spaceAPI.createBooking(bookingData);
                         
-                        console.log('预约创建成功:', response);
-                        
-                        // 成功提示
                         if (response.data && response.data.booking_no) {
                             alert(`预约提交成功！\n\n预约编号：${response.data.booking_no}\n预约时段：${startTime}-${endTime}\n预约时长：${durationHours}小时\n\n即将跳转到"我的预约"页面查看详情...`);
                         } else {
                             alert('预约提交成功！即将跳转到"我的预约"页面...');
                         }
                         
-                        // 跳转到我的预约页面
                         setTimeout(() => {
                             window.location.href = '/space-frontend/my-bookings.html';
                         }, 1500);
@@ -1407,63 +2093,53 @@ const loadSpaceType = async () => {
                     }
                 }
                 
-                watch(bookingDate, () => {
-                    loadTimeSlots();
-                    selectedTimeSlots.value = [];
-                });
-                
-                watch(selectedResource, () => {
-                    if (bookingDate.value) {
-                        loadTimeSlots();
-                        selectedTimeSlots.value = [];
-                    }
-                });
-                
                 onMounted(() => {
                     loadUserData()
                     loadSpaceType()
-                    loadTimeSlots()
+                    
+                    if (!bookingDate.value) {
+                        const today = new Date();
+                        bookingDate.value = today.toISOString().split('T')[0];
+                    }
                 })
                 
-return {
-                     currentStep,
-                     spaceType,
-                     typeUnit,
-                     availableResources,
-                     selectedResource,
-                     bookingDate,
-                     minDate,
-                     timeSlots,
-                     selectedTimeSlots,
-                     totalSelectedHours,
-                     isConsecutive,
-                     meetingTitle,
-                     attendeesCount,
-                     specialRequests,
-                     feeDetail,
-                     submitting,
-                     currentUser,
-                     userType,
-                     freeHoursRemaining,
-                     canProceedToNext,
-                     conflictDetected,
-                     conflictBookings,
-                     bookedSlotsInfo,
-                     availableHoursCount,
-                     bookedHoursCount,
-                     nextStep,
-                     prevStep,
-                     selectResource,
-                     isSlotSelected,
-                     isInSelectedRange,
-                     toggleTimeSlot,
-                     clearTimeSlots,
-                     formatSelectedSlots,
-                     calculateFee,
-                     toggleFavorite,
-                     submitBooking,
-                     loadTimeSlots
-                 }
+                return {
+                    currentStep,
+                    spaceType,
+                    typeUnit,
+                    availableResources,
+                    selectedResource,
+                    bookingDate,
+                    minDate,
+                    timeSlots,
+                    selectedTimeSlots,
+                    totalSelectedHours,
+                    isConsecutive,
+                    meetingTitle,
+                    attendeesCount,
+                    specialRequests,
+                    feeDetail,
+                    submitting,
+                    currentUser,
+                    userType,
+                    freeHoursRemaining,
+                    canProceedToNext,
+                    conflictDetected,
+                    conflictBookings,
+                    bookedSlotsInfo,
+                    availableHoursCount,
+                    bookedHoursCount,
+                    nextStep,
+                    prevStep,
+                    selectResource,
+                    isSlotSelected,
+                    toggleTimeSlot,
+                    clearTimeSlots,
+                    formatSelectedSlots,
+                    calculateFee,
+                    loadTimeSlots,
+                    submitBooking
+                }
             }
         }).mount('#app')
     </script>
