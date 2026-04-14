@@ -230,6 +230,104 @@
              box-shadow: var(--shadow-lg);
          }
          
+         .time-slot.disabled {
+             background: var(--danger-light);
+             border-color: var(--danger);
+             color: var(--danger);
+             cursor: not-allowed;
+             opacity: 0.8;
+         }
+         
+         .time-slot.conflict {
+             background: var(--warning-light);
+             border-color: var(--warning);
+         }
+         
+         .time-slot-info {
+             font-size: var(--font-size-xs);
+             color: var(--text-tertiary);
+             margin-top: var(--spacing-xs);
+         }
+         
+         .time-slot-info.conflict-info {
+             color: var(--danger);
+             font-weight: 500;
+         }
+         
+         .conflict-tooltip {
+             position: absolute;
+             bottom: 100%;
+             left: 50%;
+             transform: translateX(-50%);
+             background: var(--bg-card);
+             border: 1px solid var(--border);
+             border-radius: var(--radius-md);
+             padding: var(--spacing-sm) var(--spacing-md);
+             font-size: var(--font-size-xs);
+             white-space: nowrap;
+             box-shadow: var(--shadow-lg);
+             z-index: 100;
+             display: none;
+         }
+         
+         .time-slot.disabled:hover .conflict-tooltip {
+             display: block;
+         }
+         
+         .conflict-warning-box {
+             background: var(--danger-light);
+             border: 2px solid var(--danger);
+             border-radius: var(--radius-lg);
+             padding: var(--spacing-lg);
+             margin-bottom: var(--spacing-lg);
+             display: flex;
+             align-items: flex-start;
+             gap: var(--spacing-md);
+         }
+         
+         .conflict-warning-icon {
+             font-size: 24px;
+         }
+         
+         .conflict-warning-content {
+             flex: 1;
+         }
+         
+         .conflict-warning-title {
+             font-weight: 600;
+             color: var(--danger-dark);
+             margin-bottom: var(--spacing-sm);
+         }
+         
+         .conflict-warning-detail {
+             font-size: var(--font-size-sm);
+             color: var(--danger);
+         }
+         
+         .time-legend {
+             display: flex;
+             gap: var(--spacing-lg);
+             margin-bottom: var(--spacing-md);
+             font-size: var(--font-size-sm);
+         }
+         
+         .legend-item {
+             display: flex;
+             align-items: center;
+             gap: var(--spacing-sm);
+         }
+         
+         .legend-dot {
+             width: 16px;
+             height: 16px;
+             border-radius: var(--radius-sm);
+         }
+         
+         .legend-dot.available { background: var(--success-light); border: 2px solid var(--success); }
+         .legend-dot.selected { background: var(--primary); border: 2px solid var(--primary); }
+         .legend-dot.booked { background: var(--danger-light); border: 2px solid var(--danger); }
+         .legend-dot.pending { background: var(--warning-light); border: 2px solid var(--warning); }
+         
          .time-slot.selected::after {
              content: '';
              position: absolute;
@@ -452,7 +550,7 @@
                         选择时段
                     </h2>
                     
-                    <div class="form-group" style="margin-bottom: var(--spacing-xl);">
+<div class="form-group" style="margin-bottom: var(--spacing-xl);">
                         <label for="booking-date" class="form-label">预约日期</label>
                         <input 
                             type="date" 
@@ -461,42 +559,101 @@
                             v-model="bookingDate"
                             :min="minDate"
                             :aria-describedby="dateHint"
+                            @change="loadTimeSlots"
                         >
                         <span id="dateHint" class="form-hint">可预约未来7天内的时段</span>
                     </div>
                     
-<!-- 时间段选择说明 -->
-                     <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md); font-size: var(--font-size-sm); color: var(--primary-dark);">
-                         <strong>💡 选择提示：</strong>可连续选择多个时间段（如上午连续2小时、3小时）。点击时段即可选中/取消，系统会自动验证连续性。
-                         <div v-if="selectedTimeSlots.length > 0" style="margin-top: var(--spacing-sm); color: var(--success);">
-                             已选择 {{ selectedTimeSlots.length }} 个时段，共 {{ totalSelectedHours }} 小时
-                         </div>
-                     </div>
-                     
-                     <div class="time-picker-grid" role="grid" aria-label="时段选择">
-                         <div 
-                             v-for="slot in timeSlots" 
-                             :key="slot.time"
-                             class="time-slot"
-                             :class="{ 
-                                 selected: isSlotSelected(slot),
-                                 disabled: !slot.available,
-                                 'in-range': isInSelectedRange(slot)
-                             }"
-                             role="gridcell"
-                             tabindex="0"
-                             @click="toggleTimeSlot(slot)"
-                             @keypress.enter="toggleTimeSlot(slot)"
-                             :aria-disabled="!slot.available"
-                             :aria-label="`${slot.time} ${slot.available ? '可用' : '已被预约'} ${isSlotSelected(slot) ? '已选中' : ''}`"
-                         >
-                             {{ slot.time }}
-                             <div v-if="isSlotSelected(slot)" style="font-size: var(--font-size-xs); color: var(--success);">✓ 已选</div>
-                             <div v-else-if="!slot.available" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
-                                 已预约
-                             </div>
-                         </div>
-                     </div>
+                    <!-- 实时冲突检测状态 -->
+                    <div v-if="conflictDetected" class="conflict-warning-box">
+                        <div class="conflict-warning-icon">⚠️</div>
+                        <div class="conflict-warning-content">
+                            <div class="conflict-warning-title">时段冲突提示</div>
+                            <div class="conflict-warning-detail">
+                                <div v-for="conflict in conflictBookings" :key="conflict.booking_id" style="margin-bottom: var(--spacing-xs);">
+                                    <strong>{{ conflict.time_range }}</strong> 已被预约：
+                                    <span style="color: var(--danger-dark);">{{ conflict.title }}</span>
+                                    <span style="color: var(--text-tertiary);">({{ conflict.user_name }})</span>
+                                </div>
+                                <div style="margin-top: var(--spacing-sm); color: var(--primary);">
+                                    请选择其他可用时段或更换日期
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时段图例 -->
+                    <div class="time-legend">
+                        <div class="legend-item">
+                            <div class="legend-dot available"></div>
+                            <span>可用</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot.selected"></div>
+                            <span>已选</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot booked"></div>
+                            <span>已被预约</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot pending"></div>
+                            <span>待审批</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 可用时段摘要 -->
+                    <div v-if="timeSlots.length > 0" style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); font-size: var(--font-size-sm);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>
+                                <strong>当日可用时段：</strong>
+                                {{ availableHoursCount }} 小时
+                                <span v-if="availableHoursCount < 4" style="color: var(--warning);">（时段紧张，建议尽早预约）</span>
+                            </span>
+                            <span style="color: var(--text-tertiary);">
+                                已预约 {{ bookedHoursCount }} 小时
+                            </span>
+                        </div>
+                    </div>
+                    
+ <!-- 时间段选择说明 -->
+                      <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md); font-size: var(--font-size-sm); color: var(--primary-dark);">
+                          <strong>💡 选择提示：</strong>可连续选择多个时间段（如上午连续2小时、3小时）。点击时段即可选中/取消，系统会自动验证连续性。
+                          <div v-if="selectedTimeSlots.length > 0" style="margin-top: var(--spacing-sm); color: var(--success);">
+                              已选择 {{ selectedTimeSlots.length }} 个时段，共 {{ totalSelectedHours }} 小时
+                          </div>
+                      </div>
+                      
+                      <div class="time-picker-grid" role="grid" aria-label="时段选择">
+                          <div 
+                              v-for="slot in timeSlots" 
+                              :key="slot.time"
+                              class="time-slot"
+                              :class="{ 
+                                  selected: isSlotSelected(slot),
+                                  disabled: !slot.available,
+                                  conflict: slot.hasConflict,
+                                  'in-range': isInSelectedRange(slot)
+                              }"
+                              role="gridcell"
+                              tabindex="0"
+                              @click="toggleTimeSlot(slot)"
+                              @keypress.enter="toggleTimeSlot(slot)"
+                              :aria-disabled="!slot.available"
+                              :aria-label="`${slot.time} ${slot.available ? '可用' : '已被预约'} ${isSlotSelected(slot) ? '已选中' : ''}`"
+                          >
+                              {{ slot.time }}
+                              <div v-if="isSlotSelected(slot)" class="time-slot-info" style="color: var(--success);">✓ 已选</div>
+                              <div v-else-if="!slot.available && slot.bookingInfo" class="time-slot-info conflict-info">
+                                  已预约
+                                  <div class="conflict-tooltip">
+                                      <strong>{{ slot.bookingInfo.title }}</strong><br>
+                                      预约人: {{ slot.bookingInfo.user_name }}
+                                  </div>
+                              </div>
+                              <div v-else-if="slot.available" class="time-slot-info">可预约</div>
+                          </div>
+                      </div>
                      
                      <!-- 操作按钮 -->
                      <div v-if="selectedTimeSlots.length > 0" style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); justify-content: center;">
@@ -690,6 +847,13 @@
 const bookingDate = ref('')
                  const timeSlots = ref([])
                  const selectedTimeSlots = ref([]) // 改为数组支持多选
+                 
+                 // 冲突检测相关状态
+                 const conflictDetected = ref(false)
+                 const conflictBookings = ref([])
+                 const bookedSlotsInfo = ref([])
+                 const availableHoursCount = ref(0)
+                 const bookedHoursCount = ref(0)
                  
                  const meetingTitle = ref('')
                  const attendeesCount = ref(1)
@@ -951,8 +1115,27 @@ const calculateFee = async () => {
                 }
                 
 const loadSpaceType = async () => {
-                     const typeCode = new URLSearchParams(window.location.search).get('type')
-                     const resourceId = new URLSearchParams(window.location.search).get('resourceId')
+                     const params = new URLSearchParams(window.location.search);
+                     const typeCode = params.get('type')
+                     const resourceId = params.get('resourceId')
+                     const dateParam = params.get('date')
+                     const timeParam = params.get('time')
+                     
+                     if (dateParam) {
+                         bookingDate.value = dateParam
+                     }
+                     
+                     if (timeParam) {
+                         const startTime = timeParam
+                         const hour = parseInt(startTime.split(':')[0])
+                         const endTime = `${hour + 1}:00`
+                         const slotTime = `${startTime}-${endTime}`
+                         
+                         selectedTimeSlots.value = [{
+                             time: slotTime,
+                             available: true
+                         }]
+                     }
                      
                      try {
                          const response = await spaceAPI.getResources({ type_code: typeCode || 'meeting_room' });
@@ -1046,6 +1229,8 @@ const loadSpaceType = async () => {
                 const loadTimeSlots = async () => {
                     if (!selectedResource.value || !bookingDate.value) {
                         timeSlots.value = [];
+                        conflictDetected.value = false;
+                        conflictBookings.value = [];
                         return;
                     }
                     
@@ -1058,6 +1243,17 @@ const loadSpaceType = async () => {
                         const availableSlots = response.data.available_slots || [];
                         const bookedSlots = response.data.booked_slots || [];
                         
+                        // 存储已预约时段详细信息
+                        bookedSlotsInfo.value = bookedSlots;
+                        
+                        // 计算可用和已预约小时数
+                        availableHoursCount.value = response.data.total_available_hours || 0;
+                        bookedHoursCount.value = bookedSlots.reduce((sum, b) => {
+                            const start = parseInt(b.start_time.split(':')[0]);
+                            const end = parseInt(b.end_time.split(':')[0]);
+                            return sum + (end - start);
+                        }, 0);
+                        
                         const allSlots = [
                             '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
                             '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
@@ -1065,40 +1261,84 @@ const loadSpaceType = async () => {
                         ];
                         
                         timeSlots.value = allSlots.map(time => {
-                            const isBooked = bookedSlots.some(booked => {
-                                const bookedTime = `${booked.start_time}-${booked.end_time}`;
-                                return bookedTime === time;
+                            const slotStart = parseInt(time.split('-')[0].split(':')[0]);
+                            const slotEnd = parseInt(time.split('-')[1].split(':')[0]);
+                            
+                            // 检查是否与任何已预约时段重叠
+                            const matchingBooking = bookedSlots.find(booked => {
+                                const bookedStart = parseInt(booked.start_time.split(':')[0]);
+                                const bookedEnd = parseInt(booked.end_time.split(':')[0]);
+                                return slotStart >= bookedStart && slotStart < bookedEnd;
                             });
+                            
+                            const isBooked = !!matchingBooking;
                             
                             return {
                                 time: time,
-                                available: !isBooked
+                                available: !isBooked,
+                                hasConflict: isBooked,
+                                bookingInfo: matchingBooking ? {
+                                    booking_id: matchingBooking.booking_id,
+                                    title: matchingBooking.booking_title || '未知',
+                                    user_name: matchingBooking.user_name || '未知',
+                                    start_time: matchingBooking.start_time,
+                                    end_time: matchingBooking.end_time
+                                } : null
                             };
                         });
                         
-                        console.log('时段加载完成:', timeSlots.value.length);
+                        // 检测并设置冲突信息
+                        if (bookedSlots.length > 0) {
+                            conflictDetected.value = true;
+                            conflictBookings.value = bookedSlots.map(b => ({
+                                booking_id: b.booking_id,
+                                time_range: `${b.start_time}-${b.end_time}`,
+                                title: b.booking_title || '未知预约',
+                                user_name: b.user_name || '未知用户'
+                            }));
+                        } else {
+                            conflictDetected.value = false;
+                            conflictBookings.value = [];
+                        }
+                        
+                        console.log('时段加载完成:', {
+                            total: timeSlots.value.length,
+                            available: timeSlots.value.filter(s => s.available).length,
+                            booked: timeSlots.value.filter(s => !s.available).length
+                        });
+                        
                     } catch (error) {
                         console.error('加载时段失败:', error);
+                        
+                        // 使用模拟数据
                         timeSlots.value = [
-                            { time: '08:00-09:00', available: true },
-                            { time: '09:00-10:00', available: false },
-                            { time: '10:00-11:00', available: true },
-                            { time: '11:00-12:00', available: true },
-                            { time: '13:00-14:00', available: false },
-                            { time: '14:00-15:00', available: true },
-                            { time: '15:00-16:00', available: true },
-                            { time: '16:00-17:00', available: true },
-                            { time: '17:00-18:00', available: true },
-                            { time: '18:00-19:00', available: false },
-                            { time: '19:00-20:00', available: true },
-                            { time: '20:00-21:00', available: true }
+                            { time: '08:00-09:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '09:00-10:00', available: false, hasConflict: true, bookingInfo: { title: '项目会议', user_name: '张三' } },
+                            { time: '10:00-11:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '11:00-12:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '13:00-14:00', available: false, hasConflict: true, bookingInfo: { title: '客户洽谈', user_name: '李四' } },
+                            { time: '14:00-15:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '15:00-16:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '16:00-17:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '17:00-18:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '18:00-19:00', available: false, hasConflict: true, bookingInfo: { title: '团队复盘', user_name: '王五' } },
+                            { time: '19:00-20:00', available: true, hasConflict: false, bookingInfo: null },
+                            { time: '20:00-21:00', available: true, hasConflict: false, bookingInfo: null }
                         ];
+                        
+                        conflictDetected.value = true;
+                        conflictBookings.value = [
+                            { time_range: '09:00-10:00', title: '项目会议', user_name: '张三' },
+                            { time_range: '13:00-14:00', title: '客户洽谈', user_name: '李四' },
+                            { time_range: '18:00-19:00', title: '团队复盘', user_name: '王五' }
+                        ];
+                        
+                        availableHoursCount.value = 9;
+                        bookedHoursCount.value = 3;
                     }
                     
-                    if (!bookingDate.value) {
-                        const today = new Date();
-                        bookingDate.value = today.toISOString().split('T')[0];
-                    }
+                    // 清空之前选择的时段
+                    selectedTimeSlots.value = [];
                 }
                 
                 const submitBooking = async () => {
@@ -1206,6 +1446,11 @@ return {
                      userType,
                      freeHoursRemaining,
                      canProceedToNext,
+                     conflictDetected,
+                     conflictBookings,
+                     bookedSlotsInfo,
+                     availableHoursCount,
+                     bookedHoursCount,
                      nextStep,
                      prevStep,
                      selectResource,
@@ -1216,7 +1461,8 @@ return {
                      formatSelectedSlots,
                      calculateFee,
                      toggleFavorite,
-                     submitBooking
+                     submitBooking,
+                     loadTimeSlots
                  }
             }
         }).mount('#app')

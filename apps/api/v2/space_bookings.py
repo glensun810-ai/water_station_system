@@ -11,7 +11,7 @@ import random
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_current_user_required, get_admin_user
+from depends.auth import get_current_user_required, get_admin_user, get_super_admin_user
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
@@ -22,6 +22,8 @@ from shared.schemas.space.space_booking import (
     SpaceBookingResponse,
     FeeCalculationRequest,
     FeeCalculationResponse,
+    BatchOperationRequest,
+    BatchOperationResult,
 )
 from shared.schemas.space.response import ApiResponse, PaginatedResponse
 
@@ -456,9 +458,9 @@ async def delete_booking(
     booking_id: int,
     delete_reason: Optional[str] = Query(None, description="删除原因"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_super_admin_user),
 ):
-    """删除预约（软删除，仅管理员）"""
+    """删除预约（软删除，仅超级管理员）"""
 
     booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
 
@@ -557,6 +559,105 @@ async def calculate_fee(
             deposit_info=deposit_info,
             payment_methods=["wechat", "alipay", "internal_account"],
         )
+    )
+
+
+@router.post("/batch-operation", response_model=ApiResponse)
+async def batch_operation(
+    batch_data: BatchOperationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """批量操作预约"""
+
+    if batch_data.operation == "delete":
+        if current_user.role != "super_admin":
+            raise HTTPException(status_code=403, detail="批量删除仅超级管理员可用")
+
+    total = len(batch_data.booking_ids)
+    success_ids = []
+    failed_items = []
+
+    for booking_id in batch_data.booking_ids:
+        try:
+            booking = (
+                db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
+            )
+
+            if not booking:
+                failed_items.append({"id": booking_id, "error": "预约不存在"})
+                continue
+
+            if batch_data.operation == "delete":
+                if booking.is_deleted == 1:
+                    failed_items.append({"id": booking_id, "error": "预约已删除"})
+                    continue
+
+                booking.is_deleted = 1
+                booking.deleted_at = datetime.now()
+                booking.deleted_by = current_user.name
+                booking.delete_reason = batch_data.reason or "批量删除"
+
+            elif batch_data.operation == "approve":
+                if booking.status != "pending_approval":
+                    failed_items.append(
+                        {"id": booking_id, "error": f"状态为{booking.status}，无法审批"}
+                    )
+                    continue
+
+                booking.status = "approved"
+                booking.approved_by = current_user.name
+                booking.approved_at = datetime.now()
+
+            elif batch_data.operation == "cancel":
+                if booking.status in ["cancelled", "completed", "rejected"]:
+                    failed_items.append(
+                        {"id": booking_id, "error": f"状态为{booking.status}，无法取消"}
+                    )
+                    continue
+
+                booking.status = "cancelled"
+                booking.cancelled_at = datetime.now()
+                booking.cancelled_by = current_user.name
+                booking.cancel_reason = batch_data.reason or "批量取消"
+
+            elif batch_data.operation == "complete":
+                if booking.status not in ["approved", "confirmed", "in_use"]:
+                    failed_items.append(
+                        {"id": booking_id, "error": f"状态为{booking.status}，无法完成"}
+                    )
+                    continue
+
+                booking.status = "completed"
+                booking.completed_at = datetime.now()
+                booking.completed_by = current_user.name
+
+            success_ids.append(booking_id)
+
+        except Exception as e:
+            failed_items.append({"id": booking_id, "error": str(e)})
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量操作失败: {str(e)}")
+
+    success_count = len(success_ids)
+    failed_count = len(failed_items)
+
+    result_message = f"批量操作完成：成功{success_count}条，失败{failed_count}条"
+
+    return ApiResponse(
+        message=result_message,
+        data=BatchOperationResult(
+            total=total,
+            success_count=success_count,
+            failed_count=failed_count,
+            success_ids=success_ids,
+            failed_items=failed_items,
+            message=result_message,
+        ),
     )
 
 

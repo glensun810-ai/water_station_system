@@ -72,6 +72,26 @@
             padding: var(--spacing-xl);
             text-align: center;
             border-left: 4px solid var(--primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-card.active {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            border-left-color: var(--primary-dark);
+        }
+        
+        .stat-card.active .stat-value {
+            color: white;
+        }
+        
+        .stat-card.active .stat-label {
+            color: rgba(255,255,255,0.9);
         }
         
         .stat-value {
@@ -84,6 +104,37 @@
             font-size: var(--font-size-sm);
             color: var(--text-secondary);
             margin-top: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .stat-card-pending { border-left-color: var(--warning); }
+        .stat-card-approved { border-left-color: var(--success); }
+        .stat-card-completed { border-left-color: var(--info); }
+        .stat-card-rejected { border-left-color: var(--danger); }
+        .stat-card-total { border-left-color: var(--primary); }
+        
+        .filter-active-hint {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-left: var(--spacing-md);
+        }
+        
+        .clear-filter-btn {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
         }
         
         .bookings-table {
@@ -207,10 +258,82 @@
             font-size: var(--font-size-xs);
         }
         
-        .empty-state {
+        .batch-toolbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .batch-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .batch-count {
+            background: rgba(255,255,255,0.2);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-weight: 600;
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .batch-btn {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: none;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .batch-btn:hover {
+            background: white;
+            transform: translateY(-1px);
+        }
+        
+        .batch-btn.danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .batch-btn.danger:hover {
+            background: #c82333;
+        }
+        
+        .checkbox-cell {
+            width: 40px;
             text-align: center;
-            padding: var(--spacing-3xl);
-            color: var(--text-tertiary);
+        }
+        
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
         }
         
         .modal-overlay {
@@ -269,6 +392,133 @@
             margin-top: var(--spacing-xs);
         }
         
+        .batch-confirm-modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            animation: scaleIn 0.3s ease-out;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .batch-confirm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .batch-confirm-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .batch-confirm-body {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .batch-confirm-warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        .batch-confirm-list {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .batch-item-preview {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid var(--border);
+            font-size: var(--font-size-sm);
+        }
+        
+        .batch-item-preview:last-child {
+            border-bottom: none;
+        }
+        
+        .batch-reason-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            margin-top: var(--spacing-md);
+        }
+        
+        .batch-confirm-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+        }
+        
+        .progress-modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        .progress-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .progress-text {
+            font-size: var(--font-size-lg);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .progress-subtext {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
         @media (max-width: 768px) {
             .bookings-table {
                 overflow-x: auto;
@@ -311,33 +561,79 @@
         <div class="booking-container">
             <!-- 统计概览 -->
             <div class="stats-overview">
-                <div class="stat-card">
+                <div 
+                    class="stat-card stat-card-pending"
+                    :class="{ active: filters.status === 'pending_approval' }"
+                    @click="filterByStatus('pending_approval')"
+                    title="点击筛选待审批预约"
+                >
                     <div class="stat-value">{{ stats.pending }}</div>
-                    <div class="stat-label">待审批</div>
+                    <div class="stat-label">
+                        <span>待审批</span>
+                        <span v-if="filters.status === 'pending_approval'" style="font-size: 10px;">🔍 已筛选</span>
+                    </div>
                 </div>
-                <div class="stat-card">
+                <div 
+                    class="stat-card stat-card-approved"
+                    :class="{ active: filters.status === 'approved' }"
+                    @click="filterByStatus('approved')"
+                    title="点击筛选已通过预约"
+                >
                     <div class="stat-value">{{ stats.approved }}</div>
-                    <div class="stat-label">已通过</div>
+                    <div class="stat-label">
+                        <span>已通过</span>
+                        <span v-if="filters.status === 'approved'" style="font-size: 10px;">🔍 已筛选</span>
+                    </div>
                 </div>
-                <div class="stat-card">
+                <div 
+                    class="stat-card stat-card-completed"
+                    :class="{ active: filters.status === 'completed' }"
+                    @click="filterByStatus('completed')"
+                    title="点击筛选已完成预约"
+                >
                     <div class="stat-value">{{ stats.completed }}</div>
-                    <div class="stat-label">已完成</div>
+                    <div class="stat-label">
+                        <span>已完成</span>
+                        <span v-if="filters.status === 'completed'" style="font-size: 10px;">🔍 已筛选</span>
+                    </div>
                 </div>
-                <div class="stat-card">
+                <div 
+                    class="stat-card stat-card-rejected"
+                    :class="{ active: filters.status === 'rejected' }"
+                    @click="filterByStatus('rejected')"
+                    title="点击筛选已拒绝预约"
+                >
                     <div class="stat-value">{{ stats.rejected }}</div>
-                    <div class="stat-label">已拒绝</div>
+                    <div class="stat-label">
+                        <span>已拒绝</span>
+                        <span v-if="filters.status === 'rejected'" style="font-size: 10px;">🔍 已筛选</span>
+                    </div>
                 </div>
-                <div class="stat-card">
+                <div 
+                    class="stat-card stat-card-total"
+                    :class="{ active: filters.status === '' }"
+                    @click="filterByStatus('')"
+                    title="点击显示全部预约"
+                >
                     <div class="stat-value">{{ stats.total }}</div>
-                    <div class="stat-label">总预约数</div>
+                    <div class="stat-label">
+                        <span>总预约数</span>
+                        <span v-if="filters.status === ''" style="font-size: 10px;">📋 全部</span>
+                    </div>
                 </div>
+            </div>
+            
+            <!-- 当前筛选提示 -->
+            <div v-if="filters.status" class="filter-active-hint">
+                <span>🔍 当前筛选: {{ getStatusLabel(filters.status) }}</span>
+                <button class="clear-filter-btn" @click="clearStatusFilter">清除筛选</button>
             </div>
             
             <!-- 筛选栏 -->
             <div class="filter-bar">
                 <div class="filter-group">
                     <span class="filter-label">状态筛选：</span>
-                    <select class="filter-select" v-model="filters.status" @change="loadBookings">
+                    <select class="filter-select" v-model="filters.status" @change="applyFilters">
                         <option value="">全部状态</option>
                         <option value="pending_approval">待审批</option>
                         <option value="approved">已通过</option>
@@ -349,7 +645,7 @@
                 
                 <div class="filter-group">
                     <span class="filter-label">空间类型：</span>
-                    <select class="filter-select" v-model="filters.type_code" @change="loadBookings">
+                    <select class="filter-select" v-model="filters.type_code" @change="applyFilters">
                         <option value="">全部类型</option>
                         <option value="meeting_room">会议室</option>
                         <option value="auditorium">会场</option>
@@ -361,12 +657,42 @@
                 
                 <div class="filter-group">
                     <span class="filter-label">日期范围：</span>
-                    <input type="date" class="filter-select" v-model="filters.date_from" @change="loadBookings">
+                    <input type="date" class="filter-select" v-model="filters.date_from" @change="applyFilters">
                     <span>-</span>
-                    <input type="date" class="filter-select" v-model="filters.date_to" @change="loadBookings">
+                    <input type="date" class="filter-select" v-model="filters.date_to" @change="applyFilters">
                 </div>
                 
                 <button class="btn btn-primary btn-sm" @click="loadBookings">刷新数据</button>
+            </div>
+            
+            <!-- 批量操作工具栏 -->
+            <div v-if="selectedBookings.length > 0" class="batch-toolbar">
+                <div class="batch-info">
+                    <span>已选择</span>
+                    <span class="batch-count">{{ selectedBookings.length }} 条</span>
+                    <button class="batch-btn" @click="clearSelection">取消选择</button>
+                </div>
+                <div class="batch-actions">
+                    <button 
+                        v-if="hasPendingApprovals" 
+                        class="batch-btn" 
+                        @click="showBatchConfirm('approve')"
+                    >批量审批</button>
+                    <button 
+                        v-if="hasApprovableComplete" 
+                        class="batch-btn" 
+                        @click="showBatchConfirm('complete')"
+                    >批量完成</button>
+                    <button 
+                        class="batch-btn" 
+                        @click="showBatchConfirm('cancel')"
+                    >批量取消</button>
+                    <button 
+                        v-if="isSuperAdmin" 
+                        class="batch-btn danger" 
+                        @click="showBatchConfirm('delete')"
+                    >批量删除</button>
+                </div>
             </div>
             
             <!-- 预约列表 -->
@@ -378,6 +704,14 @@
                 <table v-if="bookings.length > 0">
                     <thead>
                         <tr>
+                            <th class="checkbox-cell">
+                                <input 
+                                    type="checkbox" 
+                                    class="custom-checkbox"
+                                    :checked="selectedBookings.length === bookings.length && bookings.length > 0"
+                                    @change="toggleSelectAll"
+                                >
+                            </th>
                             <th style="width: 100px;">预约编号</th>
                             <th style="width: 220px;">预约主题</th>
                             <th style="width: 140px;">预约时间</th>
@@ -389,6 +723,15 @@
                     </thead>
                     <tbody>
                         <tr v-for="booking in bookings" :key="booking.id">
+                            <td class="checkbox-cell">
+                                <input 
+                                    type="checkbox" 
+                                    class="custom-checkbox"
+                                    :value="booking.id"
+                                    v-model="selectedBookings"
+                                    @change="updateBatchButtons"
+                                >
+                            </td>
                             <td>
                                 <span class="booking-no">{{ booking.booking_no || 'BK' + booking.id }}</span>
                             </td>
@@ -427,6 +770,12 @@
                                         class="btn btn-danger btn-sm"
                                         @click="cancelBooking(booking)"
                                     >取消</button>
+                                    <button 
+                                        v-if="isSuperAdmin" 
+                                        class="btn btn-danger btn-sm"
+                                        @click="deleteBooking(booking)"
+                                        style="background: #dc3545; color: white; border-color: #dc3545;"
+                                    >删除</button>
                                 </div>
                             </td>
                         </tr>
@@ -508,6 +857,69 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 批量操作确认对话框 -->
+        <div v-if="showBatchModal" class="modal-overlay" @click.self="showBatchModal = false">
+            <div class="batch-confirm-modal">
+                <div class="batch-confirm-header">
+                    <h3 class="batch-confirm-title">{{ batchOperationTitle }}</h3>
+                    <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showBatchModal = false">✕</button>
+                </div>
+                
+                <div class="batch-confirm-body">
+                    <div class="batch-confirm-warning" v-if="batchOperation === 'delete'">
+                        ⚠️ 批量删除是不可逆操作，请谨慎操作！已选择的记录将被永久删除。
+                    </div>
+                    <div class="batch-confirm-warning" v-else>
+                        ⚠️ 批量操作将影响 {{ selectedBookings.length }} 条预约记录
+                    </div>
+                    
+                    <div style="margin-bottom: var(--spacing-md);">
+                        <div style="font-size: var(--font-size-sm); color: var(--text-tertiary); margin-bottom: var(--spacing-sm);">
+                            已选择的预约：
+                        </div>
+                        <div class="batch-confirm-list">
+                            <div class="batch-item-preview" v-for="id in selectedBookings.slice(0, 5)" :key="id">
+                                {{ getBookingById(id)?.booking_no }} - {{ getBookingById(id)?.title }}
+                            </div>
+                            <div v-if="selectedBookings.length > 5" class="batch-item-preview" style="color: var(--text-tertiary);">
+                                还有 {{ selectedBookings.length - 5 }} 条...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label style="font-size: var(--font-size-sm); color: var(--text-tertiary);">
+                            操作原因（{{ batchOperation === 'delete' ? '必填' : '可选' }}）：
+                        </label>
+                        <input 
+                            type="text" 
+                            class="batch-reason-input"
+                            v-model="batchReason"
+                            :placeholder="batchOperation === 'delete' ? '请输入删除原因' : '可选：输入操作原因'"
+                        >
+                    </div>
+                </div>
+                
+                <div class="batch-confirm-footer">
+                    <button class="btn btn-outline" @click="showBatchModal = false">取消</button>
+                    <button 
+                        class="btn btn-primary" 
+                        @click="executeBatchOperation"
+                        :disabled="batchOperation === 'delete' && !batchReason"
+                    >确认执行</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 进度显示 -->
+        <div v-if="showProgressModal" class="progress-overlay">
+            <div class="progress-modal">
+                <div class="progress-spinner"></div>
+                <div class="progress-text">正在执行批量操作...</div>
+                <div class="progress-subtext">请稍候，不要关闭页面</div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -516,6 +928,7 @@
         createApp({
             setup() {
                 const loading = ref(false);
+                const allBookings = ref([]);
                 const bookings = ref([]);
                 const stats = ref({
                     pending: 0,
@@ -532,6 +945,15 @@
                 });
                 const showDetailModal = ref(false);
                 const selectedBooking = ref(null);
+                const isSuperAdmin = ref(false);
+                
+                const selectedBookings = ref([]);
+                const showBatchModal = ref(false);
+                const showProgressModal = ref(false);
+                const batchOperation = ref('');
+                const batchReason = ref('');
+                const hasPendingApprovals = ref(false);
+                const hasApprovableComplete = ref(false);
                 
                 const API_BASE = '/api/v2';
                 
@@ -547,6 +969,20 @@
                     return map[status] || status;
                 };
                 
+                const getStatusLabel = (status) => {
+                    return getStatusText(status);
+                };
+                
+                const filterByStatus = (status) => {
+                    filters.value.status = status;
+                    applyFilters();
+                };
+                
+                const clearStatusFilter = () => {
+                    filters.value.status = '';
+                    applyFilters();
+                };
+                
                 const loadBookings = async () => {
                     loading.value = true;
                     
@@ -558,11 +994,9 @@
                             return;
                         }
                         
+                        // 加载全部数据（一次请求，用于统计和筛选显示）
                         const params = new URLSearchParams();
-                        if (filters.value.status) params.append('status', filters.value.status);
-                        if (filters.value.type_code) params.append('type_code', filters.value.type_code);
-                        if (filters.value.date_from) params.append('date_from', filters.value.date_from);
-                        if (filters.value.date_to) params.append('date_to', filters.value.date_to);
+                        params.append('limit', '100');
                         
                         const response = await fetch(`${API_BASE}/space/bookings?${params}`, {
                             headers: {
@@ -573,7 +1007,9 @@
                         const data = await response.json();
                         
                         if (data.code === 200) {
-                            bookings.value = data.data.items || [];
+                            allBookings.value = data.data.items || [];
+                            // 根据当前筛选条件过滤显示数据
+                            applyFilters();
                             updateStats();
                         } else {
                             console.error('加载失败:', data);
@@ -586,12 +1022,32 @@
                     }
                 };
                 
+                const applyFilters = () => {
+                    let result = allBookings.value;
+                    
+                    if (filters.value.status) {
+                        result = result.filter(b => b.status === filters.value.status);
+                    }
+                    if (filters.value.type_code) {
+                        result = result.filter(b => b.type_code === filters.value.type_code);
+                    }
+                    if (filters.value.date_from) {
+                        result = result.filter(b => b.booking_date >= filters.value.date_from);
+                    }
+                    if (filters.value.date_to) {
+                        result = result.filter(b => b.booking_date <= filters.value.date_to);
+                    }
+                    
+                    bookings.value = result;
+                };
+                
                 const updateStats = () => {
-                    stats.value.total = bookings.value.length;
-                    stats.value.pending = bookings.value.filter(b => b.status === 'pending_approval').length;
-                    stats.value.approved = bookings.value.filter(b => b.status === 'approved').length;
-                    stats.value.completed = bookings.value.filter(b => b.status === 'completed').length;
-                    stats.value.rejected = bookings.value.filter(b => b.status === 'rejected').length;
+                    // 统计全部数据，不受筛选影响
+                    stats.value.total = allBookings.value.length;
+                    stats.value.pending = allBookings.value.filter(b => b.status === 'pending_approval').length;
+                    stats.value.approved = allBookings.value.filter(b => b.status === 'approved').length;
+                    stats.value.completed = allBookings.value.filter(b => b.status === 'completed').length;
+                    stats.value.rejected = allBookings.value.filter(b => b.status === 'rejected').length;
                 };
                 
                 const viewDetail = (booking) => {
@@ -682,9 +1138,125 @@
                     }
                 };
                 
+                const deleteBooking = async (booking) => {
+                    const reason = prompt('请输入删除原因（可选）：');
+                    
+                    if (!confirm(`确认删除预约「${booking.title}」？\n此操作不可恢复！`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        if (reason) params.append('delete_reason', reason);
+                        
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}?${params}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('删除成功');
+                            loadBookings();
+                        } else {
+                            alert('删除失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('删除失败:', error);
+                        alert('删除失败，请重试');
+                    }
+                };
+                
+                const toggleSelectAll = () => {
+                    if (selectedBookings.value.length === bookings.value.length) {
+                        selectedBookings.value = [];
+                    } else {
+                        selectedBookings.value = bookings.value.map(b => b.id);
+                    }
+                    updateBatchButtons();
+                };
+                
+                const clearSelection = () => {
+                    selectedBookings.value = [];
+                    updateBatchButtons();
+                };
+                
+                const updateBatchButtons = () => {
+                    const selected = bookings.value.filter(b => selectedBookings.value.includes(b.id));
+                    hasPendingApprovals.value = selected.some(b => b.status === 'pending_approval');
+                    hasApprovableComplete.value = selected.some(b => b.status === 'approved' || b.status === 'confirmed' || b.status === 'in_use');
+                };
+                
+                const getBookingById = (id) => {
+                    return bookings.value.find(b => b.id === id);
+                };
+                
+                const batchOperationTitle = ref('');
+                
+                const showBatchConfirm = (operation) => {
+                    batchOperation.value = operation;
+                    batchReason.value = '';
+                    
+                    const titles = {
+                        'delete': '批量删除预约',
+                        'approve': '批量审批预约',
+                        'cancel': '批量取消预约',
+                        'complete': '批量完成预约'
+                    };
+                    batchOperationTitle.value = titles[operation];
+                    showBatchModal.value = true;
+                };
+                
+                const executeBatchOperation = async () => {
+                    if (batchOperation.value === 'delete' && !batchReason.value) {
+                        alert('删除原因必填');
+                        return;
+                    }
+                    
+                    showBatchModal.value = false;
+                    showProgressModal.value = true;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/batch-operation`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                booking_ids: selectedBookings.value,
+                                operation: batchOperation.value,
+                                reason: batchReason.value
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        showProgressModal.value = false;
+                        
+                        if (data.code === 200) {
+                            const result = data.data;
+                            alert(result.message);
+                            selectedBookings.value = [];
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        showProgressModal.value = false;
+                        console.error('批量操作失败:', error);
+                        alert('批量操作失败，请重试');
+                    }
+                };
+                
                 onMounted(async () => {
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
                     if (!user) return;
+                    
+                    isSuperAdmin.value = user.role === 'super_admin';
                     
                     loadBookings();
                 });
@@ -696,12 +1268,32 @@
                     filters,
                     showDetailModal,
                     selectedBooking,
+                    isSuperAdmin,
                     getStatusText,
+                    getStatusLabel,
+                    filterByStatus,
+                    clearStatusFilter,
+                    applyFilters,
                     loadBookings,
                     viewDetail,
                     approveBooking,
                     completeBooking,
-                    cancelBooking
+                    cancelBooking,
+                    deleteBooking,
+                    selectedBookings,
+                    showBatchModal,
+                    showProgressModal,
+                    batchOperation,
+                    batchReason,
+                    batchOperationTitle,
+                    hasPendingApprovals,
+                    hasApprovableComplete,
+                    toggleSelectAll,
+                    clearSelection,
+                    updateBatchButtons,
+                    getBookingById,
+                    showBatchConfirm,
+                    executeBatchOperation
                 };
             }
         }).mount('#app');

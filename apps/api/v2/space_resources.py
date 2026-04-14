@@ -222,6 +222,7 @@ async def check_resource_availability(
                 "end_time": b.end_time,
                 "booking_id": b.id,
                 "booking_title": b.title,
+                "user_name": b.user_name,
             }
         )
 
