@@ -26,6 +26,7 @@ from apps.api.v2.space_bookings import router as space_bookings_router
 from apps.api.v2.space_approvals import router as space_approvals_router
 from apps.api.v2.space_payments import router as space_payments_router
 from apps.api.v2.space_statistics import router as space_statistics_router
+from apps.api.v2.unified_settlement import router as unified_settlement_router
 
 # Import exception handlers
 from apps.error_handlers import register_exception_handlers
@@ -82,6 +83,7 @@ v2_router.include_router(space_bookings_router)
 v2_router.include_router(space_approvals_router)
 v2_router.include_router(space_payments_router)
 v2_router.include_router(space_statistics_router)
+v2_router.include_router(unified_settlement_router)
 
 # Add routers to main app
 app.include_router(v1_router)
