@@ -11,7 +11,7 @@ import random
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_current_user_required, get_admin_user, get_super_admin_user
+from depends.auth import get_current_user_required, get_admactiver, get_super_admactiver
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
@@ -181,7 +181,7 @@ async def create_booking(
             SpaceBooking.resource_id == booking_data.resource_id,
             SpaceBooking.booking_date == booking_data.booking_date,
             SpaceBooking.status.in_(
-                ["pending_approval", "approved", "confirmed", "in_use", "completed"]
+                ["pending", "approved", "confirmed", "active", "completed"]
             ),
         )
         .all()
@@ -208,7 +208,7 @@ async def create_booking(
     )
 
     initial_status = (
-        "pending_approval"
+        "pending"
         if space_type and space_type.requires_approval
         else "confirmed"
     )
@@ -228,7 +228,7 @@ async def create_booking(
         requires_deposit=space_type.requires_deposit if space_type else False,
         deposit_amount=total_fee * (space_type.deposit_percentage if space_type else 0),
         status=initial_status,
-        payment_status="unpaid",
+        payment_status="pending" if total_fee > 0 else "none",
         settlement_status="unsettled",
         confirmed_at=datetime.now() if initial_status == "confirmed" else None,
         confirmed_by="system" if initial_status == "confirmed" else None,
@@ -237,7 +237,7 @@ async def create_booking(
     db.add(booking)
     db.flush()
 
-    if initial_status == "pending_approval":
+    if initial_status == "pending":
         from shared.models.space.space_approval import SpaceApproval
 
         approval_no = (
@@ -291,7 +291,7 @@ async def update_booking(
     if not booking.can_modify:
         raise HTTPException(status_code=400, detail="此预约不可修改")
 
-    if booking.status not in ["pending_approval", "approved", "confirmed"]:
+    if booking.status not in ["pending", "approved", "confirmed"]:
         raise HTTPException(status_code=400, detail="预约状态不允许修改")
 
     update_data = booking_data.model_dump(exclude_unset=True)
@@ -315,7 +315,7 @@ async def update_booking(
                 SpaceBooking.resource_id == booking.resource_id,
                 SpaceBooking.booking_date == booking.booking_date,
                 SpaceBooking.status.in_(
-                    ["pending_approval", "approved", "confirmed", "in_use"]
+                    ["pending", "approved", "confirmed", "active"]
                 ),
                 SpaceBooking.id != booking_id,
             )
@@ -397,7 +397,7 @@ async def cancel_booking(
 async def approve_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """审批预约（管理员）"""
 
@@ -410,7 +410,7 @@ async def approve_booking(
     if not booking:
         raise HTTPException(status_code=404, detail="预约不存在")
 
-    if booking.status != "pending_approval":
+    if booking.status != "pending":
         raise HTTPException(status_code=400, detail="只能审批待审批的预约")
 
     booking.status = "approved"
@@ -427,7 +427,7 @@ async def approve_booking(
 async def complete_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """完成预约（管理员）"""
 
@@ -440,7 +440,7 @@ async def complete_booking(
     if not booking:
         raise HTTPException(status_code=404, detail="预约不存在")
 
-    if booking.status not in ["approved", "confirmed", "in_use"]:
+    if booking.status not in ["approved", "confirmed", "active"]:
         raise HTTPException(status_code=400, detail="只能完成已审批/确认/使用中的预约")
 
     booking.status = "completed"
@@ -458,7 +458,7 @@ async def delete_booking(
     booking_id: int,
     delete_reason: Optional[str] = Query(None, description="删除原因"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_super_admin_user),
+    current_user: User = Depends(get_super_admactiver),
 ):
     """删除预约（软删除，仅超级管理员）"""
 
@@ -566,7 +566,7 @@ async def calculate_fee(
 async def batch_operation(
     batch_data: BatchOperationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """批量操作预约"""
 
@@ -599,7 +599,7 @@ async def batch_operation(
                 booking.delete_reason = batch_data.reason or "批量删除"
 
             elif batch_data.operation == "approve":
-                if booking.status != "pending_approval":
+                if booking.status != "pending":
                     failed_items.append(
                         {"id": booking_id, "error": f"状态为{booking.status}，无法审批"}
                     )
@@ -622,7 +622,7 @@ async def batch_operation(
                 booking.cancel_reason = batch_data.reason or "批量取消"
 
             elif batch_data.operation == "complete":
-                if booking.status not in ["approved", "confirmed", "in_use"]:
+                if booking.status not in ["approved", "confirmed", "active"]:
                     failed_items.append(
                         {"id": booking_id, "error": f"状态为{booking.status}，无法完成"}
                     )

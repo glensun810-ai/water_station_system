@@ -10,7 +10,7 @@ from typing import Optional
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_admin_user, get_current_user_required
+from depends.auth import get_admactiver, get_current_user_required
 from shared.models.space.space_booking import SpaceBooking
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
@@ -84,7 +84,7 @@ async def get_statistics_overview(
     date_to: Optional[date] = Query(None, description="结束日期"),
     type_code: Optional[str] = Query(None, description="空间类型过滤"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取统计概览"""
 
@@ -147,7 +147,7 @@ async def get_statistics_overview(
 
     by_status = {}
     status_list = [
-        "pending_approval",
+        "pending",
         "approved",
         "confirmed",
         "completed",
@@ -177,7 +177,7 @@ async def get_statistics_overview(
 @router.get("/dashboard", response_model=ApiResponse)
 async def get_dashboard_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取Dashboard数据"""
 
@@ -189,9 +189,9 @@ async def get_dashboard_data(
         .count()
     )
 
-    pending_approvals = (
+    pendings = (
         db.query(SpaceBooking)
-        .filter(SpaceBooking.status == "pending_approval", SpaceBooking.is_deleted == 0)
+        .filter(SpaceBooking.status == "pending", SpaceBooking.is_deleted == 0)
         .count()
     )
 
@@ -260,7 +260,7 @@ async def get_dashboard_data(
         data={
             "today": {
                 "bookings": today_bookings,
-                "pending_approvals": pending_approvals,
+                "pendings": pendings,
                 "pending_payment_confirm": pending_payment_confirm,
                 "completed": completed_today,
                 "revenue": today_revenue,
@@ -283,7 +283,7 @@ async def get_usage_statistics(
     date_to: Optional[date] = Query(None),
     type_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取使用率统计"""
 
@@ -342,7 +342,7 @@ async def get_booking_trends(
     days: int = Query(30, ge=7, le=90, description="统计天数"),
     type_code: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取预约趋势"""
 
@@ -387,7 +387,7 @@ async def get_revenue_statistics(
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取收入统计"""
 
@@ -410,7 +410,7 @@ async def get_revenue_statistics(
     addon_revenue = query.with_entities(func.sum(SpaceBooking.addon_fee)).scalar() or 0
 
     by_payment_status = {}
-    for status in ["unpaid", "deposit_paid", "fully_paid", "refunded"]:
+    for status in ["pending", "deposit_paid", "paid", "refunded"]:
         status_revenue = (
             query.filter(SpaceBooking.payment_status == status)
             .with_entities(func.sum(SpaceBooking.actual_fee))

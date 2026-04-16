@@ -756,6 +756,10 @@
                                         <span class="text-sm text-secondary">今日预约：<span class="font-bold text-primary">{{ meetingTodayBookings }}次</span></span>
                                         <span class="text-sm text-secondary">待审批：<span class="font-bold text-warning">{{ meetingPendingApprovals }}项</span></span>
                                     </div>
+                                    <div class="flex items-center justify-between" style="margin-top: var(--spacing-sm);">
+                                        <span class="text-sm text-secondary">待结算：<span class="font-bold text-danger">¥{{ meetingPendingSettlement.toFixed(2) }}</span></span>
+                                        <span class="text-sm text-secondary">本月收入：<span class="font-bold text-success">¥{{ meetingMonthlyRevenue.toFixed(2) }}</span></span>
+                                    </div>
                                     <div v-if="meetingAlerts > 0" class="alert-badge" style="margin-top: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-sm); background: var(--danger-light); color: var(--danger); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
                                         ⚠️ 异常预约 {{ meetingAlerts }} 个
                                     </div>
@@ -766,12 +770,12 @@
                                     🏢 空间服务工作台
                                 </a>
                             </div>
-                            <div class="quick-actions" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-sm);">
-                                <a href="/portal/admin/space/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                            <div class="quick-actions" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--spacing-sm);">
+                                <a href="/portal/admin/space/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;" title="预约管理与审批">
                                     预约管理
                                 </a>
-                                <a href="/portal/admin/space/approvals.html" class="btn btn-outline btn-sm" style="justify-content: center;">
-                                    审批中心
+                                <a href="/portal/admin/space/settlements.html" class="btn btn-outline btn-sm" style="justify-content: center; border-color: var(--success); color: var(--success);" title="费用结算管理">
+                                    结算管理
                                 </a>
                                 <a href="/portal/admin/space/resources.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     资源配置
@@ -779,6 +783,12 @@
                                 <a href="/portal/admin/space/statistics.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     统计报表
                                 </a>
+                                <a href="/space-frontend/calendar.html" class="btn btn-outline btn-sm" style="justify-content: center;">
+                                    预约日历
+                                </a>
+                            </div>
+                            <div style="margin-top: var(--spacing-sm); padding: var(--spacing-sm); background: var(--info-light); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--info-dark);">
+                                💡 审批功能已整合至预约管理，无需单独跳转
                             </div>
                         </div>
                         
@@ -981,7 +991,8 @@
                          
                      </div>
                      </section>
-                </section>
+</section>
+            </div>
             
             <!-- 底部留白 -->
             <div style="height: 100px;"></div>
@@ -1029,6 +1040,7 @@
                     <button @click="handleLogout" class="btn btn-danger btn-md" style="width: 100%;">退出登录</button>
                 </div>
             </div>
+        </div>
     </div>
     
     <script>
@@ -1062,6 +1074,8 @@
                 
                 const meetingTodayBookings = ref(0);
                 const meetingPendingApprovals = ref(0);
+                const meetingPendingSettlement = ref(0);
+                const meetingMonthlyRevenue = ref(0);
                 const meetingAlerts = ref(0);
                 
                 // 系统管理数据
@@ -1233,7 +1247,19 @@ const waterNavLabel = computed(() => {
                             const meetingData = await meetingRes.json();
                             meetingTodayBookings.value = meetingData.booking_count || 0;
                             meetingPendingApprovals.value = meetingData.pending_approvals || 0;
+                            meetingPendingSettlement.value = meetingData.pending_settlement || 0;
+                            meetingMonthlyRevenue.value = meetingData.monthly_revenue || 0;
                             meetingAlerts.value = meetingData.alerts || 0;
+                        }
+                        
+                        // 加载空间服务结算数据（备用）
+                        const spaceSettlementRes = await fetch('/api/v2/space/settlements/summary').catch(() => ({ ok: false }));
+                        if (spaceSettlementRes.ok) {
+                            const spaceData = await spaceSettlementRes.json();
+                            if (spaceData.code === 200 && spaceData.data) {
+                                meetingPendingSettlement.value = spaceData.data.pending_amount || meetingPendingSettlement.value;
+                                meetingMonthlyRevenue.value = spaceData.data.monthly_revenue || meetingMonthlyRevenue.value;
+                            }
                         }
                         
                         // 计算汇总数据
@@ -1321,6 +1347,8 @@ return {
                     waterAlerts,
                     meetingTodayBookings,
                     meetingPendingApprovals,
+                    meetingPendingSettlement,
+                    meetingMonthlyRevenue,
                     meetingAlerts,
                     officeCount,
                     totalUsers,

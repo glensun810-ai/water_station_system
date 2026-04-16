@@ -182,6 +182,50 @@
             white-space: nowrap;
         }
         
+        .bookings-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: all var(--transition-fast);
+        }
+        
+        .bookings-table th.sortable:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+        
+        .bookings-table th.sortable.active {
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .sort-indicator {
+            display: inline-flex;
+            margin-left: 6px;
+            opacity: 0.3;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .bookings-table th.sortable:hover .sort-indicator {
+            opacity: 0.6;
+        }
+        
+        .bookings-table th.sortable.active .sort-indicator {
+            opacity: 1;
+        }
+        
+        .sort-indicator.desc::after {
+            content: '↓';
+        }
+        
+        .sort-indicator.asc::after {
+            content: '↑';
+        }
+        
+        .sort-indicator.none::after {
+            content: '↕';
+            font-size: 10px;
+        }
+        
         .bookings-table td {
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
@@ -220,6 +264,72 @@
             color: var(--text-tertiary);
             margin-top: 2px;
         }
+        
+        .type-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .type-icon {
+            font-size: 14px;
+        }
+        
+        .type-name {
+            font-weight: 600;
+        }
+        
+        .resource-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .resource-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .resource-location {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .resource-capacity {
+            font-size: var(--font-size-xs);
+            color: var(--info);
+        }
+        
+        .booking-duration {
+            font-size: var(--font-size-xs);
+            color: var(--success);
+            font-weight: 500;
+        }
+        
+        .fee-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .fee-amount {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .fee-status {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .fee-status.paid { color: var(--success); }
+        .fee-status.pending { color: var(--warning); }
         
         .booking-time {
             font-size: var(--font-size-sm);
@@ -340,6 +450,103 @@
         
         .batch-btn.danger:hover {
             background: #c82333;
+        }
+        
+        .batch-btn.approve-btn {
+            background: var(--success);
+            color: white;
+        }
+        
+        .batch-btn.approve-btn:hover {
+            background: #16a34a;
+        }
+        
+        .batch-btn.reject-btn {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .batch-btn.reject-btn:hover {
+            background: #b91c1c;
+        }
+        
+        .pending-quick-notice {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+        
+        .notice-icon {
+            font-size: 32px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .notice-content {
+            flex: 1;
+        }
+        
+        .notice-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--warning-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .notice-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .notice-hint {
+            color: var(--text-tertiary);
+            font-size: var(--font-size-xs);
+        }
+        
+        .notice-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            display: block;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
         }
         
         .checkbox-cell {
@@ -572,63 +779,81 @@
             <!-- 统计概览 -->
             <div class="stats-overview">
                 <div 
-                    class="stat-card stat-card-pending"
-                    :class="{ active: filters.status === 'pending_approval' }"
+                    class="stat-card"
+                    :class="{ active: filters.status === 'pending_approval' || filters.status === 'pending' }"
                     @click="filterByStatus('pending_approval')"
+                    :style="{ borderLeftColor: '#f59e0b' }"
                     title="点击筛选待审批预约"
                 >
-                    <div class="stat-value">{{ stats.pending }}</div>
+                    <div class="stat-value" style="color: #f59e0b;">{{ stats.pending }}</div>
                     <div class="stat-label">
-                        <span>待审批</span>
-                        <span v-if="filters.status === 'pending_approval'" style="font-size: 10px;">🔍 已筛选</span>
+                        <span>⏳ 待审批</span>
+                        <span v-if="filters.status === 'pending_approval'" style="font-size: 10px;">已筛选</span>
                     </div>
                 </div>
                 <div 
-                    class="stat-card stat-card-approved"
+                    class="stat-card"
                     :class="{ active: filters.status === 'approved' }"
                     @click="filterByStatus('approved')"
-                    title="点击筛选已通过预约"
+                    :style="{ borderLeftColor: '#22c55e' }"
+                    title="点击筛选已批准预约"
                 >
-                    <div class="stat-value">{{ stats.approved }}</div>
+                    <div class="stat-value" style="color: #22c55e;">{{ stats.approved }}</div>
                     <div class="stat-label">
-                        <span>已通过</span>
-                        <span v-if="filters.status === 'approved'" style="font-size: 10px;">🔍 已筛选</span>
+                        <span>✅ 已批准</span>
+                        <span v-if="filters.status === 'approved'" style="font-size: 10px;">已筛选</span>
                     </div>
                 </div>
                 <div 
-                    class="stat-card stat-card-completed"
+                    class="stat-card"
+                    :class="{ active: filters.status === 'confirmed' }"
+                    @click="filterByStatus('confirmed')"
+                    :style="{ borderLeftColor: '#3b82f6' }"
+                    title="点击筛选已确认预约"
+                >
+                    <div class="stat-value" style="color: #3b82f6;">{{ stats.confirmed }}</div>
+                    <div class="stat-label">
+                        <span>📋 已确认</span>
+                        <span v-if="filters.status === 'confirmed'" style="font-size: 10px;">已筛选</span>
+                    </div>
+                </div>
+                <div 
+                    class="stat-card"
                     :class="{ active: filters.status === 'completed' }"
                     @click="filterByStatus('completed')"
+                    :style="{ borderLeftColor: '#64748b' }"
                     title="点击筛选已完成预约"
                 >
-                    <div class="stat-value">{{ stats.completed }}</div>
+                    <div class="stat-value" style="color: #64748b;">{{ stats.completed }}</div>
                     <div class="stat-label">
-                        <span>已完成</span>
-                        <span v-if="filters.status === 'completed'" style="font-size: 10px;">🔍 已筛选</span>
+                        <span>✔️ 已完成</span>
+                        <span v-if="filters.status === 'completed'" style="font-size: 10px;">已筛选</span>
                     </div>
                 </div>
                 <div 
-                    class="stat-card stat-card-rejected"
-                    :class="{ active: filters.status === 'rejected' }"
-                    @click="filterByStatus('rejected')"
-                    title="点击筛选已拒绝预约"
+                    class="stat-card"
+                    :class="{ active: filters.status === 'settled' }"
+                    @click="filterByStatus('settled')"
+                    :style="{ borderLeftColor: '#10b981' }"
+                    title="点击筛选已结算预约"
                 >
-                    <div class="stat-value">{{ stats.rejected }}</div>
+                    <div class="stat-value" style="color: #10b981;">{{ stats.settled }}</div>
                     <div class="stat-label">
-                        <span>已拒绝</span>
-                        <span v-if="filters.status === 'rejected'" style="font-size: 10px;">🔍 已筛选</span>
+                        <span>💰 已结算</span>
+                        <span v-if="filters.status === 'settled'" style="font-size: 10px;">已筛选</span>
                     </div>
                 </div>
                 <div 
-                    class="stat-card stat-card-total"
+                    class="stat-card"
                     :class="{ active: filters.status === '' }"
                     @click="filterByStatus('')"
+                    :style="{ borderLeftColor: '#6366f1' }"
                     title="点击显示全部预约"
                 >
-                    <div class="stat-value">{{ stats.total }}</div>
+                    <div class="stat-value" style="color: #6366f1;">{{ stats.total }}</div>
                     <div class="stat-label">
-                        <span>总预约数</span>
-                        <span v-if="filters.status === ''" style="font-size: 10px;">📋 全部</span>
+                        <span>📊 总数</span>
+                        <span v-if="filters.status === ''" style="font-size: 10px;">全部</span>
                     </div>
                 </div>
             </div>
@@ -645,10 +870,13 @@
                     <span class="filter-label">状态筛选：</span>
                     <select class="filter-select" v-model="filters.status" @change="applyFilters">
                         <option value="">全部状态</option>
-                        <option value="pending_approval">待审批</option>
+                        <option value="pending">待审批</option>
                         <option value="approved">已通过</option>
+                        <option value="confirmed">已确认</option>
+                        <option value="active">进行中</option>
                         <option value="rejected">已拒绝</option>
                         <option value="completed">已完成</option>
+                        <option value="settled">已结算</option>
                         <option value="cancelled">已取消</option>
                     </select>
                 </div>
@@ -666,6 +894,11 @@
                 </div>
                 
                 <div class="filter-group">
+                    <span class="filter-label">预约人：</span>
+                    <input type="text" class="filter-select" v-model="filters.user_name" placeholder="输入姓名筛选" @input="applyFilters" style="min-width: 120px;">
+                </div>
+                
+                <div class="filter-group">
                     <span class="filter-label">日期范围：</span>
                     <input type="date" class="filter-select" v-model="filters.date_from" @change="applyFilters">
                     <span>-</span>
@@ -673,6 +906,7 @@
                 </div>
                 
                 <button class="btn btn-primary btn-sm" @click="loadBookings">刷新数据</button>
+                <button class="btn btn-outline btn-sm" @click="clearFilters" v-if="hasActiveFilters">清除筛选</button>
             </div>
             
             <!-- 批量操作工具栏 -->
@@ -685,9 +919,16 @@
                 <div class="batch-actions">
                     <button 
                         v-if="hasPendingApprovals" 
-                        class="batch-btn" 
+                        class="batch-btn approve-btn" 
                         @click="showBatchConfirm('approve')"
-                    >批量审批</button>
+                        title="批量通过审批"
+                    >✅ 批量通过</button>
+                    <button 
+                        v-if="hasPendingApprovals" 
+                        class="batch-btn reject-btn" 
+                        @click="showBatchConfirm('reject')"
+                        title="批量拒绝审批"
+                    >❌ 批量拒绝</button>
                     <button 
                         v-if="hasApprovableComplete" 
                         class="batch-btn" 
@@ -705,10 +946,43 @@
                 </div>
             </div>
             
+            <!-- 待审批快速处理提示 -->
+            <div v-if="stats.pending > 0 && filters.status === 'pending_approval'" class="pending-quick-notice">
+                <div class="notice-icon">⚡</div>
+                <div class="notice-content">
+                    <div class="notice-title">待审批预约快速处理</div>
+                    <div class="notice-desc">
+                        当前有 <strong>{{ stats.pending }}</strong> 个待审批预约。您可以：
+                        <span class="notice-hint">勾选后批量通过/拒绝，或点击单条记录右侧「审批」按钮单独处理</span>
+                    </div>
+                </div>
+                <div class="notice-actions">
+                    <button class="btn btn-success btn-sm" @click="selectAllPending">全选待审批</button>
+                    <a href="/portal/admin/space/approvals.html" class="btn btn-outline btn-sm" v-if="stats.pending > 5">
+                        进入审批中心 →
+                    </a>
+                </div>
+            </div>
+            
             <!-- 预约列表 -->
             <div class="bookings-table" v-if="!loading">
-                <div class="table-header">
-                    共 {{ bookings.length }} 条预约记录
+                <div class="table-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>共 {{ bookings.length }} 条预约记录</span>
+                    <div style="display: flex; gap: var(--spacing-md);">
+                        <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                            按类型统计：
+                        </span>
+                        <span 
+                            v-for="(count, type) in typeStats" 
+                            :key="type"
+                            style="font-size: var(--font-size-xs); padding: 2px 8px; background: var(--bg-secondary); border-radius: var(--radius-sm); cursor: pointer;"
+                            :style="{ borderLeft: '3px solid ' + getTypeColor(type) }"
+                            @click="filterByType(type)"
+                            :title="`点击筛选${getTypeName(type)}预约`"
+                        >
+                            {{ getTypeIcon(type) }} {{ getTypeName(type) }}: {{ count }}
+                        </span>
+                    </div>
                 </div>
                 
                 <table v-if="bookings.length > 0">
@@ -722,12 +996,39 @@
                                     @change="toggleSelectAll"
                                 >
                             </th>
-                            <th style="width: 100px;">预约编号</th>
-                            <th style="width: 220px;">预约主题</th>
-                            <th style="width: 140px;">预约时间</th>
-                            <th style="width: 100px;">预约人</th>
-                            <th style="width: 90px;">状态</th>
-                            <th style="width: 80px;">费用</th>
+                            <th style="width: 100px;" class="sortable" :class="{ active: filters.sort_by === 'booking_no' }" @click="toggleSort('booking_no')">
+                                预约编号
+                                <span class="sort-indicator" :class="getSortClass('booking_no')"></span>
+                            </th>
+                            <th style="width: 200px;" class="sortable" :class="{ active: filters.sort_by === 'title' }" @click="toggleSort('title')">
+                                预约主题
+                                <span class="sort-indicator" :class="getSortClass('title')"></span>
+                            </th>
+                            <th style="width: 120px;" class="sortable" :class="{ active: filters.sort_by === 'type_code' }" @click="toggleSort('type_code')">
+                                空间类型
+                                <span class="sort-indicator" :class="getSortClass('type_code')"></span>
+                            </th>
+                            <th style="width: 120px;">具体资源</th>
+                            <th style="width: 120px;" class="sortable" :class="{ active: filters.sort_by === 'booking_date' }" @click="toggleSort('booking_date')">
+                                预约时间
+                                <span class="sort-indicator" :class="getSortClass('booking_date')"></span>
+                            </th>
+                            <th style="width: 80px;" class="sortable" :class="{ active: filters.sort_by === 'user_name' }" @click="toggleSort('user_name')">
+                                预约人
+                                <span class="sort-indicator" :class="getSortClass('user_name')"></span>
+                            </th>
+                            <th style="width: 80px;" class="sortable" :class="{ active: filters.sort_by === 'status' }" @click="toggleSort('status')">
+                                状态
+                                <span class="sort-indicator" :class="getSortClass('status')"></span>
+                            </th>
+                            <th style="width: 80px;" class="sortable" :class="{ active: filters.sort_by === 'total_fee' }" @click="toggleSort('total_fee')">
+                                费用
+                                <span class="sort-indicator" :class="getSortClass('total_fee')"></span>
+                            </th>
+                            <th style="width: 160px;" class="sortable" :class="{ active: filters.sort_by === 'created_at' }" @click="toggleSort('created_at')">
+                                创建时间
+                                <span class="sort-indicator" :class="getSortClass('created_at')"></span>
+                            </th>
                             <th style="width: 160px;">操作</th>
                         </tr>
                     </thead>
@@ -747,11 +1048,30 @@
                             </td>
                             <td>
                                 <div class="booking-title">{{ booking.title }}</div>
-                                <div class="booking-subtitle">{{ booking.space_name }}</div>
+                                <div class="booking-subtitle">{{ booking.attendees_count || 0 }}人参会</div>
+                            </td>
+                            <td>
+                                <div 
+                                    class="type-cell"
+                                    :style="{ background: getTypeBgColor(booking.type_code), color: getTypeTextColor(booking.type_code) }"
+                                >
+                                    <span class="type-icon">{{ getTypeIcon(booking.type_code) }}</span>
+                                    <span class="type-name">{{ getTypeName(booking.type_code) }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="resource-cell">
+                                    <div class="resource-name">{{ booking.resource_name || booking.space_name || '未指定' }}</div>
+                                    <div class="resource-location" v-if="booking.resource_location">{{ booking.resource_location }}</div>
+                                    <div class="resource-capacity" v-if="booking.resource_capacity">容量{{ booking.resource_capacity }}人</div>
+                                </div>
                             </td>
                             <td>
                                 <div class="booking-time">{{ booking.booking_date }}</div>
                                 <div class="booking-time-range">{{ booking.start_time }}-{{ booking.end_time }}</div>
+                                <div class="booking-duration" v-if="booking.duration_hours">
+                                    {{ booking.duration_hours }}小时
+                                </div>
                             </td>
                             <td>{{ booking.user_name }}</td>
                             <td>
@@ -760,16 +1080,31 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="booking-price">¥{{ booking.total_price || 0 }}</span>
+                                <div class="fee-cell">
+                                    <div class="fee-amount">¥{{ (booking.total_fee || booking.actual_fee || 0).toFixed(2) }}</div>
+                                    <div class="fee-status" v-if="booking.payment_status">
+                                        {{ getPaymentStatusText(booking.payment_status) }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: var(--font-size-sm);">{{ formatCreatedTime(booking.created_at) }}</div>
                             </td>
                             <td>
                                 <div class="action-btns">
                                     <button class="btn btn-outline btn-sm" @click="viewDetail(booking)">查看</button>
-                                    <button 
-                                        v-if="booking.status === 'pending_approval'" 
-                                        class="btn btn-primary btn-sm" 
-                                        @click="approveBooking(booking)"
-                                    >审批</button>
+                                    <template v-if="booking.status === 'pending_approval'">
+                                        <button 
+                                            class="btn btn-success btn-sm" 
+                                            @click="approveBooking(booking)"
+                                            title="通过审批"
+                                        >通过</button>
+                                        <button 
+                                            class="btn btn-danger btn-sm"
+                                            @click="showSingleRejectModal(booking)"
+                                            title="拒绝审批"
+                                        >拒绝</button>
+                                    </template>
                                     <button 
                                         v-if="booking.status === 'approved'" 
                                         class="btn btn-success btn-sm"
@@ -777,7 +1112,8 @@
                                     >完成</button>
                                     <button 
                                         v-if="booking.status === 'pending_approval' || booking.status === 'approved'" 
-                                        class="btn btn-danger btn-sm"
+                                        class="btn btn-outline btn-sm"
+                                        style="color: var(--danger);"
                                         @click="cancelBooking(booking)"
                                     >取消</button>
                                     <button 
@@ -807,10 +1143,32 @@
         
         <!-- 详情弹窗 -->
         <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h3 class="modal-title">预约详情</h3>
                     <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showDetailModal = false">✕</button>
+                </div>
+                
+                <!-- 资源信息卡片 -->
+                <div v-if="selectedBooking" style="background: linear-gradient(135deg, var(--primary-light) 0%, rgba(37, 99, 235, 0.05) 100%); padding: var(--spacing-lg); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                        <div 
+                            style="width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 24px;"
+                            :style="{ background: getTypeBgColor(selectedBooking.type_code) }"
+                        >
+                            {{ getTypeIcon(selectedBooking.type_code) }}
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--text-primary); font-size: var(--font-size-base);">
+                                {{ selectedBooking.resource_name || selectedBooking.space_name }}
+                            </div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                {{ getTypeName(selectedBooking.type_code) }}
+                                <span v-if="selectedBooking.resource_location"> · {{ selectedBooking.resource_location }}</span>
+                                <span v-if="selectedBooking.resource_capacity"> · 容量{{ selectedBooking.resource_capacity }}人</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="detail-grid" v-if="selectedBooking">
@@ -827,8 +1185,15 @@
                         </div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">空间资源</div>
-                        <div class="detail-value">{{ selectedBooking.space_name }}</div>
+                        <div class="detail-label">空间类型</div>
+                        <div class="detail-value">
+                            <span 
+                                style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: var(--radius-sm);"
+                                :style="{ background: getTypeBgColor(selectedBooking.type_code), color: getTypeTextColor(selectedBooking.type_code) }"
+                            >
+                                {{ getTypeIcon(selectedBooking.type_code) }} {{ getTypeName(selectedBooking.type_code) }}
+                            </span>
+                        </div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">预约人</div>
@@ -843,12 +1208,37 @@
                         <div class="detail-value">{{ selectedBooking.start_time }} - {{ selectedBooking.end_time }}</div>
                     </div>
                     <div class="detail-item">
+                        <div class="detail-label">使用时长</div>
+                        <div class="detail-value" style="color: var(--success); font-weight: 600;">
+                            {{ selectedBooking.duration_hours || calculateDuration(selectedBooking.start_time, selectedBooking.end_time) }}小时
+                        </div>
+                    </div>
+                    <div class="detail-item">
                         <div class="detail-label">参会人数</div>
                         <div class="detail-value">{{ selectedBooking.attendees_count }}人</div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">总费用</div>
-                        <div class="detail-value" style="color: var(--primary); font-weight: 600;">¥{{ selectedBooking.total_price }}</div>
+                        <div class="detail-label">基础费用</div>
+                        <div class="detail-value">¥{{ (selectedBooking.base_fee || 0).toFixed(2) }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">实际费用</div>
+                        <div class="detail-value" style="color: var(--primary); font-weight: 600;">¥{{ (selectedBooking.actual_fee || selectedBooking.total_fee || 0).toFixed(2) }}</div>
+                    </div>
+                    <div class="detail-item" v-if="selectedBooking.payment_status">
+                        <div class="detail-label">支付状态</div>
+                        <div class="detail-value">
+                            <span 
+                                style="padding: 4px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);"
+                                :class="selectedBooking.payment_status === 'paid' ? 'status-badge approved' : 'status-badge pending'"
+                            >
+                                {{ getPaymentStatusText(selectedBooking.payment_status) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item" v-if="selectedBooking.payment_method">
+                        <div class="detail-label">支付方式</div>
+                        <div class="detail-value">{{ selectedBooking.payment_method }}</div>
                     </div>
                 </div>
                 
@@ -860,6 +1250,48 @@
                 <div v-if="selectedBooking?.special_requests" style="margin-top: var(--spacing-md);">
                     <div style="font-size: var(--font-size-sm); color: var(--text-tertiary); margin-bottom: var(--spacing-sm);">特殊需求</div>
                     <div>{{ selectedBooking.special_requests }}</div>
+                </div>
+                
+                <!-- 下一步操作提示 -->
+                <div v-if="selectedBooking" style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%); border-radius: var(--radius-md); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span style="font-size: 18px;">💡</span>
+                        <div>
+                            <div style="font-weight: 600; color: var(--primary);">下一步操作</div>
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                {{ getNextHint(selectedBooking.status) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 状态时间线 -->
+                <div v-if="selectedBooking" style="margin-top: var(--spacing-lg);">
+                    <div style="font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-md);">
+                        📊 状态变化记录
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                        <div 
+                            v-for="(event, idx) in getBookingTimeline(selectedBooking)" 
+                            :key="idx"
+                            style="display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-sm); border-radius: var(--radius-sm); background: var(--bg-secondary);"
+                        >
+                            <span style="font-size: 16px;">{{ event.icon }}</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: var(--font-size-sm); font-weight: 500; color: var(--text-primary);">{{ event.text }}</div>
+                                <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                    {{ event.timestamp ? formatTimelineTime(event.timestamp) : '待确认' }}
+                                    <span v-if="event.by_user"> · {{ event.by_user }}</span>
+                                </div>
+                            </div>
+                            <span 
+                                style="padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);"
+                                :style="{ background: event.color + '20', color: event.color }"
+                            >
+                                {{ getStatusText(event.status) }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="margin-top: var(--spacing-xl); display: flex; gap: var(--spacing-md); justify-content: flex-end;">
@@ -930,10 +1362,78 @@
                 <div class="progress-subtext">请稍候，不要关闭页面</div>
             </div>
         </div>
+        
+        <!-- 拒绝审批模态框 -->
+        <div v-if="showRejectModal" class="modal-overlay" @click.self="showRejectModal = false">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" style="color: var(--danger);">❌ 拒绝审批</h3>
+                    <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showRejectModal = false">✕</button>
+                </div>
+                
+                <div style="padding: var(--spacing-lg);">
+                    <div style="background: var(--danger-light); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                        <div style="font-size: var(--font-size-sm); color: var(--danger-dark);">
+                            将拒绝 <strong>{{ rejectTarget === 'batch' ? selectedBookings.length : 1 }}</strong> 个预约申请
+                        </div>
+                    </div>
+                    
+                    <div v-if="rejectTarget === 'single' && singleRejectBooking" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                        <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: 600;">{{ singleRejectBooking.title }}</div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 4px;">
+                            {{ singleRejectBooking.space_name }} · {{ singleRejectBooking.booking_date }} {{ singleRejectBooking.start_time }}-{{ singleRejectBooking.end_time }}
+                        </div>
+                    </div>
+                    
+                    <div v-if="rejectTarget === 'batch'" style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg); max-height: 150px; overflow-y: auto;">
+                        <div v-for="id in selectedBookings.slice(0, 5)" :key="id" style="font-size: var(--font-size-sm); padding: 4px 0;">
+                            {{ getBookingById(id)?.booking_no }} - {{ getBookingById(id)?.title }}
+                        </div>
+                        <div v-if="selectedBookings.length > 5" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                            还有 {{ selectedBookings.length - 5 }} 条...
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600; color: var(--danger);">
+                            拒绝原因 <span style="color: var(--danger);">*</span>
+                        </label>
+                        <textarea 
+                            class="form-input form-textarea"
+                            v-model="rejectReason"
+                            placeholder="请输入拒绝原因，将通知申请人（例如：时段已被占用、资源不满足要求等）"
+                            rows="3"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">
+                            替代建议（可选）
+                        </label>
+                        <input 
+                            type="text"
+                            class="form-input"
+                            v-model="rejectSuggestion"
+                            placeholder="例如：建议改预约会议室B，或调整到14:00-16:00时段"
+                        >
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end; padding: var(--spacing-lg); border-top: 1px solid var(--border);">
+                    <button class="btn btn-outline" @click="showRejectModal = false">取消</button>
+                    <button 
+                        class="btn btn-danger" 
+                        @click="executeReject"
+                        :disabled="!rejectReason.trim()"
+                    >确认拒绝</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
         
         createApp({
             components: {
@@ -946,15 +1446,22 @@
                 const stats = ref({
                     pending: 0,
                     approved: 0,
+                    confirmed: 0,
+                    active: 0,
                     completed: 0,
+                    settled: 0,
                     rejected: 0,
+                    cancelled: 0,
                     total: 0
                 });
                 const filters = ref({
                     status: '',
                     type_code: '',
                     date_from: '',
-                    date_to: ''
+                    date_to: '',
+                    user_name: '',
+                    sort_by: 'created_at',
+                    sort_order: 'desc'
                 });
                 const showDetailModal = ref(false);
                 const selectedBooking = ref(null);
@@ -968,22 +1475,189 @@
                 const hasPendingApprovals = ref(false);
                 const hasApprovableComplete = ref(false);
                 
+                // 拒绝审批相关
+                const showRejectModal = ref(false);
+                const rejectTarget = ref('batch'); // 'batch' 或 'single'
+                const singleRejectBooking = ref(null);
+                const rejectReason = ref('');
+                const rejectSuggestion = ref('');
+                
                 const API_BASE = '/api/v2';
                 
-                const getStatusText = (status) => {
-                    const map = {
-                        'pending_approval': '待审批',
-                        'approved': '已通过',
-                        'rejected': '已拒绝',
-                        'cancelled': '已取消',
-                        'completed': '已完成',
-                        'in_use': '使用中'
-                    };
-                    return map[status] || status;
+                // 空间类型配置
+                const SPACE_TYPES = {
+                    'meeting_room': { icon: '🏢', name: '会议室', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
+                    'auditorium': { icon: '🎭', name: '会场', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
+                    'lobby_screen': { icon: '📺', name: '大屏', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+                    'lobby_booth': { icon: '🏪', name: '展位', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
+                    'vip_dining': { icon: '🍽️', name: 'VIP餐厅', color: '#ec4899', bgColor: 'rgba(236, 72, 153, 0.1)' }
                 };
                 
-                const getStatusLabel = (status) => {
-                    return getStatusText(status);
+                // 状态配置（新版本）
+                const STATUS_CONFIG = {
+                    'pending': {
+                        icon: '⏳', text: '待审批', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)',
+                        userActions: ['查看详情', '取消预约', '修改预约'],
+                        adminActions: ['审批通过', '审批拒绝', '要求修改', '查看详情'],
+                        nextHint: '等待管理员审批...',
+                        transitions: ['approved', 'rejected', 'cancelled']
+                    },
+                    'pending_approval': { // 兼容旧状态
+                        icon: '⏳', text: '待审批', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)',
+                        userActions: ['查看详情', '取消预约', '修改预约'],
+                        adminActions: ['审批通过', '审批拒绝', '要求修改', '查看详情'],
+                        nextHint: '等待管理员审批...',
+                        transitions: ['approved', 'rejected', 'cancelled']
+                    },
+                    'approved': {
+                        icon: '✅', text: '已批准', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)',
+                        userActions: ['支付押金', '确认预约', '取消预约', '查看详情'],
+                        adminActions: ['确认押金', '取消预约', '查看详情'],
+                        nextHint: '请支付押金锁定预约',
+                        transitions: ['confirmed', 'cancelled']
+                    },
+                    'rejected': {
+                        icon: '❌', text: '已拒绝', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)',
+                        userActions: ['查看原因', '重新提交'],
+                        adminActions: ['查看详情'],
+                        nextHint: '预约已被拒绝',
+                        transitions: []
+                    },
+                    'confirmed': {
+                        icon: '📋', text: '已确认', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)',
+                        userActions: ['查看详情', '取消预约'],
+                        adminActions: ['标记开始', '取消预约', '修改预约', '查看详情'],
+                        nextHint: '预约已生效，请按时使用',
+                        transitions: ['active', 'completed', 'cancelled']
+                    },
+                    'active': {
+                        icon: '🎯', text: '进行中', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)',
+                        userActions: ['查看详情'],
+                        adminActions: ['标记完成', '延长时间', '查看详情'],
+                        nextHint: '正在使用中',
+                        transitions: ['completed']
+                    },
+                    'in_use': { // 兼容旧状态
+                        icon: '🎯', text: '进行中', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)',
+                        userActions: ['查看详情'],
+                        adminActions: ['标记完成', '延长时间', '查看详情'],
+                        nextHint: '正在使用中',
+                        transitions: ['completed']
+                    },
+                    'completed': {
+                        icon: '✔️', text: '已完成', color: '#64748b', bgColor: 'rgba(100, 116, 139, 0.1)',
+                        userActions: ['支付余额', '确认结算', '申请发票', '评价反馈'],
+                        adminActions: ['确认结算', '调整费用', '发送账单', '查看详情'],
+                        nextHint: '使用已完成，请确认结算',
+                        transitions: ['settled']
+                    },
+                    'settled': {
+                        icon: '💰', text: '已结算', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)',
+                        userActions: ['查看详情', '下载发票'],
+                        adminActions: ['开具发票', '查看详情'],
+                        nextHint: '费用已结算完毕',
+                        transitions: []
+                    },
+                    'cancelled': {
+                        icon: '🚫', text: '已取消', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)',
+                        userActions: ['查看详情'],
+                        adminActions: ['查看详情'],
+                        nextHint: '预约已取消',
+                        transitions: []
+                    }
+                };
+                
+                // 支付状态配置
+                const PAYMENT_STATUS_CONFIG = {
+                    'none': { icon: '🎁', text: '免费', color: '#22c55e' },
+                    'unpaid': { icon: '⏳', text: '待支付', color: '#f59e0b' },
+                    'pending': { icon: '⏳', text: '待支付', color: '#f59e0b' },
+                    'deposit_paid': { icon: '💵', text: '押金已付', color: '#3b82f6' },
+                    'partial': { icon: '📊', text: '部分支付', color: '#8b5cf6' },
+                    'paid': { icon: '✅', text: '已支付', color: '#22c55e' },
+                    'fully_paid': { icon: '✅', text: '已支付', color: '#22c55e' },
+                    'refunded': { icon: '↩️', text: '已退款', color: '#94a3b8' }
+                };
+                
+                const getTypeIcon = (typeCode) => SPACE_TYPES[typeCode]?.icon || '📍';
+                const getTypeName = (typeCode) => SPACE_TYPES[typeCode]?.name || typeCode || '未知';
+                const getTypeColor = (typeCode) => SPACE_TYPES[typeCode]?.color || '#6b7280';
+                const getTypeBgColor = (typeCode) => SPACE_TYPES[typeCode]?.bgColor || 'rgba(107, 114, 128, 0.1)';
+                const getTypeTextColor = (typeCode) => SPACE_TYPES[typeCode]?.color || '#6b7280';
+                
+                const getStatusText = (status) => STATUS_CONFIG[status]?.text || status;
+                const getStatusIcon = (status) => STATUS_CONFIG[status]?.icon || '📍';
+                const getStatusColor = (status) => STATUS_CONFIG[status]?.color || '#6b7280';
+                const getStatusBgColor = (status) => STATUS_CONFIG[status]?.bgColor || 'rgba(107, 114, 128, 0.1)';
+                const getNextHint = (status) => STATUS_CONFIG[status]?.nextHint || '';
+                const getUserActions = (status) => STATUS_CONFIG[status]?.userActions || ['查看详情'];
+                const getAdminActions = (status) => STATUS_CONFIG[status]?.adminActions || ['查看详情'];
+                
+                const getPaymentStatusText = (status) => PAYMENT_STATUS_CONFIG[status]?.text || status;
+                const getPaymentStatusIcon = (status) => PAYMENT_STATUS_CONFIG[status]?.icon || '💰';
+                
+                const getStatusLabel = (status) => getStatusText(status);
+                
+                const typeStats = computed(() => {
+                    const stats = {};
+                    allBookings.value.forEach(b => {
+                        const type = b.type_code || 'unknown';
+                        stats[type] = (stats[type] || 0) + 1;
+                    });
+                    return stats;
+                });
+                
+                const filterByType = (typeCode) => {
+                    filters.value.type_code = filters.value.type_code === typeCode ? '' : typeCode;
+                    applyFilters();
+                };
+                
+                const calculateDuration = (startTime, endTime) => {
+                    if (!startTime || !endTime) return 0;
+                    const start = parseInt(startTime.split(':')[0]);
+                    const end = parseInt(endTime.split(':')[0]);
+                    return end - start;
+                };
+                
+                const getBookingTimeline = (booking) => {
+                    const timeline = [];
+                    const statusEvents = [
+                        { status: 'pending', timestamp: booking.created_at, text: '提交预约', by: '用户' },
+                        { status: 'approved', timestamp: booking.approved_at, text: '审批通过', by: booking.approved_by },
+                        { status: 'rejected', timestamp: booking.rejected_at, text: '审批拒绝', by: booking.rejected_by },
+                        { status: 'confirmed', timestamp: booking.confirmed_at, text: '确认预约', by: booking.confirmed_by },
+                        { status: 'active', timestamp: booking.activated_at || booking.started_at, text: '开始使用', by: booking.activated_by },
+                        { status: 'completed', timestamp: booking.completed_at, text: '使用完成', by: booking.completed_by },
+                        { status: 'settled', timestamp: booking.settled_at, text: '结算确认', by: booking.settled_by },
+                        { status: 'cancelled', timestamp: booking.cancelled_at, text: '取消预约', by: booking.cancelled_by }
+                    ];
+                    
+                    statusEvents.forEach(event => {
+                        if (event.timestamp) {
+                            const config = STATUS_CONFIG[event.status] || {};
+                            timeline.push({
+                                status: event.status,
+                                timestamp: event.timestamp,
+                                text: event.text,
+                                by_user: event.by || '系统',
+                                icon: config.icon || '',
+                                color: config.color || '#6b7280'
+                            });
+                        }
+                    });
+                    
+                    return timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                };
+                
+                const formatTimelineTime = (timestamp) => {
+                    if (!timestamp) return '';
+                    const date = new Date(timestamp);
+                    return date.toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
                 };
                 
                 const filterByStatus = (status) => {
@@ -1020,7 +1694,17 @@
                         const data = await response.json();
                         
                         if (data.code === 200) {
-                            allBookings.value = data.data.items || [];
+                            allBookings.value = (data.data.items || []).map(b => {
+                                // 计算使用时长
+                                const durationHours = b.duration_hours || calculateDuration(b.start_time, b.end_time);
+                                
+                                return {
+                                    ...b,
+                                    duration_hours: durationHours,
+                                    space_name: b.resource_name || b.space_name,
+                                    total_fee: b.total_fee || b.actual_fee || 0
+                                };
+                            });
                             // 根据当前筛选条件过滤显示数据
                             applyFilters();
                             updateStats();
@@ -1050,17 +1734,136 @@
                     if (filters.value.date_to) {
                         result = result.filter(b => b.booking_date <= filters.value.date_to);
                     }
+                    if (filters.value.user_name && filters.value.user_name.trim()) {
+                        const query = filters.value.user_name.trim().toLowerCase();
+                        result = result.filter(b => 
+                            b.user_name && b.user_name.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    result = sortBookings(result, filters.value.sort_by, filters.value.sort_order);
                     
                     bookings.value = result;
                 };
                 
+                const sortBookings = (data, sortBy, sortOrder) => {
+                    const sorted = [...data];
+                    
+                    sorted.sort((a, b) => {
+                        let valA, valB;
+                        
+                        switch (sortBy) {
+                            case 'booking_no':
+                                valA = a.booking_no || `BK${a.id}`;
+                                valB = b.booking_no || `BK${b.id}`;
+                                return sortOrder === 'asc' 
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'title':
+                                valA = a.title || '';
+                                valB = b.title || '';
+                                return sortOrder === 'asc'
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'type_code':
+                                valA = a.type_code || '';
+                                valB = b.type_code || '';
+                                return sortOrder === 'asc'
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'booking_date':
+                                valA = a.booking_date || '';
+                                valB = b.booking_date || '';
+                                return sortOrder === 'asc'
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'user_name':
+                                valA = a.user_name || '';
+                                valB = b.user_name || '';
+                                return sortOrder === 'asc'
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'status':
+                                valA = a.status || '';
+                                valB = b.status || '';
+                                return sortOrder === 'asc'
+                                    ? valA.localeCompare(valB)
+                                    : valB.localeCompare(valA);
+                            case 'total_fee':
+                                valA = a.total_fee || a.actual_fee || 0;
+                                valB = b.total_fee || b.actual_fee || 0;
+                                return sortOrder === 'asc'
+                                    ? valA - valB
+                                    : valB - valA;
+                            case 'created_at':
+                                valA = new Date(a.created_at || 0).getTime();
+                                valB = new Date(b.created_at || 0).getTime();
+                                return sortOrder === 'asc'
+                                    ? valA - valB
+                                    : valB - valA;
+                            default:
+                                return 0;
+                        }
+                    });
+                    
+                    return sorted;
+                };
+                
+                const toggleSort = (column) => {
+                    if (filters.value.sort_by === column) {
+                        filters.value.sort_order = filters.value.sort_order === 'desc' ? 'asc' : 'desc';
+                    } else {
+                        filters.value.sort_by = column;
+                        filters.value.sort_order = 'desc';
+                    }
+                    applyFilters();
+                };
+                
+                const getSortClass = (column) => {
+                    if (filters.value.sort_by !== column) {
+                        return 'none';
+                    }
+                    return filters.value.sort_order;
+                };
+                
+                const hasActiveFilters = computed(() => {
+                    return filters.value.status || filters.value.type_code || 
+                           filters.value.date_from || filters.value.date_to ||
+                           (filters.value.user_name && filters.value.user_name.trim());
+                });
+                
+                const clearFilters = () => {
+                    filters.value.status = '';
+                    filters.value.type_code = '';
+                    filters.value.date_from = '';
+                    filters.value.date_to = '';
+                    filters.value.user_name = '';
+                    filters.value.sort_by = 'created_at';
+                    filters.value.sort_order = 'desc';
+                    applyFilters();
+                };
+                
+                const formatCreatedTime = (datetime) => {
+                    if (!datetime) return '-';
+                    const date = new Date(datetime);
+                    return date.toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
                 const updateStats = () => {
-                    // 统计全部数据，不受筛选影响
                     stats.value.total = allBookings.value.length;
-                    stats.value.pending = allBookings.value.filter(b => b.status === 'pending_approval').length;
+                    stats.value.pending = allBookings.value.filter(b => b.status === 'pending_approval' || b.status === 'pending').length;
                     stats.value.approved = allBookings.value.filter(b => b.status === 'approved').length;
+                    stats.value.confirmed = allBookings.value.filter(b => b.status === 'confirmed').length;
+                    stats.value.active = allBookings.value.filter(b => b.status === 'active' || b.status === 'in_use').length;
                     stats.value.completed = allBookings.value.filter(b => b.status === 'completed').length;
+                    stats.value.settled = allBookings.value.filter(b => b.status === 'settled').length;
                     stats.value.rejected = allBookings.value.filter(b => b.status === 'rejected').length;
+                    stats.value.cancelled = allBookings.value.filter(b => b.status === 'cancelled').length;
                 };
                 
                 const viewDetail = (booking) => {
@@ -1092,6 +1895,91 @@
                         console.error('审批失败:', error);
                         alert('操作失败，请重试');
                     }
+                };
+                
+                const showSingleRejectModal = (booking) => {
+                    singleRejectBooking.value = booking;
+                    rejectTarget.value = 'single';
+                    rejectReason.value = '';
+                    rejectSuggestion.value = '';
+                    showRejectModal.value = true;
+                };
+                
+                const executeReject = async () => {
+                    if (!rejectReason.value.trim()) {
+                        alert('请输入拒绝原因');
+                        return;
+                    }
+                    
+                    const targetIds = rejectTarget.value === 'batch' 
+                        ? selectedBookings.value 
+                        : [singleRejectBooking.value.id];
+                    
+                    const targetNames = rejectTarget.value === 'batch'
+                        ? `${targetIds.length} 个预约`
+                        : singleRejectBooking.value.title;
+                    
+                    if (!confirm(`确认拒绝 ${targetNames}？\n拒绝后将通知申请人。`)) return;
+                    
+                    showRejectModal.value = false;
+                    showProgressModal.value = true;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        let successCount = 0;
+                        let failCount = 0;
+                        
+                        for (const id of targetIds) {
+                            try {
+                                const response = await fetch(`${API_BASE}/space/bookings/${id}/reject`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({
+                                        rejection_reason: rejectReason.value,
+                                        suggestion: rejectSuggestion.value
+                                    })
+                                });
+                                
+                                const data = await response.json();
+                                if (data.code === 200) {
+                                    successCount++;
+                                } else {
+                                    failCount++;
+                                }
+                            } catch (e) {
+                                failCount++;
+                            }
+                        }
+                        
+                        showProgressModal.value = false;
+                        
+                        if (failCount === 0) {
+                            alert(`拒绝成功：${successCount} 个预约已拒绝`);
+                        } else {
+                            alert(`处理完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+                        }
+                        
+                        rejectReason.value = '';
+                        rejectSuggestion.value = '';
+                        singleRejectBooking.value = null;
+                        selectedBookings.value = [];
+                        loadBookings();
+                        
+                    } catch (error) {
+                        showProgressModal.value = false;
+                        console.error('拒绝失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const selectAllPending = () => {
+                    selectedBookings.value = bookings.value
+                        .filter(b => b.status === 'pending_approval')
+                        .map(b => b.id);
+                    updateBatchButtons();
                 };
                 
                 const completeBooking = async (booking) => {
@@ -1209,6 +2097,14 @@
                 const batchOperationTitle = ref('');
                 
                 const showBatchConfirm = (operation) => {
+                    if (operation === 'reject') {
+                        rejectTarget.value = 'batch';
+                        rejectReason.value = '';
+                        rejectSuggestion.value = '';
+                        showRejectModal.value = true;
+                        return;
+                    }
+                    
                     batchOperation.value = operation;
                     batchReason.value = '';
                     
@@ -1290,6 +2186,9 @@
                     loadBookings,
                     viewDetail,
                     approveBooking,
+                    showSingleRejectModal,
+                    executeReject,
+                    selectAllPending,
                     completeBooking,
                     cancelBooking,
                     deleteBooking,
@@ -1306,7 +2205,37 @@
                     updateBatchButtons,
                     getBookingById,
                     showBatchConfirm,
-                    executeBatchOperation
+                    executeBatchOperation,
+                    showRejectModal,
+                    rejectTarget,
+                    singleRejectBooking,
+                    rejectReason,
+                    rejectSuggestion,
+                    typeStats,
+                    getTypeIcon,
+                    getTypeName,
+                    getTypeColor,
+                    getTypeBgColor,
+                    getTypeTextColor,
+                    getPaymentStatusText,
+                    getPaymentStatusIcon,
+                    getStatusIcon,
+                    getStatusColor,
+                    getStatusBgColor,
+                    getNextHint,
+                    getUserActions,
+                    getAdminActions,
+                    STATUS_CONFIG,
+                    PAYMENT_STATUS_CONFIG,
+                    filterByType,
+                    calculateDuration,
+                    getBookingTimeline,
+                    formatTimelineTime,
+                    toggleSort,
+                    getSortClass,
+                    hasActiveFilters,
+                    clearFilters,
+                    formatCreatedTime
                 };
             }
         }).mount('#app');

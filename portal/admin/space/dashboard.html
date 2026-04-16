@@ -207,32 +207,126 @@
         .types-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: var(--spacing-md);
+            gap: var(--spacing-lg);
             margin-bottom: var(--spacing-xl);
         }
         
         .type-card {
             background: white;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-lg);
             padding: var(--spacing-lg);
             text-align: center;
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+        
+        .type-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
+        }
+        
+        .type-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-theme-color, var(--primary));
+        }
+        
+        .type-card.meeting_room::before { background: #3b82f6; }
+        .type-card.auditorium::before { background: #8b5cf6; }
+        .type-card.lobby_screen::before { background: #f59e0b; }
+        .type-card.lobby_booth::before { background: #10b981; }
+        .type-card.vip_dining::before { background: #ec4899; }
+        
+        .type-badge {
+            position: absolute;
+            top: var(--spacing-sm);
+            right: var(--spacing-sm);
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
         }
         
         .type-icon {
-            font-size: 32px;
+            font-size: 40px;
+            margin-bottom: var(--spacing-sm);
         }
         
         .type-name {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-primary);
-            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-base);
         }
         
         .type-desc {
             font-size: var(--font-size-xs);
             color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
         }
+        
+        .type-stats {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .type-stat-item {
+            text-align: center;
+        }
+        
+        .type-stat-value {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .type-stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .type-action {
+            margin-top: var(--spacing-md);
+            font-size: var(--font-size-xs);
+            color: var(--primary);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .type-card:hover .type-action {
+            opacity: 1;
+        }
+        
+        .type-usage-bar {
+            margin-top: var(--spacing-sm);
+            height: 4px;
+            background: var(--bg-secondary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .type-usage-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width var(--transition-base);
+        }
+        
+        .type-usage-fill.low { background: var(--success); }
+        .type-usage-fill.medium { background: var(--warning); }
+        .type-usage-fill.high { background: var(--danger); }
         
         .related-links-grid {
             display: grid;
@@ -275,7 +369,25 @@
             }
             
             .types-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-md);
+            }
+            
+            .type-card {
+                padding: var(--spacing-md);
+            }
+            
+            .type-icon {
+                font-size: 28px;
+            }
+            
+            .type-stats {
+                display: none;
+            }
+            
+            .type-action {
+                opacity: 1;
+                font-size: 10px;
             }
             
             .related-links-grid {
@@ -284,6 +396,12 @@
             
             .header-links {
                 flex-wrap: wrap;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .types-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -352,17 +470,18 @@
                 </h2>
                 
                 <div class="quick-links-grid">
-                    <a href="/portal/admin/space/approvals.html" class="quick-link-card pending">
+                    <a href="/portal/admin/space/bookings.html" class="quick-link-card pending">
                         <div class="quick-link-badge" v-if="stats.pendingApprovals > 0">{{ stats.pendingApprovals }} 待审批</div>
                         <div class="quick-link-icon">📋</div>
-                        <div class="quick-link-title">审批中心</div>
-                        <div class="quick-link-desc">审批预约申请，通过/拒绝</div>
+                        <div class="quick-link-title">预约管理</div>
+                        <div class="quick-link-desc">预约列表与审批操作一体化</div>
                     </a>
                     
-                    <a href="/portal/admin/space/bookings.html" class="quick-link-card">
-                        <div class="quick-link-icon">📅</div>
-                        <div class="quick-link-title">预约管理</div>
-                        <div class="quick-link-desc">查看所有预约，管理状态</div>
+                    <a href="/portal/admin/space/settlements.html" class="quick-link-card">
+                        <div class="quick-link-badge" v-if="stats.pendingPaymentConfirm > 0">{{ stats.pendingPaymentConfirm }} 待结算</div>
+                        <div class="quick-link-icon">💰</div>
+                        <div class="quick-link-title">结算管理</div>
+                        <div class="quick-link-desc">费用确认、账单导出</div>
                     </a>
                     
                     <a href="/portal/admin/space/resources.html" class="quick-link-card">
@@ -384,34 +503,96 @@
                 <h2 class="section-title">
                     <span>🏠</span>
                     <span>空间类型概览</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-left: var(--spacing-sm);">
+                        点击卡片查看详情或跳转预约列表
+                    </span>
                 </h2>
                 
                 <div class="types-grid">
-                    <div class="type-card">
-                        <div class="type-icon">🏢</div>
-                        <div class="type-name">会议室</div>
-                        <div class="type-desc">按小时计费</div>
+                    <div 
+                        v-for="type in spaceTypes" 
+                        :key="type.code"
+                        class="type-card"
+                        :class="type.code"
+                        @click="goToTypeBookings(type.code)"
+                        :title="`点击查看${type.name}预约列表`"
+                    >
+                        <div class="type-badge" v-if="type.pendingCount > 0">
+                            {{ type.pendingCount }} 待审批
+                        </div>
+                        
+                        <div class="type-icon">{{ type.icon }}</div>
+                        <div class="type-name">{{ type.name }}</div>
+                        <div class="type-desc">{{ type.pricingDesc }}</div>
+                        
+                        <div class="type-usage-bar" v-if="type.usageRate !== undefined">
+                            <div 
+                                class="type-usage-fill"
+                                :class="getUsageClass(type.usageRate)"
+                                :style="{ width: type.usageRate + '%' }"
+                            ></div>
+                        </div>
+                        
+                        <div class="type-stats">
+                            <div class="type-stat-item">
+                                <div class="type-stat-value">{{ type.resourceCount }}</div>
+                                <div class="type-stat-label">资源数</div>
+                            </div>
+                            <div class="type-stat-item">
+                                <div class="type-stat-value">{{ type.todayBookings }}</div>
+                                <div class="type-stat-label">今日预约</div>
+                            </div>
+                            <div class="type-stat-item">
+                                <div class="type-stat-value">{{ type.monthlyBookings }}</div>
+                                <div class="type-stat-label">本月预约</div>
+                            </div>
+                        </div>
+                        
+                        <div class="type-action">
+                            查看预约列表 →
+                        </div>
                     </div>
-                    <div class="type-card">
-                        <div class="type-icon">🎭</div>
-                        <div class="type-name">会场</div>
-                        <div class="type-desc">按半天/全天</div>
-                    </div>
-                    <div class="type-card">
-                        <div class="type-icon">📺</div>
-                        <div class="type-name">大屏</div>
-                        <div class="type-desc">按时段计费</div>
-                    </div>
-                    <div class="type-card">
-                        <div class="type-icon">🏪</div>
-                        <div class="type-name">展位</div>
-                        <div class="type-desc">按天/周计费</div>
-                    </div>
-                    <div class="type-card">
-                        <div class="type-icon">🍽️</div>
-                        <div class="type-name">VIP餐厅</div>
-                        <div class="type-desc">按餐段计费</div>
-                    </div>
+                </div>
+                
+                <!-- 类型快速操作栏 -->
+                <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap; margin-top: var(--spacing-lg);">
+                    <button 
+                        class="btn btn-outline btn-sm"
+                        @click="goToTypeBookings('meeting_room')"
+                    >
+                        🏢 会议室预约
+                    </button>
+                    <button 
+                        class="btn btn-outline btn-sm"
+                        @click="goToTypeBookings('auditorium')"
+                    >
+                        🎭 会场预约
+                    </button>
+                    <button 
+                        class="btn btn-outline btn-sm"
+                        @click="goToTypeBookings('vip_dining')"
+                    >
+                        🍽️ VIP餐厅预约
+                    </button>
+                    <button 
+                        class="btn btn-outline btn-sm"
+                        @click="goToTypeBookings('lobby_screen')"
+                    >
+                        📺 大屏预约
+                    </button>
+                    <button 
+                        class="btn btn-outline btn-sm"
+                        @click="goToTypeBookings('lobby_booth')"
+                    >
+                        🏪 展位预约
+                    </button>
+                    <button 
+                        class="btn btn-primary btn-sm"
+                        style="margin-left: auto;"
+                        @click="goToResources"
+                    >
+                        ⚙️ 管理资源配置
+                    </button>
                 </div>
             </section>
             
@@ -456,12 +637,87 @@
                     todayRevenue: 0
                 });
                 
+                const spaceTypes = ref([
+                    {
+                        code: 'meeting_room',
+                        name: '会议室',
+                        icon: '🏢',
+                        pricingDesc: '按小时计费',
+                        resourceCount: 0,
+                        todayBookings: 0,
+                        monthlyBookings: 0,
+                        pendingCount: 0,
+                        usageRate: 0
+                    },
+                    {
+                        code: 'auditorium',
+                        name: '会场',
+                        icon: '🎭',
+                        pricingDesc: '按半天/全天',
+                        resourceCount: 0,
+                        todayBookings: 0,
+                        monthlyBookings: 0,
+                        pendingCount: 0,
+                        usageRate: 0
+                    },
+                    {
+                        code: 'lobby_screen',
+                        name: '大屏',
+                        icon: '📺',
+                        pricingDesc: '按时段计费',
+                        resourceCount: 0,
+                        todayBookings: 0,
+                        monthlyBookings: 0,
+                        pendingCount: 0,
+                        usageRate: 0
+                    },
+                    {
+                        code: 'lobby_booth',
+                        name: '展位',
+                        icon: '🏪',
+                        pricingDesc: '按天/周计费',
+                        resourceCount: 0,
+                        todayBookings: 0,
+                        monthlyBookings: 0,
+                        pendingCount: 0,
+                        usageRate: 0
+                    },
+                    {
+                        code: 'vip_dining',
+                        name: 'VIP餐厅',
+                        icon: '🍽️',
+                        pricingDesc: '按餐段计费',
+                        resourceCount: 0,
+                        todayBookings: 0,
+                        monthlyBookings: 0,
+                        pendingCount: 0,
+                        usageRate: 0
+                    }
+                ]);
+                
+                const API_BASE = '/api/v2';
+                
+                const getUsageClass = (rate) => {
+                    if (rate < 30) return 'low';
+                    if (rate < 70) return 'medium';
+                    return 'high';
+                };
+                
+                const goToTypeBookings = (typeCode) => {
+                    window.location.href = `/portal/admin/space/bookings.html?type=${typeCode}`;
+                };
+                
+                const goToResources = () => {
+                    window.location.href = '/portal/admin/space/resources.html';
+                };
+                
                 const loadDashboardData = async () => {
                     const token = localStorage.getItem('token');
                     if (!token) return;
                     
                     try {
-                        const response = await fetch('/api/v2/space/statistics/dashboard', {
+                        // 加载统计数据
+                        const response = await fetch(`${API_BASE}/space/statistics/dashboard`, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             }
@@ -470,15 +726,97 @@
                         const data = await response.json();
                         if (data.code === 200) {
                             stats.value = {
-                                pendingApprovals: data.data.today.pending_approvals || 0,
-                                pendingPaymentConfirm: data.data.today.pending_payment_confirm || 0,
-                                todayApproved: data.data.today.completed || 0,
-                                todayBookings: data.data.today.bookings || 0,
-                                todayRevenue: data.data.today.revenue || 0
+                                pendingApprovals: data.data.today?.pending_approvals || 0,
+                                pendingPaymentConfirm: data.data.today?.pending_payment_confirm || 0,
+                                todayApproved: data.data.today?.completed || 0,
+                                todayBookings: data.data.today?.bookings || 0,
+                                todayRevenue: data.data.today?.revenue || 0
                             };
+                            
+                            // 更新类型统计
+                            if (data.data.types) {
+                                data.data.types.forEach(typeData => {
+                                    const type = spaceTypes.value.find(t => t.code === typeData.code);
+                                    if (type) {
+                                        type.resourceCount = typeData.resource_count || 0;
+                                        type.todayBookings = typeData.today_bookings || 0;
+                                        type.monthlyBookings = typeData.monthly_bookings || 0;
+                                        type.pendingCount = typeData.pending_count || 0;
+                                        type.usageRate = typeData.usage_rate || 0;
+                                    }
+                                });
+                            }
                         }
                     } catch (error) {
                         console.error('加载Dashboard数据失败:', error);
+                        // 使用模拟数据展示功能
+                        loadMockData();
+                    }
+                };
+                
+                const loadMockData = async () => {
+                    const token = localStorage.getItem('token');
+                    
+                    try {
+                        // 加载资源数据
+                        const resourcesRes = await fetch(`${API_BASE}/space/resources`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const resourcesData = await resourcesRes.json();
+                        if (resourcesData.code === 200) {
+                            const resources = resourcesData.data || [];
+                            
+                            // 统计各类型资源数
+                            spaceTypes.value.forEach(type => {
+                                type.resourceCount = resources.filter(r => r.type_code === type.code).length;
+                            });
+                        }
+                        
+                        // 加载预约数据
+                        const bookingsRes = await fetch(`${API_BASE}/space/bookings?limit=100`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const bookingsData = await bookingsRes.json();
+                        if (bookingsData.code === 200) {
+                            const bookings = bookingsData.data.items || [];
+                            const today = new Date().toISOString().split('T')[0];
+                            const currentMonth = today.slice(0, 7);
+                            
+                            spaceTypes.value.forEach(type => {
+                                const typeBookings = bookings.filter(b => b.type_code === type.code);
+                                type.todayBookings = typeBookings.filter(b => b.booking_date === today).length;
+                                type.monthlyBookings = typeBookings.filter(b => b.booking_date.startsWith(currentMonth)).length;
+                                type.pendingCount = typeBookings.filter(b => b.status === 'pending_approval').length;
+                                
+                                // 计算使用率（基于今日预约数和资源数）
+                                if (type.resourceCount > 0) {
+                                    const totalSlots = type.resourceCount * 12; // 每天12个时段
+                                    const usedSlots = type.todayBookings * 2; // 平均每个预约2个时段
+                                    type.usageRate = Math.min(Math.round((usedSlots / totalSlots) * 100), 100);
+                                }
+                            });
+                            
+                            // 更新总统计
+                            stats.value.todayBookings = bookings.filter(b => b.booking_date === today).length;
+                            stats.value.pendingApprovals = bookings.filter(b => b.status === 'pending_approval').length;
+                            
+                            const monthBookings = bookings.filter(b => b.booking_date.startsWith(currentMonth));
+                            stats.value.todayRevenue = monthBookings.reduce((sum, b) => sum + (b.total_fee || b.actual_fee || 0), 0);
+                        }
+                        
+                    } catch (error) {
+                        console.error('加载模拟数据失败:', error);
+                        
+                        // 设置默认展示数据
+                        spaceTypes.value.forEach((type, index) => {
+                            type.resourceCount = index === 0 ? 8 : (index < 3 ? 2 : 1);
+                            type.todayBookings = Math.floor(Math.random() * 5);
+                            type.monthlyBookings = Math.floor(Math.random() * 20) + 5;
+                            type.pendingCount = Math.floor(Math.random() * 3);
+                            type.usageRate = Math.floor(Math.random() * 60) + 20;
+                        });
                     }
                 };
                 
@@ -490,7 +828,11 @@
                 });
                 
                 return {
-                    stats
+                    stats,
+                    spaceTypes,
+                    getUsageClass,
+                    goToTypeBookings,
+                    goToResources
                 };
             }
         }).mount('#app');

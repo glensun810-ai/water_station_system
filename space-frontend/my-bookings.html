@@ -441,9 +441,9 @@
                 const bookings = ref([]);
                 
                 const stats = computed(() => {
-                    const pending = bookings.value.filter(b => b.status === 'pending' || b.status === 'pending_approval').length;
-                    const approved = bookings.value.filter(b => b.status === 'approved' || b.status === 'confirmed').length;
-                    const completed = bookings.value.filter(b => b.status === 'completed').length;
+                    const pending = bookings.value.filter(b => b.status === 'pending').length;
+                    const approved = bookings.value.filter(b => b.status === 'approved' || b.status === 'confirmed' || b.status === 'active').length;
+                    const completed = bookings.value.filter(b => b.status === 'completed' || b.status === 'settled').length;
                     return {
                         pending,
                         approved,
@@ -472,13 +472,14 @@
                 
                 const mapBookingStatus = (apiStatus) => {
                     const statusMap = {
-                        'pending_approval': 'pending',
+                        'pending': 'pending',
                         'approved': 'approved',
-                        'confirmed': 'approved',
+                        'confirmed': 'confirmed',
+                        'active': 'active',
                         'rejected': 'rejected',
                         'completed': 'completed',
-                        'cancelled': 'cancelled',
-                        'in_use': 'approved'
+                        'settled': 'settled',
+                        'cancelled': 'cancelled'
                     };
                     return statusMap[apiStatus] || apiStatus;
                 };

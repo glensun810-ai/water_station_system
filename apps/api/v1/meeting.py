@@ -39,7 +39,7 @@ def get_meeting_stats_today(
 
     pending_approvals = (
         db.query(func.count(MeetingBooking.id))
-        .filter(MeetingBooking.status == BookingStatus.PENDING)
+        .filter(MeetingBooking.status == BookingStatus.pending)
         .scalar()
         or 0
     )
@@ -48,7 +48,7 @@ def get_meeting_stats_today(
         db.query(func.count(MeetingBooking.id))
         .filter(
             MeetingBooking.booking_date == today,
-            MeetingBooking.status == BookingStatus.CANCELLED,
+            MeetingBooking.status == BookingStatus.cancelled,
         )
         .scalar()
         or 0
@@ -86,7 +86,7 @@ def get_usage_rate(
     query = db.query(MeetingBooking).filter(
         MeetingBooking.booking_date >= start_date,
         MeetingBooking.booking_date <= end_date,
-        MeetingBooking.status == BookingStatus.CONFIRMED,
+        MeetingBooking.status == BookingStatus.confirmed,
     )
 
     if room_id:
@@ -155,7 +155,7 @@ def get_weekly_stats(
         .filter(
             MeetingBooking.booking_date >= start_of_week,
             MeetingBooking.booking_date <= end_of_week,
-            MeetingBooking.status == BookingStatus.CONFIRMED,
+            MeetingBooking.status == BookingStatus.confirmed,
         )
         .scalar()
         or 0
@@ -167,7 +167,7 @@ def get_weekly_stats(
             MeetingBooking.booking_date >= start_of_week,
             MeetingBooking.booking_date <= end_of_week,
             MeetingBooking.status.in_(
-                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                [BookingStatus.confirmed, BookingStatus.completed]
             ),
         )
         .scalar()
@@ -219,7 +219,7 @@ def get_monthly_stats(
         .filter(
             MeetingBooking.booking_date >= start_of_month,
             MeetingBooking.booking_date <= end_of_month,
-            MeetingBooking.status == BookingStatus.CONFIRMED,
+            MeetingBooking.status == BookingStatus.confirmed,
         )
         .scalar()
         or 0
@@ -230,7 +230,7 @@ def get_monthly_stats(
         .filter(
             MeetingBooking.booking_date >= start_of_month,
             MeetingBooking.booking_date <= end_of_month,
-            MeetingBooking.status == BookingStatus.COMPLETED,
+            MeetingBooking.status == BookingStatus.completed,
         )
         .scalar()
         or 0
@@ -241,7 +241,7 @@ def get_monthly_stats(
         .filter(
             MeetingBooking.booking_date >= start_of_month,
             MeetingBooking.booking_date <= end_of_month,
-            MeetingBooking.status == BookingStatus.CANCELLED,
+            MeetingBooking.status == BookingStatus.cancelled,
         )
         .scalar()
         or 0
@@ -253,7 +253,7 @@ def get_monthly_stats(
             MeetingBooking.booking_date >= start_of_month,
             MeetingBooking.booking_date <= end_of_month,
             MeetingBooking.status.in_(
-                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                [BookingStatus.confirmed, BookingStatus.completed]
             ),
         )
         .scalar()
@@ -265,7 +265,7 @@ def get_monthly_stats(
         .filter(
             MeetingBooking.booking_date >= start_of_month,
             MeetingBooking.booking_date <= end_of_month,
-            MeetingBooking.status == BookingStatus.PENDING,
+            MeetingBooking.status == BookingStatus.pending,
         )
         .scalar()
         or 0.0
@@ -317,7 +317,7 @@ def get_revenue_stats(
             MeetingBooking.booking_date >= start_date,
             MeetingBooking.booking_date <= end_date,
             MeetingBooking.status.in_(
-                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                [BookingStatus.confirmed, BookingStatus.completed]
             ),
         )
         .scalar()
@@ -329,7 +329,7 @@ def get_revenue_stats(
         .filter(
             MeetingBooking.booking_date >= start_date,
             MeetingBooking.booking_date <= end_date,
-            MeetingBooking.status == BookingStatus.PENDING,
+            MeetingBooking.status == BookingStatus.pending,
         )
         .scalar()
         or 0.0
@@ -340,7 +340,7 @@ def get_revenue_stats(
         .filter(
             MeetingBooking.booking_date >= start_date,
             MeetingBooking.booking_date <= end_date,
-            MeetingBooking.status == BookingStatus.CANCELLED,
+            MeetingBooking.status == BookingStatus.cancelled,
         )
         .scalar()
         or 0.0
@@ -352,7 +352,7 @@ def get_revenue_stats(
             MeetingBooking.booking_date >= start_date,
             MeetingBooking.booking_date <= end_date,
             MeetingBooking.status.in_(
-                [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                [BookingStatus.confirmed, BookingStatus.completed]
             ),
         )
         .scalar()
@@ -403,7 +403,7 @@ def get_booking_trend(
             .filter(
                 MeetingBooking.booking_date == current_date,
                 MeetingBooking.status.in_(
-                    [BookingStatus.CONFIRMED, BookingStatus.COMPLETED]
+                    [BookingStatus.confirmed, BookingStatus.completed]
                 ),
             )
             .scalar()

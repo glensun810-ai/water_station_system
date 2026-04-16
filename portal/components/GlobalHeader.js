@@ -217,9 +217,9 @@ const GlobalHeader = {
         
         // 是否是内部用户
         isInternalUser() {
-            return this.userInfo?.department && 
-                   !this.userInfo?.is_admin && 
-                   this.managedOffices.length === 0;
+            return this.userInfo?.user_type === 'internal' && 
+                   !this.isSuperOrAdmin && 
+                   !this.isOfficeAdmin;
         },
         
         // 是否是外部用户（优先判断管理员身份）
@@ -227,9 +227,7 @@ const GlobalHeader = {
             if (this.isSuperOrAdmin) return false;
             if (this.isOfficeAdmin) return false;
             if (this.isInternalUser) return false;
-            return !this.userInfo?.department && 
-                   !this.userInfo?.is_admin && 
-                   this.managedOffices.length === 0;
+            return this.userInfo?.user_type === 'external';
         },
         
         // 管理员徽章文本

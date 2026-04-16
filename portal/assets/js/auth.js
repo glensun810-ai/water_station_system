@@ -122,6 +122,7 @@ const AuthManager = {
                     role: data.role,
                     roleName: data.role_name,
                     department: data.department,
+                    user_type: data.user_type,
                     avatar: '👤'
                 });
                 return true;

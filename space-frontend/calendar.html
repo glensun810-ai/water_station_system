@@ -286,6 +286,7 @@
         .legend-dot.confirmed { background: var(--primary); }
         .legend-dot.in-use { background: var(--info); }
         .legend-dot.completed { background: var(--text-tertiary); }
+        .legend-dot.settled { background: var(--primary-dark); }
         .legend-dot.rejected { background: var(--danger); }
         .legend-dot.cancelled { background: var(--text-tertiary); }
         .legend-dot.available { background: var(--success-light); border: 1px solid var(--success); }
@@ -2168,7 +2169,7 @@
                     <div class="stat-mini-value primary">{{ stats.totalBookings }}</div>
                     <div class="stat-mini-label">本月预约</div>
                 </div>
-                <div class="stat-mini-card" @click="filterByStatus('pending_approval')">
+                <div class="stat-mini-card" @click="filterByStatus('pending')">
                     <div class="stat-mini-value warning">{{ stats.pendingCount }}</div>
                     <div class="stat-mini-label">待审批</div>
                 </div>
@@ -2176,8 +2177,8 @@
                     <div class="stat-mini-value success">{{ stats.confirmedCount }}</div>
                     <div class="stat-mini-label">已确认</div>
                 </div>
-                <div class="stat-mini-card" @click="filterByStatus('in_use')">
-                    <div class="stat-mini-value info">{{ stats.inUseCount }}</div>
+                <div class="stat-mini-card" @click="filterByStatus('active')">
+                    <div class="stat-mini-value info">{{ stats.activeCount }}</div>
                     <div class="stat-mini-label">使用中</div>
                 </div>
                 <div class="stat-mini-card" @click="filterByStatus('completed')">
@@ -2320,11 +2321,12 @@
                         <div class="sidebar-title">🔍 状态筛选</div>
                         <select class="resource-select" v-model="selectedStatus">
                             <option value="">全部状态</option>
-                            <option value="pending_approval">待审批</option>
+                            <option value="pending">待审批</option>
                             <option value="approved">已通过</option>
                             <option value="confirmed">已确认</option>
-                            <option value="in_use">使用中</option>
+                            <option value="active">使用中</option>
                             <option value="completed">已完成</option>
+                            <option value="settled">已结算</option>
                             <option value="rejected">已拒绝</option>
                             <option value="cancelled">已取消</option>
                         </select>
@@ -2835,8 +2837,9 @@
                 const stats = ref({
                     totalBookings: 0,
                     pendingCount: 0,
+                    approvedCount: 0,
                     confirmedCount: 0,
-                    inUseCount: 0,
+                    activeCount: 0,
                     completedCount: 0,
                     myBookingsCount: 0
                 });
@@ -2871,13 +2874,14 @@
                 const API_BASE = '/api/v2';
                 
                 const STATUS_MAP = {
-                    'pending_approval': { text: '待审批', class: 'pending', canModify: true, canCancel: true, priority: 1 },
+                    'pending': { text: '待审批', class: 'pending', canModify: true, canCancel: true, priority: 1 },
                     'approved': { text: '已通过', class: 'approved', canModify: false, canCancel: true, priority: 2 },
                     'confirmed': { text: '已确认', class: 'confirmed', canModify: false, canCancel: true, priority: 3 },
-                    'in_use': { text: '使用中', class: 'in-use', canModify: false, canCancel: false, priority: 4 },
+                    'active': { text: '使用中', class: 'in-use', canModify: false, canCancel: false, priority: 4 },
                     'completed': { text: '已完成', class: 'completed', canModify: false, canCancel: false, priority: 5 },
-                    'rejected': { text: '已拒绝', class: 'rejected', canModify: false, canCancel: false, priority: 6 },
-                    'cancelled': { text: '已取消', class: 'cancelled', canModify: false, canCancel: false, priority: 7 }
+                    'settled': { text: '已结算', class: 'settled', canModify: false, canCancel: false, priority: 6 },
+                    'rejected': { text: '已拒绝', class: 'rejected', canModify: false, canCancel: false, priority: 7 },
+                    'cancelled': { text: '已取消', class: 'cancelled', canModify: false, canCancel: false, priority: 8 }
                 };
                 
                 const getStatusInfo = (status) => STATUS_MAP[status] || { text: status, class: '', canModify: false, canCancel: false };
@@ -3577,9 +3581,10 @@
                             
                             stats.value = {
                                 totalBookings: bookings.value.length,
-                                pendingCount: bookings.value.filter(b => b.status === 'pending_approval').length,
+                                pendingCount: bookings.value.filter(b => b.status === 'pending').length,
+                                approvedCount: bookings.value.filter(b => b.status === 'approved').length,
                                 confirmedCount: bookings.value.filter(b => b.status === 'confirmed').length,
-                                inUseCount: bookings.value.filter(b => b.status === 'in_use').length,
+                                activeCount: bookings.value.filter(b => b.status === 'active').length,
                                 completedCount: bookings.value.filter(b => b.status === 'completed').length,
                                 myBookingsCount: currentUser.value ? bookings.value.filter(b => b.userId === currentUser.value.id).length : 0
                             };

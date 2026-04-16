@@ -20,13 +20,16 @@ from models.base import Base, TimestampMixin
 
 
 class BookingStatus(str, enum.Enum):
-    """预约状态"""
+    """预约状态（与Space模块统一）"""
 
-    pending = "pending"
-    confirmed = "confirmed"
-    completed = "completed"
-    cancelled = "cancelled"
-    rejected = "rejected"
+    pending = "pending"  # 待审批（原为待处理，现统一为待审批）
+    approved = "approved"  # 已批准（新增）
+    rejected = "rejected"  # 已拒绝
+    confirmed = "confirmed"  # 已确认
+    active = "active"  # 进行中（新增，替代原in_use）
+    completed = "completed"  # 已完成
+    settled = "settled"  # 已结算（新增）
+    cancelled = "cancelled"  # 已取消
 
 
 class MeetingBooking(Base, TimestampMixin):
@@ -53,7 +56,7 @@ class MeetingBooking(Base, TimestampMixin):
     status = Column(String(20), default=BookingStatus.pending.value)
     total_fee = Column(Float, default=0.0)
     actual_fee = Column(Float, default=0.0)
-    payment_status = Column(String(20), default="unpaid")
+    payment_status = Column(String(20), default="pending")
     payment_method = Column(String(50))
     cancel_reason = Column(String(500))
     cancelled_at = Column(DateTime)

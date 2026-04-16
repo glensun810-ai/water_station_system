@@ -11,7 +11,7 @@ import random
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_admin_user, get_super_admin_user, get_current_user_required
+from depends.auth import get_admactiver, get_super_admactiver, get_current_user_required
 from shared.models.space.space_approval import SpaceApproval, ApprovalStatus
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.schemas.space.space_approval import (
@@ -33,7 +33,7 @@ async def get_approvals(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取审批列表（管理员）"""
 
@@ -66,11 +66,11 @@ async def get_approvals(
 
 
 @router.get("/pending", response_model=ApiResponse)
-async def get_pending_approvals(
+async def get_pendings(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取待审批列表"""
 
@@ -133,7 +133,7 @@ async def get_my_approvals(
 async def get_approval(
     approval_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """获取审批详情"""
 
@@ -149,7 +149,7 @@ async def get_approval(
 async def create_approval(
     approval_data: SpaceApprovalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """提交审批申请"""
 
@@ -198,7 +198,7 @@ async def approve_approval(
     approval_id: int,
     approve_data: SpaceApprovalApprove,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """审批通过"""
 
@@ -268,7 +268,7 @@ async def reject_approval(
     approval_id: int,
     reject_data: SpaceApprovalReject,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """
     ★审批拒绝（完整实现，修复BUG-001）
@@ -346,7 +346,7 @@ async def request_modify_approval(
     approval_id: int,
     modify_data: SpaceApprovalRequestModify,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """要求修改"""
 
@@ -369,7 +369,7 @@ async def request_modify_approval(
         db.query(SpaceBooking).filter(SpaceBooking.id == approval.booking_id).first()
     )
     if booking:
-        booking.status = "pending_approval"
+        booking.status = "pending"
 
     db.commit()
 
@@ -394,7 +394,7 @@ async def batch_approve_approvals(
     approval_ids: List[int],
     approval_notes: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_admactiver),
 ):
     """批量审批"""
 
@@ -559,7 +559,7 @@ def _get_alternative_suggestions(booking: SpaceBooking, db: Session) -> List[dic
                     SpaceBooking.resource_id == resource.id,
                     SpaceBooking.booking_date == check_date,
                     SpaceBooking.status.in_(
-                        ["pending_approval", "approved", "confirmed", "in_use"]
+                        ["pending", "approved", "confirmed", "active"]
                     ),
                 )
                 .count()

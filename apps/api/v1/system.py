@@ -353,6 +353,7 @@ def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
                 "role": user.role,
                 "role_name": user.role_name,
                 "department": user.department,
+                "user_type": user.user_type,
                 "avatar": "👤",
             },
         }
@@ -501,6 +502,7 @@ def get_profile(current_user: User = Depends(get_current_user_required)):
         "role": current_user.role,
         "role_name": current_user.role_name,
         "department": current_user.department,
+        "user_type": current_user.user_type,
         "email": current_user.email,
         "phone": current_user.phone,
         "avatar": "👤",

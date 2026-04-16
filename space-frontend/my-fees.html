@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的费用 - 空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .fees-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-xl);
+            margin-bottom: var(--spacing-xl);
+            text-align: center;
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-subtitle {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+        }
+        
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border-top: 4px solid var(--primary);
+        }
+        
+        .stat-card.monthly { border-top-color: var(--info); }
+        .stat-card.pending { border-top-color: var(--warning); }
+        .stat-card.paid { border-top-color: var(--success); }
+        .stat-card.free { border-top-color: var(--success); }
+        
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-value.info { color: var(--info); }
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.success { color: var(--success); }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            background: white;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+        }
+        
+        .filter-tab:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .fees-list {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .fee-card {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background var(--transition-fast);
+        }
+        
+        .fee-card:last-child {
+            border-bottom: none;
+        }
+        
+        .fee-card:hover {
+            background: var(--bg-hover);
+        }
+        
+        .fee-info {
+            flex: 1;
+        }
+        
+        .fee-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .fee-meta {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .fee-amount {
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+            color: var(--primary);
+        }
+        
+        .fee-amount.pending {
+            color: var(--warning);
+        }
+        
+        .fee-amount.paid {
+            color: var(--success);
+        }
+        
+        .fee-status {
+            margin-left: var(--spacing-md);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-badge.paid {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-badge.free {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .fee-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .fee-detail-modal {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-lg);
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .tips-section {
+            margin-top: var(--spacing-xl);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+        }
+        
+        .tips-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--success-dark);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .tips-content {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: var(--spacing-md) 0 0;
+        }
+        
+        .tips-list li {
+            padding: var(--spacing-xs) 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        @media (max-width: 768px) {
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .fee-card {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .fee-meta {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[
+            { text: '空间服务', icon: '🏢', url: '/space-frontend/index.html' },
+            { text: '我的费用', icon: '💰', url: '/space-frontend/my-fees.html' }
+        ]"></global-header>
+        
+        <div class="fees-container">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1 class="page-title">💰 我的空间服务费用</h1>
+                <p class="page-subtitle">查看和管理您的空间预约费用</p>
+            </div>
+            
+            <!-- 费用概览 -->
+            <div class="stats-overview">
+                <div class="stat-card monthly">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value info">¥{{ stats.monthlyFee.toFixed(2) }}</div>
+                    <div class="stat-label">本月费用</div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value warning">¥{{ stats.pendingFee.toFixed(2) }}</div>
+                    <div class="stat-label">待支付</div>
+                </div>
+                <div class="stat-card paid">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value success">¥{{ stats.paidFee.toFixed(2) }}</div>
+                    <div class="stat-label">已支付</div>
+                </div>
+                <div class="stat-card free">
+                    <div class="stat-icon">🎁</div>
+                    <div class="stat-value success">{{ stats.freeHours }}小时</div>
+                    <div class="stat-label">本月免费额度</div>
+                </div>
+            </div>
+            
+            <!-- 筛选标签 -->
+            <div class="filter-tabs">
+                <div 
+                    class="filter-tab" 
+                    :class="{ active: activeFilter === 'all' }"
+                    @click="setFilter('all')"
+                >全部费用</div>
+                <div 
+                    class="filter-tab" 
+                    :class="{ active: activeFilter === 'pending' }"
+                    @click="setFilter('pending')"
+                >待支付</div>
+                <div 
+                    class="filter-tab" 
+                    :class="{ active: activeFilter === 'paid' }"
+                    @click="setFilter('paid')"
+                >已支付</div>
+                <div 
+                    class="filter-tab" 
+                    :class="{ active: activeFilter === 'free' }"
+                    @click="setFilter('free')"
+                >免费使用</div>
+            </div>
+            
+            <!-- 费用列表 -->
+            <div v-if="loading" class="loading-spinner">
+                <div class="spinner"></div>
+                <p style="color: var(--text-secondary);">加载费用数据...</p>
+            </div>
+            
+            <div v-else class="fees-list">
+                <div v-if="filteredFees.length > 0">
+                    <div 
+                        v-for="fee in filteredFees" 
+                        :key="fee.id"
+                        class="fee-card"
+                        @click="showFeeDetail(fee)"
+                    >
+                        <div class="fee-info">
+                            <div class="fee-title">{{ fee.title }}</div>
+                            <div class="fee-meta">
+                                <span>{{ fee.spaceName }}</span>
+                                <span>{{ fee.bookingDate }} {{ fee.timeSlot }}</span>
+                                <span>{{ fee.typeName }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="fee-amount" :class="fee.statusClass">
+                            <span v-if="fee.isFree">免费</span>
+                            <span v-else>¥{{ fee.amount.toFixed(2) }}</span>
+                            <span class="fee-status">
+                                <span class="status-badge" :class="fee.statusClass">
+                                    {{ fee.statusText }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="fee-actions">
+                            <button 
+                                v-if="fee.status === 'pending'"
+                                class="btn btn-primary btn-sm"
+                                @click.stop="payFee(fee)"
+                            >立即支付</button>
+                            <button 
+                                class="btn btn-outline btn-sm"
+                                @click.stop="viewBooking(fee)"
+                            >查看预约</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else class="empty-state">
+                    <div class="empty-icon">💰</div>
+                    <p v-if="activeFilter === 'all'">暂无费用记录</p>
+                    <p v-else-if="activeFilter === 'pending'">暂无待支付费用</p>
+                    <p v-else-if="activeFilter === 'paid'">暂无已支付费用</p>
+                    <p v-else-if="activeFilter === 'free'">暂无免费使用记录</p>
+                </div>
+            </div>
+            
+            <!-- 温馨提示 -->
+            <div class="tips-section">
+                <div class="tips-title">💡 费用说明</div>
+                <div class="tips-content">
+                    <p>空间服务费用按实际使用时长和资源定价计算。部分资源享有免费使用额度。</p>
+                    <ul class="tips-list">
+                        <li><span>✅</span> 会议室基础使用享有每月免费额度</li>
+                        <li><span>💰</span> VIP餐厅、会场等特殊资源需付费使用</li>
+                        <li><span>⏳</span> 待支付费用请在预约完成后7天内完成付款</li>
+                        <li><span>📋</span> 如有费用疑问请联系管理员核实</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 费用详情模态框 -->
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+            <div class="fee-detail-modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">费用详情</h3>
+                    <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showDetailModal = false">✕</button>
+                </div>
+                
+                <div v-if="selectedFee" class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">预约主题</div>
+                        <div class="detail-value">{{ selectedFee.title }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">空间资源</div>
+                        <div class="detail-value">{{ selectedFee.spaceName }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">使用日期</div>
+                        <div class="detail-value">{{ selectedFee.bookingDate }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">使用时段</div>
+                        <div class="detail-value">{{ selectedFee.timeSlot }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">费用状态</div>
+                        <div class="detail-value">
+                            <span class="status-badge" :class="selectedFee.statusClass">
+                                {{ selectedFee.statusText }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">费用金额</div>
+                        <div class="detail-value" v-if="selectedFee.isFree" style="color: var(--success);">免费使用</div>
+                        <div class="detail-value" v-else style="color: var(--primary); font-weight: 600;">
+                            ¥{{ selectedFee.amount.toFixed(2) }}
+                        </div>
+                    </div>
+                    <div class="detail-item" v-if="selectedFee.paymentTime">
+                        <div class="detail-label">支付时间</div>
+                        <div class="detail-value">{{ selectedFee.paymentTime }}</div>
+                    </div>
+                    <div class="detail-item" v-if="selectedFee.paymentMethod">
+                        <div class="detail-label">支付方式</div>
+                        <div class="detail-value">{{ selectedFee.paymentMethod }}</div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="showDetailModal = false">关闭</button>
+                    <button 
+                        v-if="selectedFee && selectedFee.status === 'pending'"
+                        class="btn btn-primary"
+                        @click="payFee(selectedFee)"
+                    >立即支付</button>
+                    <button 
+                        class="btn btn-outline"
+                        @click="viewBooking(selectedFee)"
+                        v-if="selectedFee"
+                    >查看预约详情</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const fees = ref([]);
+                const activeFilter = ref('all');
+                const showDetailModal = ref(false);
+                const selectedFee = ref(null);
+                
+                const stats = ref({
+                    monthlyFee: 0,
+                    pendingFee: 0,
+                    paidFee: 0,
+                    freeHours: 5
+                });
+                
+                const API_BASE = '/api/v2';
+                
+                const filteredFees = computed(() => {
+                    if (activeFilter.value === 'all') return fees.value;
+                    if (activeFilter.value === 'pending') return fees.value.filter(f => f.status === 'pending');
+                    if (activeFilter.value === 'paid') return fees.value.filter(f => f.status === 'paid');
+                    if (activeFilter.value === 'free') return fees.value.filter(f => f.isFree);
+                    return fees.value;
+                });
+                
+                const getStatusText = (status, isFree) => {
+                    if (isFree) return '免费';
+                    const map = {
+                        'pending': '待支付',
+                        'paid': '已支付',
+                        'settled': '已结算'
+                    };
+                    return map[status] || status;
+                };
+                
+                const getStatusClass = (status, isFree) => {
+                    if (isFree) return 'free';
+                    const map = {
+                        'pending': 'pending',
+                        'paid': 'paid',
+                        'settled': 'paid'
+                    };
+                    return map[status] || '';
+                };
+                
+                const loadFees = async () => {
+                    loading.value = true;
+                    
+                    try {
+                        const user = await checkAuth({ requireAuth: true, validateToken: true });
+                        if (!user) {
+                            window.location.href = '/portal/admin/login.html';
+                            return;
+                        }
+                        
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings?user_id=${user.id}&limit=50`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            const items = data.data.items || [];
+                            
+                            fees.value = items.map(b => {
+                                const amount = b.actual_fee || b.total_fee || 0;
+                                const isFree = amount === 0;
+                                const status = b.payment_status || (b.status === 'completed' ? 'settled' : 'pending');
+                                
+                                return {
+                                    id: b.id,
+                                    title: b.title || '未命名预约',
+                                    spaceName: b.resource_name,
+                                    typeName: b.type_name,
+                                    bookingDate: b.booking_date,
+                                    timeSlot: `${b.start_time}-${b.end_time}`,
+                                    amount: amount,
+                                    isFree: isFree,
+                                    status: status,
+                                    statusText: getStatusText(status, isFree),
+                                    statusClass: getStatusClass(status, isFree),
+                                    paymentTime: b.payment_time,
+                                    paymentMethod: b.payment_method
+                                };
+                            });
+                            
+                            updateStats();
+                        }
+                        
+                    } catch (error) {
+                        console.error('加载费用失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const updateStats = () => {
+                    const currentMonth = new Date().toISOString().slice(0, 7);
+                    
+                    stats.value.monthlyFee = fees.value
+                        .filter(f => !f.isFree && f.bookingDate.startsWith(currentMonth))
+                        .reduce((sum, f) => sum + f.amount, 0);
+                    
+                    stats.value.pendingFee = fees.value
+                        .filter(f => !f.isFree && f.status === 'pending')
+                        .reduce((sum, f) => sum + f.amount, 0);
+                    
+                    stats.value.paidFee = fees.value
+                        .filter(f => !f.isFree && (f.status === 'paid' || f.status === 'settled'))
+                        .reduce((sum, f) => sum + f.amount, 0);
+                    
+                    stats.value.freeHours = fees.value
+                        .filter(f => f.isFree && f.bookingDate.startsWith(currentMonth))
+                        .reduce((sum, f) => {
+                            const [start, end] = f.timeSlot.split('-');
+                            return sum + (parseInt(end) - parseInt(start));
+                        }, 0);
+                };
+                
+                const setFilter = (filter) => {
+                    activeFilter.value = filter;
+                };
+                
+                const showFeeDetail = (fee) => {
+                    selectedFee.value = fee;
+                    showDetailModal.value = true;
+                };
+                
+                const payFee = (fee) => {
+                    alert(`即将跳转支付页面支付 ¥${fee.amount.toFixed(2)}\n\n支付方式：预付账户扣款 / 线下结算`);
+                };
+                
+                const viewBooking = (fee) => {
+                    if (!fee) return;
+                    window.location.href = `/space-frontend/my-bookings.html?id=${fee.id}`;
+                };
+                
+                onMounted(async () => {
+                    loadFees();
+                });
+                
+                return {
+                    loading,
+                    fees,
+                    stats,
+                    activeFilter,
+                    filteredFees,
+                    showDetailModal,
+                    selectedFee,
+                    setFilter,
+                    showFeeDetail,
+                    payFee,
+                    viewBooking
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

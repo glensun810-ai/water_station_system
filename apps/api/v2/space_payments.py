@@ -326,12 +326,12 @@ async def verify_payment(
         db.query(SpaceBooking).filter(SpaceBooking.id == payment.booking_id).first()
     )
     if booking:
-        booking.payment_status = "fully_paid"
+        booking.payment_status = "paid"
         booking.admin_payment_verified = True
         booking.admin_payment_verified_at = datetime.now()
         booking.admin_payment_verified_by = current_user.name
 
-        if booking.status == "pending_approval":
+        if booking.status == "pending":
             booking.status = "approved"
             booking.approved_by = current_user.name
             booking.approved_at = datetime.now()

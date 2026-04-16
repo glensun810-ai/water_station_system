@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算管理 - 空间服务</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-secondary);
+        }
+        
+        .settlement-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .page-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid var(--primary);
+            transition: all var(--transition-fast);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-card.pending { border-left-color: var(--warning); }
+        .stat-card.settled { border-left-color: var(--success); }
+        .stat-card.monthly { border-left-color: var(--info); }
+        .stat-card.total { border-left-color: var(--primary); }
+        
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.success { color: var(--success); }
+        .stat-value.info { color: var(--info); }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stat-count {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .filter-bar {
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .filter-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+        }
+        
+        .settlement-tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            background: white;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+        }
+        
+        .settlement-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            border: 2px solid transparent;
+        }
+        
+        .settlement-tab:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .settlement-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .settlement-list {
+            background: white;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .settlement-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .settlement-table thead {
+            background: linear-gradient(to bottom, #f8f9fa, #f1f3f5);
+        }
+        
+        .settlement-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .settlement-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .settlement-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .booking-no {
+            color: var(--primary);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+        }
+        
+        .booking-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .booking-subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .amount {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .amount.pending {
+            color: var(--warning);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-badge.settled {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-badge.confirmed {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-tertiary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .summary-section {
+            margin-top: var(--spacing-xl);
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .summary-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .summary-table th {
+            padding: var(--spacing-md);
+            text-align: left;
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .summary-table td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .summary-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .dept-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .modal-body {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            display: block;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+            }
+            
+            .settlement-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .settlement-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[
+            { text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html' },
+            { text: '结算管理', icon: '💰', url: '/portal/admin/space/settlements.html' }
+        ]"></global-header>
+        
+        <div class="settlement-container">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <span>💰</span>
+                        <span>结算管理</span>
+                    </h1>
+                    <p class="page-subtitle">空间服务费用结算与账单管理</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" @click="exportSettlements">📥 导出报表</button>
+                    <button class="btn btn-outline btn-sm" @click="sendReminder">📧 发送提醒</button>
+                    <button class="btn btn-primary btn-sm" @click="refreshData">🔄 刷新数据</button>
+                </div>
+            </div>
+            
+            <!-- 统计概览 -->
+            <div class="stats-grid">
+                <div class="stat-card pending">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value warning">¥{{ stats.pendingAmount.toFixed(2) }}</div>
+                    <div class="stat-label">待确认收款</div>
+                    <div class="stat-count">{{ stats.pendingCount }} 笔</div>
+                </div>
+                <div class="stat-card settled">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value success">¥{{ stats.monthlySettled.toFixed(2) }}</div>
+                    <div class="stat-label">本月已结算</div>
+                    <div class="stat-count">{{ stats.monthlySettledCount }} 笔</div>
+                </div>
+                <div class="stat-card monthly">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value info">¥{{ stats.monthlyRevenue.toFixed(2) }}</div>
+                    <div class="stat-label">本月收入</div>
+                    <div class="stat-count">本月累计</div>
+                </div>
+                <div class="stat-card total">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value">¥{{ stats.totalRevenue.toFixed(2) }}</div>
+                    <div class="stat-label">累计收入</div>
+                    <div class="stat-count">历史总计</div>
+                </div>
+            </div>
+            
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <span class="filter-label">状态：</span>
+                    <select class="filter-select" v-model="filters.status" @change="applyFilters">
+                        <option value="">全部</option>
+                        <option value="pending_payment">待确认收款</option>
+                        <option value="settled">已结算</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">空间类型：</span>
+                    <select class="filter-select" v-model="filters.type" @change="applyFilters">
+                        <option value="">全部类型</option>
+                        <option value="meeting_room">会议室</option>
+                        <option value="auditorium">会场</option>
+                        <option value="vip_dining">VIP餐厅</option>
+                        <option value="lobby_screen">大屏</option>
+                        <option value="lobby_booth">展位</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">月份：</span>
+                    <input type="month" class="filter-select" v-model="filters.month" @change="applyFilters">
+                </div>
+            </div>
+            
+            <!-- 结算列表 -->
+            <div v-if="loading" class="loading-spinner">
+                <div class="spinner"></div>
+                <p style="color: var(--text-secondary);">加载结算数据...</p>
+            </div>
+            
+            <div v-else class="settlement-list">
+                <table class="settlement-table" v-if="filteredSettlements.length > 0">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">预约编号</th>
+                            <th style="width: 180px;">预约主题</th>
+                            <th style="width: 120px;">空间资源</th>
+                            <th style="width: 120px;">预约人</th>
+                            <th style="width: 120px;">使用时段</th>
+                            <th style="width: 100px;">费用金额</th>
+                            <th style="width: 100px;">状态</th>
+                            <th style="width: 150px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in filteredSettlements" :key="item.id">
+                            <td>
+                                <span class="booking-no">{{ item.bookingNo }}</span>
+                            </td>
+                            <td>
+                                <div class="booking-title">{{ item.title }}</div>
+                                <div class="booking-subtitle">{{ item.typeName }}</div>
+                            </td>
+                            <td>{{ item.spaceName }}</td>
+                            <td>{{ item.userName }}</td>
+                            <td>
+                                <div>{{ item.bookingDate }}</div>
+                                <div class="booking-subtitle">{{ item.timeSlot }}</div>
+                            </td>
+                            <td>
+                                <span class="amount" :class="{ pending: item.status === 'pending_payment' }">
+                                    ¥{{ item.amount.toFixed(2) }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge" :class="item.statusClass">
+                                    {{ item.statusText }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <button 
+                                        v-if="item.status === 'pending_payment'" 
+                                        class="btn btn-success btn-sm"
+                                        @click="confirmSettlement(item)"
+                                    >确认收款</button>
+                                    <button 
+                                        v-if="item.status === 'settled'" 
+                                        class="btn btn-outline btn-sm"
+                                        @click="viewDetail(item)"
+                                    >查看详情</button>
+                                    <button 
+                                        class="btn btn-outline btn-sm"
+                                        @click="viewBooking(item)"
+                                    >查看预约</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div v-else class="empty-state">
+                    <div class="empty-icon">💰</div>
+                    <p>暂无结算记录</p>
+                </div>
+            </div>
+            
+            <!-- 部门汇总 -->
+            <div class="summary-section" v-if="departmentSummary.length > 0">
+                <div class="summary-title">
+                    <span>📊</span>
+                    <span>部门费用汇总</span>
+                </div>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>部门</th>
+                            <th>本月预约</th>
+                            <th>本月费用</th>
+                            <th>已结算</th>
+                            <th>待结算</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="dept in departmentSummary" :key="dept.name">
+                            <td>
+                                <span class="dept-name">{{ dept.name }}</span>
+                            </td>
+                            <td>{{ dept.bookingCount }} 次</td>
+                            <td>¥{{ dept.monthlyFee.toFixed(2) }}</td>
+                            <td class="amount success">¥{{ dept.settled.toFixed(2) }}</td>
+                            <td class="amount warning">¥{{ dept.pending.toFixed(2) }}</td>
+                            <td>
+                                <button 
+                                    v-if="dept.pending > 0"
+                                    class="btn btn-outline btn-sm"
+                                    @click="sendDeptReminder(dept)"
+                                >发送提醒</button>
+                                <button 
+                                    class="btn btn-outline btn-sm"
+                                    @click="exportDeptBill(dept)"
+                                >导出账单</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 确认收款模态框 -->
+        <div v-if="showConfirmModal" class="modal-overlay" @click.self="showConfirmModal = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" style="color: var(--success);">✅ 确认收款</h3>
+                    <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showConfirmModal = false">✕</button>
+                </div>
+                
+                <div class="modal-body" v-if="selectedItem">
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                        <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: 600;">{{ selectedItem.title }}</div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 4px;">
+                            {{ selectedItem.spaceName }} · {{ selectedItem.bookingDate }} · ¥{{ selectedItem.amount.toFixed(2) }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">收款金额确认</label>
+                        <input type="number" class="form-input" v-model="confirmAmount" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">收款方式</label>
+                        <select class="form-input" v-model="paymentMethod">
+                            <option value="cash">现金</option>
+                            <option value="bank_transfer">银行转账</option>
+                            <option value="alipay">支付宝</option>
+                            <option value="wechat">微信支付</option>
+                            <option value="prepaid">预付账户扣款</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">备注（可选）</label>
+                        <input type="text" class="form-input" v-model="settlementNote" placeholder="收款备注信息">
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="showConfirmModal = false">取消</button>
+                    <button class="btn btn-success" @click="executeConfirm">确认收款</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const settlements = ref([]);
+                const stats = ref({
+                    pendingAmount: 0,
+                    pendingCount: 0,
+                    monthlySettled: 0,
+                    monthlySettledCount: 0,
+                    monthlyRevenue: 0,
+                    totalRevenue: 0
+                });
+                const filters = ref({
+                    status: '',
+                    type: '',
+                    month: new Date().toISOString().slice(0, 7)
+                });
+                const departmentSummary = ref([]);
+                
+                const showConfirmModal = ref(false);
+                const selectedItem = ref(null);
+                const confirmAmount = ref(0);
+                const paymentMethod = ref('bank_transfer');
+                const settlementNote = ref('');
+                
+                const API_BASE = '/api/v2';
+                
+                const filteredSettlements = computed(() => {
+                    let result = settlements.value;
+                    
+                    if (filters.value.status) {
+                        result = result.filter(s => s.status === filters.value.status);
+                    }
+                    if (filters.value.type) {
+                        result = result.filter(s => s.typeCode === filters.value.type);
+                    }
+                    if (filters.value.month) {
+                        result = result.filter(s => s.bookingDate.startsWith(filters.value.month));
+                    }
+                    
+                    return result;
+                });
+                
+                const getStatusText = (status) => {
+                    const map = {
+                        'pending_payment': '待确认收款',
+                        'settled': '已结算',
+                        'confirmed': '已确认'
+                    };
+                    return map[status] || status;
+                };
+                
+                const getStatusClass = (status) => {
+                    const map = {
+                        'pending_payment': 'pending',
+                        'settled': 'settled',
+                        'confirmed': 'confirmed'
+                    };
+                    return map[status] || '';
+                };
+                
+                const loadSettlements = async () => {
+                    loading.value = true;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        if (!token) {
+                            window.location.href = '/portal/admin/login.html';
+                            return;
+                        }
+                        
+                        // 获取预约数据，筛选已完成的预约用于结算
+                        const response = await fetch(`${API_BASE}/space/bookings?limit=100`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            const items = data.data.items || [];
+                            
+                            // 筛选有费用的预约
+                            settlements.value = items
+                                .filter(b => b.total_fee > 0 || b.actual_fee > 0)
+                                .map(b => ({
+                                    id: b.id,
+                                    bookingNo: b.booking_no || `BK${b.id}`,
+                                    title: b.title,
+                                    typeName: b.type_name,
+                                    typeCode: b.type_code,
+                                    spaceName: b.resource_name,
+                                    userName: b.user_name,
+                                    bookingDate: b.booking_date,
+                                    timeSlot: `${b.start_time}-${b.end_time}`,
+                                    amount: b.actual_fee || b.total_fee || 0,
+                                    status: b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment'),
+                                    statusText: getStatusText(b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment')),
+                                    statusClass: getStatusClass(b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment'))
+                                }));
+                            
+                            updateStats();
+                            updateDepartmentSummary();
+                        }
+                        
+                    } catch (error) {
+                        console.error('加载结算数据失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const updateStats = () => {
+                    const monthPrefix = filters.value.month;
+                    
+                    stats.value.pendingAmount = settlements.value
+                        .filter(s => s.status === 'pending_payment')
+                        .reduce((sum, s) => sum + s.amount, 0);
+                    stats.value.pendingCount = settlements.value
+                        .filter(s => s.status === 'pending_payment').length;
+                    
+                    stats.value.monthlySettled = settlements.value
+                        .filter(s => s.status === 'settled' && s.bookingDate.startsWith(monthPrefix))
+                        .reduce((sum, s) => sum + s.amount, 0);
+                    stats.value.monthlySettledCount = settlements.value
+                        .filter(s => s.status === 'settled' && s.bookingDate.startsWith(monthPrefix)).length;
+                    
+                    stats.value.monthlyRevenue = settlements.value
+                        .filter(s => s.bookingDate.startsWith(monthPrefix))
+                        .reduce((sum, s) => sum + s.amount, 0);
+                    
+                    stats.value.totalRevenue = settlements.value
+                        .reduce((sum, s) => sum + s.amount, 0);
+                };
+                
+                const updateDepartmentSummary = () => {
+                    const deptMap = {};
+                    
+                    settlements.value.forEach(s => {
+                        const dept = s.userName + '部门';
+                        if (!deptMap[dept]) {
+                            deptMap[dept] = {
+                                name: dept,
+                                bookingCount: 0,
+                                monthlyFee: 0,
+                                settled: 0,
+                                pending: 0
+                            };
+                        }
+                        
+                        deptMap[dept].bookingCount++;
+                        if (s.bookingDate.startsWith(filters.value.month)) {
+                            deptMap[dept].monthlyFee += s.amount;
+                        }
+                        
+                        if (s.status === 'settled') {
+                            deptMap[dept].settled += s.amount;
+                        } else if (s.status === 'pending_payment') {
+                            deptMap[dept].pending += s.amount;
+                        }
+                    });
+                    
+                    departmentSummary.value = Object.values(deptMap);
+                };
+                
+                const applyFilters = () => {
+                    updateStats();
+                    updateDepartmentSummary();
+                };
+                
+                const refreshData = async () => {
+                    await loadSettlements();
+                };
+                
+                const confirmSettlement = (item) => {
+                    selectedItem.value = item;
+                    confirmAmount.value = item.amount;
+                    paymentMethod.value = 'bank_transfer';
+                    settlementNote.value = '';
+                    showConfirmModal.value = true;
+                };
+                
+                const executeConfirm = async () => {
+                    if (!selectedItem.value) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${selectedItem.value.id}/settle`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                settled_amount: confirmAmount.value,
+                                payment_method: paymentMethod.value,
+                                note: settlementNote.value
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('收款确认成功');
+                            showConfirmModal.value = false;
+                            loadSettlements();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                        
+                    } catch (error) {
+                        console.error('确认收款失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const viewDetail = (item) => {
+                    alert(`结算详情：\n\n预约编号：${item.bookingNo}\n费用金额：¥${item.amount.toFixed(2)}`);
+                };
+                
+                const viewBooking = (item) => {
+                    window.location.href = `/portal/admin/space/bookings.html?id=${item.id}`;
+                };
+                
+                const exportSettlements = () => {
+                    let csv = '空间服务结算报表\n\n';
+                    csv += '预约编号,预约主题,空间资源,预约人,使用时段,费用金额,状态\n';
+                    
+                    filteredSettlements.value.forEach(s => {
+                        csv += `${s.bookingNo},${s.title},${s.spaceName},${s.userName},${s.bookingDate} ${s.timeSlot},${s.amount.toFixed(2)},${s.statusText}\n`;
+                    });
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `空间服务结算报表_${filters.value.month}.csv`;
+                    link.click();
+                };
+                
+                const sendReminder = () => {
+                    if (stats.value.pendingCount > 0) {
+                        alert(`将向 ${stats.value.pendingCount} 位待付款用户发送付款提醒`);
+                    } else {
+                        alert('暂无待确认收款的预约');
+                    }
+                };
+                
+                const sendDeptReminder = (dept) => {
+                    alert(`将向 ${dept.name} 发送付款提醒\n待结算金额：¥${dept.pending.toFixed(2)}`);
+                };
+                
+                const exportDeptBill = (dept) => {
+                    let csv = `${dept.name} 空间服务账单\n\n`;
+                    csv += '本月预约次数,本月费用,已结算,待结算\n';
+                    csv += `${dept.bookingCount}次,¥${dept.monthlyFee.toFixed(2)},¥${dept.settled.toFixed(2)},¥${dept.pending.toFixed(2)}\n`;
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${dept.name}_账单_${filters.value.month}.csv`;
+                    link.click();
+                };
+                
+                onMounted(async () => {
+                    const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
+                    if (!user) return;
+                    
+                    loadSettlements();
+                });
+                
+                return {
+                    loading,
+                    settlements,
+                    stats,
+                    filters,
+                    filteredSettlements,
+                    departmentSummary,
+                    showConfirmModal,
+                    selectedItem,
+                    confirmAmount,
+                    paymentMethod,
+                    settlementNote,
+                    applyFilters,
+                    refreshData,
+                    confirmSettlement,
+                    executeConfirm,
+                    viewDetail,
+                    viewBooking,
+                    exportSettlements,
+                    sendReminder,
+                    sendDeptReminder,
+                    exportDeptBill
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -222,3 +222,7 @@ async def check_office_permission(
             )
 
     return current_user
+
+
+get_admactiver = get_admin_user
+get_super_admactiver = get_super_admin_user
