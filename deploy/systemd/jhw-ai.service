@@ -1,0 +1,24 @@
+[Unit]
+Description=AI产业集群空间服务系统
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/jhw-ai
+Environment="PATH=/var/www/jhw-ai/.venv/bin"
+ExecStart=/var/www/jhw-ai/.venv/bin/python -m uvicorn apps.main:app --host 127.0.0.1 --port 8008
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# 日志配置
+StandardOutput=file:/var/www/jhw-ai/logs/api_service.log
+StandardError=file:/var/www/jhw-ai/logs/api_error.log
+
+# 安全配置
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
