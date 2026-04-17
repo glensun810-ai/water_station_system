@@ -745,16 +745,96 @@
         }
         
         @media (max-width: 768px) {
-            .bookings-table {
-                overflow-x: auto;
+            .booking-container {
+                padding: var(--spacing-md);
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
             }
             
-            .bookings-table table {
-                min-width: 700px;
+            .header-section {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .header-section h1 {
+                font-size: var(--font-size-lg);
+            }
+            
+            .header-section .quick-link {
+                width: 100%;
+                text-align: center;
+                min-height: 44px;
+            }
+            
+            .stats-overview {
+                grid-template-columns: repeat(3, 1fr);
+                gap: var(--spacing-sm);
+            }
+            
+            .stat-card {
+                padding: var(--spacing-md);
+            }
+            
+            .stat-value {
+                font-size: var(--font-size-lg);
             }
             
             .filter-bar {
                 flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-select {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            .action-buttons {
+                width: 100%;
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            .bookings-table {
+                display: none;
+            }
+            
+            .bookings-card-list {
+                display: flex !important;
+            }
+            
+            .btn-sm {
+                min-height: 44px;
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: var(--font-size-sm);
+            }
+            
+            .action-btns {
+                flex-wrap: wrap;
+                gap: var(--spacing-xs);
+            }
+            
+            .action-btns .btn {
+                flex: 1;
+                min-width: 60px;
+                min-height: 44px;
+            }
+            
+            .bottom-nav {
+                display: block;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -1195,7 +1275,65 @@
                 <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
                 <p style="margin-top: var(--spacing-lg); color: var(--text-secondary);">加载中...</p>
             </div>
+            
+            <!-- 移动端卡片列表（替代表格） -->
+            <div class="bookings-card-list" v-if="!loading && bookings.length > 0" style="display: none; flex-direction: column; gap: var(--spacing-md);">
+                <div v-for="booking in bookings" :key="booking.id" class="booking-card" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--spacing-lg); border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                        <div style="font-weight: 700; color: var(--primary);">{{ booking.booking_no }}</div>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;" :style="{ background: getStatusBgColor(booking.status), color: getStatusColor(booking.status) }">
+                            {{ getStatusText(booking.status) }}
+                        </span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-md); font-size: 14px;">
+                        <div><span style="color: var(--text-tertiary);">空间：</span>{{ booking.resource_name }}</div>
+                        <div><span style="color: var(--text-tertiary);">日期：</span>{{ booking.booking_date }}</div>
+                        <div><span style="color: var(--text-tertiary);">时段：</span>{{ booking.start_time }}-{{ booking.end_time }}</div>
+                        <div><span style="color: var(--text-tertiary);">时长：</span>{{ booking.duration }}小时</div>
+                        <div><span style="color: var(--text-tertiary);">费用：</span>¥{{ (booking.total_fee || 0).toFixed(2) }}</div>
+                        <div>
+                            <span style="color: var(--text-tertiary);">支付：</span>
+                            <span :style="{ color: getPaymentModeColor(booking.payment_mode) }">{{ getPaymentModeIcon(booking.payment_mode) }} {{ getPaymentModeText(booking.payment_mode) }}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
+                        <button class="btn btn-outline btn-sm" @click="viewDetail(booking)" style="min-height: 44px;">查看</button>
+                        <button v-if="booking.status === 'pending'" class="btn btn-success btn-sm" @click="approveWithPayment(booking)" style="min-height: 44px;">通过+收款</button>
+                        <button v-if="booking.status === 'approved' && booking.payment_status === 'pending'" class="btn btn-primary btn-sm" @click="confirmPayment(booking)" style="min-height: 44px;">收款</button>
+                        <button v-if="booking.status === 'approved' && booking.payment_status !== 'pending'" class="btn btn-success btn-sm" @click="markConfirmed(booking)" style="min-height: 44px;">生效</button>
+                        <button v-if="booking.status === 'completed'" class="btn btn-success btn-sm" @click="settleBooking(booking)" style="min-height: 44px;">结算</button>
+                    </div>
+                </div>
+            </div>
         </div>
+        
+        <!-- 移动端底部导航 -->
+        <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
+            <div style="display: flex; justify-content: space-around;">
+                <a href="/portal/admin/space/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 12px;">工作台</span>
+                </a>
+                <a href="/portal/admin/space/bookings.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--primary); text-decoration: none;">
+                    <span style="font-size: 24px;">📋</span>
+                    <span style="font-size: 12px;">预约</span>
+                </a>
+                <a href="/portal/admin/space/credit-notes.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">📝</span>
+                    <span style="font-size: 12px;">账单</span>
+                </a>
+                <a href="/portal/admin/space/resources.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">🏢</span>
+                    <span style="font-size: 12px;">资源</span>
+                </a>
+                <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 12px;">首页</span>
+                </a>
+            </div>
+        </nav>
         
         <!-- 详情弹窗 -->
         <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
