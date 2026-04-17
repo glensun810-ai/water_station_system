@@ -221,8 +221,8 @@ def user_register(
             )
 
     # 检查用户名是否已存在
-    check_query = text("SELECT id FROM users WHERE name = :name")
-    existing_user = db.execute(check_query, {"name": register_data.name}).fetchone()
+    check_query = text("SELECT id FROM users WHERE username = :username")
+    existing_user = db.execute(check_query, {"username": register_data.name}).fetchone()
 
     if existing_user:
         # 记录注册失败日志
@@ -279,15 +279,16 @@ def user_register(
 
     try:
         insert_query = text("""
-            INSERT INTO users (name, password_hash, department, role, is_active, balance_credit, 
+            INSERT INTO users (username, name, password_hash, department, role, is_active, balance_credit, 
                              user_type, phone, email, company, created_at)
-            VALUES (:name, :password_hash, :department, 'user', :is_active, 0, 
+            VALUES (:username, :name, :password_hash, :department, 'user', :is_active, 0, 
                    :user_type, :phone, :email, :company, :created_at)
         """)
 
         db.execute(
             insert_query,
             {
+                "username": register_data.name,
                 "name": register_data.name,
                 "password_hash": password_hash,
                 "department": register_data.department
@@ -304,8 +305,8 @@ def user_register(
         db.commit()
 
         # 获取新创建的用户ID
-        user_query = text("SELECT id FROM users WHERE name = :name")
-        new_user = db.execute(user_query, {"name": register_data.name}).fetchone()
+        user_query = text("SELECT id FROM users WHERE username = :username")
+        new_user = db.execute(user_query, {"username": register_data.name}).fetchone()
 
         user_type_text = (
             "外部用户" if register_data.user_type == "external" else "内部用户"
@@ -355,7 +356,6 @@ def user_register(
         )
 
 
-
 @router.post("/login", response_model=TokenResponse)
 def user_login(login_data: UserLogin, request: Request, db: Session = Depends(get_db)):
     """
@@ -384,13 +384,13 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
     try:
         # 查询用户
         query = text("""
-            SELECT id, name, department, role, password_hash, is_active, balance_credit,
+            SELECT id, username, name, department, role, password_hash, is_active, balance_credit,
                    user_type, phone, email
             FROM users
-            WHERE name = :name
+            WHERE username = :username
         """)
 
-        result = db.execute(query, {"name": login_data.name})
+        result = db.execute(query, {"username": login_data.name})
         user = result.fetchone()
 
         # 验证用户存在
@@ -401,7 +401,7 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
             )
 
         user_id = user.id
-        username = user.name
+        username = user.username
         user_role = user.role
 
         # 验证用户状态
@@ -425,6 +425,7 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
         access_token = create_access_token(
             data={
                 "sub": str(user.id),
+                "username": user.username,
                 "name": user.name,
                 "role": user.role,
                 "department": user.department or "",
@@ -444,7 +445,7 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
         """),
             {
                 "user_id": user.id,
-                "username": user.name,
+                "username": user.username,
                 "role": user.role,
                 "login_time": datetime.now().isoformat(),
                 "ip_address": client_host,
@@ -465,7 +466,7 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
             user_info={
                 "user_id": user.id,
                 "name": user.name,
-                "username": user.name,
+                "username": user.username,
                 "department": user.department,
                 "role": user.role,
                 "role_name": get_role_display_name(user.role, user.department),

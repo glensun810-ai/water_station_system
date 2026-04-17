@@ -576,6 +576,13 @@
                 
                 const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
                 
+                const handleAuthError = () => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userInfo');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                };
+                
                 const formatDate = (dateStr) => {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
@@ -604,10 +611,10 @@
                 const loadOrders = async () => {
                     try {
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userInfoStr = localStorage.getItem('userInfo');
                         
-                        if (!token || !userId) {
-                            window.location.href = '/portal/register.html';
+                        if (!token || !userInfoStr) {
+                            handleAuthError();
                             return;
                         }
                         
@@ -627,10 +634,16 @@
                             const data = await response.json();
                             orders.value = data.orders || [];
                             total.value = data.total || 0;
+                            loading.value = false;
+                        } else if (response.status === 401) {
+                            loading.value = false;
+                            handleAuthError();
+                            return;
+                        } else {
+                            loading.value = false;
                         }
                     } catch (e) {
                         console.error('加载订单失败:', e);
-                    } finally {
                         loading.value = false;
                     }
                 };
@@ -650,6 +663,9 @@
                                 service_balance: data.service_balance || 0,
                                 total_balance: data.total_balance || 0
                             };
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                            return;
                         }
                     } catch (e) {
                         console.error('加载余额失败:', e);

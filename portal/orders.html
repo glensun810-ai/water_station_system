@@ -392,26 +392,17 @@
                     { label: '已退款', value: 'refunded' }
                 ];
                 
-                const loadUserInfo = async () => {
+                const loadUserInfo = () => {
                     try {
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userInfoStr = localStorage.getItem('userInfo');
                         
-                        if (!token || !userId) {
-                            window.location.href = '/portal/register.html';
+                        if (!token || !userInfoStr) {
+                            window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
                             return;
                         }
                         
-                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            userInfo.value = data;
-                        }
+                        userInfo.value = JSON.parse(userInfoStr);
                     } catch (err) {
                         console.error('加载用户信息失败:', err);
                     }
@@ -435,7 +426,7 @@
                     try {
                         loading.value = true;
                         
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         const token = localStorage.getItem('token');
                         
                         const url = currentTab.value === 'all' 
@@ -492,7 +483,7 @@
                 
                 const cancelOrder = async (order) => {
                     try {
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         const token = localStorage.getItem('token');
                         
                         const response = await fetch(`/api/payment/orders/${order.order_no}/cancel`, {
@@ -536,7 +527,7 @@
                             return;
                         }
                         
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         const token = localStorage.getItem('token');
                         
                         const response = await fetch('/api/payment/refund', {

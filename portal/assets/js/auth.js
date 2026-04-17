@@ -122,8 +122,12 @@ const AuthManager = {
                     role: data.role,
                     roleName: data.role_name,
                     department: data.department,
-                    user_type: data.user_type,
-                    avatar: '👤'
+                    user_type: data.user_type || 'internal',
+                    balance_credit: data.balance_credit || 0,
+                    phone: data.phone || '',
+                    email: data.email || '',
+                    avatar: '👤',
+                    is_admin: ['super_admin', 'admin', 'office_admin'].includes(data.role)
                 });
                 return true;
             }

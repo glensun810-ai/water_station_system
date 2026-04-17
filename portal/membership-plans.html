@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="./assets/css/design-system.css">
     <link rel="stylesheet" href="./components/GlobalHeader.css">
     <script src="./components/GlobalHeader.js"></script>
+    <script src="./assets/js/auth.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -899,7 +900,7 @@
                             
                             <div v-if="!isLoggedIn" class="login-hint">
                                 <span>💡</span>
-                                <span>登录后即可购买会员套餐</span>
+                                <span>请先 <a href="/portal/admin/login.html?redirect=/portal/membership-plans.html" style="color: var(--primary); font-weight: 600;">登录</a> 后购买会员套餐</span>
                             </div>
                         </div>
                     </div>
@@ -1099,6 +1100,7 @@
                 const loading = ref(true);
                 const error = ref(null);
                 const userInfo = ref(null);
+                    const token = localStorage.getItem('token');
                 
                 const isLoggedIn = computed(() => userInfo.value && userInfo.value.id);
                 
@@ -1114,20 +1116,18 @@
                 
                 const loadUserInfo = async () => {
                     try {
-                        const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
-                        
-                        if (!token || !userId) return;
-                        
-                        const response = await fetch(`${API_BASE}/user/info?user_id=${userId}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        
-                        if (response.ok) {
-                            userInfo.value = await response.json();
+                        // 使用 auth.js 的统一认证检查
+                        const user = await checkAuth({ requireAuth: false, validateToken: false });
+                        if (user && user.id) {
+                            userInfo.value = user;
+                            console.log('用户已登录:', userInfo.value);
+                        } else {
+                            console.log('用户未登录');
+                            userInfo.value = null;
                         }
                     } catch (err) {
                         console.error('加载用户信息失败:', err);
+                        userInfo.value = null;
                     }
                 };
                 
@@ -1160,7 +1160,7 @@
                 
                 const selectPlan = (plan) => {
                     if (!isLoggedIn.value) {
-                        window.location.href = '/portal/register.html';
+                        window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
                         return;
                     }
                     
@@ -1182,9 +1182,6 @@
                     
                     try {
                         submittingOrder.value = true;
-                        
-                        const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
                         
                         const response = await fetch(`${API_BASE}/membership/orders`, {
                             method: 'POST',

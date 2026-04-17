@@ -333,24 +333,15 @@
                 const loadUserInfo = async () => {
                     try {
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userInfoStr = localStorage.getItem('userInfo');
                         
-                        if (!token || !userId) {
+                        if (!token || !userInfoStr) {
                             error.value = '请先登录';
-                            window.location.href = '/portal/register.html';
+                            window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
                             return;
                         }
                         
-                        const response = await fetch(`/api/user/info?user_id=${userId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            userInfo.value = data;
-                        }
+                        userInfo.value = JSON.parse(userInfoStr);
                     } catch (err) {
                         console.error('加载用户信息失败:', err);
                     }
@@ -367,7 +358,7 @@
                         plan.value = JSON.parse(savedPlan);
                         
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         
                         const response = await fetch('/api/payment/orders', {
                             method: 'POST',
@@ -400,7 +391,7 @@
                         isPaying.value = true;
                         
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         
                         const response = await fetch(`/api/payment/alipay/create?order_no=${orderNo.value}`, {
                             method: 'POST',
@@ -434,7 +425,7 @@
                     statusCheckTimer = setInterval(async () => {
                         try {
                             const token = localStorage.getItem('token');
-                            const userId = localStorage.getItem('user_id');
+                            const userId = userInfo.value?.id;
                             
                             const response = await fetch(`/api/payment/orders/${orderNo.value}/status`, {
                                 headers: {
@@ -470,7 +461,7 @@
                         }
                         
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userId = userInfo.value?.id;
                         
                         await fetch(`/api/payment/orders/${orderNo.value}/cancel`, {
                             method: 'POST',

@@ -578,6 +578,13 @@
                 
                 const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
                 
+                const handleAuthError = () => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userInfo');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                };
+                
                 const formatDate = (dateStr) => {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
@@ -627,10 +634,10 @@
                 const loadBalanceInfo = async () => {
                     try {
                         const token = localStorage.getItem('token');
-                        const userId = localStorage.getItem('user_id');
+                        const userInfoStr = localStorage.getItem('userInfo');
                         
-                        if (!token || !userId) {
-                            window.location.href = '/portal/register.html';
+                        if (!token || !userInfoStr) {
+                            handleAuthError();
                             return;
                         }
                         
@@ -640,6 +647,9 @@
                         
                         if (response.ok) {
                             balanceInfo.value = await response.json();
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                            return;
                         }
                     } catch (e) {
                         console.error('加载余额失败:', e);
@@ -656,6 +666,9 @@
                         
                         if (response.ok) {
                             summary.value = await response.json();
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                            return;
                         }
                     } catch (e) {
                         console.error('加载统计失败:', e);
@@ -674,6 +687,9 @@
                             const data = await response.json();
                             transactions.value = data.transactions || [];
                             transactionsTotal.value = data.total || 0;
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                            return;
                         }
                     } catch (e) {
                         console.error('加载交易记录失败:', e);
@@ -692,6 +708,9 @@
                             const data = await response.json();
                             deductRecords.value = data.records || [];
                             deductTotal.value = data.total || 0;
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                            return;
                         }
                     } catch (e) {
                         console.error('加载抵扣记录失败:', e);

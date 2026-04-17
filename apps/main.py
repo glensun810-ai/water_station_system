@@ -22,6 +22,7 @@ from apps.api.v1.membership_order import router as membership_order_router
 from apps.api.v1.user_balance import router as user_balance_router
 from apps.api.v1.admin_membership_order import router as admin_membership_order_router
 from apps.api.v1.admin_balance import router as admin_balance_router
+from apps.water.api_user_auth import router as user_auth_router
 
 # Import the unified v2 API routes (Space Service)
 from apps.api.v2.space_types import router as space_types_router
@@ -35,7 +36,8 @@ from apps.api.v2.space_payment_settlement import (
     router as space_payment_settlement_router,
 )
 
-# Import exception handlers
+from apps.water.api_login_logs import router as login_logs_router
+
 from apps.error_handlers import register_exception_handlers
 
 # 导入space模型以确保表被创建
@@ -100,6 +102,8 @@ v2_router.include_router(space_payment_settlement_router)
 # Add routers to main app
 app.include_router(v1_router)
 app.include_router(v2_router)
+app.include_router(login_logs_router)
+app.include_router(user_auth_router)
 
 # Mount static files for portal and shared resources
 portal_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "portal")

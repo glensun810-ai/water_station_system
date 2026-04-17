@@ -474,7 +474,10 @@
                 </div>
                 
                 <div class="mb-4">
-                    <div class="text-sm font-medium text-gray-700 mb-2">3. 领取人和时间</div>
+                    <div class="text-sm font-medium text-gray-700 mb-2">3. 领取人和时间
+                        <span v-if="!isAdmin" class="text-xs text-gray-400 ml-1">(默认为当前登录用户)</span>
+                        <span v-else class="text-xs text-blue-400 ml-1">(管理员帮用户登记，默认为所选办公室负责人)</span>
+                    </div>
                     <div class="bg-white rounded-lg p-3 space-y-3">
                         <div class="flex items-center">
                             <div class="w-16 text-sm text-gray-500">领取人</div>
@@ -1361,19 +1364,25 @@
                     }
                 },
                 'form.officeId': function(newVal) {
-                    // When office changes in pickup tab, auto-update pickup person to office leader
                     if (newVal && this.activeTab === 'pickup') {
-                        // First check userOffices for the leader
-                        const userOffice = this.userOffices.find(o => o.id === newVal);
-                        if (userOffice && userOffice.leader_name) {
-                            this.form.personName = userOffice.leader_name;
-                            this.form.personId = '';
-                            this.useManualPerson = true;
+                        if (this.isAdmin) {
+                            const userOffice = this.userOffices.find(o => o.id === newVal);
+                            if (userOffice && userOffice.leader_name) {
+                                this.form.personName = userOffice.leader_name;
+                                this.form.personId = '';
+                                this.useManualPerson = true;
+                            } else {
+                                const office = this.offices.find(o => o.id === newVal);
+                                if (office && office.leader_name) {
+                                    this.form.personName = office.leader_name;
+                                    this.form.personId = '';
+                                    this.useManualPerson = true;
+                                }
+                            }
                         } else {
-                            // Check in full offices list
-                            const office = this.offices.find(o => o.id === newVal);
-                            if (office && office.leader_name) {
-                                this.form.personName = office.leader_name;
+                            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                            if (userInfo.name) {
+                                this.form.personName = userInfo.name;
                                 this.form.personId = '';
                                 this.useManualPerson = true;
                             }
@@ -1496,9 +1505,10 @@
                             if (this.offices.length > 0 && !this.form.officeId) {
                                 this.form.officeId = this.offices[0].id;
                                 this.settlementOfficeId = this.offices[0].id;
-                                // 自动设置领水人
-                                if (this.offices[0].leader_name) {
-                                    this.form.personName = this.offices[0].leader_name;
+                                // 普通用户默认领取人为登录用户本人
+                                const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                                if (userInfo.name) {
+                                    this.form.personName = userInfo.name;
                                     this.form.personId = '';
                                     this.useManualPerson = true;
                                 }
@@ -1707,29 +1717,46 @@ async loadRecords(officeId, status) {
                     this.form.personId = ''; 
                     this.form.personName = ''; 
                     this.useManualPerson = false;
-                    if (office.leader_name) {
-                        this.form.personName = office.leader_name;
-                        this.useManualPerson = true; 
+                    
+                    if (this.isAdmin) {
+                        if (office.leader_name) {
+                            this.form.personName = office.leader_name;
+                            this.useManualPerson = true; 
+                        }
+                    } else {
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                        if (userInfo.name) {
+                            this.form.personName = userInfo.name;
+                            this.useManualPerson = true;
+                        }
                     }
                 },
                 switchOffice(officeId) {
                     if (this.activeTab === 'pickup') {
-                        // 从用户办公室列表中获取
                         let office = this.userOffices.find(o => o.id === officeId);
                         if (!office) {
                             office = this.offices.find(o => o.id === officeId);
                         }
                         if (office) {
                             this.form.officeId = officeId;
-                            // 设置领取人为办公室负责人
-                            if (office.leader_name) {
-                                this.form.personName = office.leader_name;
-                                this.form.personId = '';
-                                this.useManualPerson = true;
+                            // 根据角色设置领取人
+                            if (this.isAdmin) {
+                                if (office.leader_name) {
+                                    this.form.personName = office.leader_name;
+                                    this.form.personId = '';
+                                    this.useManualPerson = true;
+                                } else {
+                                    this.form.personName = '';
+                                    this.form.personId = '';
+                                    this.useManualPerson = false;
+                                }
                             } else {
-                                this.form.personName = '';
-                                this.form.personId = '';
-                                this.useManualPerson = false;
+                                const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                                if (userInfo.name) {
+                                    this.form.personName = userInfo.name;
+                                    this.form.personId = '';
+                                    this.useManualPerson = true;
+                                }
                             }
                         }
                     } else {
@@ -1791,9 +1818,18 @@ async loadRecords(officeId, status) {
                         localStorage.setItem('user_default_office_id', defaultOffice.id);
                         // 应用到表单
                         this.form.officeId = defaultOffice.id;
-                        if (defaultOffice.leader_name) {
-                            this.form.personName = defaultOffice.leader_name;
-                            this.useManualPerson = true;
+                        // 根据角色设置领取人
+                        if (this.isAdmin) {
+                            if (defaultOffice.leader_name) {
+                                this.form.personName = defaultOffice.leader_name;
+                                this.useManualPerson = true;
+                            }
+                        } else {
+                            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                            if (userInfo.name) {
+                                this.form.personName = userInfo.name;
+                                this.useManualPerson = true;
+                            }
                         }
                         this.settlementOfficeId = defaultOffice.id;
                     }
@@ -1835,15 +1871,21 @@ async loadRecords(officeId, status) {
                     } catch (e) { this.showError('网络错误'); }
                 },
                 resetForm() { 
-                    // After submission, reset to default office and person
                     const defaultOffice = this.userOffices.find(o => o.is_default) || this.userOffices[0];
+                    let personName = '';
+                    if (this.isAdmin) {
+                        personName = defaultOffice && defaultOffice.leader_name ? defaultOffice.leader_name : '';
+                    } else {
+                        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                        personName = userInfo.name || '';
+                    }
                     this.form = { 
                         officeId: defaultOffice ? defaultOffice.id : '', 
                         personId: '', 
-                        personName: defaultOffice && defaultOffice.leader_name ? defaultOffice.leader_name : '', 
+                        personName: personName, 
                         pickupTime: this.form.pickupTime 
                     };
-                    this.useManualPerson = !! (defaultOffice && defaultOffice.leader_name);
+                    this.useManualPerson = !!personName;
                     this.products.forEach(p => this.cart[p.id] = 0); 
                 },
                 async applySettlement() {
