@@ -208,9 +208,7 @@ async def create_booking(
     )
 
     initial_status = (
-        "pending"
-        if space_type and space_type.requires_approval
-        else "confirmed"
+        "pending" if space_type and space_type.requires_approval else "confirmed"
     )
 
     booking = SpaceBooking(
@@ -314,9 +312,7 @@ async def update_booking(
             .filter(
                 SpaceBooking.resource_id == booking.resource_id,
                 SpaceBooking.booking_date == booking.booking_date,
-                SpaceBooking.status.in_(
-                    ["pending", "approved", "confirmed", "active"]
-                ),
+                SpaceBooking.status.in_(["pending", "approved", "confirmed", "active"]),
                 SpaceBooking.id != booking_id,
             )
             .all()
@@ -451,6 +447,60 @@ async def complete_booking(
     db.refresh(booking)
 
     return ApiResponse(message="预约已完成", data=_format_booking(booking, db))
+
+
+@router.put("/{booking_id}/settle", response_model=ApiResponse)
+async def settle_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admactiver),
+):
+    """确认结算（管理员）- 将预约状态从completed改为settled"""
+
+    booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "completed":
+        raise HTTPException(status_code=400, detail="只能结算已完成的预约")
+
+    booking.status = "settled"
+    booking.settlement_status = "settled"
+    booking.settled_at = datetime.now()
+    booking.settled_by = current_user.name
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(message="结算确认成功", data=_format_booking(booking, db))
+
+
+@router.put("/{booking_id}/unsettle", response_model=ApiResponse)
+async def unsettle_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admactiver),
+):
+    """取消结算（管理员）- 将预约状态从settled改回completed"""
+
+    booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "settled":
+        raise HTTPException(status_code=400, detail="只能取消已结算的预约")
+
+    booking.status = "completed"
+    booking.settlement_status = "unsettled"
+    booking.settled_at = None
+    booking.settled_by = None
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(message="取消结算成功", data=_format_booking(booking, db))
 
 
 @router.delete("/{booking_id}", response_model=ApiResponse)

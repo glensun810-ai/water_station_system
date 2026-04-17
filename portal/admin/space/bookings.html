@@ -780,15 +780,15 @@
             <div class="stats-overview">
                 <div 
                     class="stat-card"
-                    :class="{ active: filters.status === 'pending_approval' || filters.status === 'pending' }"
-                    @click="filterByStatus('pending_approval')"
+                    :class="{ active: filters.status === 'pending' }"
+                    @click="filterByStatus('pending')"
                     :style="{ borderLeftColor: '#f59e0b' }"
                     title="点击筛选待审批预约"
                 >
                     <div class="stat-value" style="color: #f59e0b;">{{ stats.pending }}</div>
                     <div class="stat-label">
                         <span>⏳ 待审批</span>
-                        <span v-if="filters.status === 'pending_approval'" style="font-size: 10px;">已筛选</span>
+                        <span v-if="filters.status === 'pending'" style="font-size: 10px;">已筛选</span>
                     </div>
                 </div>
                 <div 
@@ -947,7 +947,7 @@
             </div>
             
             <!-- 待审批快速处理提示 -->
-            <div v-if="stats.pending > 0 && filters.status === 'pending_approval'" class="pending-quick-notice">
+            <div v-if="stats.pending > 0 && filters.status === 'pending'" class="pending-quick-notice">
                 <div class="notice-icon">⚡</div>
                 <div class="notice-content">
                     <div class="notice-title">待审批预约快速处理</div>
@@ -1093,7 +1093,7 @@
                             <td>
                                 <div class="action-btns">
                                     <button class="btn btn-outline btn-sm" @click="viewDetail(booking)">查看</button>
-                                    <template v-if="booking.status === 'pending_approval'">
+                                    <template v-if="booking.status === 'pending'">
                                         <button 
                                             class="btn btn-success btn-sm" 
                                             @click="approveBooking(booking)"
@@ -1111,7 +1111,7 @@
                                         @click="completeBooking(booking)"
                                     >完成</button>
                                     <button 
-                                        v-if="booking.status === 'pending_approval' || booking.status === 'approved'" 
+                                        v-if="booking.status === 'pending' || booking.status === 'approved'" 
                                         class="btn btn-outline btn-sm"
                                         style="color: var(--danger);"
                                         @click="cancelBooking(booking)"
@@ -1856,7 +1856,7 @@
                 
                 const updateStats = () => {
                     stats.value.total = allBookings.value.length;
-                    stats.value.pending = allBookings.value.filter(b => b.status === 'pending_approval' || b.status === 'pending').length;
+                    stats.value.pending = allBookings.value.filter(b => b.status === 'pending').length;
                     stats.value.approved = allBookings.value.filter(b => b.status === 'approved').length;
                     stats.value.confirmed = allBookings.value.filter(b => b.status === 'confirmed').length;
                     stats.value.active = allBookings.value.filter(b => b.status === 'active' || b.status === 'in_use').length;
@@ -1977,7 +1977,7 @@
                 
                 const selectAllPending = () => {
                     selectedBookings.value = bookings.value
-                        .filter(b => b.status === 'pending_approval')
+                        .filter(b => b.status === 'pending')
                         .map(b => b.id);
                     updateBatchButtons();
                 };
@@ -2086,7 +2086,7 @@
                 
                 const updateBatchButtons = () => {
                     const selected = bookings.value.filter(b => selectedBookings.value.includes(b.id));
-                    hasPendingApprovals.value = selected.some(b => b.status === 'pending_approval');
+                    hasPendingApprovals.value = selected.some(b => b.status === 'pending');
                     hasApprovableComplete.value = selected.some(b => b.status === 'approved' || b.status === 'confirmed' || b.status === 'in_use');
                 };
                 

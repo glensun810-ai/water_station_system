@@ -285,9 +285,7 @@ class PricingEngine:
             .filter(
                 SpaceBooking.resource_id == resource_id,
                 SpaceBooking.booking_date == booking_date,
-                SpaceBooking.status.in_(
-                    ["pending_approval", "approved", "confirmed", "in_use"]
-                ),
+                SpaceBooking.status.in_(["pending", "approved", "confirmed", "active"]),
             )
             .all()
         )

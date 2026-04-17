@@ -206,9 +206,7 @@ async def check_resource_availability(
         .filter(
             SpaceBooking.resource_id == resource_id,
             SpaceBooking.booking_date == date,
-            SpaceBooking.status.in_(
-                ["pending_approval", "approved", "confirmed", "in_use"]
-            ),
+            SpaceBooking.status.in_(["pending", "approved", "confirmed", "active"]),
         )
         .order_by(SpaceBooking.start_time)
         .all()
