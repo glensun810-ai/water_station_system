@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>会员订单审核</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .stat-card.clickable {
+            cursor: pointer;
+        }
+        
+        .stat-card.clickable:hover {
+            border: 2px solid var(--primary);
+        }
+        
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            opacity: 0.8;
+        }
+        
+        .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
+        .stat-icon.success { background: var(--success-light); color: var(--success); }
+        .stat-icon.warning { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.danger { background: var(--danger-light); color: var(--danger); }
+        
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-left: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .orders-table {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 180px 120px 150px 100px 100px 120px 150px 160px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 180px 120px 150px 100px 100px 120px 150px 160px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            align-items: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .table-row:hover {
+            background: var(--bg-hover);
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .status-badge.pending_review {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-badge.approved {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-badge.rejected {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+        }
+        
+        .status-badge.cancelled {
+            background: var(--bg-secondary);
+            color: var(--text-tertiary);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .action-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+        
+        .action-btn.success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .action-btn.success:hover {
+            background: #16a34a;
+        }
+        
+        .action-btn.danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .action-btn.danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .action-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        
+        .action-btn.secondary:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-xl);
+            border-top: 1px solid var(--border);
+        }
+        
+        .detail-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .detail-section-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .detail-value.highlight {
+            color: var(--primary);
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .toast {
+            position: fixed;
+            top: var(--spacing-xl);
+            right: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success { background: var(--success-light); color: var(--success-dark); }
+        .toast.error { background: var(--danger-light); color: var(--danger-dark); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            opacity: 0.5;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .empty-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .empty-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .user-link {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .user-link:hover {
+            text-decoration: underline;
+        }
+        
+        .amount-text {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .audit-history {
+            margin-top: var(--spacing-lg);
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+        }
+        
+        .audit-item {
+            display: flex;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .audit-item:last-child {
+            border-bottom: none;
+        }
+        
+        .audit-time {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            min-width: 120px;
+        }
+        
+        .audit-content {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 1024px) {
+            .table-header, .table-row {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+            
+            .table-header {
+                display: none;
+            }
+            
+            .table-row {
+                display: flex;
+                flex-direction: column;
+                padding: var(--spacing-lg);
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-md);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 0;
+                align-items: flex-end;
+            }
+            
+            .modal {
+                max-width: 100%;
+                border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html#system-management-section'}, {text: '会员订单审核', icon: '📋', url: '/portal/admin/membership-orders.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span>📋</span>
+                    <span>会员订单审核</span>
+                </h1>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card clickable" @click="filterByStatus('pending_review')">
+                    <div class="stat-info">
+                        <div class="stat-label">待审核</div>
+                        <div class="stat-value">{{ stats.pending_orders }}</div>
+                    </div>
+                    <div class="stat-icon warning">⏳</div>
+                </div>
+                <div class="stat-card clickable" @click="filterByStatus('approved')">
+                    <div class="stat-info">
+                        <div class="stat-label">已通过</div>
+                        <div class="stat-value">{{ stats.approved_orders }}</div>
+                    </div>
+                    <div class="stat-icon success">✓</div>
+                </div>
+                <div class="stat-card clickable" @click="filterByStatus('rejected')">
+                    <div class="stat-info">
+                        <div class="stat-label">已拒绝</div>
+                        <div class="stat-value">{{ stats.rejected_orders }}</div>
+                    </div>
+                    <div class="stat-icon danger">✗</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">本月订单</div>
+                        <div class="stat-value">{{ stats.month_orders }}</div>
+                    </div>
+                    <div class="stat-icon primary">📅</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">待审核金额</div>
+                        <div class="stat-value">¥{{ stats.pending_amount }}</div>
+                    </div>
+                    <div class="stat-icon warning">💰</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">本月金额</div>
+                        <div class="stat-value">¥{{ stats.month_amount }}</div>
+                    </div>
+                    <div class="stat-icon success">💵</div>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input v-model="searchText" type="text" class="search-input" placeholder="搜索订单号/用户名/手机号...">
+                </div>
+                
+                <select v-model="statusFilter" class="filter-select">
+                    <option value="">全部状态</option>
+                    <option value="pending_review">待审核</option>
+                    <option value="approved">已通过</option>
+                    <option value="rejected">已拒绝</option>
+                    <option value="cancelled">已取消</option>
+                </select>
+                
+                <button v-if="statusFilter || searchText" @click="clearFilters" class="btn btn-outline btn-sm">
+                    清空筛选
+                </button>
+                
+                <button @click="loadOrders" class="btn btn-outline btn-sm">
+                    刷新
+                </button>
+            </div>
+            
+            <div v-if="orders.length === 0 && !loading" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div class="empty-title">暂无订单</div>
+                <div class="empty-desc">当前筛选条件下没有找到订单</div>
+            </div>
+            
+            <div v-else class="orders-table">
+                <div class="table-header">
+                    <div>订单号</div>
+                    <div>用户</div>
+                    <div>套餐</div>
+                    <div>金额</div>
+                    <div>状态</div>
+                    <div>支付方式</div>
+                    <div>提交时间</div>
+                    <div>操作</div>
+                </div>
+                
+                <div v-for="order in orders" :key="order.id" class="table-row">
+                    <div>
+                        <strong>{{ order.order_no }}</strong>
+                    </div>
+                    <div>
+                        <span class="user-link" @click="showUserDetail(order)">{{ order.user_name }}</span>
+                        <br>
+                        <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ order.user_phone }}</span>
+                    </div>
+                    <div>
+                        <strong>{{ order.plan_name }}</strong>
+                        <br>
+                        <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ order.plan_duration_months }}个月</span>
+                    </div>
+                    <div>
+                        <span class="amount-text">¥{{ order.amount }}</span>
+                        <span v-if="order.original_amount" style="font-size: var(--font-size-xs); color: var(--text-tertiary); text-decoration: line-through;">¥{{ order.original_amount }}</span>
+                    </div>
+                    <div>
+                        <span :class="['status-badge', order.status]">
+                            <span>{{ getStatusIcon(order.status) }}</span>
+                            <span>{{ order.status_text }}</span>
+                        </span>
+                    </div>
+                    <div>{{ getPaymentMethodText(order.payment_method) }}</div>
+                    <div>{{ formatDate(order.created_at) }}</div>
+                    <div>
+                        <div class="action-buttons">
+                            <button v-if="order.status === 'pending_review'" @click="showReviewModal(order)" class="action-btn primary">
+                                审核
+                            </button>
+                            <button @click="showDetailModal(order)" class="action-btn secondary">
+                                详情
+                            </button>
+                            <button v-if="order.status === 'pending_review'" @click="quickApprove(order)" class="action-btn success">
+                                ✓ 快审
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="total > pageSize" style="display: flex; justify-content: center; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                <button @click="prevPage" :disabled="page === 1" class="btn btn-outline btn-sm">上一页</button>
+                <span style="color: var(--text-secondary);">第 {{ page }} / {{ Math.ceil(total / pageSize) }} 页</span>
+                <button @click="nextPage" :disabled="page >= Math.ceil(total / pageSize)" class="btn btn-outline btn-sm">下一页</button>
+            </div>
+        </div>
+        
+        <div v-if="showReviewModal" class="modal-overlay" @click.self="closeReviewModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>✓</span>
+                        <span>审核订单</span>
+                    </h3>
+                    <button @click="closeReviewModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="detail-section">
+                        <div class="detail-section-title">
+                            <span>📋</span>
+                            <span>订单信息</span>
+                        </div>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">订单号</div>
+                                <div class="detail-value">{{ currentOrder.order_no }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">用户</div>
+                                <div class="detail-value">{{ currentOrder.user_name }} ({{ currentOrder.user_phone }})</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">套餐</div>
+                                <div class="detail-value">{{ currentOrder.plan_name }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">有效期</div>
+                                <div class="detail-value">{{ currentOrder.plan_duration_months }}个月</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">订单金额</div>
+                                <div class="detail-value highlight">¥{{ currentOrder.amount }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">支付方式</div>
+                                <div class="detail-value">{{ getPaymentMethodText(currentOrder.payment_method) }}</div>
+                            </div>
+                        </div>
+                        <div v-if="currentOrder.apply_note" style="margin-top: var(--spacing-md);">
+                            <div class="detail-label">申请备注</div>
+                            <div class="detail-value">{{ currentOrder.apply_note }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-section-title">
+                            <span>⚙️</span>
+                            <span>审核操作</span>
+                        </div>
+                        
+                        <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                            <button @click="reviewForm.approved = true" :class="['btn', reviewForm.approved ? 'btn-success' : 'btn-outline']" style="flex: 1;">
+                                ✓ 通过审核
+                            </button>
+                            <button @click="reviewForm.approved = false" :class="['btn', !reviewForm.approved ? 'btn-danger' : 'btn-outline']" style="flex: 1;">
+                                ✗ 拒绝审核
+                            </button>
+                        </div>
+                        
+                        <div v-if="reviewForm.approved">
+                            <div class="form-group">
+                                <label class="form-label">入账金额（元）</label>
+                                <input v-model.number="reviewForm.balance_added" type="number" class="form-input" step="0.01" placeholder="默认为订单金额">
+                                <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
+                                    默认入账金额：¥{{ currentOrder.amount }}
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">会员开始日期</label>
+                                <input v-model="reviewForm.member_start_date" type="date" class="form-input">
+                                <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
+                                    默认为今天，会员有效期：{{ currentOrder.plan_duration_months }}个月
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">审核备注</label>
+                            <textarea v-model="reviewForm.review_note" class="form-input form-textarea" placeholder="填写审核备注（可选）"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div v-if="orderDetail && orderDetail.balance" class="detail-section">
+                        <div class="detail-section-title">
+                            <span>💰</span>
+                            <span>用户余额</span>
+                        </div>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">会员余额</div>
+                                <div class="detail-value">¥{{ orderDetail.balance.membership_balance }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">服务余额</div>
+                                <div class="detail-value">¥{{ orderDetail.balance.service_balance }}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">总余额</div>
+                                <div class="detail-value highlight">¥{{ orderDetail.balance.total_balance }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeReviewModal" class="btn btn-outline">取消</button>
+                    <button @click="submitReview" class="btn btn-primary" :disabled="submitting">
+                        <span v-if="submitting">审核中...</span>
+                        <span v-else>{{ reviewForm.approved ? '确认通过' : '确认拒绝' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>📋</span>
+                        <span>订单详情</span>
+                    </h3>
+                    <button @click="closeDetailModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div v-if="orderDetail">
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>📦</span>
+                                <span>订单信息</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">订单号</div>
+                                    <div class="detail-value">{{ orderDetail.order.order_no }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">订单金额</div>
+                                    <div class="detail-value highlight">¥{{ orderDetail.order.amount }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">订单状态</div>
+                                    <div class="detail-value">
+                                        <span :class="['status-badge', orderDetail.order.status]">
+                                            {{ orderDetail.order.status_text }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">支付方式</div>
+                                    <div class="detail-value">{{ getPaymentMethodText(orderDetail.order.payment_method) }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">会员开始日期</div>
+                                    <div class="detail-value">{{ orderDetail.order.member_start_date || '-' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">会员结束日期</div>
+                                    <div class="detail-value">{{ orderDetail.order.member_end_date || '-' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">入账金额</div>
+                                    <div class="detail-value">¥{{ orderDetail.order.balance_added }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">提交时间</div>
+                                    <div class="detail-value">{{ formatDate(orderDetail.order.created_at) }}</div>
+                                </div>
+                            </div>
+                            <div v-if="orderDetail.order.apply_note" style="margin-top: var(--spacing-md);">
+                                <div class="detail-label">申请备注</div>
+                                <div class="detail-value">{{ orderDetail.order.apply_note }}</div>
+                            </div>
+                            <div v-if="orderDetail.order.review_note" style="margin-top: var(--spacing-md);">
+                                <div class="detail-label">审核备注</div>
+                                <div class="detail-value">{{ orderDetail.order.review_note }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>👤</span>
+                                <span>用户信息</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">用户名</div>
+                                    <div class="detail-value">{{ orderDetail.user.name }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">手机号</div>
+                                    <div class="detail-value">{{ orderDetail.user.phone }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>👑</span>
+                                <span>套餐信息</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">套餐名称</div>
+                                    <div class="detail-value">{{ orderDetail.plan.name }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">有效期</div>
+                                    <div class="detail-value">{{ orderDetail.plan.duration_months }}个月</div>
+                                </div>
+                            </div>
+                            <div v-if="orderDetail.plan.features && orderDetail.plan.features.length > 0" style="margin-top: var(--spacing-md);">
+                                <div class="detail-label">套餐权益</div>
+                                <div style="margin-top: var(--spacing-sm);">
+                                    <div v-for="(feature, index) in orderDetail.plan.features" :key="index" style="padding: var(--spacing-xs) 0; font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                        ✓ {{ feature }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>💰</span>
+                                <span>用户余额</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">会员余额</div>
+                                    <div class="detail-value">¥{{ orderDetail.balance.membership_balance }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">服务余额</div>
+                                    <div class="detail-value">¥{{ orderDetail.balance.service_balance }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">总余额</div>
+                                    <div class="detail-value highlight">¥{{ orderDetail.balance.total_balance }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="orderDetail.audit_records && orderDetail.audit_records.length > 0" class="detail-section">
+                            <div class="detail-section-title">
+                                <span>📝</span>
+                                <span>审核历史</span>
+                            </div>
+                            <div class="audit-history">
+                                <div v-for="audit in orderDetail.audit_records" :key="audit.id" class="audit-item">
+                                    <div class="audit-time">{{ formatDate(audit.created_at) }}</div>
+                                    <div class="audit-content">
+                                        <strong>{{ audit.action === 'approve' ? '通过' : audit.action === 'reject' ? '拒绝' : '取消' }}</strong>
+                                        <span v-if="audit.admin_name"> - {{ audit.admin_name }}</span>
+                                        <span v-if="audit.note"> - {{ audit.note }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeDetailModal" class="btn btn-outline">关闭</button>
+                    <button v-if="orderDetail && orderDetail.order.status === 'pending_review'" @click="closeDetailModal(); showReviewModal = true;" class="btn btn-primary">
+                        审核
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="toast.show" :class="['toast', toast.type]">
+            <span>{{ toast.icon }}</span>
+            <span>{{ toast.message }}</span>
+        </div>
+        
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const orders = ref([]);
+                const stats = ref({
+                    total_orders: 0,
+                    pending_orders: 0,
+                    approved_orders: 0,
+                    rejected_orders: 0,
+                    total_amount: 0,
+                    pending_amount: 0,
+                    approved_amount: 0,
+                    month_orders: 0,
+                    month_amount: 0
+                });
+                const loading = ref(true);
+                const searchText = ref('');
+                const statusFilter = ref('');
+                const page = ref(1);
+                const pageSize = ref(20);
+                const total = ref(0);
+                
+                const showReviewModal = ref(false);
+                const showDetailModal = ref(false);
+                const currentOrder = ref(null);
+                const orderDetail = ref(null);
+                const submitting = ref(false);
+                
+                const reviewForm = ref({
+                    approved: true,
+                    balance_added: null,
+                    member_start_date: '',
+                    review_note: ''
+                });
+                
+                const toast = ref({ show: false, type: 'success', message: '', icon: '✓' });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                
+                const showToast = (type, message) => {
+                    const icons = { success: '✓', error: '✗' };
+                    toast.value = { show: true, type, message, icon: icons[type] };
+                    setTimeout(() => toast.value.show = false, 3000);
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+                
+                const getStatusIcon = (status) => {
+                    const icons = {
+                        pending_review: '⏳',
+                        approved: '✓',
+                        rejected: '✗',
+                        cancelled: '○'
+                    };
+                    return icons[status] || '○';
+                };
+                
+                const getPaymentMethodText = (method) => {
+                    const methods = {
+                        bank_transfer: '银行转账',
+                        cash: '现金',
+                        check: '支票',
+                        alipay: '支付宝',
+                        wechat: '微信'
+                    };
+                    return methods[method] || method || '-';
+                };
+                
+                const loadStats = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/membership/orders/stats`);
+                        if (response.ok) {
+                            stats.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载统计失败:', e);
+                    }
+                };
+                
+                const loadOrders = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        let url = `${API_BASE}/admin/membership/orders?page=${page.value}&page_size=${pageSize.value}`;
+                        
+                        if (statusFilter.value) {
+                            url += `&status=${statusFilter.value}`;
+                        }
+                        
+                        if (searchText.value) {
+                            url += `&search=${encodeURIComponent(searchText.value)}`;
+                        }
+                        
+                        const response = await fetch(url);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            orders.value = data.orders || [];
+                            total.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载订单失败:', e);
+                        showToast('error', '加载订单失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const filterByStatus = (status) => {
+                    statusFilter.value = status;
+                    page.value = 1;
+                    loadOrders();
+                };
+                
+                const clearFilters = () => {
+                    searchText.value = '';
+                    statusFilter.value = '';
+                    page.value = 1;
+                    loadOrders();
+                };
+                
+                const prevPage = () => {
+                    if (page.value > 1) {
+                        page.value--;
+                        loadOrders();
+                    }
+                };
+                
+                const nextPage = () => {
+                    if (page.value < Math.ceil(total.value / pageSize.value)) {
+                        page.value++;
+                        loadOrders();
+                    }
+                };
+                
+                const showReviewModalFn = async (order) => {
+                    currentOrder.value = order;
+                    reviewForm.value = {
+                        approved: true,
+                        balance_added: null,
+                        member_start_date: new Date().toISOString().split('T')[0],
+                        review_note: ''
+                    };
+                    
+                    await loadOrderDetail(order.id);
+                    showReviewModal.value = true;
+                };
+                
+                const showDetailModalFn = async (order) => {
+                    currentOrder.value = order;
+                    await loadOrderDetail(order.id);
+                    showDetailModal.value = true;
+                };
+                
+                const loadOrderDetail = async (orderId) => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/membership/orders/${orderId}`);
+                        if (response.ok) {
+                            orderDetail.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载订单详情失败:', e);
+                    }
+                };
+                
+                const closeReviewModal = () => {
+                    showReviewModal.value = false;
+                    currentOrder.value = null;
+                    orderDetail.value = null;
+                };
+                
+                const closeDetailModal = () => {
+                    showDetailModal.value = false;
+                    currentOrder.value = null;
+                    orderDetail.value = null;
+                };
+                
+                const submitReview = async () => {
+                    if (!currentOrder.value) return;
+                    
+                    try {
+                        submitting.value = true;
+                        
+                        const payload = {
+                            approved: reviewForm.value.approved,
+                            review_note: reviewForm.value.review_note,
+                            balance_added: reviewForm.value.balance_added || currentOrder.value.amount,
+                            member_start_date: reviewForm.value.member_start_date || undefined
+                        };
+                        
+                        const response = await fetch(`${API_BASE}/admin/membership/orders/${currentOrder.value.id}/review`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            showToast('success', reviewForm.value.approved ? '审核通过，余额已入账' : '审核已拒绝');
+                            closeReviewModal();
+                            await loadStats();
+                            await loadOrders();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '审核失败');
+                        }
+                    } catch (e) {
+                        console.error('审核失败:', e);
+                        showToast('error', '审核失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                const quickApprove = async (order) => {
+                    if (confirm(`确认快速通过订单 ${order.order_no}？\n用户：${order.user_name}\n套餐：${order.plan_name}\n金额：¥${order.amount}`)) {
+                        currentOrder.value = order;
+                        reviewForm.value = {
+                            approved: true,
+                            balance_added: order.amount,
+                            member_start_date: new Date().toISOString().split('T')[0],
+                            review_note: '快速审核通过'
+                        };
+                        
+                        await submitReview();
+                    }
+                };
+                
+                const showUserDetail = (order) => {
+                    window.location.href = `/portal/admin/balance-manage.html?user_id=${order.user_id}`;
+                };
+                
+                watch([searchText, statusFilter], () => {
+                    page.value = 1;
+                    loadOrders();
+                });
+                
+                onMounted(async () => {
+                    await loadStats();
+                    await loadOrders();
+                });
+                
+                return {
+                    orders,
+                    stats,
+                    loading,
+                    searchText,
+                    statusFilter,
+                    page,
+                    pageSize,
+                    total,
+                    showReviewModal,
+                    showDetailModal,
+                    currentOrder,
+                    orderDetail,
+                    submitting,
+                    reviewForm,
+                    toast,
+                    formatDate,
+                    getStatusIcon,
+                    getPaymentMethodText,
+                    loadOrders,
+                    filterByStatus,
+                    clearFilters,
+                    prevPage,
+                    nextPage,
+                    showReviewModal: showReviewModalFn,
+                    showDetailModal: showDetailModalFn,
+                    closeReviewModal,
+                    closeDetailModal,
+                    submitReview,
+                    quickApprove,
+                    showUserDetail
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

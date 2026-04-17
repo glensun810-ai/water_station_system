@@ -43,7 +43,7 @@ async def confirm_offline_payment(
     if booking.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="只能确认自己的预约支付")
 
-    if booking.status not in ["approved", "pending_approval"]:
+    if booking.status not in ["approved", "pending"]:
         raise HTTPException(status_code=400, detail="预约状态不允许支付确认")
 
     payment_no = (

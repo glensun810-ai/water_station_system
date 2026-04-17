@@ -18,6 +18,71 @@
             background: var(--bg-secondary);
         }
         
+        .success-banner {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            position: sticky;
+            top: 60px;
+            z-index: 99;
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .success-banner-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+        
+        .success-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .success-text {
+            flex: 1;
+        }
+        
+        .success-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .success-detail {
+            font-size: var(--font-size-sm);
+            opacity: 0.95;
+        }
+        
+        .success-close-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .success-close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -258,6 +323,35 @@
         <!-- 全局导航栏 -->
         <global-header :breadcrumbs="[{text: '空间服务', icon: '🏢', url: '/space-frontend/index.html'}, {text: '我的预约', icon: '📋', url: '/space-frontend/my-bookings.html'}]"></global-header>
         
+        <!-- 成功提示Banner -->
+        <div v-if="showSuccessBanner" class="success-banner">
+            <div class="success-banner-content">
+                <span class="success-icon">✓</span>
+                <div class="success-text">
+                    <div class="success-title">{{ successInfo.message || '预约提交成功！' }}</div>
+                    <div class="success-detail">
+                        {{ successInfo.space_name }} | {{ successInfo.date }} {{ successInfo.time }} | {{ successInfo.duration }}小时
+                        <span v-if="successInfo.payment_mode === 'balance_deduct'" style="color: #a7f3d0;">
+                            （余额全额抵扣 ✓）
+                        </span>
+                        <span v-else-if="successInfo.payment_mode === 'mixed'" style="color: #fcd34d;">
+                            （抵扣 ¥{{ (successInfo.deduct_amount || 0).toFixed(2) }} + 记账 ¥{{ (successInfo.credit_amount || 0).toFixed(2) }}）
+                        </span>
+                        <span v-else-if="successInfo.payment_mode === 'credit'" style="color: #fcd34d;">
+                            （记账待结算）
+                        </span>
+                        <span v-else-if="successInfo.status === 'approved'" style="color: var(--success);">
+                            （已自动审批通过）
+                        </span>
+                        <span v-else style="color: var(--warning);">
+                            （等待管理员审批）
+                        </span>
+                    </div>
+                </div>
+                <button class="success-close-btn" @click="closeSuccessBanner">×</button>
+            </div>
+        </div>
+        
         <!-- Main Content -->
         <main class="main-container">
             <!-- Stats Summary -->
@@ -439,6 +533,41 @@
                 const currentUser = ref(null);
                 const activeFilter = ref('all');
                 const bookings = ref([]);
+                const showSuccessBanner = ref(false);
+                const successInfo = ref({});
+                
+                const checkSuccessNotification = () => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const successParam = urlParams.get('success');
+                    
+                    if (successParam === '1') {
+                        const bookingSuccess = localStorage.getItem('booking_success');
+                        if (bookingSuccess) {
+                            try {
+                                const data = JSON.parse(bookingSuccess);
+                                const timestamp = data.timestamp || 0;
+                                
+                                if (Date.now() - timestamp < 30000) {
+                                    successInfo.value = data;
+                                    showSuccessBanner.value = true;
+                                    setTimeout(() => {
+                                        showSuccessBanner.value = false;
+                                    }, 10000);
+                                }
+                                
+                                localStorage.removeItem('booking_success');
+                                
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                            } catch (e) {
+                                console.error('解析成功信息失败:', e);
+                            }
+                        }
+                    }
+                };
+                
+                const closeSuccessBanner = () => {
+                    showSuccessBanner.value = false;
+                };
                 
                 const stats = computed(() => {
                     const pending = bookings.value.filter(b => b.status === 'pending').length;
@@ -519,9 +648,20 @@
                 
                 const loadBookings = async () => {
                     try {
-                        const response = await spaceAPI.getMyBookings();
+                        console.log('开始加载预约列表...');
+                        const token = localStorage.getItem('token');
+                        console.log('Token:', token ? '已获取' : '未找到');
                         
-                        const items = response.data.items || [];
+                        const response = await spaceAPI.getMyBookings();
+                        console.log('API响应:', response);
+                        
+                        const items = response.data?.items || response.items || [];
+                        console.log('预约数据条数:', items.length);
+                        
+                        if (items.length > 0) {
+                            console.log('第一条预约数据示例:', items[0]);
+                        }
+                        
                         bookings.value = items.map(item => ({
                             id: item.id,
                             bookingNo: item.booking_no,
@@ -540,9 +680,10 @@
                             canCancel: item.can_cancel
                         }));
                         
-                        console.log('预约列表加载完成:', bookings.value.length);
+                        console.log('预约列表处理完成:', bookings.value.length, '条');
                     } catch (error) {
                         console.error('加载预约列表失败:', error);
+                        console.error('错误详情:', error.message, error.stack);
                         bookings.value = [];
                     }
                 };
@@ -608,6 +749,7 @@
                 };
                 
                 onMounted(() => {
+                    checkSuccessNotification();
                     loadUserAndBookings();
                 });
                 
@@ -625,7 +767,10 @@
                     goToPayment,
                     goToBooking,
                     goBack,
-                    handleLogout
+                    handleLogout,
+                    showSuccessBanner,
+                    successInfo,
+                    closeSuccessBanner
                 };
             }
         }).mount('#app');

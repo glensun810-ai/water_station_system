@@ -625,6 +625,17 @@
                         </button>
                         
                         <button 
+                            v-if="approval.userType === 'external'"
+                            class="btn btn-primary action-btn"
+                            @click="approveWithPayment(approval)"
+                            :aria-label="`确认收款并审批 ${approval.title}`"
+                            style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);"
+                        >
+                            <span aria-hidden="true">💰</span>
+                            确认收款并审批
+                        </button>
+                        
+                        <button 
                             class="btn btn-danger action-btn"
                             @click="openRejectDialog(approval)"
                             :aria-label="`拒绝审批 ${approval.title}`"
@@ -877,6 +888,44 @@
                     }
                 }
                 
+                const approveWithPayment = async (approval) => {
+                    const paymentMethod = prompt('请选择收款方式：\n1. 现金 (offline_cash)\n2. 银行转账 (offline_transfer)\n3. 支付宝 (alipay)\n4. 微信 (wechat)\n\n输入对应数字或直接输入方式名称：', '1')
+                    
+                    if (!paymentMethod) return
+                    
+                    let method = 'offline_cash'
+                    if (paymentMethod === '2' || paymentMethod === 'offline_transfer') method = 'offline_transfer'
+                    else if (paymentMethod === '3' || paymentMethod === 'alipay') method = 'alipay'
+                    else if (paymentMethod === '4' || paymentMethod === 'wechat') method = 'wechat'
+                    
+                    const notes = prompt('收款备注（可选）：', '线下确认收款')
+                    
+                    try {
+                        const response = await fetch(`/api/v2/space/bookings/${approval.bookingId}/approve-with-payment?payment_method=${method}&payment_notes=${encodeURIComponent(notes || '')}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            }
+                        })
+                        
+                        if (response.ok) {
+                            const data = await response.json()
+                            approval.status = 'approved'
+                            approval.approvedBy = data.data.approved_by
+                            approval.approvedAt = data.data.approved_at
+                            pendingCount.value--
+                            processedCount.value++
+                            
+                            alert(`审批成功并已确认收款！\n收款金额：¥${data.data.amount}\n收款方式：${method}`)
+                        } else {
+                            const error = await response.json()
+                            alert('操作失败：' + (error.detail || error.message))
+                        }
+                    } catch (error) {
+                        alert('确认收款失败：' + error.message)
+                    }
+                }
+                
                 const openRejectDialog = (approval) => {
                     currentApproval.value = approval
                     rejectionReason.value = ''
@@ -1104,6 +1153,7 @@
                     suggestedAlternatives,
                     getStatusText,
                     approveApproval,
+                    approveWithPayment,
                     openRejectDialog,
                     closeRejectDialog,
                     confirmReject,

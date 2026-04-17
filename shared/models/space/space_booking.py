@@ -266,6 +266,15 @@ class SpaceBooking(Base, TimestampMixin):
 
     status = Column(String(20), default="pending", index=True)
     payment_status = Column(String(20), default="none")
+    payment_mode = Column(
+        String(20), default="credit", comment="credit/balance_deduct/prepay"
+    )
+
+    credit_note_id = Column(Integer, comment="记账账单ID")
+    deduct_record_id = Column(Integer, comment="抵扣记录ID")
+
+    deduct_amount = Column(Float, default=0.0, comment="余额抵扣金额")
+    credit_amount = Column(Float, default=0.0, comment="记账金额")
 
     approval_id = Column(Integer)
     approved_by = Column(String(100))

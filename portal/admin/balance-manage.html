@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>余额管理</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            opacity: 0.8;
+        }
+        
+        .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
+        .stat-icon.success { background: var(--success-light); color: var(--success); }
+        .stat-icon.warning { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.danger { background: var(--danger-light); color: var(--danger); }
+        
+        .tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: var(--spacing-sm);
+        }
+        
+        .tab-item {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab-item:hover {
+            color: var(--primary);
+        }
+        
+        .tab-item.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-left: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .accounts-table {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 120px 150px 120px 120px 120px 120px 150px 160px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 120px 150px 120px 120px 120px 120px 150px 160px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            align-items: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .table-row:hover {
+            background: var(--bg-hover);
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        
+        .user-link {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .user-link:hover {
+            text-decoration: underline;
+        }
+        
+        .amount-text {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .amount-text.warning {
+            color: var(--warning);
+        }
+        
+        .amount-text.success {
+            color: var(--success);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .action-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+        
+        .action-btn.success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .action-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        
+        .action-btn.secondary:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal.large {
+            max-width: 800px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-xl);
+            border-top: 1px solid var(--border);
+        }
+        
+        .detail-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .detail-section-title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .detail-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .detail-value.highlight {
+            color: var(--primary);
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-label.required::after {
+            content: '*';
+            color: var(--danger);
+            margin-left: var(--spacing-xs);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .balance-type-toggle {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .balance-type-option {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .balance-type-option:hover {
+            border-color: var(--primary);
+        }
+        
+        .balance-type-option.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .transactions-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .transaction-item:hover {
+            background: var(--bg-hover);
+        }
+        
+        .transaction-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .transaction-type {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .transaction-desc {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .transaction-time {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+        
+        .transaction-amount {
+            font-weight: 600;
+            font-size: var(--font-size-base);
+        }
+        
+        .transaction-amount.positive {
+            color: var(--success);
+        }
+        
+        .transaction-amount.negative {
+            color: var(--danger);
+        }
+        
+        .toast {
+            position: fixed;
+            top: var(--spacing-xl);
+            right: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success { background: var(--success-light); color: var(--success-dark); }
+        .toast.error { background: var(--danger-light); color: var(--danger-dark); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            opacity: 0.5;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .empty-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .empty-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-tertiary);
+        }
+        
+        .expire-warning {
+            color: var(--warning);
+            font-size: var(--font-size-xs);
+        }
+        
+        @media (max-width: 1024px) {
+            .table-header, .table-row {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+            
+            .table-header {
+                display: none;
+            }
+            
+            .table-row {
+                display: flex;
+                flex-direction: column;
+                padding: var(--spacing-lg);
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-md);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 0;
+                align-items: flex-end;
+            }
+            
+            .modal {
+                max-width: 100%;
+                border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '管理中心', icon: '⚙️', url: '/portal/index.html#system-management-section'}, {text: '余额管理', icon: '💰', url: '/portal/admin/balance-manage.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span>💰</span>
+                    <span>余额管理</span>
+                </h1>
+                <div class="header-actions">
+                    <button @click="showGiftModal = true" class="btn btn-success">
+                        <span>🎁</span>
+                        <span>赠送余额</span>
+                    </button>
+                    <button @click="showAdjustModal = true" class="btn btn-primary">
+                        <span>⚙️</span>
+                        <span>调整余额</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">用户总数</div>
+                        <div class="stat-value">{{ stats.total_users }}</div>
+                    </div>
+                    <div class="stat-icon primary">👥</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">会员余额总额</div>
+                        <div class="stat-value">¥{{ stats.total_membership_balance }}</div>
+                    </div>
+                    <div class="stat-icon success">👑</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">服务余额总额</div>
+                        <div class="stat-value">¥{{ stats.total_service_balance }}</div>
+                    </div>
+                    <div class="stat-icon warning">💳</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">赠送余额总额</div>
+                        <div class="stat-value">¥{{ stats.total_gift_balance }}</div>
+                    </div>
+                    <div class="stat-icon primary">🎁</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">总余额</div>
+                        <div class="stat-value">¥{{ stats.total_balance }}</div>
+                    </div>
+                    <div class="stat-icon success">💰</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">本月充值</div>
+                        <div class="stat-value">¥{{ stats.month_charged }}</div>
+                    </div>
+                    <div class="stat-icon primary">📈</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">本月抵扣</div>
+                        <div class="stat-value">¥{{ stats.month_deducted }}</div>
+                    </div>
+                    <div class="stat-icon warning">📉</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">累计抵扣</div>
+                        <div class="stat-value">¥{{ stats.total_deducted }}</div>
+                    </div>
+                    <div class="stat-icon danger">📊</div>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <div :class="['tab-item', { active: currentTab === 'accounts' }]" @click="currentTab = 'accounts'">
+                    余额账户
+                </div>
+                <div :class="['tab-item', { active: currentTab === 'transactions' }]" @click="currentTab = 'transactions'">
+                    交易记录
+                </div>
+            </div>
+            
+            <div v-if="currentTab === 'accounts'">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input v-model="searchText" type="text" class="search-input" placeholder="搜索用户名/手机号...">
+                    </div>
+                    
+                    <input v-model.number="minBalance" type="number" class="filter-select" placeholder="最小余额" style="width: 120px;">
+                    
+                    <button v-if="searchText || minBalance" @click="clearFilters" class="btn btn-outline btn-sm">
+                        清空筛选
+                    </button>
+                    
+                    <button @click="loadAccounts" class="btn btn-outline btn-sm">
+                        刷新
+                    </button>
+                </div>
+                
+                <div v-if="accounts.length === 0 && !loading" class="empty-state">
+                    <div class="empty-icon">💰</div>
+                    <div class="empty-title">暂无余额账户</div>
+                    <div class="empty-desc">当前筛选条件下没有找到余额账户</div>
+                </div>
+                
+                <div v-else class="accounts-table">
+                    <div class="table-header">
+                        <div>用户</div>
+                        <div>手机号</div>
+                        <div>会员余额</div>
+                        <div>服务余额</div>
+                        <div>赠送余额</div>
+                        <div>总余额</div>
+                        <div>最后交易</div>
+                        <div>操作</div>
+                    </div>
+                    
+                    <div v-for="account in accounts" :key="account.id" class="table-row">
+                        <div>
+                            <span class="user-link" @click="showAccountDetail(account)">{{ account.user_name }}</span>
+                        </div>
+                        <div>{{ account.user_phone }}</div>
+                        <div>
+                            <span class="amount-text success">¥{{ account.membership_balance }}</span>
+                            <span v-if="account.membership_expire_date" class="expire-warning">
+                                ({{ getDaysLeft(account.membership_expire_date) }}天后过期)
+                            </span>
+                        </div>
+                        <div>
+                            <span class="amount-text">¥{{ account.service_balance }}</span>
+                        </div>
+                        <div>
+                            <span class="amount-text warning">¥{{ account.gift_balance }}</span>
+                        </div>
+                        <div>
+                            <span class="amount-text success">¥{{ account.total_balance }}</span>
+                        </div>
+                        <div>{{ formatDate(account.last_transaction_at) || '-' }}</div>
+                        <div>
+                            <div class="action-buttons">
+                                <button @click="openAdjustForAccount(account)" class="action-btn primary">
+                                    调整
+                                </button>
+                                <button @click="showAccountDetail(account)" class="action-btn secondary">
+                                    详情
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-if="accountsTotal > accountsPageSize" style="display: flex; justify-content: center; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                    <button @click="accountsPrevPage" :disabled="accountsPage === 1" class="btn btn-outline btn-sm">上一页</button>
+                    <span style="color: var(--text-secondary);">第 {{ accountsPage }} / {{ Math.ceil(accountsTotal / accountsPageSize) }} 页</span>
+                    <button @click="accountsNextPage" :disabled="accountsPage >= Math.ceil(accountsTotal / accountsPageSize)" class="btn btn-outline btn-sm">下一页</button>
+                </div>
+            </div>
+            
+            <div v-if="currentTab === 'transactions'">
+                <div class="toolbar">
+                    <select v-model="transactionTypeFilter" class="filter-select">
+                        <option value="">全部类型</option>
+                        <option value="membership_charge">会员充值</option>
+                        <option value="service_charge">服务充值</option>
+                        <option value="deduct">余额抵扣</option>
+                        <option value="refund">退款</option>
+                        <option value="gift">赠送</option>
+                        <option value="adjust">管理员调整</option>
+                    </select>
+                    
+                    <input v-model="startDateFilter" type="date" class="filter-select" style="width: 140px;">
+                    <input v-model="endDateFilter" type="date" class="filter-select" style="width: 140px;">
+                    
+                    <button @click="loadTransactions" class="btn btn-outline btn-sm">
+                        刷新
+                    </button>
+                </div>
+                
+                <div v-if="transactions.length === 0 && !loading" class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-title">暂无交易记录</div>
+                    <div class="empty-desc">当前筛选条件下没有找到交易记录</div>
+                </div>
+                
+                <div v-else class="accounts-table">
+                    <div class="table-header">
+                        <div>流水号</div>
+                        <div>用户</div>
+                        <div>交易类型</div>
+                        <div>金额</div>
+                        <div>余额类型</div>
+                        <div>变动前</div>
+                        <div>变动后</div>
+                        <div>说明</div>
+                        <div>时间</div>
+                    </div>
+                    
+                    <div v-for="tx in transactions" :key="tx.id" class="table-row" style="grid-template-columns: 140px 100px 120px 100px 100px 100px 100px 180px 140px;">
+                        <div style="font-size: var(--font-size-xs);">{{ tx.transaction_no }}</div>
+                        <div>{{ tx.user_name }}</div>
+                        <div>{{ tx.transaction_type_text }}</div>
+                        <div>
+                            <span :class="['amount-text', tx.amount >= 0 ? 'positive' : 'negative']">
+                                {{ tx.amount >= 0 ? '+' : '' }}¥{{ Math.abs(tx.amount) }}
+                            </span>
+                        </div>
+                        <div>{{ tx.balance_type || '-' }}</div>
+                        <div>¥{{ tx.before_total_balance || '-' }}</div>
+                        <div>¥{{ tx.after_total_balance || '-' }}</div>
+                        <div style="font-size: var(--font-size-xs);">{{ tx.description || '-' }}</div>
+                        <div>{{ formatDate(tx.created_at) }}</div>
+                    </div>
+                </div>
+                
+                <div v-if="transactionsTotal > transactionsPageSize" style="display: flex; justify-content: center; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                    <button @click="transactionsPrevPage" :disabled="transactionsPage === 1" class="btn btn-outline btn-sm">上一页</button>
+                    <span style="color: var(--text-secondary);">第 {{ transactionsPage }} / {{ Math.ceil(transactionsTotal / transactionsPageSize) }} 页</span>
+                    <button @click="transactionsNextPage" :disabled="transactionsPage >= Math.ceil(transactionsTotal / transactionsPageSize)" class="btn btn-outline btn-sm">下一页</button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showAdjustModal" class="modal-overlay" @click.self="closeAdjustModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>⚙️</span>
+                        <span>调整余额</span>
+                    </h3>
+                    <button @click="closeAdjustModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label required">用户</label>
+                        <input v-model.number="adjustForm.user_id" type="number" class="form-input" placeholder="输入用户ID">
+                        <div v-if="adjustForm.user_id" style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
+                            或在余额账户列表点击"调整"按钮
+                        </div>
+                    </div>
+                    
+                    <div class="balance-type-toggle">
+                        <div :class="['balance-type-option', { active: adjustForm.balance_type === 'membership' }]" @click="adjustForm.balance_type = 'membership'">
+                            会员余额
+                        </div>
+                        <div :class="['balance-type-option', { active: adjustForm.balance_type === 'service' }]" @click="adjustForm.balance_type = 'service'">
+                            服务余额
+                        </div>
+                        <div :class="['balance-type-option', { active: adjustForm.balance_type === 'gift' }]" @click="adjustForm.balance_type = 'gift'">
+                            赠送余额
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label required">调整金额</label>
+                        <input v-model.number="adjustForm.amount" type="number" class="form-input" step="0.01" placeholder="正数为增加，负数为减少">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
+                            例如：100（增加100元）或 -50（减少50元）
+                        </div>
+                    </div>
+                    
+                    <div v-if="adjustForm.balance_type === 'membership' && adjustForm.amount > 0" class="form-group">
+                        <label class="form-label">过期日期</label>
+                        <input v-model="adjustForm.expire_date" type="date" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">调整说明</label>
+                        <textarea v-model="adjustForm.description" class="form-input form-textarea" placeholder="填写调整原因"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeAdjustModal" class="btn btn-outline">取消</button>
+                    <button @click="submitAdjust" class="btn btn-primary" :disabled="submitting || !adjustForm.user_id || !adjustForm.amount">
+                        <span v-if="submitting">调整中...</span>
+                        <span v-else>确认调整</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showGiftModal" class="modal-overlay" @click.self="closeGiftModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>🎁</span>
+                        <span>赠送余额</span>
+                    </h3>
+                    <button @click="closeGiftModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label required">用户ID</label>
+                        <input v-model.number="giftForm.user_id" type="number" class="form-input" placeholder="输入用户ID">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label required">赠送金额</label>
+                        <input v-model.number="giftForm.amount" type="number" class="form-input" step="0.01" min="0" placeholder="赠送金额">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">赠送说明</label>
+                        <textarea v-model="giftForm.description" class="form-input form-textarea" placeholder="填写赠送原因"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeGiftModal" class="btn btn-outline">取消</button>
+                    <button @click="submitGift" class="btn btn-success" :disabled="submitting || !giftForm.user_id || !giftForm.amount">
+                        <span v-if="submitting">赠送中...</span>
+                        <span v-else>确认赠送</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal">
+            <div class="modal large" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>💰</span>
+                        <span>余额详情</span>
+                    </h3>
+                    <button @click="closeDetailModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div v-if="accountDetail">
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>👤</span>
+                                <span>用户信息</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">用户名</div>
+                                    <div class="detail-value">{{ accountDetail.user.name }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">手机号</div>
+                                    <div class="detail-value">{{ accountDetail.user.phone }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>💰</span>
+                                <span>余额信息</span>
+                            </div>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">会员余额</div>
+                                    <div class="detail-value highlight">¥{{ accountDetail.account.membership_balance }}</div>
+                                    <div v-if="accountDetail.account.membership_expire_date" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                        过期日期：{{ accountDetail.account.membership_expire_date }}
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">服务余额</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.service_balance }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">赠送余额</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.gift_balance }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">总余额</div>
+                                    <div class="detail-value highlight">¥{{ accountDetail.account.total_balance }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">累计会员充值</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.total_membership_charged }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">累计服务充值</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.total_service_charged }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">累计抵扣</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.total_deducted }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">累计退款</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.total_refunded }}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md);">
+                                <div style="font-size: var(--font-size-sm); color: var(--primary); font-weight: 600;">
+                                    可用余额：会员 ¥{{ accountDetail.available.membership }} + 服务 ¥{{ accountDetail.available.service }} + 赠送 ¥{{ accountDetail.available.gift }} = ¥{{ accountDetail.available.total }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">
+                                <span>📝</span>
+                                <span>最近交易</span>
+                            </div>
+                            <div class="transactions-list">
+                                <div v-for="tx in accountDetail.recent_transactions" :key="tx.id" class="transaction-item">
+                                    <div class="transaction-info">
+                                        <div class="transaction-type">{{ tx.transaction_type }}</div>
+                                        <div class="transaction-desc">{{ tx.description || '-' }}</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div :class="['transaction-amount', tx.amount >= 0 ? 'positive' : 'negative']">
+                                            {{ tx.amount >= 0 ? '+' : '' }}¥{{ Math.abs(tx.amount) }}
+                                        </div>
+                                        <div class="transaction-time">{{ formatDate(tx.created_at) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="accountDetail.recent_deducts && accountDetail.recent_deducts.length > 0" class="detail-section">
+                            <div class="detail-section-title">
+                                <span>📊</span>
+                                <span>最近抵扣</span>
+                            </div>
+                            <div class="transactions-list">
+                                <div v-for="record in accountDetail.recent_deducts" :key="record.id" class="transaction-item">
+                                    <div class="transaction-info">
+                                        <div class="transaction-type">{{ record.order_type }} - {{ record.order_no || '无订单号' }}</div>
+                                        <div class="transaction-desc">抵扣：会员 ¥{{ record.membership_deduct }} + 服务 ¥{{ record.service_deduct }} + 现金 ¥{{ record.cash_amount }}</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div class="transaction-amount negative">-¥{{ record.membership_deduct + record.service_deduct }}</div>
+                                        <div class="transaction-time">{{ formatDate(record.created_at) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeDetailModal" class="btn btn-outline">关闭</button>
+                    <button @click="openAdjustForAccountDetail" class="btn btn-primary">
+                        调整余额
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="toast.show" :class="['toast', toast.type]">
+            <span>{{ toast.icon }}</span>
+            <span>{{ toast.message }}</span>
+        </div>
+        
+        <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const stats = ref({
+                    total_users: 0,
+                    total_membership_balance: 0,
+                    total_service_balance: 0,
+                    total_gift_balance: 0,
+                    total_balance: 0,
+                    total_membership_charged: 0,
+                    total_service_charged: 0,
+                    total_deducted: 0,
+                    month_charged: 0,
+                    month_deducted: 0
+                });
+                
+                const currentTab = ref('accounts');
+                const accounts = ref([]);
+                const transactions = ref([]);
+                const loading = ref(false);
+                
+                const searchText = ref('');
+                const minBalance = ref(null);
+                const accountsPage = ref(1);
+                const accountsPageSize = ref(20);
+                const accountsTotal = ref(0);
+                
+                const transactionTypeFilter = ref('');
+                const startDateFilter = ref('');
+                const endDateFilter = ref('');
+                const transactionsPage = ref(1);
+                const transactionsPageSize = ref(20);
+                const transactionsTotal = ref(0);
+                
+                const showAdjustModal = ref(false);
+                const showGiftModal = ref(false);
+                const showDetailModal = ref(false);
+                const accountDetail = ref(null);
+                const submitting = ref(false);
+                
+                const adjustForm = ref({
+                    user_id: null,
+                    amount: null,
+                    balance_type: 'membership',
+                    description: '',
+                    expire_date: ''
+                });
+                
+                const giftForm = ref({
+                    user_id: null,
+                    amount: null,
+                    description: ''
+                });
+                
+                const toast = ref({ show: false, type: 'success', message: '', icon: '✓' });
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                
+                const showToast = (type, message) => {
+                    const icons = { success: '✓', error: '✗' };
+                    toast.value = { show: true, type, message, icon: icons[type] };
+                    setTimeout(() => toast.value.show = false, 3000);
+                };
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+                
+                const getDaysLeft = (expireDateStr) => {
+                    if (!expireDateStr) return '';
+                    const expireDate = new Date(expireDateStr);
+                    const now = new Date();
+                    const days = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
+                    return days > 0 ? days : 0;
+                };
+                
+                const loadStats = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/balance/stats`);
+                        if (response.ok) {
+                            stats.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载统计失败:', e);
+                    }
+                };
+                
+                const loadAccounts = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        let url = `${API_BASE}/admin/balance/accounts?page=${accountsPage.value}&page_size=${accountsPageSize.value}`;
+                        
+                        if (searchText.value) {
+                            url += `&search=${encodeURIComponent(searchText.value)}`;
+                        }
+                        
+                        if (minBalance.value) {
+                            url += `&min_balance=${minBalance.value}`;
+                        }
+                        
+                        const response = await fetch(url);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            accounts.value = data.accounts || [];
+                            accountsTotal.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载账户失败:', e);
+                        showToast('error', '加载账户失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const loadTransactions = async () => {
+                    try {
+                        loading.value = true;
+                        
+                        let url = `${API_BASE}/admin/balance/transactions?page=${transactionsPage.value}&page_size=${transactionsPageSize.value}`;
+                        
+                        if (transactionTypeFilter.value) {
+                            url += `&transaction_type=${transactionTypeFilter.value}`;
+                        }
+                        
+                        if (startDateFilter.value) {
+                            url += `&start_date=${startDateFilter.value}`;
+                        }
+                        
+                        if (endDateFilter.value) {
+                            url += `&end_date=${endDateFilter.value}`;
+                        }
+                        
+                        const response = await fetch(url);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            transactions.value = data.transactions || [];
+                            transactionsTotal.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载交易记录失败:', e);
+                        showToast('error', '加载交易记录失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const clearFilters = () => {
+                    searchText.value = '';
+                    minBalance.value = null;
+                    accountsPage.value = 1;
+                    loadAccounts();
+                };
+                
+                const accountsPrevPage = () => {
+                    if (accountsPage.value > 1) {
+                        accountsPage.value--;
+                        loadAccounts();
+                    }
+                };
+                
+                const accountsNextPage = () => {
+                    if (accountsPage.value < Math.ceil(accountsTotal.value / accountsPageSize.value)) {
+                        accountsPage.value++;
+                        loadAccounts();
+                    }
+                };
+                
+                const transactionsPrevPage = () => {
+                    if (transactionsPage.value > 1) {
+                        transactionsPage.value--;
+                        loadTransactions();
+                    }
+                };
+                
+                const transactionsNextPage = () => {
+                    if (transactionsPage.value < Math.ceil(transactionsTotal.value / transactionsPageSize.value)) {
+                        transactionsPage.value++;
+                        loadTransactions();
+                    }
+                };
+                
+                const showAccountDetail = async (account) => {
+                    try {
+                        loading.value = true;
+                        const response = await fetch(`${API_BASE}/admin/balance/accounts/${account.user_id}`);
+                        if (response.ok) {
+                            accountDetail.value = await response.json();
+                            showDetailModal.value = true;
+                        }
+                    } catch (e) {
+                        console.error('加载详情失败:', e);
+                        showToast('error', '加载详情失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const openAdjustForAccount = (account) => {
+                    adjustForm.value = {
+                        user_id: account.user_id,
+                        amount: null,
+                        balance_type: 'membership',
+                        description: '',
+                        expire_date: ''
+                    };
+                    showAdjustModal.value = true;
+                };
+                
+                const openAdjustForAccountDetail = () => {
+                    if (accountDetail.value) {
+                        adjustForm.value = {
+                            user_id: accountDetail.value.user.id,
+                            amount: null,
+                            balance_type: 'membership',
+                            description: '',
+                            expire_date: ''
+                        };
+                        showDetailModal.value = false;
+                        showAdjustModal.value = true;
+                    }
+                };
+                
+                const closeAdjustModal = () => {
+                    showAdjustModal.value = false;
+                    adjustForm.value = {
+                        user_id: null,
+                        amount: null,
+                        balance_type: 'membership',
+                        description: '',
+                        expire_date: ''
+                    };
+                };
+                
+                const closeGiftModal = () => {
+                    showGiftModal.value = false;
+                    giftForm.value = {
+                        user_id: null,
+                        amount: null,
+                        description: ''
+                    };
+                };
+                
+                const closeDetailModal = () => {
+                    showDetailModal.value = false;
+                    accountDetail.value = null;
+                };
+                
+                const submitAdjust = async () => {
+                    try {
+                        submitting.value = true;
+                        
+                        const response = await fetch(`${API_BASE}/admin/balance/adjust`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(adjustForm.value)
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            showToast('success', `余额调整成功，${adjustForm.value.amount >= 0 ? '增加' : '减少'} ¥${Math.abs(adjustForm.value.amount)}`);
+                            closeAdjustModal();
+                            await loadStats();
+                            await loadAccounts();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '调整失败');
+                        }
+                    } catch (e) {
+                        console.error('调整失败:', e);
+                        showToast('error', '调整失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                const submitGift = async () => {
+                    try {
+                        submitting.value = true;
+                        
+                        const response = await fetch(`${API_BASE}/admin/balance/gift`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(giftForm.value)
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            showToast('success', `赠送成功，赠送 ¥${giftForm.value.amount}`);
+                            closeGiftModal();
+                            await loadStats();
+                            await loadAccounts();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '赠送失败');
+                        }
+                    } catch (e) {
+                        console.error('赠送失败:', e);
+                        showToast('error', '赠送失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+                
+                watch(currentTab, (newTab) => {
+                    if (newTab === 'accounts') {
+                        loadAccounts();
+                    } else if (newTab === 'transactions') {
+                        loadTransactions();
+                    }
+                });
+                
+                watch([searchText, minBalance], () => {
+                    accountsPage.value = 1;
+                    loadAccounts();
+                });
+                
+                watch([transactionTypeFilter, startDateFilter, endDateFilter], () => {
+                    transactionsPage.value = 1;
+                    loadTransactions();
+                });
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const userIdParam = urlParams.get('user_id');
+                if (userIdParam) {
+                    adjustForm.value.user_id = parseInt(userIdParam);
+                    showAdjustModal.value = true;
+                }
+                
+                onMounted(async () => {
+                    await loadStats();
+                    await loadAccounts();
+                });
+                
+                return {
+                    stats,
+                    currentTab,
+                    accounts,
+                    transactions,
+                    loading,
+                    searchText,
+                    minBalance,
+                    accountsPage,
+                    accountsPageSize,
+                    accountsTotal,
+                    transactionTypeFilter,
+                    startDateFilter,
+                    endDateFilter,
+                    transactionsPage,
+                    transactionsPageSize,
+                    transactionsTotal,
+                    showAdjustModal,
+                    showGiftModal,
+                    showDetailModal,
+                    accountDetail,
+                    submitting,
+                    adjustForm,
+                    giftForm,
+                    toast,
+                    formatDate,
+                    getDaysLeft,
+                    loadAccounts,
+                    loadTransactions,
+                    clearFilters,
+                    accountsPrevPage,
+                    accountsNextPage,
+                    transactionsPrevPage,
+                    transactionsNextPage,
+                    showAccountDetail,
+                    openAdjustForAccount,
+                    openAdjustForAccountDetail,
+                    closeAdjustModal,
+                    closeGiftModal,
+                    closeDetailModal,
+                    submitAdjust,
+                    submitGift
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

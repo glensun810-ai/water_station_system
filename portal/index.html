@@ -564,16 +564,31 @@
                         <span>我的信息</span>
                     </h2>
                     <div class="stats-grid">
-                        <div class="card">
+                        <a href="/portal/balance.html" class="card" style="cursor: pointer; transition: all 0.2s; text-decoration: none;">
                             <div class="flex items-center justify-between mb-sm">
-                                <span class="text-secondary text-sm">水站余额</span>
+                                <span class="text-secondary text-sm">账户余额</span>
                                 <span class="text-2xl">💧</span>
                             </div>
                             <div class="text-3xl font-bold text-primary mb-xs">¥{{ userBalance.toFixed(2) }}</div>
-                            <div class="text-xs text-tertiary">预付余额</div>
-                        </div>
+                            <div class="text-xs text-tertiary">会员余额 + 服务余额</div>
+                            <div class="text-xs text-info mt-sm" style="display: flex; align-items: center; gap: 4px;">
+                                <span>查看明细 →</span>
+                            </div>
+                        </a>
                         
-                        <div class="card">
+                        <a href="/portal/admin/space/credit-notes.html" v-if="userInfo && userInfo.is_admin" class="card" style="cursor: pointer; transition: all 0.2s; text-decoration: none;">
+                            <div class="flex items-center justify-between mb-sm">
+                                <span class="text-secondary text-sm">记账未结算</span>
+                                <span class="text-2xl">💰</span>
+                            </div>
+                            <div class="text-3xl font-bold text-warning mb-xs">¥{{ unsettledAmount.toFixed(2) }}</div>
+                            <div class="text-xs text-tertiary">信用模式待结算</div>
+                            <div class="text-xs text-info mt-sm" style="display: flex; align-items: center; gap: 4px;">
+                                <span>管理账单 →</span>
+                            </div>
+                        </a>
+                        
+                        <div class="card" v-else>
                             <div class="flex items-center justify-between mb-sm">
                                 <span class="text-secondary text-sm">待结算金额</span>
                                 <span class="text-2xl">💰</span>
@@ -588,16 +603,22 @@
                                 <span class="text-2xl">🕐</span>
                             </div>
                             <div class="text-3xl font-bold text-success mb-xs">{{ freeHours }}小时</div>
-                            <div class="text-xs text-tertiary">本月剩余</div>
+                            <div class="text-xs text-tertiary">本月剩余免费额度</div>
+                            <div v-if="userInfo && userInfo.user_type === 'external'" class="text-xs text-warning mt-sm">
+                                外部访客无免费额度
+                            </div>
                         </div>
                         
-                        <div class="card">
+                        <div class="card" style="opacity: 0.7;">
                             <div class="flex items-center justify-between mb-sm">
                                 <span class="text-secondary text-sm">优惠券</span>
                                 <span class="text-2xl">🎫</span>
                             </div>
                             <div class="text-3xl font-bold text-info mb-xs">{{ couponCount }}张</div>
                             <div class="text-xs text-tertiary">可用优惠券</div>
+                            <div class="text-xs text-warning mt-sm" style="display: flex; align-items: center; gap: 4px;">
+                                <span>即将上线</span>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1126,6 +1147,7 @@ const waterNavLabel = computed(() => {
                                 department: user.department,
                                 role: user.role,
                                 roleName: user.roleName,
+                                user_type: user.user_type || 'internal',
                                 is_admin: user.role === '超级管理员' || user.role === 'admin' || user.role === 'super_admin' || user.is_admin === true
                             };
                             console.log('用户已登录:', userInfo.value);
@@ -1144,43 +1166,88 @@ const waterNavLabel = computed(() => {
                             console.log('用户未登录，设置为游客状态');
                         }
                         
-// 加载用户数据（仅已登录用户，API可能失败，但不影响页面显示）
+// 加载用户数据（仅已登录用户）
                         if (userInfo.value && userInfo.value.id) {
-                            // 使用默认值，不阻塞页面加载
                             userBalance.value = 0;
                             unsettledAmount.value = 0;
                             freeHours.value = 5;
                             couponCount.value = 0;
                             
-                            // 异步加载真实数据（不阻塞页面显示）
-                            // 暂时注释掉API调用，避免500错误影响用户体验
-                            // TODO: 等后端API修复后再启用
-                            /*
-                            try {
-                                const [balanceRes, settlementRes, freeHoursRes] = await Promise.all([
-                                    fetch(`${API_BASE}/unified/user/${userInfo.value.id}/balance`).catch(() => ({ ok: false })),
-                                    fetch(`${API_BASE}/unified/settlement/summary?user_id=${userInfo.value.id}`).catch(() => ({ ok: false })),
-                                    fetch(`${API_BASE}/meeting/user/${userInfo.value.id}/free-hours`).catch(() => ({ ok: false }))
-                                ]);
-                                
-                                if (balanceRes && balanceRes.ok) {
-                                    const balanceData = await balanceRes.json();
-                                    userBalance.value = balanceData.balance_prepaid || 0;
+                            const token = localStorage.getItem('token');
+                            
+                            if (token) {
+                                try {
+                                    const balanceResponse = await fetch('/api/v1/balance/my', {
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                    });
+                                    
+                                    if (balanceResponse.ok) {
+                                        const balanceData = await balanceResponse.json();
+                                        userBalance.value = balanceData.total_balance || 0;
+                                    }
+                                    
+                                    try {
+                                        const creditNotesResponse = await fetch('/api/v2/space/payment/credit-notes?status=pending&limit=100', {
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        });
+                                        
+                                        if (creditNotesResponse.ok) {
+                                            const creditNotesData = await creditNotesResponse.json();
+                                            const pendingNotes = creditNotesData.items || [];
+                                            unsettledAmount.value = pendingNotes.reduce((sum, note) => sum + (note.total_amount || 0), 0);
+                                        }
+                                    } catch (e) {
+                                        console.log('加载记账账单失败:', e);
+                                    }
+                                    
+                                    try {
+                                        const bookingsResponse = await fetch('/api/v2/space/bookings/my', {
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        });
+                                        
+                                        if (bookingsResponse.ok) {
+                                            const bookingsData = await bookingsResponse.json();
+                                            const bookings = bookingsData.data?.items || [];
+                                            const creditBookings = bookings.filter(b => b.payment_mode === 'credit' && ['approved', 'confirmed', 'active', 'completed'].includes(b.status));
+                                            unsettledAmount.value += creditBookings.reduce((sum, b) => sum + (b.total_fee || 0), 0);
+                                        }
+                                    } catch (e) {
+                                        console.log('加载预约记录失败:', e);
+                                    }
+                                    
+                                    const currentMonth = new Date().toISOString().slice(0, 7);
+                                    try {
+                                        const bookingsResponse = await fetch(`/api/v2/space/bookings/my`, {
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        });
+                                        
+                                        if (bookingsResponse.ok) {
+                                            const bookingsData = await bookingsResponse.json();
+                                            const bookings = bookingsData.data?.items || [];
+                                            const monthBookings = bookings.filter(b => {
+                                                const bookingMonth = b.booking_date?.slice(0, 7);
+                                                return bookingMonth === currentMonth;
+                                            });
+                                            
+                                            const usedHours = monthBookings.reduce((sum, b) => sum + (b.duration || 0), 0);
+                                            
+                                            if (userInfo.value.user_type === 'internal') {
+                                                freeHours.value = Math.max(0, 5 - usedHours);
+                                            } else {
+                                                freeHours.value = 0;
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.log('计算免费时长失败:', e);
+                                        freeHours.value = userInfo.value.user_type === 'internal' ? 5 : 0;
+                                    }
+                                    
+                                    couponCount.value = 0;
+                                    
+                                } catch (error) {
+                                    console.log('加载用户数据失败（不影响页面显示）:', error);
                                 }
-                                
-                                if (settlementRes && settlementRes.ok) {
-                                    const settlementData = await settlementRes.json();
-                                    unsettledAmount.value = settlementData.total_unsettled || 0;
-                                }
-                                
-                                if (freeHoursRes && freeHoursRes.ok) {
-                                    const freeHoursData = await freeHoursRes.json();
-                                    freeHours.value = freeHoursData.free_hours || 5;
-                                }
-                            } catch (error) {
-                                console.log('加载用户数据失败（不影响页面显示）:', error);
                             }
-                            */
                         }
                         
                     } catch (error) {
@@ -1231,41 +1298,101 @@ const waterNavLabel = computed(() => {
                 
                 // 加载管理中心数据
                 const loadAdminStats = async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
+                    
                     try {
-                        // 加载水站今日数据
-                        const waterRes = await fetch(`${API_BASE}/water/stats/today`).catch(() => ({ ok: false }));
-                        if (waterRes.ok) {
-                            const waterData = await waterRes.json();
-                            waterTodayCount.value = waterData.pickup_count || 0;
-                            waterPendingAmount.value = waterData.pending_amount || 0;
-                            waterAlerts.value = waterData.alerts || 0;
-                        }
+                        // 加载空间服务今日数据
+                        const spaceDashboardRes = await fetch('/api/v2/space/statistics/dashboard', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }).catch(() => ({ ok: false }));
                         
-                        // 加载会议室今日数据
-                        const meetingRes = await fetch(`${API_BASE}/meeting/stats/today`).catch(() => ({ ok: false }));
-                        if (meetingRes.ok) {
-                            const meetingData = await meetingRes.json();
-                            meetingTodayBookings.value = meetingData.booking_count || 0;
-                            meetingPendingApprovals.value = meetingData.pending_approvals || 0;
-                            meetingPendingSettlement.value = meetingData.pending_settlement || 0;
-                            meetingMonthlyRevenue.value = meetingData.monthly_revenue || 0;
-                            meetingAlerts.value = meetingData.alerts || 0;
-                        }
-                        
-                        // 加载空间服务结算数据（备用）
-                        const spaceSettlementRes = await fetch('/api/v2/space/settlements/summary').catch(() => ({ ok: false }));
-                        if (spaceSettlementRes.ok) {
-                            const spaceData = await spaceSettlementRes.json();
+                        if (spaceDashboardRes.ok) {
+                            const spaceData = await spaceDashboardRes.json();
                             if (spaceData.code === 200 && spaceData.data) {
-                                meetingPendingSettlement.value = spaceData.data.pending_amount || meetingPendingSettlement.value;
-                                meetingMonthlyRevenue.value = spaceData.data.monthly_revenue || meetingMonthlyRevenue.value;
+                                meetingTodayBookings.value = spaceData.data.today?.bookings || 0;
+                                meetingPendingApprovals.value = spaceData.data.today?.pendings || 0;
+                                todayIncome.value = spaceData.data.today?.revenue || 0;
                             }
+                        }
+                        
+                        // 加载空间服务结算数据
+                        const spaceSettlementRes = await fetch('/api/v2/unified/settlements/summary', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }).catch(() => ({ ok: false }));
+                        
+                        if (spaceSettlementRes.ok) {
+                            const settlementData = await spaceSettlementRes.json();
+                            if (settlementData.total) {
+                                meetingPendingSettlement.value = settlementData.total?.pending_amount || 0;
+                                meetingMonthlyRevenue.value = settlementData.space?.monthly_revenue || 0;
+                            }
+                        }
+                        
+                        // 计算今日订单总数
+                        const today = new Date().toISOString().slice(0, 10);
+                        
+                        try {
+                            const waterPickupsRes = await fetch(`/api/v1/water/pickups`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (waterPickupsRes.ok) {
+                                const waterData = await waterPickupsRes.json();
+                                const today = new Date().toISOString().slice(0, 10);
+                                
+                                if (Array.isArray(waterData)) {
+                                    const todayPickups = waterData.filter(p => p.pickup_time?.slice(0, 10) === today);
+                                    waterTodayCount.value = todayPickups.length;
+                                } else if (waterData.items) {
+                                    const todayPickups = waterData.items.filter(p => p.pickup_time?.slice(0, 10) === today);
+                                    waterTodayCount.value = todayPickups.length;
+                                } else if (waterData.data?.items) {
+                                    const todayPickups = waterData.data.items.filter(p => p.pickup_time?.slice(0, 10) === today);
+                                    waterTodayCount.value = todayPickups.length;
+                                }
+                            }
+                        } catch (e) {
+                            console.log('水站数据加载失败:', e);
+                            waterTodayCount.value = 0;
                         }
                         
                         // 计算汇总数据
                         todayOrders.value = waterTodayCount.value + meetingTodayBookings.value;
                         pendingTasks.value = meetingPendingApprovals.value;
-                        alertsCount.value = waterAlerts.value + meetingAlerts.value;
+                        
+                        // 检查异常告警（待支付的已完成预约）
+                        try {
+                            const bookingsRes = await fetch('/api/v2/space/bookings?status=completed&payment_status=pending&limit=100', {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (bookingsRes.ok) {
+                                const bookingsData = await bookingsRes.json();
+                                const abnormalBookings = bookingsData.data?.items?.length || 0;
+                                alertsCount.value = abnormalBookings;
+                                meetingAlerts.value = abnormalBookings;
+                            }
+                        } catch (e) {
+                            console.log('异常告警加载失败:', e);
+                            alertsCount.value = 0;
+                            meetingAlerts.value = 0;
+                        }
+                        
+                        // 水站待结算金额
+                        try {
+                            const waterSettlementRes = await fetch('/api/v1/water/settlements/summary', {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (waterSettlementRes.ok) {
+                                const waterSettlementData = await waterSettlementRes.json();
+                                waterPendingAmount.value = waterSettlementData.data?.pending_amount || 0;
+                            }
+                        } catch (e) {
+                            console.log('水站结算数据加载失败:', e);
+                            waterPendingAmount.value = 0;
+                        }
                         
                         // 更新时间
                         currentTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -1273,32 +1400,41 @@ const waterNavLabel = computed(() => {
                         // 加载系统管理数据（仅超管）
                         if (userInfo.value.role === '超级管理员' || userInfo.value.role === 'super_admin') {
                             // 办公室统计
-                            const officesRes = await fetch(`${API_BASE}/system/offices`).catch(() => ({ ok: false }));
+                            const officesRes = await fetch('/api/v1/system/offices', {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            }).catch(() => ({ ok: false }));
+                            
                             if (officesRes.ok) {
                                 const officesData = await officesRes.json();
-                                officeCount.value = officesData.items?.length || officesData.length || 0;
-                                if (officesData.items) {
+                                officeCount.value = officesData.data?.items?.length || officesData.items?.length || 0;
+                                if (officesData.data?.items) {
+                                    totalUsers.value = officesData.data.items.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                                } else if (Array.isArray(officesData.items)) {
                                     totalUsers.value = officesData.items.reduce((sum, office) => sum + (office.user_count || 0), 0);
-                                } else if (Array.isArray(officesData)) {
-                                    totalUsers.value = officesData.reduce((sum, office) => sum + (office.user_count || 0), 0);
                                 }
                             }
                             
                             // 用户统计
-                            const usersRes = await fetch(`${API_BASE}/system/users`).catch(() => ({ ok: false }));
+                            const usersRes = await fetch('/api/v1/system/users', {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            }).catch(() => ({ ok: false }));
+                            
                             if (usersRes.ok) {
                                 const usersData = await usersRes.json();
-                                const userList = usersData.items || usersData;
+                                const userList = usersData.data?.items || usersData.items || [];
                                 adminCount.value = userList.filter(u => u.role === 'super_admin' || u.role === 'admin').length || 0;
                                 staffCount.value = userList.filter(u => u.role === 'user').length || 0;
                             }
                             
                             // 结算统计
-                            const settlementRes = await fetch(`${API_BASE}/water/settlements/summary`).catch(() => ({ ok: false }));
+                            const settlementRes = await fetch('/api/v1/water/settlements/summary', {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            }).catch(() => ({ ok: false }));
+                            
                             if (settlementRes.ok) {
                                 const settlementData = await settlementRes.json();
-                                pendingSettlement.value = settlementData.total?.pending_amount || 0;
-                                appliedSettlement.value = settlementData.total?.applied_amount || 0;
+                                pendingSettlement.value = settlementData.data?.pending_amount || 0;
+                                appliedSettlement.value = settlementData.data?.applied_amount || 0;
                             }
                         }
                         
@@ -1309,12 +1445,12 @@ const waterNavLabel = computed(() => {
                 
                 let refreshTimer = null;
                 
-                onMounted(() => {
-                    loadUserData();
+                onMounted(async () => {
+                    await loadUserData();
                     
                     // 如果是管理员，加载管理中心数据并定时刷新
                     if (userInfo.value && userInfo.value.is_admin) {
-                        loadAdminStats();
+                        await loadAdminStats();
                         refreshTimer = setInterval(loadAdminStats, 60000); // 每60秒刷新一次
                     }
                 });

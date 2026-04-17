@@ -1025,6 +1025,7 @@
                                 费用
                                 <span class="sort-indicator" :class="getSortClass('total_fee')"></span>
                             </th>
+                            <th style="width: 100px;">支付模式</th>
                             <th style="width: 160px;" class="sortable" :class="{ active: filters.sort_by === 'created_at' }" @click="toggleSort('created_at')">
                                 创建时间
                                 <span class="sort-indicator" :class="getSortClass('created_at')"></span>
@@ -1088,6 +1089,12 @@
                                 </div>
                             </td>
                             <td>
+                                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);"
+                                      :style="{ background: getPaymentModeBgColor(booking.payment_mode), color: getPaymentModeColor(booking.payment_mode) }">
+                                    {{ getPaymentModeIcon(booking.payment_mode) }} {{ getPaymentModeText(booking.payment_mode) }}
+                                </span>
+                            </td>
+                            <td>
                                 <div style="font-size: var(--font-size-sm);">{{ formatCreatedTime(booking.created_at) }}</div>
                             </td>
                             <td>
@@ -1096,8 +1103,14 @@
                                     <template v-if="booking.status === 'pending'">
                                         <button 
                                             class="btn btn-success btn-sm" 
+                                            @click="approveWithPayment(booking)"
+                                            title="审批通过并确认收款"
+                                        >通过+收款</button>
+                                        <button 
+                                            class="btn btn-outline btn-sm"
+                                            style="color: var(--success);"
                                             @click="approveBooking(booking)"
-                                            title="通过审批"
+                                            title="仅审批通过（内部员工免费）"
                                         >通过</button>
                                         <button 
                                             class="btn btn-danger btn-sm"
@@ -1105,17 +1118,60 @@
                                             title="拒绝审批"
                                         >拒绝</button>
                                     </template>
+                                    <template v-if="booking.status === 'approved' && booking.payment_status === 'pending'">
+                                        <button 
+                                            class="btn btn-primary btn-sm"
+                                            @click="confirmPayment(booking)"
+                                            title="确认用户已付款"
+                                        >确认收款</button>
+                                    </template>
+                                    <template v-if="booking.status === 'approved' && booking.payment_status !== 'pending'">
+                                        <button 
+                                            class="btn btn-success btn-sm"
+                                            @click="markConfirmed(booking)"
+                                            title="标记为已确认生效"
+                                        >确认生效</button>
+                                    </template>
+                                    <template v-if="booking.status === 'confirmed'">
+                                        <button 
+                                            class="btn btn-info btn-sm"
+                                            @click="markActive(booking)"
+                                            title="标记开始使用"
+                                        >开始使用</button>
+                                    </template>
+                                    <template v-if="booking.status === 'active'">
+                                        <button 
+                                            class="btn btn-warning btn-sm"
+                                            @click="completeBooking(booking)"
+                                            title="标记使用完成"
+                                        >完成使用</button>
+                                    </template>
+                                    <template v-if="booking.status === 'completed'">
+                                        <button 
+                                            class="btn btn-success btn-sm"
+                                            @click="settleBooking(booking)"
+                                            title="确认费用结算"
+                                        >确认结算</button>
+                                    </template>
+                                    <template v-if="booking.status === 'settled'">
+                                        <button 
+                                            class="btn btn-outline btn-sm"
+                                            @click="generateInvoice(booking)"
+                                            title="开具发票"
+                                        >开票</button>
+                                    </template>
                                     <button 
-                                        v-if="booking.status === 'approved'" 
-                                        class="btn btn-success btn-sm"
-                                        @click="completeBooking(booking)"
-                                    >完成</button>
-                                    <button 
-                                        v-if="booking.status === 'pending' || booking.status === 'approved'" 
+                                        v-if="['pending', 'approved', 'confirmed'].includes(booking.status)" 
                                         class="btn btn-outline btn-sm"
                                         style="color: var(--danger);"
                                         @click="cancelBooking(booking)"
                                     >取消</button>
+                                    <button 
+                                        v-if="booking.status === 'settled' && isSuperAdmin" 
+                                        class="btn btn-warning btn-sm"
+                                        @click="unsettleBooking(booking)"
+                                        title="取消结算（管理员）"
+                                    >取消结算</button>
                                     <button 
                                         v-if="isSuperAdmin" 
                                         class="btn btn-danger btn-sm"
@@ -1252,6 +1308,60 @@
                     <div>{{ selectedBooking.special_requests }}</div>
                 </div>
                 
+                <!-- 业务流程状态卡片 -->
+                <div v-if="selectedBooking" style="margin-top: var(--spacing-lg);">
+                    <div style="font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-md);">
+                        📋 业务流程状态
+                    </div>
+                    
+                    <!-- 支付状态警告 -->
+                    <div v-if="selectedBooking.payment_status === 'pending' && ['approved', 'confirmed', 'active', 'completed'].includes(selectedBooking.status)" 
+                         style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); 
+                                border: 1px solid rgba(245, 158, 11, 0.3); 
+                                border-radius: var(--radius-md); 
+                                padding: var(--spacing-md); 
+                                margin-bottom: var(--spacing-md);">
+                        <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                            <span style="font-size: 20px;">⚠️</span>
+                            <div>
+                                <div style="font-weight: 600; color: #f59e0b;">支付状态异常</div>
+                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                    预约已进入「{{ getStatusText(selectedBooking.status) }}」状态，但支付状态仍为「待支付」。
+                                    <br>建议：立即点击下方「确认收款」按钮处理支付确认。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 流程进度条 -->
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: var(--spacing-md); padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <template v-for="(step, idx) in ['pending', 'approved', 'confirmed', 'active', 'completed', 'settled']" :key="idx">
+                            <div 
+                                style="flex: 1; height: 8px; border-radius: 4px; transition: all 0.3s;"
+                                :style="{
+                                    background: step === selectedBooking.status ? STATUS_CONFIG[step]?.color : 
+                                               (STATUS_CONFIG[step]?.transitions?.includes(selectedBooking.status) || 
+                                                ['settled'].includes(selectedBooking.status)) ? STATUS_CONFIG[step]?.color + '80' : '#e0e0e0'
+                                }"
+                            ></div>
+                            <div v-if="idx < 5" style="width: 2px; height: 8px; background: var(--border);"></div>
+                        </template>
+                    </div>
+                    
+                    <!-- 流程步骤说明 -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm); font-size: var(--font-size-xs);">
+                        <div v-for="(step, idx) in ['pending', 'approved', 'confirmed', 'active', 'completed', 'settled']" :key="idx"
+                             style="padding: var(--spacing-xs); border-radius: var(--radius-sm); text-align: center;"
+                             :style="{
+                                 background: step === selectedBooking.status ? STATUS_CONFIG[step]?.bgColor : 'var(--bg-secondary)',
+                                 color: step === selectedBooking.status ? STATUS_CONFIG[step]?.color : 'var(--text-tertiary)',
+                                 fontWeight: step === selectedBooking.status ? '600' : '400'
+                             }">
+                            {{ STATUS_CONFIG[step]?.icon }} {{ STATUS_CONFIG[step]?.text }}
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 下一步操作提示 -->
                 <div v-if="selectedBooking" style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%); border-radius: var(--radius-md); border: 1px solid rgba(59, 130, 246, 0.2);">
                     <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
@@ -1259,7 +1369,7 @@
                         <div>
                             <div style="font-weight: 600; color: var(--primary);">下一步操作</div>
                             <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
-                                {{ getNextHint(selectedBooking.status) }}
+                                {{ getNextHintWithPayment(selectedBooking) }}
                             </div>
                         </div>
                     </div>
@@ -1512,8 +1622,8 @@
                     'approved': {
                         icon: '✅', text: '已批准', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)',
                         userActions: ['支付押金', '确认预约', '取消预约', '查看详情'],
-                        adminActions: ['确认押金', '取消预约', '查看详情'],
-                        nextHint: '请支付押金锁定预约',
+                        adminActions: ['确认收款', '确认生效', '取消预约', '查看详情'],
+                        nextHint: '预约已批准。请确认支付状态，支付确认后点击「确认生效」使预约正式生效。',
                         transitions: ['confirmed', 'cancelled']
                     },
                     'rejected': {
@@ -1572,12 +1682,30 @@
                     'none': { icon: '🎁', text: '免费', color: '#22c55e' },
                     'unpaid': { icon: '⏳', text: '待支付', color: '#f59e0b' },
                     'pending': { icon: '⏳', text: '待支付', color: '#f59e0b' },
+                    'credit': { icon: '📝', text: '记账', color: '#8b5cf6' },
+                    'deducted': { icon: '💰', text: '已抵扣', color: '#22c55e' },
+                    'partial_deducted': { icon: '⚡', text: '部分抵扣', color: '#f59e0b' },
                     'deposit_paid': { icon: '💵', text: '押金已付', color: '#3b82f6' },
                     'partial': { icon: '📊', text: '部分支付', color: '#8b5cf6' },
                     'paid': { icon: '✅', text: '已支付', color: '#22c55e' },
                     'fully_paid': { icon: '✅', text: '已支付', color: '#22c55e' },
+                    'settled': { icon: '📋', text: '已结算', color: '#10b981' },
                     'refunded': { icon: '↩️', text: '已退款', color: '#94a3b8' }
                 };
+                
+                // 支付模式配置
+                const PAYMENT_MODE_CONFIG = {
+                    'credit': { icon: '📝', text: '记账模式', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
+                    'balance_deduct': { icon: '💰', text: '余额抵扣', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
+                    'mixed': { icon: '⚡', text: '混合支付', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+                    'prepay': { icon: '💵', text: '预付模式', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+                    'free': { icon: '🎁', text: '免费', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' }
+                };
+                
+                const getPaymentModeText = (mode) => PAYMENT_MODE_CONFIG[mode]?.text || mode || '记账';
+                const getPaymentModeIcon = (mode) => PAYMENT_MODE_CONFIG[mode]?.icon || '📝';
+                const getPaymentModeColor = (mode) => PAYMENT_MODE_CONFIG[mode]?.color || '#8b5cf6';
+                const getPaymentModeBgColor = (mode) => PAYMENT_MODE_CONFIG[mode]?.bgColor || 'rgba(139, 92, 246, 0.1)';
                 
                 const getTypeIcon = (typeCode) => SPACE_TYPES[typeCode]?.icon || '📍';
                 const getTypeName = (typeCode) => SPACE_TYPES[typeCode]?.name || typeCode || '未知';
@@ -1592,6 +1720,53 @@
                 const getNextHint = (status) => STATUS_CONFIG[status]?.nextHint || '';
                 const getUserActions = (status) => STATUS_CONFIG[status]?.userActions || ['查看详情'];
                 const getAdminActions = (status) => STATUS_CONFIG[status]?.adminActions || ['查看详情'];
+                
+                const getNextHintWithPayment = (booking) => {
+                    const status = booking.status;
+                    const paymentStatus = booking.payment_status;
+                    
+                    if (status === 'pending') {
+                        return '等待管理员审批。可点击「通过+收款」一步完成审批和收款确认，或点击「通过」仅审批（内部员工免费使用）。';
+                    }
+                    
+                    if (status === 'approved' && paymentStatus === 'pending') {
+                        return '预约已批准，但支付状态仍为「待支付」。请点击「确认收款」按钮，线下收取费用后确认支付状态。';
+                    }
+                    
+                    if (status === 'approved' && paymentStatus !== 'pending') {
+                        return '支付已确认。点击「确认生效」将预约标记为已确认状态，预约正式生效。';
+                    }
+                    
+                    if (status === 'confirmed') {
+                        return '预约已确认生效，等待使用时间到达。到达使用时间后点击「开始使用」标记为进行中状态。';
+                    }
+                    
+                    if (status === 'active') {
+                        return '正在使用中。使用结束后点击「完成使用」标记为已完成状态，进入结算流程。';
+                    }
+                    
+                    if (status === 'completed' && paymentStatus !== 'paid') {
+                        return '使用已完成，但支付状态异常。请先确认收款，再点击「确认结算」完成费用结算。';
+                    }
+                    
+                    if (status === 'completed') {
+                        return '使用已完成，费用已确认。点击「确认结算」完成费用结算，生成结算记录。';
+                    }
+                    
+                    if (status === 'settled') {
+                        return '预约已完成全部流程，费用已结算。如需发票，点击「开票」按钮申请开具发票。';
+                    }
+                    
+                    if (status === 'cancelled') {
+                        return '预约已取消。如已支付，系统将自动处理退款。';
+                    }
+                    
+                    if (status === 'rejected') {
+                        return '预约已被拒绝。用户可查看拒绝原因并重新提交预约申请。';
+                    }
+                    
+                    return STATUS_CONFIG[status]?.nextHint || '';
+                };
                 
                 const getPaymentStatusText = (status) => PAYMENT_STATUS_CONFIG[status]?.text || status;
                 const getPaymentStatusIcon = (status) => PAYMENT_STATUS_CONFIG[status]?.icon || '💰';
@@ -2070,6 +2245,195 @@
                     }
                 };
                 
+                const approveWithPayment = async (booking) => {
+                    if (!confirm(`确认审批通过并确认收款？\n\n预约：${booking.title}\n费用：¥${(booking.total_fee || 0).toFixed(2)}\n\n此操作将：\n1. 预约状态：pending → approved\n2. 支付状态：pending → paid\n3. 同时记录收款信息`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/approve-with-payment?payment_method=offline_cash&payment_notes=管理员线下确认收款`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200 || data.success) {
+                            alert('审批通过并确认收款成功！');
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('操作失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const confirmPayment = async (booking) => {
+                    const method = prompt('请选择支付方式：\n\n1 - 现金\n2 - 银行转账\n3 - 微信\n4 - 支付宝\n\n请输入数字选择:', '1');
+                    if (!method) return;
+                    
+                    const methodMap = { '1': 'offline_cash', '2': 'offline_transfer', '3': 'wechat', '4': 'alipay' };
+                    const paymentMethod = methodMap[method] || 'offline_cash';
+                    
+                    const notes = prompt('收款备注（可选）：', '');
+                    
+                    if (!confirm(`确认收款？\n\n金额：¥${(booking.total_fee || 0).toFixed(2)}\n方式：${paymentMethod}`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/approve-with-payment?payment_method=${paymentMethod}&payment_notes=${encodeURIComponent(notes || '管理员确认收款')}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200 || data.success) {
+                            alert('收款确认成功！');
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('收款确认失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const markConfirmed = async (booking) => {
+                    if (!confirm(`确认预约生效？\n\n预约：${booking.title}\n预约日期：${booking.booking_date}\n时段：${booking.start_time}-${booking.end_time}\n\n此操作将：\n1. 状态：approved → confirmed\n2. 预约正式生效，等待使用时间到达`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/confirm`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('预约已确认生效，预约正式生效！');
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('操作失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const markActive = async (booking) => {
+                    if (!confirm(`标记开始使用？\n\n预约：${booking.title}\n预约日期：${booking.booking_date}\n时段：${booking.start_time}-${booking.end_time}\n\n此操作将：\n1. 状态：confirmed → active\n2. 标记预约正在使用中`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/activate`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('已标记为进行中！');
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('操作失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const settleBooking = async (booking) => {
+                    const fee = prompt(`确认结算费用（可调整）：\n\n原费用：¥${(booking.total_fee || 0).toFixed(2)}\n\n请输入实际结算金额：`, (booking.total_fee || 0).toFixed(2));
+                    if (!fee) return;
+                    
+                    const actualFee = parseFloat(fee);
+                    if (isNaN(actualFee) || actualFee < 0) {
+                        alert('请输入有效金额');
+                        return;
+                    }
+                    
+                    if (!confirm(`确认结算？\n\n结算金额：¥${actualFee.toFixed(2)}\n\n此操作将：\n1. 预约状态：completed → settled\n2. 支付状态标记为已结算\n3. 创建结算记录`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        
+                        if (actualFee !== booking.total_fee) {
+                            const updateResponse = await fetch(`${API_BASE}/space/bookings/${booking.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ actual_fee: actualFee, total_fee: actualFee })
+                            });
+                        }
+                        
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/settle`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('结算确认成功！');
+                            loadBookings();
+                        } else {
+                            alert('结算失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('结算失败:', error);
+                        alert('结算失败，请重试');
+                    }
+                };
+                
+                const unsettleBooking = async (booking) => {
+                    if (!confirm(`取消结算？\n\n此操作将预约状态从 settled 改回 completed\n预约编号：${booking.booking_no}`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/space/bookings/${booking.id}/unsettle`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.code === 200) {
+                            alert('已取消结算');
+                            loadBookings();
+                        } else {
+                            alert('操作失败: ' + (data.detail || data.message));
+                        }
+                    } catch (error) {
+                        console.error('操作失败:', error);
+                        alert('操作失败，请重试');
+                    }
+                };
+                
+                const generateInvoice = async (booking) => {
+                    alert(`发票功能开发中...\n\n预约编号：${booking.booking_no}\n结算金额：¥${(booking.total_fee || 0).toFixed(2)}`);
+                };
+                
                 const toggleSelectAll = () => {
                     if (selectedBookings.value.length === bookings.value.length) {
                         selectedBookings.value = [];
@@ -2186,6 +2550,13 @@
                     loadBookings,
                     viewDetail,
                     approveBooking,
+                    approveWithPayment,
+                    confirmPayment,
+                    markConfirmed,
+                    markActive,
+                    settleBooking,
+                    unsettleBooking,
+                    generateInvoice,
                     showSingleRejectModal,
                     executeReject,
                     selectAllPending,
@@ -2219,10 +2590,16 @@
                     getTypeTextColor,
                     getPaymentStatusText,
                     getPaymentStatusIcon,
+                    getPaymentModeText,
+                    getPaymentModeIcon,
+                    getPaymentModeColor,
+                    getPaymentModeBgColor,
+                    PAYMENT_MODE_CONFIG,
                     getStatusIcon,
                     getStatusColor,
                     getStatusBgColor,
                     getNextHint,
+                    getNextHintWithPayment,
                     getUserActions,
                     getAdminActions,
                     STATUS_CONFIG,

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime
 from typing import Optional, List
 from datetime import datetime as dt
+from decimal import Decimal
 import random
 
 from config.database import get_db
@@ -151,10 +152,20 @@ async def get_booking(
 @router.post("", response_model=ApiResponse)
 async def create_booking(
     booking_data: SpaceBookingCreate,
+    payment_mode: Optional[str] = Query(
+        "credit",
+        description="支付模式: credit(记账)/balance_deduct(余额抵扣)/prepay(预付)",
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_required),
 ):
-    """创建预约"""
+    """创建预约
+
+    支付模式说明：
+    - credit（记账模式）：内部员工默认模式，使用后结算，月底统一账单
+    - balance_deduct（余额抵扣）：有余额时可选择，实时从账户扣款
+    - prepay（预付模式）：外部访客必须，使用前线下付费
+    """
 
     resource = (
         db.query(SpaceResource)
@@ -207,12 +218,96 @@ async def create_booking(
         f"SB{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
     )
 
-    initial_status = (
-        "pending" if space_type and space_type.requires_approval else "confirmed"
-    )
+    user_type = current_user.user_type or "internal"
+
+    deduct_amount = Decimal("0")
+    credit_amount = Decimal("0")
+
+    if user_type == "internal":
+        from models.user_balance import UserBalanceAccount
+
+        balance_account = (
+            db.query(UserBalanceAccount)
+            .filter(UserBalanceAccount.user_id == current_user.id)
+            .first()
+        )
+
+        available_balance = Decimal(
+            str(balance_account.total_balance if balance_account else 0)
+        )
+
+        if available_balance >= Decimal(str(total_fee)):
+            deduct_amount = Decimal(str(total_fee))
+            credit_amount = Decimal("0")
+            payment_mode = "balance_deduct"
+            payment_status = "deducted"
+            approval_notes = "内部员工预约，余额全额抵扣，自动审批通过"
+        elif available_balance > Decimal("0"):
+            deduct_amount = available_balance
+            credit_amount = Decimal(str(total_fee)) - available_balance
+            payment_mode = "mixed"
+            payment_status = "partial_deducted"
+            approval_notes = f"内部员工预约，余额抵扣¥{deduct_amount:.2f}+记账¥{credit_amount:.2f}，自动审批通过"
+        else:
+            deduct_amount = Decimal("0")
+            credit_amount = Decimal(str(total_fee))
+            payment_mode = "credit"
+            payment_status = "credit"
+            approval_notes = "内部员工预约，全记账模式，自动审批通过"
+
+        initial_status = "approved"
+        approved_at = datetime.now()
+        approved_by = "system_auto"
+
+    else:
+        if payment_mode != "prepay":
+            raise HTTPException(
+                status_code=400,
+                detail="外部访客必须使用预付模式，请线下付费后由管理员确认",
+            )
+
+        initial_status = "pending"
+        approved_at = None
+        approved_by = None
+        approval_notes = None
+        payment_status = "pending"
+        deduct_amount = Decimal("0")
+        credit_amount = Decimal("0")
+
+    if space_type and space_type.requires_approval:
+        initial_status = "pending"
+        approved_at = None
+        approved_by = None
+        approval_notes = (
+            None
+            if user_type == "external"
+            else f"内部员工预约高价值空间，需人工审批。支付：{payment_mode}"
+        )
+        if user_type == "internal":
+            payment_status = "pending"
 
     booking = SpaceBooking(
-        **booking_data.model_dump(exclude={"type_code", "end_date", "booking_days"}),
+        **booking_data.model_dump(
+            exclude={
+                "type_code",
+                "end_date",
+                "booking_days",
+                "user_type",
+                "duration_hours",
+                "user_name",
+                "user_phone",
+                "user_email",
+                "department",
+                "office_id",
+                "meal_session",
+                "meal_standard",
+                "guests_count",
+                "content_type",
+                "content_url",
+                "exhibition_type",
+                "exhibition_plan_url",
+            }
+        ),
         booking_no=booking_no,
         duration=duration,
         duration_unit=space_type.min_duration_unit if space_type else "hour",
@@ -220,20 +315,128 @@ async def create_booking(
         type_code=space_type.type_code if space_type else None,
         resource_name=resource.name,
         user_id=current_user.id,
+        user_type=user_type,
+        user_name=current_user.name or current_user.username,
+        user_phone=current_user.phone,
+        user_email=current_user.email,
+        department=current_user.department,
         total_fee=total_fee,
         actual_fee=total_fee,
         base_fee=total_fee,
         requires_deposit=space_type.requires_deposit if space_type else False,
-        deposit_amount=total_fee * (space_type.deposit_percentage if space_type else 0),
+        deposit_amount=total_fee
+        * (space_type.deposit_percentage / 100 if space_type else 0),
         status=initial_status,
-        payment_status="pending" if total_fee > 0 else "none",
-        settlement_status="unsettled",
-        confirmed_at=datetime.now() if initial_status == "confirmed" else None,
-        confirmed_by="system" if initial_status == "confirmed" else None,
+        payment_status=payment_status,
+        payment_mode=payment_mode,
+        deduct_amount=float(deduct_amount),
+        credit_amount=float(credit_amount),
+        approved_at=approved_at,
+        approved_by=approved_by,
+        approval_notes=approval_notes,
     )
 
     db.add(booking)
     db.flush()
+
+    if deduct_amount > Decimal("0"):
+        from models.user_balance import (
+            UserBalanceAccount,
+            BalanceTransaction,
+            BalanceDeductRecord,
+            TransactionType,
+            BalanceType,
+        )
+
+        balance_account = (
+            db.query(UserBalanceAccount)
+            .filter(UserBalanceAccount.user_id == current_user.id)
+            .first()
+        )
+
+        if balance_account:
+            deduct_no = f"DD{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+
+            deduct_record = BalanceDeductRecord(
+                deduct_no=deduct_no,
+                user_id=current_user.id,
+                order_type="space_booking",
+                order_id=booking.id,
+                order_no=booking.booking_no,
+                total_amount=float(deduct_amount),
+                membership_deduct=min(
+                    Decimal(str(balance_account.membership_balance)),
+                    deduct_amount,
+                ),
+                service_deduct=min(
+                    Decimal(str(balance_account.service_balance)),
+                    deduct_amount
+                    - min(
+                        Decimal(str(balance_account.membership_balance)),
+                        deduct_amount,
+                    ),
+                ),
+                gift_deduct=0,
+                cash_amount=0,
+                description=f"空间预约余额抵扣：{booking.resource_name} {booking.booking_date}（抵扣¥{deduct_amount:.2f}）",
+            )
+            db.add(deduct_record)
+
+            membership_deduct = min(
+                Decimal(str(balance_account.membership_balance)),
+                deduct_amount,
+            )
+            remaining = deduct_amount - membership_deduct
+            service_deduct = min(
+                Decimal(str(balance_account.service_balance)), remaining
+            )
+
+            balance_account.membership_balance -= membership_deduct
+            balance_account.service_balance -= service_deduct
+            balance_account.total_deducted += deduct_amount
+            balance_account.update_total_balance()
+            balance_account.last_transaction_at = datetime.now()
+
+            booking.deduct_record_id = deduct_record.id
+
+            if membership_deduct > 0:
+                tx = BalanceTransaction(
+                    transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                    user_id=current_user.id,
+                    transaction_type=TransactionType.DEDUCT,
+                    amount=-membership_deduct,
+                    balance_type=BalanceType.MEMBERSHIP,
+                    before_membership_balance=balance_account.membership_balance
+                    + membership_deduct,
+                    before_total_balance=balance_account.total_balance
+                    + membership_deduct,
+                    after_membership_balance=balance_account.membership_balance,
+                    after_total_balance=balance_account.total_balance,
+                    reference_type="space_booking",
+                    reference_id=booking.id,
+                    reference_no=booking.booking_no,
+                    description=f"空间预约抵扣（会员余额）：{booking.resource_name}",
+                )
+                db.add(tx)
+
+            if service_deduct > 0:
+                tx2 = BalanceTransaction(
+                    transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}{random.randint(100, 999)}",
+                    user_id=current_user.id,
+                    transaction_type=TransactionType.DEDUCT,
+                    amount=-service_deduct,
+                    balance_type=BalanceType.SERVICE,
+                    before_service_balance=balance_account.service_balance
+                    + service_deduct,
+                    before_total_balance=balance_account.total_balance + service_deduct,
+                    after_service_balance=balance_account.service_balance,
+                    after_total_balance=balance_account.total_balance,
+                    reference_type="space_booking",
+                    reference_id=booking.id,
+                    reference_no=booking.booking_no,
+                    description=f"空间预约抵扣（服务余额）：{booking.resource_name}",
+                )
+                db.add(tx2)
 
     if initial_status == "pending":
         from shared.models.space.space_approval import SpaceApproval
@@ -259,9 +462,25 @@ async def create_booking(
     db.commit()
     db.refresh(booking)
 
-    return ApiResponse(
-        code=201, message="预约创建成功", data=_format_booking(booking, db)
-    )
+    payment_mode_text = {
+        "credit": "记账模式（使用后结算）",
+        "balance_deduct": "余额抵扣（已全额扣款）",
+        "mixed": "混合支付（余额抵扣+记账）",
+        "prepay": "预付模式（待线下支付）",
+    }
+
+    if payment_mode == "balance_deduct":
+        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已从账户余额全额扣除。"
+    elif payment_mode == "mixed":
+        message = f"预约创建成功！费用 ¥{total_fee:.2f}，其中 ¥{deduct_amount:.2f} 已从余额扣除，¥{credit_amount:.2f} 记账待结算。"
+    elif payment_mode == "credit":
+        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已记账，将在使用后结算，月度账单统一处理。"
+    elif initial_status == "pending":
+        message = f"预约创建成功！等待管理员审批和支付确认。"
+    else:
+        message = f"预约创建成功，已自动审批通过。"
+
+    return ApiResponse(code=201, message=message, data=_format_booking(booking, db))
 
 
 @router.put("/{booking_id}", response_model=ApiResponse)
@@ -343,6 +562,77 @@ async def update_booking(
     db.refresh(booking)
 
     return ApiResponse(message="预约修改成功", data=_format_booking(booking, db))
+
+
+@router.put("/{booking_id}/confirm", response_model=ApiResponse)
+async def confirm_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admactiver),
+):
+    """确认预约生效（管理员）- 将预约从 approved 标记为 confirmed"""
+
+    booking = (
+        db.query(SpaceBooking)
+        .filter(SpaceBooking.id == booking_id, SpaceBooking.is_deleted == 0)
+        .first()
+    )
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "approved":
+        raise HTTPException(
+            status_code=400, detail=f"只能确认已批准的预约，当前状态为 {booking.status}"
+        )
+
+    if booking.payment_status == "pending":
+        raise HTTPException(
+            status_code=400, detail="支付状态仍为待支付，请先确认收款后再确认生效"
+        )
+
+    booking.status = "confirmed"
+    booking.confirmed_at = datetime.now()
+    booking.confirmed_by = current_user.name
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(
+        message="预约已确认生效，预约正式生效", data=_format_booking(booking, db)
+    )
+
+
+@router.put("/{booking_id}/activate", response_model=ApiResponse)
+async def activate_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admactiver),
+):
+    """标记开始使用（管理员）- 将预约从 confirmed 标记为 active"""
+
+    booking = (
+        db.query(SpaceBooking)
+        .filter(SpaceBooking.id == booking_id, SpaceBooking.is_deleted == 0)
+        .first()
+    )
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "confirmed":
+        raise HTTPException(
+            status_code=400, detail=f"只能激活已确认的预约，当前状态为 {booking.status}"
+        )
+
+    booking.status = "active"
+    booking.activated_at = datetime.now()
+    booking.activated_by = current_user.name
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(message="预约已标记为进行中", data=_format_booking(booking, db))
 
 
 @router.put("/{booking_id}/cancel", response_model=ApiResponse)
@@ -750,6 +1040,9 @@ def _format_booking(booking: SpaceBooking, db: Session) -> dict:
         "deposit_paid": booking.deposit_paid,
         "status": booking.status,
         "payment_status": booking.payment_status,
+        "payment_mode": booking.payment_mode,
+        "deduct_amount": booking.deduct_amount,
+        "credit_amount": booking.credit_amount,
         "approved_by": booking.approved_by,
         "approved_at": booking.approved_at.isoformat() if booking.approved_at else None,
         "rejected_reason": booking.rejected_reason,
@@ -767,3 +1060,144 @@ def _format_booking(booking: SpaceBooking, db: Session) -> dict:
         "created_at": booking.created_at.isoformat(),
         "updated_at": booking.updated_at.isoformat(),
     }
+
+
+@router.put("/{booking_id}/approve-with-payment", response_model=ApiResponse)
+async def approve_booking_with_payment(
+    booking_id: int,
+    payment_method: str = Query(
+        "offline_cash", description="支付方式: offline_cash/offline_transfer/etc"
+    ),
+    payment_notes: Optional[str] = Query(None, description="收款备注"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admactiver),
+):
+    """
+    管理员审批预约并确认收款（一步完成）
+
+    适用场景：外部访客预约
+    - 预约状态：pending → approved
+    - 支付状态：pending → paid
+    - 同时记录收款信息
+
+    注意：仅适用于pending状态的预约
+    """
+
+    booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+
+    if booking.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail="只能审批pending状态的预约。当前状态：" + booking.status,
+        )
+
+    # 检查时段是否仍有冲突（审批前再次确认）
+    try:
+        start_dt = dt.strptime(booking.start_time, "%H:%M")
+        end_dt = dt.strptime(booking.end_time, "%H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="预约时间格式错误")
+
+    conflicting = (
+        db.query(SpaceBooking)
+        .filter(
+            SpaceBooking.resource_id == booking.resource_id,
+            SpaceBooking.booking_date == booking.booking_date,
+            SpaceBooking.status.in_(["approved", "confirmed", "active"]),
+            SpaceBooking.id != booking_id,
+        )
+        .all()
+    )
+
+    for existing in conflicting:
+        try:
+            existing_start = dt.strptime(existing.start_time, "%H:%M")
+            existing_end = dt.strptime(existing.end_time, "%H:%M")
+        except ValueError:
+            continue
+
+        if not (end_dt <= existing_start or start_dt >= existing_end):
+            raise HTTPException(
+                status_code=400,
+                detail=f"时段冲突：{booking.start_time}-{booking.end_time} 已被其他已批准的预约占用",
+            )
+
+    # 更新预约状态
+    booking.status = "approved"
+    booking.approved_at = datetime.now()
+    booking.approved_by = current_user.name
+    booking.approval_notes = payment_notes or "管理员确认收款并审批通过"
+
+    # 更新支付状态
+    if booking.total_fee and booking.total_fee > 0:
+        booking.payment_status = "paid"
+        booking.deposit_paid = True
+        booking.deposit_paid_at = datetime.now()
+        booking.deposit_payment_method = payment_method
+
+    # 创建支付记录
+    from shared.models.space.space_payment import SpacePayment
+    import random
+
+    payment_no = (
+        f"SP{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+    )
+
+    payment = SpacePayment(
+        payment_no=payment_no,
+        booking_id=booking_id,
+        booking_no=booking.booking_no,
+        user_id=booking.user_id,
+        user_name=booking.user_name,
+        payment_type="full",
+        payment_purpose="管理员确认收款",
+        amount=booking.actual_fee or booking.total_fee or 0,
+        currency="CNY",
+        payment_method=payment_method,
+        payment_channel="offline",
+        status="completed",
+        initiated_at=datetime.now(),
+        completed_at=datetime.now(),
+        verified_by=current_user.name,
+        verified_at=datetime.now(),
+        verification_notes=payment_notes or "管理员线下确认收款",
+    )
+
+    db.add(payment)
+
+    # 更新审批记录（如果存在）
+    if booking.approval_id:
+        from shared.models.space.space_approval import SpaceApproval
+
+        approval = (
+            db.query(SpaceApproval)
+            .filter(SpaceApproval.id == booking.approval_id)
+            .first()
+        )
+        if approval:
+            approval.status = "approved"
+            approval.result = "approved"
+            approval.approved_at = datetime.now()
+            approval.approver_id = current_user.id
+            approval.approver_name = current_user.name
+            approval.approval_notes = payment_notes or "管理员确认收款并审批通过"
+
+    db.commit()
+    db.refresh(booking)
+
+    return ApiResponse(
+        message="审批成功并已确认收款",
+        data={
+            "booking_id": booking_id,
+            "booking_no": booking.booking_no,
+            "status": booking.status,
+            "payment_status": booking.payment_status,
+            "approved_at": booking.approved_at.isoformat(),
+            "approved_by": booking.approved_by,
+            "amount": payment.amount,
+            "payment_method": payment_method,
+        },
+    )

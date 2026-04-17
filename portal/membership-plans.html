@@ -633,6 +633,177 @@
                 padding: var(--spacing-sm);
             }
         }
+        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            padding: var(--spacing-xl);
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding: var(--spacing-xl);
+            border-top: 1px solid var(--border);
+        }
+        
+        .order-summary {
+            background: var(--primary-light);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+        }
+        
+        .summary-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .summary-value {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .summary-amount {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .payment-options {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .payment-option {
+            flex: 1;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .payment-option:hover {
+            border-color: var(--primary);
+        }
+        
+        .payment-option.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .payment-icon {
+            font-size: 24px;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .order-note {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -851,6 +1022,71 @@
                 </div>
             </section>
         </div>
+        
+        <div v-if="showOrderModal" class="modal-overlay" @click.self="closeOrderModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>📋</span>
+                        <span>提交会员订单</span>
+                    </h3>
+                    <button @click="closeOrderModal" class="modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="order-summary">
+                        <div class="summary-item">
+                            <div class="summary-label">套餐名称</div>
+                            <div class="summary-value">{{ selectedPlan?.name }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">有效期</div>
+                            <div class="summary-value">{{ selectedPlan?.duration_months }}个月</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">订单金额</div>
+                            <div class="summary-amount">¥{{ selectedPlan?.price }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">支付方式</label>
+                        <div class="payment-options">
+                            <div :class="['payment-option', { active: orderForm.payment_method === 'bank_transfer' }]" @click="orderForm.payment_method = 'bank_transfer'">
+                                <span class="payment-icon">🏦</span>
+                                <span>银行转账</span>
+                            </div>
+                            <div :class="['payment-option', { active: orderForm.payment_method === 'cash' }]" @click="orderForm.payment_method = 'cash'">
+                                <span class="payment-icon">💵</span>
+                                <span>现金</span>
+                            </div>
+                            <div :class="['payment-option', { active: orderForm.payment_method === 'check' }]" @click="orderForm.payment_method = 'check'">
+                                <span class="payment-icon">📝</span>
+                                <span>支票</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">申请备注（可选）</label>
+                        <textarea v-model="orderForm.apply_note" class="form-textarea" placeholder="如有特殊需求可在此说明"></textarea>
+                    </div>
+                    
+                    <div class="order-note">
+                        <span>💡</span>
+                        <span>提交订单后需等待管理员审核，审核通过后余额将自动入账，会员权益即刻生效。</span>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeOrderModal" class="btn btn-outline">取消</button>
+                    <button @click="submitOrder" class="btn btn-primary" :disabled="submittingOrder">
+                        <span v-if="submittingOrder">提交中...</span>
+                        <span v-else>确认提交</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -914,14 +1150,69 @@
                     }
                 };
                 
+                const selectedPlan = ref(null);
+                const showOrderModal = ref(false);
+                const orderForm = ref({
+                    payment_method: 'bank_transfer',
+                    apply_note: ''
+                });
+                const submittingOrder = ref(false);
+                
                 const selectPlan = (plan) => {
                     if (!isLoggedIn.value) {
                         window.location.href = '/portal/register.html';
                         return;
                     }
                     
-                    localStorage.setItem('selected_plan', JSON.stringify(plan));
-                    window.location.href = '/portal/payment.html';
+                    selectedPlan.value = plan;
+                    showOrderModal.value = true;
+                };
+                
+                const closeOrderModal = () => {
+                    showOrderModal.value = false;
+                    selectedPlan.value = null;
+                    orderForm.value = {
+                        payment_method: 'bank_transfer',
+                        apply_note: ''
+                    };
+                };
+                
+                const submitOrder = async () => {
+                    if (!selectedPlan.value) return;
+                    
+                    try {
+                        submittingOrder.value = true;
+                        
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        const response = await fetch(`${API_BASE}/membership/orders`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                plan_id: selectedPlan.value.id,
+                                payment_method: orderForm.value.payment_method,
+                                apply_note: orderForm.value.apply_note
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            closeOrderModal();
+                            window.location.href = `/portal/membership-orders.html`;
+                        } else {
+                            const error = await response.json();
+                            alert(error.detail || '提交订单失败');
+                        }
+                    } catch (err) {
+                        console.error('提交订单失败:', err);
+                        alert('提交订单失败，请稍后重试');
+                    } finally {
+                        submittingOrder.value = false;
+                    }
                 };
                 
                 onMounted(async () => {
@@ -936,7 +1227,13 @@
                     error,
                     isLoggedIn,
                     commonFeatures,
-                    selectPlan
+                    selectedPlan,
+                    showOrderModal,
+                    orderForm,
+                    submittingOrder,
+                    selectPlan,
+                    closeOrderModal,
+                    submitOrder
                 };
             }
         }).mount('#app');

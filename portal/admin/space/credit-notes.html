@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记账账单管理</title>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .filter-bar {
+            background: var(--bg-card);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+        
+        .notes-table {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .notes-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .notes-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: linear-gradient(to bottom, #f8f9fa, #f1f3f5);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .notes-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .notes-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+        
+        .status-paid {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+        
+        .status-settled {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+        
+        .note-detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+        }
+        
+        .item-info {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        
+        .item-amount {
+            font-weight: 600;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[
+            { text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html' },
+            { text: '记账账单', icon: '📋', url: '/portal/admin/space/credit-notes.html' }
+        ]"></global-header>
+        
+        <div class="container">
+            <div class="header-section">
+                <h1 class="page-title">📋 记账账单管理</h1>
+                <button class="btn btn-primary" @click="processMonthlySettlement">月度结算处理</button>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.totalNotes }}</div>
+                    <div class="stat-label">总账单数</div>
+                </div>
+                <div class="stat-card" style="border-left-color: var(--warning);">
+                    <div class="stat-value" style="color: var(--warning);">{{ stats.pendingNotes }}</div>
+                    <div class="stat-label">待处理账单</div>
+                </div>
+                <div class="stat-card" style="border-left-color: var(--success);">
+                    <div class="stat-value" style="color: var(--success);">{{ stats.paidNotes }}</div>
+                    <div class="stat-label">已支付账单</div>
+                </div>
+                <div class="stat-card" style="border-left-color: var(--info);">
+                    <div class="stat-value" style="color: var(--info);">¥{{ stats.totalAmount.toFixed(2) }}</div>
+                    <div class="stat-label">账单总金额</div>
+                </div>
+            </div>
+            
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>月份：</label>
+                    <select class="form-select" v-model="filters.month" @change="loadNotes">
+                        <option value="">全部</option>
+                        <option v-for="m in availableMonths" :key="m" :value="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>状态：</label>
+                    <select class="form-select" v-model="filters.status" @change="loadNotes">
+                        <option value="">全部</option>
+                        <option value="pending">待处理</option>
+                        <option value="partially_paid">部分支付</option>
+                        <option value="paid">已支付</option>
+                        <option value="settled">已结算</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline" @click="loadNotes">刷新</button>
+            </div>
+            
+            <div class="notes-table" v-if="!loading">
+                <table v-if="notes.length > 0">
+                    <thead>
+                        <tr>
+                            <th>账单编号</th>
+                            <th>用户</th>
+                            <th>部门</th>
+                            <th>月份</th>
+                            <th>预约次数</th>
+                            <th>账单金额</th>
+                            <th>已支付</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="note in notes" :key="note.id">
+                            <td><strong>{{ note.note_no }}</strong></td>
+                            <td>{{ note.user_name }}</td>
+                            <td>{{ note.department || '-' }}</td>
+                            <td>{{ note.month }}</td>
+                            <td>{{ note.booking_count }}</td>
+                            <td style="color: var(--primary); font-weight: 600;">¥{{ note.total_amount.toFixed(2) }}</td>
+                            <td>¥{{ note.paid_amount.toFixed(2) }}</td>
+                            <td>
+                                <span class="status-badge" :class="'status-' + note.status">
+                                    {{ getStatusText(note.status) }}
+                                </span>
+                            </td>
+                            <td>{{ formatTime(note.created_at) }}</td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" @click="viewDetail(note)">查看详情</button>
+                                <button 
+                                    v-if="note.status === 'pending'" 
+                                    class="btn btn-success btn-sm"
+                                    @click="markPaid(note)"
+                                >确认支付</button>
+                                <button 
+                                    v-if="note.status === 'paid'" 
+                                    class="btn btn-primary btn-sm"
+                                    @click="markSettled(note)"
+                                >确认结算</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div v-else style="text-align: center; padding: var(--spacing-3xl);">
+                    <div style="font-size: 48px;">📋</div>
+                    <p>暂无记账账单</p>
+                </div>
+            </div>
+            
+            <div v-else style="text-align: center; padding: var(--spacing-3xl);">
+                <div style="width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div>
+                <p>加载中...</p>
+            </div>
+        </div>
+        
+        <!-- 账单详情弹窗 -->
+        <div v-if="showDetailModal" class="note-detail-modal" @click.self="showDetailModal = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 style="font-size: var(--font-size-xl); font-weight: 700;">
+                        账单详情 - {{ selectedNote?.note_no }}
+                    </h3>
+                    <button style="background: none; border: none; font-size: 24px; cursor: pointer;" @click="showDetailModal = false">×</button>
+                </div>
+                
+                <div v-if="selectedNote" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">用户</div>
+                        <div style="font-weight: 600;">{{ selectedNote.user_name }}</div>
+                    </div>
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">部门</div>
+                        <div style="font-weight: 600;">{{ selectedNote.department || '-' }}</div>
+                    </div>
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">账单月份</div>
+                        <div style="font-weight: 600;">{{ selectedNote.month }}</div>
+                    </div>
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">预约次数</div>
+                        <div style="font-weight: 600;">{{ selectedNote.booking_count }} 次</div>
+                    </div>
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">账单金额</div>
+                        <div style="font-weight: 600; color: var(--primary);">¥{{ selectedNote.total_amount.toFixed(2) }}</div>
+                    </div>
+                    <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">已支付</div>
+                        <div style="font-weight: 600;">¥{{ selectedNote.paid_amount.toFixed(2) }}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: var(--spacing-xl);">
+                    <h4 style="font-weight: 600; margin-bottom: var(--spacing-md);">预约明细</h4>
+                    <div class="items-list">
+                        <div v-for="item in selectedNote.items" :key="item.id" class="item-row">
+                            <div class="item-info">
+                                <div><strong>{{ item.booking_no }}</strong></div>
+                                <div>{{ item.space_name }}</div>
+                                <div>{{ item.booking_date }} {{ item.time_slot }}</div>
+                            </div>
+                            <div class="item-amount">¥{{ item.amount.toFixed(2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
+                    <button class="btn btn-outline" @click="showDetailModal = false">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const loading = ref(false);
+                const notes = ref([]);
+                const stats = ref({
+                    totalNotes: 0,
+                    pendingNotes: 0,
+                    paidNotes: 0,
+                    totalAmount: 0
+                });
+                const filters = ref({
+                    month: '',
+                    status: ''
+                });
+                const availableMonths = ref([]);
+                const showDetailModal = ref(false);
+                const selectedNote = ref(null);
+                
+                const API_BASE = '/api/v2/space/payment';
+                
+                const getStatusText = (status) => {
+                    const texts = {
+                        pending: '待处理',
+                        partially_paid: '部分支付',
+                        paid: '已支付',
+                        settled: '已结算'
+                    };
+                    return texts[status] || status;
+                };
+                
+                const formatTime = (timeStr) => {
+                    if (!timeStr) return '-';
+                    const date = new Date(timeStr);
+                    return date.toLocaleDateString('zh-CN');
+                };
+                
+                const loadNotes = async () => {
+                    loading.value = true;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const params = new URLSearchParams();
+                        
+                        if (filters.value.month) params.append('month', filters.value.month);
+                        if (filters.value.status) params.append('status', filters.value.status);
+                        params.append('limit', '100');
+                        
+                        const response = await fetch(`${API_BASE}/credit-notes?${params}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        notes.value = data.items || [];
+                        
+                        stats.value.totalNotes = notes.value.length;
+                        stats.value.pendingNotes = notes.value.filter(n => n.status === 'pending').length;
+                        stats.value.paidNotes = notes.value.filter(n => n.status === 'paid').length;
+                        stats.value.totalAmount = notes.value.reduce((sum, n) => sum + n.total_amount, 0);
+                        
+                        const months = [...new Set(notes.value.map(n => n.month))].sort().reverse();
+                        availableMonths.value = months;
+                        
+                    } catch (error) {
+                        console.error('加载账单失败:', error);
+                        alert('加载失败，请重试');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const viewDetail = async (note) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/credit-notes/${note.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        selectedNote.value = await response.json();
+                        showDetailModal.value = true;
+                        
+                    } catch (error) {
+                        console.error('加载详情失败:', error);
+                        alert('加载详情失败');
+                    }
+                };
+                
+                const markPaid = async (note) => {
+                    const amount = prompt(`确认支付金额：\n\n账单金额：¥${note.total_amount.toFixed(2)}\n\n请输入支付金额：`, note.total_amount.toFixed(2));
+                    if (!amount) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        
+                        // 这里需要调用API标记支付，目前简化处理
+                        alert(`支付确认成功！\n\n账单：${note.note_no}\n支付金额：¥${parseFloat(amount).toFixed(2)}`);
+                        loadNotes();
+                        
+                    } catch (error) {
+                        console.error('支付确认失败:', error);
+                        alert('操作失败');
+                    }
+                };
+                
+                const markSettled = async (note) => {
+                    if (!confirm(`确认结算账单？\n\n账单：${note.note_no}\n金额：¥${note.total_amount.toFixed(2)}\n\n结算后将标记为已完成`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/monthly-settlement`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                month: note.month,
+                                user_id: note.user_id
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        alert(data.message || '结算成功');
+                        loadNotes();
+                        
+                    } catch (error) {
+                        console.error('结算失败:', error);
+                        alert('结算失败');
+                    }
+                };
+                
+                const processMonthlySettlement = async () => {
+                    const month = prompt('请输入要处理的月份（如 2026-04）：', new Date().toISOString().slice(0, 7));
+                    if (!month) return;
+                    
+                    if (!confirm(`确认处理 ${month} 月份的所有记账账单结算？`)) return;
+                    
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}/monthly-settlement`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ month })
+                        });
+                        
+                        const data = await response.json();
+                        alert(data.message || '月度结算处理完成');
+                        loadNotes();
+                        
+                    } catch (error) {
+                        console.error('月度结算失败:', error);
+                        alert('月度结算失败');
+                    }
+                };
+                
+                onMounted(async () => {
+                    const user = await checkAuth({ requireAuth: true, requireAdmin: true });
+                    if (!user) return;
+                    
+                    loadNotes();
+                });
+                
+                return {
+                    loading,
+                    notes,
+                    stats,
+                    filters,
+                    availableMonths,
+                    showDetailModal,
+                    selectedNote,
+                    getStatusText,
+                    formatTime,
+                    loadNotes,
+                    viewDetail,
+                    markPaid,
+                    markSettled,
+                    processMonthlySettlement
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

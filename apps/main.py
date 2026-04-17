@@ -18,6 +18,10 @@ from apps.api.v1.products import category_router as product_categories_router
 from apps.api.v1.offices import router as offices_router
 from apps.api.v1.accounts import router as accounts_router
 from apps.api.v1.membership import router as membership_router
+from apps.api.v1.membership_order import router as membership_order_router
+from apps.api.v1.user_balance import router as user_balance_router
+from apps.api.v1.admin_membership_order import router as admin_membership_order_router
+from apps.api.v1.admin_balance import router as admin_balance_router
 
 # Import the unified v2 API routes (Space Service)
 from apps.api.v2.space_types import router as space_types_router
@@ -27,6 +31,9 @@ from apps.api.v2.space_approvals import router as space_approvals_router
 from apps.api.v2.space_payments import router as space_payments_router
 from apps.api.v2.space_statistics import router as space_statistics_router
 from apps.api.v2.unified_settlement import router as unified_settlement_router
+from apps.api.v2.space_payment_settlement import (
+    router as space_payment_settlement_router,
+)
 
 # Import exception handlers
 from apps.error_handlers import register_exception_handlers
@@ -72,6 +79,10 @@ v1_router.include_router(product_categories_router, tags=["产品分类"])
 v1_router.include_router(offices_router, tags=["办公室管理"])
 v1_router.include_router(accounts_router, tags=["办公室账户管理"])
 v1_router.include_router(membership_router, tags=["会员套餐"])
+v1_router.include_router(membership_order_router, tags=["会员订单"])
+v1_router.include_router(user_balance_router, tags=["用户余额"])
+v1_router.include_router(admin_membership_order_router, tags=["管理员-会员订单"])
+v1_router.include_router(admin_balance_router, tags=["管理员-余额管理"])
 
 # Create v2 version router (Space Service - 新架构)
 v2_router = APIRouter(prefix="/api/v2")
@@ -84,6 +95,7 @@ v2_router.include_router(space_approvals_router)
 v2_router.include_router(space_payments_router)
 v2_router.include_router(space_statistics_router)
 v2_router.include_router(unified_settlement_router)
+v2_router.include_router(space_payment_settlement_router)
 
 # Add routers to main app
 app.include_router(v1_router)

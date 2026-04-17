@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的余额</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            min-height: 100vh;
+        }
+        
+        .page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+            padding-top: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .balance-summary {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .balance-total {
+            text-align: center;
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .balance-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .balance-amount {
+            font-size: var(--font-size-4xl);
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .balance-unit {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .balance-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+        }
+        
+        .balance-type-item {
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            text-align: center;
+        }
+        
+        .balance-type-icon {
+            font-size: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .balance-type-name {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .balance-type-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .balance-type-value.membership {
+            color: var(--success);
+        }
+        
+        .balance-type-value.service {
+            color: var(--primary);
+        }
+        
+        .balance-type-value.gift {
+            color: var(--warning);
+        }
+        
+        .balance-expire {
+            font-size: var(--font-size-xs);
+            color: var(--warning);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-item {
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .tab-item {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-item:hover {
+            border-color: var(--primary);
+        }
+        
+        .tab-item.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        .records-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .record-item:last-child {
+            border-bottom: none;
+        }
+        
+        .record-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .record-type {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .record-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .record-time {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .record-amount {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        
+        .record-amount.positive {
+            color: var(--success);
+        }
+        
+        .record-amount.negative {
+            color: var(--danger);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .action-btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .action-btn.primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+        
+        .action-btn.outline {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .action-btn.outline:hover {
+            background: var(--primary-light);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: var(--spacing-3xl);
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-lg);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-lg);
+        }
+        
+        .pagination-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .deduct-detail {
+            display: flex;
+            gap: var(--spacing-md);
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .deduct-tag {
+            padding: 2px 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+        
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-md);
+            }
+            
+            .balance-types {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '我的余额', icon: '💰', url: '/portal/balance.html'}]"></global-header>
+        
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span>💰</span>
+                    <span>我的余额</span>
+                </h1>
+            </div>
+            
+            <div v-if="loading" class="loading-spinner">
+                <div class="spinner"></div>
+                <div>加载中...</div>
+            </div>
+            
+            <div v-else>
+                <div class="balance-summary">
+                    <div class="balance-total">
+                        <div class="balance-label">可用余额</div>
+                        <div style="display: flex; align-items: baseline; justify-content: center; gap: var(--spacing-xs);">
+                            <span class="balance-unit">¥</span>
+                            <span class="balance-amount">{{ balanceInfo.available_total_balance }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="balance-types">
+                        <div class="balance-type-item">
+                            <div class="balance-type-icon">👑</div>
+                            <div class="balance-type-name">会员余额</div>
+                            <div class="balance-type-value membership">¥{{ balanceInfo.membership_balance }}</div>
+                            <div v-if="balanceInfo.membership_expire_date" class="balance-expire">
+                                {{ getDaysLeft(balanceInfo.membership_expire_date) }}天后过期
+                            </div>
+                        </div>
+                        <div class="balance-type-item">
+                            <div class="balance-type-icon">💳</div>
+                            <div class="balance-type-name">服务余额</div>
+                            <div class="balance-type-value service">¥{{ balanceInfo.service_balance }}</div>
+                        </div>
+                        <div class="balance-type-item">
+                            <div class="balance-type-icon">🎁</div>
+                            <div class="balance-type-name">赠送余额</div>
+                            <div class="balance-type-value gift">¥{{ balanceInfo.gift_balance }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">¥{{ summary.total_charged }}</div>
+                        <div class="stat-label">累计充值</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">¥{{ summary.total_deducted }}</div>
+                        <div class="stat-label">累计抵扣</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ summary.month_deduct_count }}</div>
+                        <div class="stat-label">本月抵扣次数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">¥{{ summary.month_deduct_amount }}</div>
+                        <div class="stat-label">本月抵扣金额</div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn primary" @click="goToMembership">
+                        <span>👑</span>
+                        <span>开通会员</span>
+                    </button>
+                    <button class="action-btn outline" @click="goToOrders">
+                        <span>📋</span>
+                        <span>我的订单</span>
+                    </button>
+                </div>
+                
+                <div class="tabs">
+                    <div :class="['tab-item', { active: currentTab === 'transactions' }]" @click="currentTab = 'transactions'">
+                        💰 余额变动
+                    </div>
+                    <div :class="['tab-item', { active: currentTab === 'deduct' }]" @click="currentTab = 'deduct'">
+                        📊 抵扣记录
+                    </div>
+                </div>
+                
+                <div v-if="currentTab === 'transactions'" class="records-card">
+                    <div v-if="transactions.length === 0" class="empty-state">
+                        暂无余额变动记录
+                    </div>
+                    
+                    <div v-for="tx in transactions" :key="tx.id" class="record-item">
+                        <div class="record-info">
+                            <div class="record-type">
+                                <span>{{ getTransactionIcon(tx.transaction_type) }}</span>
+                                <span>{{ tx.transaction_type_text }}</span>
+                            </div>
+                            <div class="record-desc">{{ tx.description || '-' }}</div>
+                            <div class="record-time">{{ formatDate(tx.created_at) }}</div>
+                            <div v-if="tx.expire_date" style="font-size: var(--font-size-xs); color: var(--warning); margin-top: var(--spacing-xs);">
+                                过期日期：{{ tx.expire_date }}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div :class="['record-amount', tx.amount >= 0 ? 'positive' : 'negative']">
+                                {{ tx.amount >= 0 ? '+' : '' }}¥{{ Math.abs(tx.amount) }}
+                            </div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                {{ tx.reference_no || '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="transactionsTotal > transactionsPageSize" class="pagination">
+                        <button class="pagination-btn" @click="transactionsPrevPage" :disabled="transactionsPage === 1">上一页</button>
+                        <span class="pagination-info">第 {{ transactionsPage }} / {{ Math.ceil(transactionsTotal / transactionsPageSize) }} 页</span>
+                        <button class="pagination-btn" @click="transactionsNextPage" :disabled="transactionsPage >= Math.ceil(transactionsTotal / transactionsPageSize)">下一页</button>
+                    </div>
+                </div>
+                
+                <div v-if="currentTab === 'deduct'" class="records-card">
+                    <div v-if="deductRecords.length === 0" class="empty-state">
+                        暂无抵扣记录
+                    </div>
+                    
+                    <div v-for="record in deductRecords" :key="record.id" class="record-item">
+                        <div class="record-info">
+                            <div class="record-type">
+                                <span>{{ getOrderTypeIcon(record.order_type) }}</span>
+                                <span>{{ getOrderTypeText(record.order_type) }}</span>
+                            </div>
+                            <div class="record-desc">
+                                订单金额：¥{{ record.total_amount }}
+                                <span v-if="record.member_discount > 0">（会员折扣 ¥{{ record.member_discount }}）</span>
+                            </div>
+                            <div class="deduct-detail">
+                                <span class="deduct-tag">会员 ¥{{ record.membership_deduct }}</span>
+                                <span class="deduct-tag">服务 ¥{{ record.service_deduct }}</span>
+                                <span class="deduct-tag">赠送 ¥{{ record.gift_deduct }}</span>
+                                <span class="deduct-tag">现金 ¥{{ record.cash_amount }}</span>
+                            </div>
+                            <div class="record-time">{{ formatDate(record.created_at) }}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="record-amount negative">
+                                -¥{{ record.membership_deduct + record.service_deduct + record.gift_deduct }}
+                            </div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
+                                {{ record.order_no || '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="deductTotal > deductPageSize" class="pagination">
+                        <button class="pagination-btn" @click="deductPrevPage" :disabled="deductPage === 1">上一页</button>
+                        <span class="pagination-info">第 {{ deductPage }} / {{ Math.ceil(deductTotal / deductPageSize) }} 页</span>
+                        <button class="pagination-btn" @click="deductNextPage" :disabled="deductPage >= Math.ceil(deductTotal / deductPageSize)">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const loading = ref(true);
+                const balanceInfo = ref({
+                    membership_balance: 0,
+                    service_balance: 0,
+                    gift_balance: 0,
+                    total_balance: 0,
+                    available_membership_balance: 0,
+                    available_service_balance: 0,
+                    available_total_balance: 0,
+                    membership_expire_date: null,
+                    total_membership_charged: 0,
+                    total_service_charged: 0,
+                    total_deducted: 0,
+                    total_refunded: 0
+                });
+                
+                const summary = ref({
+                    total_balance: 0,
+                    total_charged: 0,
+                    total_deducted: 0,
+                    month_deduct_count: 0,
+                    month_deduct_amount: 0
+                });
+                
+                const currentTab = ref('transactions');
+                const transactions = ref([]);
+                const transactionsPage = ref(1);
+                const transactionsPageSize = ref(20);
+                const transactionsTotal = ref(0);
+                
+                const deductRecords = ref([]);
+                const deductPage = ref(1);
+                const deductPageSize = ref(20);
+                const deductTotal = ref(0);
+                
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+                
+                const getDaysLeft = (expireDateStr) => {
+                    if (!expireDateStr) return '';
+                    const expireDate = new Date(expireDateStr);
+                    const now = new Date();
+                    const days = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
+                    return days > 0 ? days : 0;
+                };
+                
+                const getTransactionIcon = (type) => {
+                    const icons = {
+                        membership_charge: '👑',
+                        service_charge: '💳',
+                        deduct: '📊',
+                        refund: '↩️',
+                        gift: '🎁',
+                        adjust: '⚙️'
+                    };
+                    return icons[type] || '💰';
+                };
+                
+                const getOrderTypeIcon = (type) => {
+                    const icons = {
+                        meeting: '📅',
+                        dining: '🍽️',
+                        water: '💧',
+                        space: '🏢'
+                    };
+                    return icons[type] || '📋';
+                };
+                
+                const getOrderTypeText = (type) => {
+                    const texts = {
+                        meeting: '会议室预约',
+                        dining: '餐饮服务',
+                        water: '水站服务',
+                        space: '空间服务'
+                    };
+                    return texts[type] || type;
+                };
+                
+                const loadBalanceInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('user_id');
+                        
+                        if (!token || !userId) {
+                            window.location.href = '/portal/register.html';
+                            return;
+                        }
+                        
+                        const response = await fetch(`${API_BASE}/balance/my`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (response.ok) {
+                            balanceInfo.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载余额失败:', e);
+                    }
+                };
+                
+                const loadSummary = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch(`${API_BASE}/balance/summary`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (response.ok) {
+                            summary.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载统计失败:', e);
+                    }
+                };
+                
+                const loadTransactions = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch(`${API_BASE}/balance/transactions?page=${transactionsPage.value}&page_size=${transactionsPageSize.value}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            transactions.value = data.transactions || [];
+                            transactionsTotal.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载交易记录失败:', e);
+                    }
+                };
+                
+                const loadDeductRecords = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        
+                        const response = await fetch(`${API_BASE}/balance/deduct-records?page=${deductPage.value}&page_size=${deductPageSize.value}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            deductRecords.value = data.records || [];
+                            deductTotal.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载抵扣记录失败:', e);
+                    }
+                };
+                
+                const transactionsPrevPage = () => {
+                    if (transactionsPage.value > 1) {
+                        transactionsPage.value--;
+                        loadTransactions();
+                    }
+                };
+                
+                const transactionsNextPage = () => {
+                    if (transactionsPage.value < Math.ceil(transactionsTotal.value / transactionsPageSize.value)) {
+                        transactionsPage.value++;
+                        loadTransactions();
+                    }
+                };
+                
+                const deductPrevPage = () => {
+                    if (deductPage.value > 1) {
+                        deductPage.value--;
+                        loadDeductRecords();
+                    }
+                };
+                
+                const deductNextPage = () => {
+                    if (deductPage.value < Math.ceil(deductTotal.value / deductPageSize.value)) {
+                        deductPage.value++;
+                        loadDeductRecords();
+                    }
+                };
+                
+                const goToMembership = () => {
+                    window.location.href = '/portal/membership-plans.html';
+                };
+                
+                const goToOrders = () => {
+                    window.location.href = '/portal/membership-orders.html';
+                };
+                
+                watch(currentTab, (newTab) => {
+                    if (newTab === 'transactions') {
+                        loadTransactions();
+                    } else if (newTab === 'deduct') {
+                        loadDeductRecords();
+                    }
+                });
+                
+                onMounted(async () => {
+                    await loadBalanceInfo();
+                    await loadSummary();
+                    await loadTransactions();
+                    loading.value = false;
+                });
+                
+                return {
+                    loading,
+                    balanceInfo,
+                    summary,
+                    currentTab,
+                    transactions,
+                    transactionsPage,
+                    transactionsTotal,
+                    deductRecords,
+                    deductPage,
+                    deductTotal,
+                    formatDate,
+                    getDaysLeft,
+                    getTransactionIcon,
+                    getOrderTypeIcon,
+                    getOrderTypeText,
+                    transactionsPrevPage,
+                    transactionsNextPage,
+                    deductPrevPage,
+                    deductNextPage,
+                    goToMembership,
+                    goToOrders
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

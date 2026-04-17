@@ -472,6 +472,7 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
         booking_info = {
             "resource_name": booking.resource_name,
             "user_name": booking.user_name,
+            "user_type": booking.user_type,
             "title": booking.title,
             "booking_date": booking.booking_date.isoformat()
             if booking.booking_date
@@ -488,6 +489,9 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
             "special_requests": booking.special_requests,
         }
 
+    # 从booking中提取user_type用于前端判断
+    user_type = booking.user_type if booking else "internal"
+
     return {
         "id": approval.id,
         "approval_no": approval.approval_no,
@@ -503,6 +507,8 @@ def _format_approval(approval: SpaceApproval, db: Session) -> dict:
         "approver_department": approval.approver_department,
         "status": approval.status,
         "result": approval.result,
+        "user_type": user_type,
+        "userType": user_type,  # 兼容前端驼峰命名
         "submitted_at": approval.submitted_at.isoformat()
         if approval.submitted_at
         else None,

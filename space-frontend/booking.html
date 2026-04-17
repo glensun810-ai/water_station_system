@@ -907,6 +907,134 @@
             font-size: var(--font-size-lg);
         }
         
+        /* ===== 支付模式选择 ===== */
+        .payment-mode-card {
+            background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+            border-radius: 16px;
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-xl);
+            border: 1px solid #91d5ff;
+        }
+        
+        .payment-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            background: #1890ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+        
+        .payment-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .payment-option {
+            background: white;
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            border: 2px solid #d9d9d9;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .payment-option:hover {
+            border-color: #1890ff;
+        }
+        
+        .payment-option.selected {
+            border-color: #1890ff;
+            background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+        }
+        
+        .payment-option.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-color: #d9d9d9;
+        }
+        
+        .option-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .option-icon {
+            font-size: 24px;
+        }
+        
+        .option-name {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .option-check {
+            margin-left: auto;
+            width: 24px;
+            height: 24px;
+            background: #1890ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .option-desc {
+            font-size: var(--font-size-sm);
+            color: #666;
+            margin-top: var(--spacing-sm);
+            padding-left: 36px;
+        }
+        
+        .option-balance {
+            font-size: var(--font-size-sm);
+            color: #1890ff;
+            font-weight: 500;
+            margin-top: var(--spacing-xs);
+            padding-left: 36px;
+        }
+        
+        .option-warning {
+            font-size: var(--font-size-sm);
+            color: #ff4d4f;
+            margin-top: var(--spacing-xs);
+            padding-left: 36px;
+        }
+        
+        .payment-hint {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+            padding: var(--spacing-md);
+            background: rgba(24, 144, 255, 0.1);
+            border-radius: 8px;
+            font-size: var(--font-size-sm);
+            color: #1890ff;
+        }
+        
         /* ===== 确认页面 ===== */
         .confirm-card {
             background: white;
@@ -1517,6 +1645,84 @@
                             <span class="fee-total-value">{{ feeDetail.totalFee }}</span>
                         </div>
                     </div>
+                    
+                    <!-- 支付模式选择（仅外部访客需要选择） -->
+                    <div class="payment-mode-card" v-if="userType === 'external' && paymentModes.length > 0">
+                        <div class="payment-header">
+                            <div class="payment-icon">💳</div>
+                            <span class="payment-title">选择支付方式</span>
+                        </div>
+                        
+                        <div class="payment-options">
+                            <div 
+                                v-for="mode in paymentModes" 
+                                :key="mode.mode"
+                                class="payment-option"
+                                :class="{ selected: selectedPaymentMode === mode.mode, disabled: !mode.available }"
+                                @click="selectPaymentMode(mode)"
+                            >
+                                <div class="option-header">
+                                    <span class="option-icon">
+                                        <span v-if="mode.mode === 'prepay'">💵</span>
+                                    </span>
+                                    <span class="option-name">{{ mode.name }}</span>
+                                    <span v-if="selectedPaymentMode === mode.mode" class="option-check">✓</span>
+                                </div>
+                                <div class="option-desc">{{ mode.description }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="payment-hint">
+                            <span>💡</span>
+                            <span>外部访客需线下付费，管理员确认后预约生效</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 内部员工支付说明 -->
+                    <div class="payment-mode-card" v-if="userType === 'internal'" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc;">
+                        <div class="payment-header">
+                            <div class="payment-icon">💡</div>
+                            <span class="payment-title">智能支付</span>
+                        </div>
+                        
+                        <div style="background: white; padding: var(--spacing-lg); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                                <span style="font-size: var(--font-size-sm); color: #64748b;">当前余额</span>
+                                <span style="font-size: var(--font-size-xl); font-weight: 700; color: var(--primary);">¥{{ userBalance.toFixed(2) }}</span>
+                            </div>
+                            
+                            <div v-if="userBalance >= feeDetail.totalFee" style="display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-md); background: #ecfdf5; border-radius: var(--radius-sm); border: 1px solid #a7f3d0;">
+                                <span style="font-size: 18px;">✅</span>
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: 600; color: #059669;">余额充足，预约时将全额抵扣</div>
+                                    <div style="font-size: var(--font-size-xs); color: #64748b;">费用 ¥{{ feeDetail.totalFee }} 将从余额扣除</div>
+                                </div>
+                            </div>
+                            
+                            <div v-else-if="userBalance > 0" style="display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-md); background: #fef3c7; border-radius: var(--radius-sm); border: 1px solid #fcd34d;">
+                                <span style="font-size: 18px;">⚡</span>
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: 600; color: #92400e;">余额部分抵扣 + 剩余记账</div>
+                                    <div style="font-size: var(--font-size-xs); color: #64748b;">
+                                        抵扣 ¥{{ userBalance.toFixed(2) }} + 记账 ¥{{ (feeDetail.totalFee - userBalance).toFixed(2) }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div v-else style="display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-md); background: #f1f5f9; border-radius: var(--radius-sm); border: 1px solid #cbd5e1;">
+                                <span style="font-size: 18px;">📝</span>
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: 600; color: #475569;">记账模式，使用后结算</div>
+                                    <div style="font-size: var(--font-size-xs); color: #64748b;">费用 ¥{{ feeDetail.totalFee }} 将记录到月度账单</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="payment-hint" style="background: rgba(14, 165, 233, 0.1); color: #0369a1;">
+                            <span>💡</span>
+                            <span>内部员工无需手动选择，系统自动优先使用余额抵扣，剩余部分记账</span>
+                        </div>
+                    </div>
                 </section>
                 
                 <!-- 步骤4：确认提交 -->
@@ -1656,6 +1862,9 @@
                 })
                 
                 const submitting = ref(false)
+                const paymentModes = ref([])
+                const selectedPaymentMode = ref('credit')
+                const userBalance = ref(0)
                 
                 const minDate = computed(() => {
                     const today = new Date()
@@ -1821,6 +2030,80 @@
                             role: 'guest'
                         }
                     }
+                }
+                
+                const loadPaymentModes = async () => {
+                    if (!currentUser.value?.id || feeDetail.value.totalFee === 0) {
+                        if (userType.value === 'internal') {
+                            paymentModes.value = [
+                                { mode: 'credit', name: '记账模式', description: '使用后结算，月底统一账单', available: true }
+                            ]
+                            selectedPaymentMode.value = 'credit'
+                        } else {
+                            paymentModes.value = [
+                                { mode: 'prepay', name: '预付模式', description: '使用前需线下付费', available: true }
+                            ]
+                            selectedPaymentMode.value = 'prepay'
+                        }
+                        return
+                    }
+                    
+                    try {
+                        const token = localStorage.getItem('token')
+                        const response = await fetch(`/api/v1/balance/my`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                        const balanceData = await response.json()
+                        userBalance.value = balanceData.total_balance || 0
+                        
+                        if (userType.value === 'internal') {
+                            paymentModes.value = [
+                                {
+                                    mode: 'credit',
+                                    name: '记账模式',
+                                    description: '使用后结算，月底统一账单处理',
+                                    available: true,
+                                    balance_required: 0
+                                },
+                                {
+                                    mode: 'balance_deduct',
+                                    name: '余额抵扣',
+                                    description: '使用账户余额支付',
+                                    available: userBalance.value >= feeDetail.value.totalFee,
+                                    balance_required: feeDetail.value.totalFee,
+                                    available_balance: userBalance.value
+                                }
+                            ]
+                            
+                            if (userBalance.value >= feeDetail.value.totalFee) {
+                                selectedPaymentMode.value = 'balance_deduct'
+                            } else {
+                                selectedPaymentMode.value = 'credit'
+                            }
+                        } else {
+                            paymentModes.value = [
+                                {
+                                    mode: 'prepay',
+                                    name: '预付模式',
+                                    description: '使用前需线下付费，管理员确认后生效',
+                                    available: true,
+                                    balance_required: feeDetail.value.totalFee
+                                }
+                            ]
+                            selectedPaymentMode.value = 'prepay'
+                        }
+                    } catch (error) {
+                        console.error('加载支付模式失败:', error)
+                        paymentModes.value = [
+                            { mode: 'credit', name: '记账模式', description: '使用后结算', available: true }
+                        ]
+                        selectedPaymentMode.value = 'credit'
+                    }
+                }
+                
+                const selectPaymentMode = (mode) => {
+                    if (!mode.available) return
+                    selectedPaymentMode.value = mode.mode
                 }
                 
                 const loadSpaceType = async () => {
@@ -2036,65 +2319,101 @@
                     selectedTimeSlots.value = [];
                 }
                 
-                const submitBooking = async () => {
-                    submitting.value = true
-                    
-                    try {
-                        if (selectedTimeSlots.value.length === 0) {
-                            alert('请选择预约时段');
-                            submitting.value = false;
-                            return;
-                        }
-                        
-                        const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                            const aStart = parseInt(a.time.split(':')[0]);
-                            const bStart = parseInt(b.time.split(':')[0]);
-                            return aStart - bStart;
-                        });
-                        
-                        const startTime = slots[0].time.split('-')[0];
-                        const endTime = slots[slots.length - 1].time.split('-')[1];
-                        const durationHours = slots.length;
-                        
-                        const bookingData = {
-                            resource_id: selectedResource.value.id,
-                            booking_date: bookingDate.value,
-                            start_time: startTime,
-                            end_time: endTime,
-                            title: meetingTitle.value,
-                            attendees_count: attendeesCount.value,
-                            special_requests: specialRequests.value,
-                            user_name: currentUser.value?.name || '访客',
-                            user_type: userType.value,
-                            user_phone: currentUser.value?.phone || '',
-                            user_email: currentUser.value?.email || '',
-                            department: currentUser.value?.department || '',
-                            duration_hours: durationHours
-                        };
-                        
-                        const response = await spaceAPI.createBooking(bookingData);
-                        
-                        if (response.data && response.data.booking_no) {
-                            alert(`预约提交成功！\n\n预约编号：${response.data.booking_no}\n预约时段：${startTime}-${endTime}\n预约时长：${durationHours}小时\n\n即将跳转到"我的预约"页面查看详情...`);
-                        } else {
-                            alert('预约提交成功！即将跳转到"我的预约"页面...');
-                        }
-                        
-                        setTimeout(() => {
-                            window.location.href = '/space-frontend/my-bookings.html';
-                        }, 1500);
-                        
-                    } catch (error) {
-                        console.error('预约提交失败:', error);
-                        const errorMsg = error.response?.data?.detail || error.message || '网络请求失败';
-                        alert(`预约提交失败：${errorMsg}\n\n请检查：\n1. 是否已登录\n2. 时段是否已被预约\n3. 网络连接是否正常`);
-                    } finally {
-                        submitting.value = false;
-                    }
-                }
+const submitBooking = async () => {
+                     submitting.value = true
+                     
+                     try {
+                         if (selectedTimeSlots.value.length === 0) {
+                             alert('请选择预约时段');
+                             submitting.value = false;
+                             return;
+                         }
+                         
+                         const slots = [...selectedTimeSlots.value].sort((a, b) => {
+                             const aStart = parseInt(a.time.split(':')[0]);
+                             const bStart = parseInt(b.time.split(':')[0]);
+                             return aStart - bStart;
+                         });
+                         
+                         const startTime = slots[0].time.split('-')[0];
+                         const endTime = slots[slots.length - 1].time.split('-')[1];
+                         const durationHours = slots.length;
+                         
+                         const bookingData = {
+                             resource_id: selectedResource.value.id,
+                             booking_date: bookingDate.value,
+                             start_time: startTime,
+                             end_time: endTime,
+                             title: meetingTitle.value,
+                             attendees_count: attendeesCount.value,
+                             special_requests: specialRequests.value,
+                             user_name: currentUser.value?.name || '访客',
+                             user_type: userType.value,
+                             user_phone: currentUser.value?.phone || '',
+                             user_email: currentUser.value?.email || '',
+                             department: currentUser.value?.department || '',
+                             duration_hours: durationHours
+                         };
+                         
+                         const token = localStorage.getItem('token')
+                         
+                         let apiUrl = `/api/v2/space/bookings`;
+                         if (userType.value === 'external') {
+                             apiUrl += `?payment_mode=${selectedPaymentMode.value || 'prepay'}`;
+                         }
+                         
+                         const response = await fetch(apiUrl, {
+                             method: 'POST',
+                             headers: {
+                                 'Content-Type': 'application/json',
+                                 'Authorization': `Bearer ${token}`
+                             },
+                             body: JSON.stringify(bookingData)
+                         })
+                         
+                         const result = await response.json()
+                         console.log('预约创建响应:', result);
+                         
+                         if (!response.ok || result.success === false) {
+                             throw new Error(result.detail || result.message || '预约创建失败')
+                         }
+                         
+                         const bookingNo = result.data?.booking_no || '';
+                         const status = result.data?.status || 'pending';
+                         const message = result.message || '预约提交成功';
+                         
+                         localStorage.setItem('booking_success', JSON.stringify({
+                             booking_no: bookingNo,
+                             space_name: selectedResource.value.name,
+                             date: bookingDate.value,
+                             time: `${startTime}-${endTime}`,
+                             duration: durationHours,
+                             status: status,
+                             payment_mode: result.data?.payment_mode || selectedPaymentMode.value,
+                             deduct_amount: result.data?.deduct_amount || 0,
+                             credit_amount: result.data?.credit_amount || 0,
+                             message: message,
+                             timestamp: Date.now()
+                         }));
+                         
+                         window.location.href = '/space-frontend/my-bookings.html?success=1';
+                         
+                     } catch (error) {
+                         console.error('预约提交失败:', error);
+                         const errorMsg = error.message || '网络请求失败';
+                         alert(`预约提交失败：${errorMsg}\n\n请检查：\n1. 是否已登录\n2. 时段是否已被预约\n3. 网络连接是否正常`);
+                     } finally {
+                         submitting.value = false;
+                     }
+                 }
                 
-                onMounted(() => {
-                    loadUserData()
+                watch(feeDetail, () => {
+                    loadPaymentModes()
+                }, { deep: true })
+                
+                onMounted(async () => {
+                    await loadUserData()
+                    await loadPaymentModes()
                     loadSpaceType()
                     
                     if (!bookingDate.value) {
@@ -2129,6 +2448,9 @@
                     bookedSlotsInfo,
                     availableHoursCount,
                     bookedHoursCount,
+                    paymentModes,
+                    selectedPaymentMode,
+                    userBalance,
                     nextStep,
                     prevStep,
                     selectResource,
@@ -2138,6 +2460,7 @@
                     formatSelectedSlots,
                     calculateFee,
                     loadTimeSlots,
+                    selectPaymentMode,
                     submitBooking
                 }
             }
