@@ -13,7 +13,11 @@ from models.membership_plan import MembershipPlan
 from depends.auth import get_current_user, get_admin_user
 from models.user import User
 
+# 用户侧路由（获取套餐列表）
 router = APIRouter(prefix="/membership", tags=["会员套餐"])
+
+# 管理员路由（创建、编辑、删除套餐）
+admin_router = APIRouter(prefix="/admin/membership/plans", tags=["管理员-会员套餐管理"])
 
 
 class MembershipPlanResponse(BaseModel):
@@ -131,7 +135,9 @@ class MembershipPlanUpdate(BaseModel):
     sort_order: Optional[int] = None
 
 
-@router.post("/admin/plans")
+# ========== 管理员操作路由 ==========
+
+@admin_router.post("")
 async def create_membership_plan(
     plan_data: MembershipPlanCreate,
     db: Session = Depends(get_db),
@@ -163,7 +169,7 @@ async def create_membership_plan(
         raise HTTPException(status_code=500, detail=f"创建会员套餐失败: {str(e)}")
 
 
-@router.put("/admin/plans/{plan_id}")
+@admin_router.put("/{plan_id}")
 async def update_membership_plan(
     plan_id: int,
     plan_data: MembershipPlanUpdate,
@@ -206,7 +212,7 @@ async def update_membership_plan(
         raise HTTPException(status_code=500, detail=f"更新会员套餐失败: {str(e)}")
 
 
-@router.delete("/admin/plans/{plan_id}")
+@admin_router.delete("/{plan_id}")
 async def delete_membership_plan(
     plan_id: int,
     db: Session = Depends(get_db),

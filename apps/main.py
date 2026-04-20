@@ -18,6 +18,7 @@ from apps.api.v1.products import category_router as product_categories_router
 from apps.api.v1.offices import router as offices_router
 from apps.api.v1.accounts import router as accounts_router
 from apps.api.v1.membership import router as membership_router
+from apps.api.v1.membership import admin_router as admin_membership_router
 from apps.api.v1.membership_order import router as membership_order_router
 from apps.api.v1.user_balance import router as user_balance_router
 from apps.api.v1.admin_membership_order import router as admin_membership_order_router
@@ -81,6 +82,7 @@ v1_router.include_router(product_categories_router, tags=["产品分类"])
 v1_router.include_router(offices_router, tags=["办公室管理"])
 v1_router.include_router(accounts_router, tags=["办公室账户管理"])
 v1_router.include_router(membership_router, tags=["会员套餐"])
+v1_router.include_router(admin_membership_router, tags=["管理员-会员套餐管理"])
 v1_router.include_router(membership_order_router, tags=["会员订单"])
 v1_router.include_router(user_balance_router, tags=["用户余额"])
 v1_router.include_router(admin_membership_order_router, tags=["管理员-会员订单"])
