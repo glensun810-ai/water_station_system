@@ -128,11 +128,12 @@
             gap: var(--spacing-xs);
         }
         
-        .stat-card-pending { border-left-color: var(--warning); }
-        .stat-card-approved { border-left-color: var(--success); }
-        .stat-card-completed { border-left-color: var(--info); }
-        .stat-card-rejected { border-left-color: var(--danger); }
-        .stat-card-total { border-left-color: var(--primary); }
+.stat-card-pending { border-left-color: var(--warning); }
+.stat-card-approved { border-left-color: var(--success); }
+.stat-card-completed { border-left-color: var(--info); }
+.stat-card-rejected { border-left-color: var(--danger); }
+.stat-card-abnormal { border-left-color: #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%); }
+.stat-card-total { border-left-color: var(--primary); }
         
         .filter-active-hint {
             background: var(--primary-light);
@@ -374,6 +375,18 @@
         .status-completed {
             background: var(--info-light);
             color: var(--info-dark);
+        }
+        
+        .status-abnormal {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulseAbnormal {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
         
         .action-btns {
@@ -924,6 +937,20 @@
                     </div>
                 </div>
                 <div 
+                    v-if="stats.abnormal > 0"
+                    class="stat-card stat-card-abnormal"
+                    :class="{ active: filters.status === 'abnormal' }"
+                    @click="filterByStatus('abnormal')"
+                    :style="{ borderLeftColor: '#ef4444' }"
+                    title="点击筛选异常预约（已完成但待支付）"
+                >
+                    <div class="stat-value" style="color: #ef4444;">{{ stats.abnormal }}</div>
+                    <div class="stat-label">
+                        <span>⚠️ 异常</span>
+                        <span v-if="filters.status === 'abnormal'" style="font-size: 10px;">已筛选</span>
+                    </div>
+                </div>
+                <div 
                     class="stat-card"
                     :class="{ active: filters.status === '' }"
                     @click="filterByStatus('')"
@@ -958,6 +985,7 @@
                         <option value="completed">已完成</option>
                         <option value="settled">已结算</option>
                         <option value="cancelled">已取消</option>
+                        <option value="abnormal">⚠️ 异常（待支付）</option>
                     </select>
                 </div>
                 
@@ -1041,6 +1069,22 @@
                     <a href="/portal/admin/space/approvals.html" class="btn btn-outline btn-sm" v-if="stats.pending > 5">
                         进入审批中心 →
                     </a>
+                </div>
+            </div>
+            
+            <div v-if="stats.abnormal > 0 && filters.status === 'abnormal'" class="pending-quick-notice" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); border: 1px solid rgba(239, 68, 68, 0.3);">
+                <div class="notice-icon" style="animation: pulse 1s infinite;">⚠️</div>
+                <div class="notice-content">
+                    <div class="notice-title" style="color: #ef4444;">异常预约需立即处理</div>
+                    <div class="notice-desc">
+                        当前有 <strong style="color: #ef4444;">{{ stats.abnormal }}</strong> 个已完成但待支付的预约，需要尽快处理收款确认。
+                        <span class="notice-hint">异常原因：预约已完成使用，但费用尚未确认支付。请点击「确认收款」或「确认结算」处理。</span>
+                    </div>
+                </div>
+                <div class="notice-actions">
+                    <span style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                        💡 点击表格操作栏的「结算」按钮处理异常
+                    </span>
                 </div>
             </div>
             
@@ -1156,8 +1200,11 @@
                             </td>
                             <td>{{ booking.user_name }}</td>
                             <td>
-                                <span class="status-badge" :class="'status-' + booking.status">
-                                    {{ getStatusText(booking.status) }}
+                                <span class="status-badge" :class="'status-' + (booking.status === 'completed' && booking.payment_status === 'pending' ? 'abnormal' : booking.status)">
+                                    {{ booking.status === 'completed' && booking.payment_status === 'pending' ? '⚠️ 异常' : getStatusText(booking.status) }}
+                                </span>
+                                <span v-if="booking.status === 'completed' && booking.payment_status === 'pending'" style="display: block; font-size: 10px; color: #ef4444; margin-top: 2px;">
+                                    待支付 ¥{{ (booking.total_fee || 0).toFixed(2) }}
                                 </span>
                             </td>
                             <td>
@@ -1700,6 +1747,7 @@
                     settled: 0,
                     rejected: 0,
                     cancelled: 0,
+                    abnormal: 0,
                     total: 0
                 });
                 const filters = ref({
@@ -1811,6 +1859,13 @@
                         userActions: ['查看详情'],
                         adminActions: ['查看详情'],
                         nextHint: '预约已取消',
+                        transitions: []
+                    },
+                    'abnormal': {
+                        icon: '⚠️', text: '异常', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)',
+                        userActions: ['查看详情'],
+                        adminActions: ['确认收款', '确认结算', '查看详情'],
+                        nextHint: '预约已完成但支付状态异常，请立即处理收款确认',
                         transitions: []
                     }
                 };
@@ -2036,7 +2091,11 @@
                     let result = allBookings.value;
                     
                     if (filters.value.status) {
-                        result = result.filter(b => b.status === filters.value.status);
+                        if (filters.value.status === 'abnormal') {
+                            result = result.filter(b => b.status === 'completed' && b.payment_status === 'pending');
+                        } else {
+                            result = result.filter(b => b.status === filters.value.status);
+                        }
                     }
                     if (filters.value.type_code) {
                         result = result.filter(b => b.type_code === filters.value.type_code);
@@ -2177,6 +2236,7 @@
                     stats.value.settled = allBookings.value.filter(b => b.status === 'settled').length;
                     stats.value.rejected = allBookings.value.filter(b => b.status === 'rejected').length;
                     stats.value.cancelled = allBookings.value.filter(b => b.status === 'cancelled').length;
+                    stats.value.abnormal = allBookings.value.filter(b => b.status === 'completed' && b.payment_status === 'pending').length;
                 };
                 
                 const viewDetail = (booking) => {
@@ -2668,6 +2728,12 @@
                     if (!user) return;
                     
                     isSuperAdmin.value = user.role === 'super_admin';
+                    
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const alertType = urlParams.get('alert');
+                    if (alertType === 'abnormal') {
+                        filters.value.status = 'abnormal';
+                    }
                     
                     loadBookings();
                 });
