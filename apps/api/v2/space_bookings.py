@@ -35,6 +35,7 @@ router = APIRouter(prefix="/space/bookings", tags=["空间预约管理"])
 async def get_bookings(
     type_code: Optional[str] = Query(None, description="空间类型代码过滤"),
     status: Optional[str] = Query(None, description="状态过滤"),
+    payment_status: Optional[str] = Query(None, description="支付状态过滤"),
     booking_date: Optional[date] = Query(None, description="预约日期过滤"),
     date_from: Optional[date] = Query(None, description="日期范围开始"),
     date_to: Optional[date] = Query(None, description="日期范围结束"),
@@ -52,6 +53,8 @@ async def get_bookings(
         query = query.filter(SpaceBooking.type_code == type_code)
     if status:
         query = query.filter(SpaceBooking.status == status)
+    if payment_status:
+        query = query.filter(SpaceBooking.payment_status == payment_status)
     if booking_date:
         query = query.filter(SpaceBooking.booking_date == booking_date)
     if date_from:
