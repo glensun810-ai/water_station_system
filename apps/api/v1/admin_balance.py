@@ -38,19 +38,19 @@ class AdminBalanceAccountResponse(BaseModel):
     id: int
     user_id: int
     user_name: str
-    user_phone: str
+    user_phone: Optional[str] = None
     membership_balance: float
     service_balance: float
     gift_balance: float
     total_balance: float
     frozen_membership_balance: float
     frozen_service_balance: float
-    membership_expire_date: Optional[str]
+    membership_expire_date: Optional[str] = None
     total_membership_charged: float
     total_service_charged: float
     total_deducted: float
     total_refunded: float
-    last_transaction_at: Optional[str]
+    last_transaction_at: Optional[str] = None
     created_at: str
     updated_at: str
 
