@@ -6,7 +6,7 @@
     <meta name="theme-color" content="var(--text-primary)">
     <title>会员套餐管理</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
@@ -1157,7 +1157,8 @@
                 
                 const toast = ref({ show: false, type: 'success', message: '', icon: '✓' });
                 
-                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/membership`;
+                const API_ADMIN_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/admin/membership`;
                 
                 const stats = computed(() => {
                     const total = plans.value.length;
@@ -1288,8 +1289,8 @@
                         };
                         
                         const url = isEdit.value 
-                            ? `${API_BASE}/admin/membership/plans/${editingPlan.value.id}`
-                            : `${API_BASE}/admin/membership/plans`;
+                            ? `${API_ADMIN_BASE}/admin/membership/plans/${editingPlan.value.id}`
+                            : `${API_ADMIN_BASE}/admin/membership/plans`;
                         
                         const method = isEdit.value ? 'PUT' : 'POST';
                         
@@ -1317,7 +1318,7 @@
                 
                 const toggleStatus = async (plan) => {
                     try {
-                        const response = await fetch(`${API_BASE}/admin/membership/plans/${plan.id}`, {
+                        const response = await fetch(`${API_ADMIN_BASE}/admin/membership/plans/${plan.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active: !plan.is_active })
@@ -1345,7 +1346,7 @@
                     try {
                         deleting.value = true;
                         
-                        const response = await fetch(`${API_BASE}/admin/membership/plans/${deletingPlan.value.id}`, {
+                        const response = await fetch(`${API_ADMIN_BASE}/admin/membership/plans/${deletingPlan.value.id}`, {
                             method: 'DELETE'
                         });
                         

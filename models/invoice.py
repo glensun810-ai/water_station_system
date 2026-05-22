@@ -2,8 +2,7 @@
 发票相关模型
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
-from sqlalchemy.dialects.mysql import DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -32,7 +31,7 @@ class Invoice(Base):
     phone = Column(String(50), nullable=True, comment="电话")
     bank_name = Column(String(100), nullable=True, comment="开户银行")
     bank_account = Column(String(50), nullable=True, comment="银行账号")
-    amount = Column(DECIMAL(10, 2), nullable=False, comment="金额")
+    amount = Column(Numeric(10, 2), nullable=False, comment="金额")
     email = Column(String(100), nullable=True, comment="接收邮箱")
     file_path = Column(String(255), nullable=True, comment="发票文件路径")
     status = Column(

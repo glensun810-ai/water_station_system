@@ -113,7 +113,7 @@ const ConfigLoader = {
    */
   async _loadFromApi() {
     const API_BASE = localStorage.getItem('API_BASE') || 
-      (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : 'https://jhw-ai.com/api');
+      (window.location.origin + '/api');
     
     const response = await fetch(`${API_BASE}/services/config`);
     

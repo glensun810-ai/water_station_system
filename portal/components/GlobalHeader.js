@@ -1,24 +1,36 @@
 /**
- * GlobalHeader - 全局导航栏组件（优化版）
- * 
- * 设计理念：极简主义 + 角色驱动 + 渐进式信息披露
- * 
- * 功能：
- * 1. 面包屑导航
- * 2. 角色驱动的用户菜单
- * 3. 办公室切换（仅办公室管理员）
- * 4. 会员功能（外部用户）
+ * GlobalHeader - 全局导航栏组件 v2.0
+ *
+ * 设计理念：极简主义 + 角色驱动 + 渐进式信息披露 + 玻璃质感
+ *
+ * Props:
+ *   breadcrumbs - 面包屑数组 [{text, url, icon}]
+ *   backUrl      - 返回按钮链接
+ *   backText     - 返回按钮文本，默认"返回"
+ *   transparent  - 透明背景模式，滚动后渐变显现
+ *
+ * Slots:
+ *   nav-actions  - 页面操作区（标签页、按钮等）
  */
 
 const GlobalHeader = {
     template: `
-        <header class="global-header" v-cloak>
+        <header class="global-header" :class="{ 'header-transparent': transparent && !isScrolled, 'header-scrolled': isScrolled }" v-cloak>
             <div class="header-left">
+                <!-- 返回按钮 -->
+                <a v-if="backUrl" :href="backUrl" class="header-back-btn" :title="backText || '返回'">
+                    <svg class="back-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span class="back-text" v-if="!isMobile">{{ backText || '返回' }}</span>
+                </a>
+
                 <!-- Logo和面包屑 -->
                 <div class="breadcrumb-nav">
                     <a href="/portal/index.html" class="breadcrumb-item breadcrumb-home">
-                        <span class="breadcrumb-icon">🏢</span>
-                        <span class="breadcrumb-text">AI产业集群空间服务</span>
+                        <img src="/portal/assets/images/logo.png" class="breadcrumb-logo" alt="进化湾" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';">
+                        <span class="breadcrumb-icon" style="display:none">🏢</span>
+                        <span class="breadcrumb-text">进化湾</span>
                     </a>
                     <template v-for="(item, index) in breadcrumbs">
                         <span class="breadcrumb-separator">/</span>
@@ -28,6 +40,11 @@ const GlobalHeader = {
                         </a>
                     </template>
                 </div>
+            </div>
+
+            <!-- 页面操作区（slot） -->
+            <div class="header-center" v-if="$slots['nav-actions']">
+                <slot name="nav-actions"></slot>
             </div>
 
             <div class="header-right" v-if="userInfo">
@@ -53,8 +70,8 @@ const GlobalHeader = {
                 <transition name="menu-fade">
                     <div class="office-menu" v-if="showOfficeMenu" @click.stop>
                         <div class="menu-section">
-                            <div 
-                                v-for="office in managedOffices" 
+                            <div
+                                v-for="office in managedOffices"
                                 :key="office.office_id"
                                 class="office-menu-item"
                                 :class="{ 'office-active': currentOfficeId === office.office_id }"
@@ -72,14 +89,17 @@ const GlobalHeader = {
                 </transition>
 
                 <!-- 用户下拉菜单 -->
-                <transition name="menu-fade">
-                    <div class="user-menu" v-if="showUserMenu" @click.stop>
+                <transition name="header-menu-trans">
+                    <div class="user-menu" :class="{ 'mobile-sheet': isMobile }" v-if="showUserMenu" @click.stop>
+                        <!-- 移动端拖拽手柄 -->
+                        <div class="sheet-handle" v-if="isMobile"></div>
+
                         <!-- 用户身份信息 -->
                         <div class="menu-user-info">
                             <div class="user-name">{{ userInfo.name }}</div>
                             <div class="user-role-label">{{ userRoleLabel }}</div>
                         </div>
-                        
+
                         <div class="menu-divider"></div>
 
                         <!-- 超级管理员/系统管理员菜单 -->
@@ -128,11 +148,11 @@ const GlobalHeader = {
                                 <span class="menu-text">会员中心</span>
                                 <span class="menu-badge">开通</span>
                             </a>
-                            <a href="#" class="menu-item">
+                            <a href="/portal/balance.html" class="menu-item">
                                 <span class="menu-icon">💳</span>
                                 <span class="menu-text">充值/缴费</span>
                             </a>
-                            <a href="#" class="menu-item">
+                            <a href="#" class="menu-item" @click.prevent="showComingSoon('我的优惠券')">
                                 <span class="menu-icon">🎫</span>
                                 <span class="menu-text">我的优惠券</span>
                             </a>
@@ -141,11 +161,11 @@ const GlobalHeader = {
                                 <span class="menu-text">邀请好友</span>
                             </a>
                             <div class="menu-divider"></div>
-                            <a href="#" class="menu-item">
+                            <a href="#" class="menu-item" @click.prevent="showComingSoon('我的预约')">
                                 <span class="menu-icon">📅</span>
                                 <span class="menu-text">我的预约（会议室）</span>
                             </a>
-                            <a href="#" class="menu-item">
+                            <a href="/portal/orders.html" class="menu-item">
                                 <span class="menu-icon">📋</span>
                                 <span class="menu-text">我的订单</span>
                             </a>
@@ -179,6 +199,18 @@ const GlobalHeader = {
         breadcrumbs: {
             type: Array,
             default: () => []
+        },
+        backUrl: {
+            type: String,
+            default: ''
+        },
+        backText: {
+            type: String,
+            default: '返回'
+        },
+        transparent: {
+            type: Boolean,
+            default: false
         }
     },
     data() {
@@ -189,8 +221,10 @@ const GlobalHeader = {
             showAddOfficeDialog: false,
             showReferralDialog: false,
             showMembershipDialog: false,
-            managedOffices: [],  // 办公室管理员管理的办公室列表
-            currentOfficeId: null,  // 当前选中的办公室ID
+            managedOffices: [],
+            currentOfficeId: null,
+            isScrolled: false,
+            isMobile: false,
             newOffice: {
                 name: '',
                 location: '',
@@ -199,46 +233,40 @@ const GlobalHeader = {
         };
     },
     computed: {
-        // 是否是超级管理员或系统管理员
         isSuperOrAdmin() {
-            return this.userInfo?.role === '超级管理员' || 
+            return this.userInfo?.role === '超级管理员' ||
                    this.userInfo?.role === 'super_admin' ||
-                   this.userInfo?.role === '管理员' || 
+                   this.userInfo?.role === '管理员' ||
                    (this.userInfo?.role === 'admin' && this.userInfo?.is_admin);
         },
-        
-        // 是否是办公室管理员
+
         isOfficeAdmin() {
-            return (this.userInfo?.role === 'office_admin' || 
+            return (this.userInfo?.role === 'office_admin' ||
                     this.userInfo?.role?.includes('办公室管理员')) &&
                     this.managedOffices.length > 0 &&
                     !this.isSuperOrAdmin;
         },
-        
-        // 是否是内部用户
+
         isInternalUser() {
-            return this.userInfo?.user_type === 'internal' && 
-                   !this.isSuperOrAdmin && 
+            return this.userInfo?.user_type === 'internal' &&
+                   !this.isSuperOrAdmin &&
                    !this.isOfficeAdmin;
         },
-        
-        // 是否是外部用户（优先判断管理员身份）
+
         isExternalUser() {
             if (this.isSuperOrAdmin) return false;
             if (this.isOfficeAdmin) return false;
             if (this.isInternalUser) return false;
             return this.userInfo?.user_type === 'external';
         },
-        
-        // 管理员徽章文本
+
         adminBadgeText() {
             if (this.userInfo?.role === '超级管理员' || this.userInfo?.role === 'super_admin') return '超管';
             if (this.userInfo?.role === '管理员' || this.userInfo?.role === 'admin') return '管理员';
             if (this.userInfo?.role === 'office_admin') return '办管';
             return '管理';
         },
-        
-        // 用户角色标签
+
         userRoleLabel() {
             if (this.userInfo?.role === 'super_admin' || this.userInfo?.role === '超级管理员') return '超级管理员';
             if (this.userInfo?.role === 'admin' || this.userInfo?.role === '管理员') return '系统管理员';
@@ -247,8 +275,7 @@ const GlobalHeader = {
             if (this.isExternalUser) return '外部用户';
             return '用户';
         },
-        
-        // 用户办公室标签
+
         userOfficeLabel() {
             if (this.isSuperOrAdmin) return '';
             if (this.isOfficeAdmin) return '办公室管理员';
@@ -256,8 +283,7 @@ const GlobalHeader = {
             if (this.isExternalUser) return '外部用户';
             return '';
         },
-        
-        // 当前办公室名称
+
         currentOfficeName() {
             const office = this.managedOffices.find(o => o.office_id === this.currentOfficeId);
             return office?.office_name || '选择办公室';
@@ -266,14 +292,30 @@ const GlobalHeader = {
     mounted() {
         this.loadUserInfo();
         this.loadManagedOffices();
+        this.checkMobile();
         window.addEventListener('storage', this.handleStorageChange);
+        window.addEventListener('resize', this.checkMobile);
         document.addEventListener('click', this.handleClickOutside);
+
+        if (this.transparent) {
+            window.addEventListener('scroll', this.handleScroll, { passive: true });
+        }
     },
     beforeUnmount() {
         window.removeEventListener('storage', this.handleStorageChange);
+        window.removeEventListener('resize', this.checkMobile);
         document.removeEventListener('click', this.handleClickOutside);
+        window.removeEventListener('scroll', this.handleScroll);
     },
     methods: {
+        checkMobile() {
+            this.isMobile = window.innerWidth < 768;
+        },
+
+        handleScroll() {
+            this.isScrolled = window.scrollY > 10;
+        },
+
         loadUserInfo() {
             try {
                 const userInfo = localStorage.getItem('userInfo');
@@ -282,14 +324,13 @@ const GlobalHeader = {
                     this.userInfo = {
                         ...parsed,
                         avatar: parsed.avatar || '👤',
-                        is_admin: parsed.role === '超级管理员' || 
+                        is_admin: parsed.role === '超级管理员' ||
                                  parsed.role === 'super_admin' ||
-                                 parsed.role === '管理员' || 
+                                 parsed.role === '管理员' ||
                                  parsed.role === 'admin' ||
                                  parsed.role === 'office_admin' ||
                                  parsed.is_admin
                     };
-                    console.log('用户信息已加载:', this.userInfo);
                 } else {
                     this.userInfo = null;
                 }
@@ -298,45 +339,40 @@ const GlobalHeader = {
                 this.userInfo = null;
             }
         },
-        
+
         async loadManagedOffices() {
-            // 只有办公室管理员才加载管理的办公室
             if (!this.userInfo || this.isSuperOrAdmin || !this.userInfo.id) {
                 this.managedOffices = [];
                 return;
             }
-            
+
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
                     this.managedOffices = [];
                     return;
                 }
-                
+
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
                 const port = window.location.port || (protocol === 'https:' ? '443' : '80');
                 const API_BASE = `${protocol}//${hostname}:${port}/api`;
-                
+
                 const response = await fetch(`${API_BASE}/office-admins/user/${this.userInfo.id}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                
+
                 if (response.ok) {
                     this.managedOffices = await response.json();
-                    
-                    // 从localStorage恢复当前选中的办公室
+
                     const savedOfficeId = localStorage.getItem('current_office_id');
                     if (savedOfficeId) {
                         this.currentOfficeId = parseInt(savedOfficeId);
                     } else if (this.managedOffices.length > 0) {
-                        // 默认选中第一个办公室
                         this.currentOfficeId = this.managedOffices[0].office_id;
                     }
-                    
-                    console.log('管理的办公室已加载:', this.managedOffices);
                 } else {
                     this.managedOffices = [];
                 }
@@ -345,39 +381,32 @@ const GlobalHeader = {
                 this.managedOffices = [];
             }
         },
-        
+
         switchOffice(office) {
             if (this.currentOfficeId === office.office_id) {
                 this.showOfficeMenu = false;
                 return;
             }
-            
-            // 更新当前办公室
+
             this.currentOfficeId = office.office_id;
             localStorage.setItem('current_office_id', office.office_id);
-            
-            // 触发全局事件
+
             window.dispatchEvent(new CustomEvent('office-changed', {
                 detail: {
                     officeId: office.office_id,
                     officeName: office.office_name
                 }
             }));
-            
-            // 关闭菜单
+
             this.showOfficeMenu = false;
-            
-            // 显示提示
             this.showToast(`已切换到 ${office.office_name}`, 'success');
-            
-            // 刷新页面以更新数据
+
             setTimeout(() => {
                 window.location.reload();
             }, 500);
         },
-        
+
         showToast(message, type = 'info') {
-            // 简单的toast提示
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             toast.textContent = message;
@@ -391,44 +420,48 @@ const GlobalHeader = {
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 z-index: 10000;
-                animation: slideIn 0.3s ease;
+                animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             `;
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease';
+                toast.style.animation = 'slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
                 setTimeout(() => toast.remove(), 300);
             }, 2000);
         },
-        
+
         handleStorageChange(event) {
             if (event.key === 'userInfo') {
                 this.loadUserInfo();
                 this.loadManagedOffices();
             }
         },
-        
+
         toggleUserMenu() {
             this.showUserMenu = !this.showUserMenu;
             this.showOfficeMenu = false;
         },
-        
+
         toggleOfficeMenu() {
             this.showOfficeMenu = !this.showOfficeMenu;
             this.showUserMenu = false;
         },
-        
+
         closeAllMenus() {
             this.showUserMenu = false;
             this.showOfficeMenu = false;
         },
-        
+
+        showComingSoon(feature) {
+            alert(feature + '功能开发中，敬请期待！');
+        },
+
         handleClickOutside(event) {
             if (!event.target.closest('.global-header')) {
                 this.closeAllMenus();
             }
         },
-        
+
         handleLogout() {
             if (confirm('确定要退出登录吗？')) {
                 localStorage.removeItem('token');
@@ -441,19 +474,18 @@ const GlobalHeader = {
     }
 };
 
-// 导出组件
 if (typeof window !== 'undefined') {
     window.GlobalHeader = GlobalHeader;
 }
 
-// 添加CSS动画
+// 注入动画关键帧
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes slideIn {
+    @keyframes slideInRight {
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
     }
-    @keyframes slideOut {
+    @keyframes slideOutRight {
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
     }

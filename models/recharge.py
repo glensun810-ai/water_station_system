@@ -3,7 +3,7 @@
 包含OfficeRecharge模型定义
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from datetime import datetime
 
 from models.base import Base
@@ -17,10 +17,10 @@ class OfficeRecharge(Base):
     __tablename__ = "office_recharge"
 
     id = Column(Integer, primary_key=True, index=True)
-    office_id = Column(Integer, nullable=False)
+    office_id = Column(Integer, ForeignKey("office.id"), nullable=False)
     office_name = Column(String(100), nullable=False)
     office_room_number = Column(String(50), nullable=True)
-    product_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     product_name = Column(String(100), nullable=False)
     product_specification = Column(String(50), nullable=True)
 

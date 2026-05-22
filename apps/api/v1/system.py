@@ -36,6 +36,7 @@ from utils.login_attempt import (
     cleanup_attempts,
 )
 from utils.token_blacklist import revoke_token, is_token_revoked, revoke_user_tokens
+from utils.rate_limiter import limiter
 
 
 router = APIRouter(prefix="/system", tags=["系统服务"])
@@ -199,6 +200,7 @@ def ensure_security_tables_exist(db: Session):
 
 
 @router.post("/auth/login", response_model=dict)
+@limiter.limit("10/minute")
 def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
     """
     用户登录（国际顶级安全标准）
@@ -592,7 +594,10 @@ def revoke_session(
 
 
 @router.get("/users/stats/overview")
-def get_user_stats(db: Session = Depends(get_db)):
+def get_user_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
     """获取用户统计概览"""
 
     total = db.query(User).count()
@@ -800,7 +805,7 @@ def create_user(
     """创建用户（仅管理员）"""
 
     username = user_data.get("name")
-    password = user_data.get("password", "123456")
+    password = user_data.get("password")
     department = user_data.get("department")
     role = user_data.get("role", "user")
     is_active = user_data.get("is_active", 1)
@@ -808,6 +813,9 @@ def create_user(
 
     if not username:
         raise HTTPException(status_code=400, detail="用户名不能为空")
+
+    if not password:
+        raise HTTPException(status_code=400, detail="密码不能为空，必须提供初始密码")
 
     existing = db.query(User).filter(User.username == username).first()
     if existing:
@@ -1083,7 +1091,9 @@ def reset_user_password(
     if user.role == "super_admin" and current_user.role != "super_admin":
         raise HTTPException(status_code=403, detail="无权限修改超级管理员密码")
 
-    new_password = password_data.get("new_password", "123456")
+    new_password = password_data.get("new_password")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="必须提供新密码")
 
     is_valid, error_msg = validate_password_strength(new_password)
     if not is_valid:
@@ -1105,7 +1115,6 @@ def reset_user_password(
         "message": "密码重置成功",
         "user_id": user_id,
         "username": user.username,
-        "new_password": new_password,
     }
 
 
@@ -1156,7 +1165,10 @@ def get_user_login_history(
 
 
 @router.get("/config/payment-qr")
-def get_payment_qr(db: Session = Depends(get_db)):
+def get_payment_qr(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
     """获取支付二维码配置"""
     from models.config import SystemConfig
 

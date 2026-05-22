@@ -3,11 +3,12 @@
 处理登录、登出、密码修改等
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Optional
+import secrets
 
 from config.database import get_db
 from config.settings import settings
@@ -15,6 +16,7 @@ from models.user import User
 from schemas.user import UserLogin, TokenResponse, UserResponse, PasswordChange
 from utils.password import hash_password, verify_password
 from utils.jwt import create_access_token, verify_token
+from utils.token_blacklist import revoke_token
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 security = HTTPBearer(auto_error=False)
@@ -41,22 +43,23 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN, detail="用户已被禁用"
         )
 
-    # 如果没有密码，使用默认密码 admin123 验证（兼容旧数据）
+    # 账户未设置密码，需通过管理员重置
     if not user.password_hash:
-        if login_data.password != "admin123":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
-            )
-    else:
-        # 验证密码
-        if not verify_password(login_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="账户未设置密码，请联系管理员重置密码后再登录",
+        )
+
+    # 验证密码
+    if not verify_password(login_data.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
             )
 
-    # 创建Token
+    # 创建Token（含jti用于token黑名单）
+    jti = secrets.token_urlsafe(32)
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": user.role},
+        data={"sub": str(user.id), "role": user.role, "jti": jti},
         expires_delta=timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS),
     )
 
@@ -107,8 +110,13 @@ def get_current_user_info(
 
 
 @router.post("/logout")
-def logout():
-    """用户登出"""
+def logout(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """用户登出（撤销token）"""
+    if credentials:
+        revoke_token(credentials.credentials, db)
     return {"message": "登出成功"}
 
 
@@ -159,11 +167,10 @@ def change_password(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="旧密码错误"
             )
     else:
-        # 兼容旧数据（无密码）
-        if password_change.old_password != "admin123":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="旧密码错误"
-            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="账户未设置密码，请先通过管理员重置密码",
+        )
 
     # 验证新密码
     if len(password_change.new_password) < 6:

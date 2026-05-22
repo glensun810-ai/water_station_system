@@ -10,7 +10,7 @@ from sqlalchemy import (
     Date,
     Text,
     ForeignKey,
-    DECIMAL,
+    Numeric,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -37,8 +37,8 @@ class CreditNote(Base):
     department = Column(String(100), comment="所属部门")
     month = Column(String(10), nullable=False, index=True, comment="账单月份 2026-04")
 
-    total_amount = Column(DECIMAL(10, 2), default=Decimal("0"), comment="账单总金额")
-    paid_amount = Column(DECIMAL(10, 2), default=Decimal("0"), comment="已支付金额")
+    total_amount = Column(Numeric(10, 2), default=Decimal("0"), comment="账单总金额")
+    paid_amount = Column(Numeric(10, 2), default=Decimal("0"), comment="已支付金额")
     booking_count = Column(Integer, default=0, comment="预约次数")
 
     status = Column(
@@ -112,7 +112,7 @@ class CreditNoteItem(Base):
     booking_date = Column(Date, comment="预约日期")
     space_name = Column(String(100), comment="空间名称")
     time_slot = Column(String(20), comment="预约时段")
-    amount = Column(DECIMAL(10, 2), nullable=False, comment="记账金额")
+    amount = Column(Numeric(10, 2), nullable=False, comment="记账金额")
 
     settled_at = Column(DateTime, nullable=True, comment="结算时间")
     created_at = Column(DateTime, default=datetime.now)

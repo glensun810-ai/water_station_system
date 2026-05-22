@@ -10,13 +10,16 @@ from sqlalchemy import text
 from datetime import timedelta, datetime
 from pydantic import BaseModel
 from typing import Optional
+import secrets
 from passlib.context import CryptContext
 
 from config.database import get_db
 from config.settings import settings
 from utils.jwt import create_access_token, verify_token
+from utils.rate_limiter import limiter
+from utils.token_blacklist import revoke_token
 
-router = APIRouter(prefix="/api/user", tags=["user_auth"])
+router = APIRouter(prefix="/user", tags=["用户认证"])
 security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -84,8 +87,7 @@ def get_role_display_name(role: str, department: str = None) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     if not hashed_password:
-        # 兼容无密码的旧数据
-        return plain_password == "123456"
+        return False
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -357,6 +359,7 @@ def user_register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def user_login(login_data: UserLogin, request: Request, db: Session = Depends(get_db)):
     """
     用户登录
@@ -421,7 +424,8 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
 
         login_status = "success"
 
-        # 创建JWT令牌
+        # 创建JWT令牌（含jti用于token黑名单）
+        jti = secrets.token_urlsafe(32)
         access_token = create_access_token(
             data={
                 "sub": str(user.id),
@@ -429,6 +433,7 @@ def user_login(login_data: UserLogin, request: Request, db: Session = Depends(ge
                 "name": user.name,
                 "role": user.role,
                 "department": user.department or "",
+                "jti": jti,
             },
             expires_delta=timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
         )
@@ -601,9 +606,9 @@ def user_logout(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    """用户登出"""
-    # JWT是无状态的，登出只需客户端删除token
-    # 这里可以添加token黑名单逻辑
+    """用户登出（撤销token）"""
+    if credentials:
+        revoke_token(credentials.credentials, db)
     return {"message": "登出成功"}
 
 
@@ -697,6 +702,7 @@ def change_password(
 
 # 为管理后台提供兼容的登录接口
 @router.post("/admin/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def admin_login_compatibility(
     login_data: UserLogin, request: Request, db: Session = Depends(get_db)
 ):

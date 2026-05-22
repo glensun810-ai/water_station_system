@@ -3,7 +3,7 @@
 包含OfficeSettlement模型定义
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from datetime import datetime
 
 from models.base import Base
@@ -19,7 +19,7 @@ class OfficeSettlement(Base):
     id = Column(Integer, primary_key=True, index=True)
     settlement_no = Column(String(50), unique=True, nullable=False)
 
-    office_id = Column(Integer, nullable=False)
+    office_id = Column(Integer, ForeignKey("office.id"), nullable=False)
     office_name = Column(String(100), nullable=False)
     office_room_number = Column(String(50), nullable=True)
 
@@ -37,7 +37,7 @@ class OfficeSettlement(Base):
 
     # 确认人信息
     confirmed_by = Column(String(100), nullable=True)
-    confirmed_by_id = Column(Integer, nullable=True)
+    confirmed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
 
     # 关联的领水记录ID列表(JSON)

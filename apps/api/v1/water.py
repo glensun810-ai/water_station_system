@@ -217,7 +217,7 @@ def get_user_pickups(
     return results
 
 
-@router.post("/pickup")
+@router.post("/pickups")
 def create_water_pickup(
     pickup_data: dict,
     db: Session = Depends(get_db),
@@ -357,7 +357,7 @@ def create_water_pickup(
     }
 
 
-@router.post("/pickup/{pickup_id}/pay")
+@router.post("/pickups/{pickup_id}/pay")
 def mark_pickup_as_paid(
     pickup_id: int,
     payment_data: dict,
@@ -411,7 +411,7 @@ def mark_pickup_as_paid(
     }
 
 
-@router.delete("/pickup/{pickup_id}")
+@router.delete("/pickups/{pickup_id}")
 def delete_pickup(
     pickup_id: int,
     db: Session = Depends(get_db),
@@ -931,29 +931,31 @@ def get_water_dashboard(
     else:
         growth_rate = 0 if current_month_settled == 0 else 100
 
-    office_stats = defaultdict(
-        lambda: {"total_qty": 0, "total_amount": 0, "pickup_count": 0}
-    )
-    all_pickups_for_ranking = (
-        db.query(OfficePickup)
-        .filter(
-            OfficePickup.is_deleted == False,
+    from sqlalchemy import func
+
+    office_ranking_rows = (
+        db.query(
+            OfficePickup.office_name,
+            func.sum(OfficePickup.quantity).label("total_qty"),
+            func.sum(OfficePickup.total_amount).label("total_amount"),
+            func.count(OfficePickup.id).label("pickup_count"),
         )
-        .limit(10000)
+        .filter(OfficePickup.is_deleted == False)
+        .group_by(OfficePickup.office_name)
+        .order_by(func.sum(OfficePickup.quantity).desc())
+        .limit(10)
         .all()
     )
 
-    for pickup in all_pickups_for_ranking:
-        office_name = pickup.office_name or "未知办公室"
-        office_stats[office_name]["total_qty"] += pickup.quantity or 0
-        office_stats[office_name]["total_amount"] += float(pickup.total_amount or 0)
-        office_stats[office_name]["pickup_count"] += 1
-
-    office_ranking = sorted(
-        [{"office_name": k, **v} for k, v in office_stats.items()],
-        key=lambda x: x["total_qty"],
-        reverse=True,
-    )[:10]
+    office_ranking = [
+        {
+            "office_name": row.office_name or "未知办公室",
+            "total_qty": int(row.total_qty or 0),
+            "total_amount": float(row.total_amount or 0),
+            "pickup_count": int(row.pickup_count or 0),
+        }
+        for row in office_ranking_rows
+    ]
 
     total_pickup_count = (
         db.query(OfficePickup)

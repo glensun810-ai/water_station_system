@@ -11,6 +11,8 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="vue.global.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+<script src="/portal/components/GlobalHeader.js"></script>
 <style>
 [v-cloak]{display:none!important}
 
@@ -335,83 +337,13 @@ confirmDialog.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blu
 </div>
 </div>
 
-<!-- 顶部导航栏 - PC端 -->
- <nav class="hidden md:flex bg-slate-800 text-white shadow-lg z-50 h-16 flex-shrink-0">
- <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
- <!-- 左侧：面包屑导航 -->
- <div class="flex items-center space-x-3">
- <a href="/portal/index.html" 
- class="flex items-center space-x-1 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition text-sm">
- <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
- </svg>
- <span>首页</span>
- </a>
+<!-- GlobalHeader 统一导航栏 -->
+<global-header role="banner" :breadcrumbs='[{"text":"会议室管理","url":"/meeting/frontend/admin.html"}]'>
+    <template #nav-actions>
+        <a href="index.html">用户端</a>
+    </template>
+</global-header>
  
- <div class="h-6 w-px bg-slate-600"></div>
- 
- <h1 class="text-lg font-bold flex items-center">
- <span class="text-xl mr-2">⚙️</span>
- <span>会议室管理后台</span>
- </h1>
- </div>
- 
- <!-- 右侧：快捷功能 + 用户信息 -->
- <div class="flex items-center space-x-3">
- <!-- 数据概览快捷入口 -->
- <button @click="currentTab = 'dashboard'" 
- class="hidden md:flex items-center space-x-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition text-sm">
- <span>📊</span>
- <span>数据概览</span>
- </button>
- 
- <!-- 用户视角快捷切换 -->
- <div class="hidden md:flex bg-slate-700 rounded-lg px-2 py-1 space-x-1">
- <a href="index.html" class="px-2 py-1 text-sm hover:bg-slate-600 rounded transition">📋 用户端</a>
- </div>
- 
- <!-- 管理员信息 -->
- <div v-if="user" class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
- <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
- {{ (user.real_name || user.username || '管').charAt(0) }}
- </div>
- <span class="hidden md:block text-sm">{{ user.real_name || user.username || '管理员' }}</span>
- </div>
- <!-- 退出登录按钮 -->
- <button @click="handleLogout" class="flex items-center space-x-1 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition text-sm" title="退出登录">
- <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
- </svg>
- <span class="hidden md:block">退出</span>
- </button>
- </div>
- </div>
- </nav>
- 
- <!-- 移动端顶部导航栏 -->
- <nav class="md:hidden bg-slate-800 text-white shadow-lg z-50 nav-bar flex-shrink-0" 
- style="padding-top: var(--safe-area-inset-top);">
- <div class="flex items-center justify-between h-14 px-4">
- <!-- 左侧：返回首页 + 标题 -->
- <div class="flex items-center gap-3">
- <a href="/portal/index.html" 
-    class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md min-h-[36px] min-w-[36px] flex items-center justify-center flex-shrink-0 group active:scale-95 transition-transform"
-    title="返回系统首页">
-     <svg class="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-     </svg>
- </a>
- <h1 class="text-base font-bold flex items-center">
-     <span class="mr-2">⚙️</span>
-     <span>会议室管理</span>
- </h1>
- </div>
- <!-- 右侧：用户头像 -->
- <div v-if="user" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
- {{ (user.real_name || user.username || '管').charAt(0) }}
- </div>
- </div>
- </nav>
 
 <!-- 移动端底部导航栏 -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 bottom-nav flex-shrink-0 shadow-lg"
@@ -2445,6 +2377,9 @@ class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition 
         const { createApp, ref, computed, onMounted, watch } = Vue;
 
         createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
 setup() {
 // API配置：根据环境自动选择正确的端口
 const hostname = window.location.hostname;

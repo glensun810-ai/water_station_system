@@ -15,7 +15,7 @@ from collections import defaultdict
 from config.database import get_db
 from utils.jwt import verify_token
 
-router = APIRouter(prefix="/api/logs", tags=["login_logs"])
+router = APIRouter(prefix="/logs", tags=["系统日志"])
 security = HTTPBearer(auto_error=False)
 
 

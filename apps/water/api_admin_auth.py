@@ -352,10 +352,22 @@ def init_admin_tables(db: Session):
 
     db.commit()
 
-    # 初始化默认超级管理员（用户名：admin，密码：admin123）
+    # 初始化默认超级管理员（用户名：admin，密码由环境变量DEFAULT_ADMIN_PASSWORD配置）
+    from config.settings import settings
+
     result = db.execute(text("SELECT id FROM admin_users WHERE username = 'admin'"))
     if not result.fetchone():
-        hashed_password = get_password_hash("admin123")
+        admin_password = settings.DEFAULT_ADMIN_PASSWORD
+        if not admin_password:
+            import secrets
+            admin_password = secrets.token_urlsafe(12)
+            print(f"\n{'='*60}")
+            print(f"  默认管理员已创建")
+            print(f"  用户名: admin")
+            print(f"  密码:   {admin_password}")
+            print(f"  请立即修改！可通过环境变量 DEFAULT_ADMIN_PASSWORD 预设密码")
+            print(f"{'='*60}\n")
+        hashed_password = get_password_hash(admin_password)
         db.execute(
             text("""
             INSERT INTO admin_users (username, password_hash, role_id, is_active)

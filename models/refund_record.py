@@ -2,8 +2,7 @@
 退款记录相关模型
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
-from sqlalchemy.dialects.mysql import DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -23,8 +22,8 @@ class RefundRecord(Base):
         Integer, ForeignKey("payment_orders.id"), nullable=False, comment="订单ID"
     )
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
-    original_amount = Column(DECIMAL(10, 2), nullable=False, comment="原订单金额")
-    refund_amount = Column(DECIMAL(10, 2), nullable=False, comment="退款金额")
+    original_amount = Column(Numeric(10, 2), nullable=False, comment="原订单金额")
+    refund_amount = Column(Numeric(10, 2), nullable=False, comment="退款金额")
     used_days = Column(Integer, nullable=True, comment="已使用天数")
     reason = Column(String(500), nullable=True, comment="退款原因")
     status = Column(

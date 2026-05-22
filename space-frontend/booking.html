@@ -9,10 +9,12 @@
     <title>创建预约 - 空间服务预约系统</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     
-    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.prod.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <script src="/portal/assets/js/auth.js"></script>
-    
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+
     <style>
         [v-cloak] { display: none !important; }
         
@@ -30,46 +32,6 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-        
-        /* ===== 顶部导航 ===== */
-        .booking-header {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding: var(--spacing-sm) var(--spacing-lg);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .breadcrumb {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: var(--font-size-sm);
-            color: rgba(255,255,255,0.9);
-        }
-        
-        .breadcrumb a {
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .breadcrumb a:hover {
-            color: white;
-        }
-        
-        .breadcrumb-divider {
-            color: rgba(255,255,255,0.5);
-        }
-        
-        .breadcrumb-current {
-            color: white;
-            font-weight: 500;
         }
         
         /* ===== 主内容区域 ===== */
@@ -1298,7 +1260,7 @@
                 background: white;
             }
             
-            .booking-header,
+            .global-header,
             .progress-container,
             .form-actions {
                 display: none;
@@ -1319,17 +1281,8 @@
             <div class="loading-text">正在提交预约...</div>
         </div>
         
-        <!-- 顶部导航 -->
-        <header class="booking-header">
-            <div class="breadcrumb">
-                <a href="/portal/index.html">Portal首页</a>
-                <span class="breadcrumb-divider">›</span>
-                <a href="/space-frontend/index.html">空间服务</a>
-                <span class="breadcrumb-divider">›</span>
-                <span class="breadcrumb-current">创建预约</span>
-            </div>
-        </header>
-        
+        <global-header role="banner" :breadcrumbs='[{"text":"创建预约","url":"/space-frontend/booking.html"}]'></global-header>
+
         <main class="booking-main">
             
             <!-- 进度指示器 -->
@@ -1834,6 +1787,7 @@
         const { createApp, ref, computed, watch, onMounted } = Vue
         
         createApp({
+            components: { 'global-header': GlobalHeader },
             setup() {
                 const currentStep = ref(1)
                 const currentUser = ref(null)
@@ -2365,7 +2319,7 @@ const submitBooking = async () => {
                          
                          const token = localStorage.getItem('token')
                          
-                         let apiUrl = `/api/v2/space/bookings`;
+                         let apiUrl = `/api/v2/space/bookings/space/bookings`;
                          if (userType.value === 'external') {
                              apiUrl += `?payment_mode=${selectedPaymentMode.value || 'prepay'}`;
                          }

@@ -3,9 +3,12 @@ AI产业集群空间服务系统主API路由
 统一暴露所有服务的API端点 following API design specification
 """
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from utils.rate_limiter import limiter
 import os
 import logging
 
@@ -38,8 +41,10 @@ from apps.api.v2.space_payment_settlement import (
 )
 
 from apps.water.api_login_logs import router as login_logs_router
+from apps.api.v1.upload import router as upload_router
 
 from apps.error_handlers import register_exception_handlers
+from utils.logger import RequestLoggingMiddleware
 
 # 导入space模型以确保表被创建
 from shared.models.space import *
@@ -57,18 +62,36 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Register exception handlers FIRST - ensure all errors return JSON
 register_exception_handlers(app)
 logger.info("Exception handlers registered successfully")
 
 # Configure CORS
+from config.settings import settings
+
+cors_origins = settings.CORS_ALLOW_ORIGINS
+cors_credentials = settings.CORS_ALLOW_CREDENTIALS
+
+if settings.ENVIRONMENT == "production":
+    if "*" in cors_origins and cors_credentials:
+        raise ValueError(
+            "生产环境不允许 allow_origins=['*'] 与 allow_credentials=True 同时使用"
+        )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production should restrict specific domains
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=cors_credentials,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+# Register request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
+logger.info("Request logging middleware registered")
 
 # Create v1 version router
 v1_router = APIRouter(prefix="/api/v1")
@@ -87,6 +110,9 @@ v1_router.include_router(membership_order_router, tags=["会员订单"])
 v1_router.include_router(user_balance_router, tags=["用户余额"])
 v1_router.include_router(admin_membership_order_router, tags=["管理员-会员订单"])
 v1_router.include_router(admin_balance_router, tags=["管理员-余额管理"])
+v1_router.include_router(login_logs_router, tags=["系统日志"])
+v1_router.include_router(user_auth_router, tags=["用户认证"])
+v1_router.include_router(upload_router, tags=["文件上传"])
 
 # Create v2 version router (Space Service - 新架构)
 v2_router = APIRouter(prefix="/api/v2")
@@ -104,8 +130,6 @@ v2_router.include_router(space_payment_settlement_router)
 # Add routers to main app
 app.include_router(v1_router)
 app.include_router(v2_router)
-app.include_router(login_logs_router)
-app.include_router(user_auth_router)
 
 # Mount static files for portal and shared resources
 portal_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "portal")
@@ -122,6 +146,13 @@ if os.path.exists(portal_dir):
 
 if os.path.exists(shared_dir):
     app.mount("/shared", StaticFiles(directory=shared_dir), name="shared")
+
+# Mount uploaded files directory
+uploads_dir = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "data", "uploads", "images"
+)
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/data/uploads/images", StaticFiles(directory=uploads_dir), name="uploads")
 
 if os.path.exists(water_frontend_dir):
     app.mount(

@@ -9,6 +9,7 @@ from sqlalchemy import or_
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+import secrets
 from passlib.context import CryptContext
 
 from config.database import get_db
@@ -668,7 +669,7 @@ def batch_delete_users(user_ids: List[int], db: Session = Depends(get_db)):
 
 @router.post("/{user_id}/reset-password")
 def reset_user_password(
-    user_id: int, new_password: str = "123456", db: Session = Depends(get_db)
+    user_id: int, new_password: Optional[str] = None, db: Session = Depends(get_db)
 ):
     """重置用户密码"""
     try:
@@ -679,11 +680,12 @@ def reset_user_password(
         if not user:
             raise HTTPException(status_code=404, detail="用户不存在")
 
-        user.password_hash = pwd_context.hash(new_password)
+        generated_password = new_password or secrets.token_urlsafe(8)
+        user.password_hash = pwd_context.hash(generated_password)
         user.updated_at = datetime.now()
         db.commit()
 
-        return {"message": f"密码已重置为: {new_password}"}
+        return {"message": "密码已重置", "new_password": generated_password}
     except HTTPException:
         raise
     except Exception as e:

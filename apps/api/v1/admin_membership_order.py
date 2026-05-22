@@ -28,7 +28,7 @@ from models.user_balance import (
 from models.user import User
 from depends.auth import get_admin_user
 
-router = APIRouter(prefix="/admin/membership/orders", tags=["管理员-会员订单"])
+router = APIRouter(prefix="/admin/membership-orders", tags=["管理员-会员订单"])
 
 
 class OrderReviewRequest(BaseModel):

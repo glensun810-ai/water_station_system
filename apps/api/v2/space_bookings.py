@@ -12,7 +12,7 @@ import random
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_current_user_required, get_admactiver, get_super_admactiver
+from depends.auth import get_current_user_required, get_admin_user, get_super_admin_user
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
@@ -571,7 +571,7 @@ async def update_booking(
 async def confirm_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """确认预约生效（管理员）- 将预约从 approved 标记为 confirmed"""
 
@@ -610,7 +610,7 @@ async def confirm_booking(
 async def activate_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """标记开始使用（管理员）- 将预约从 confirmed 标记为 active"""
 
@@ -686,7 +686,7 @@ async def cancel_booking(
 async def approve_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """审批预约（管理员）"""
 
@@ -716,7 +716,7 @@ async def approve_booking(
 async def complete_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """完成预约（管理员）"""
 
@@ -746,7 +746,7 @@ async def complete_booking(
 async def settle_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """确认结算（管理员）- 将预约状态从completed改为settled"""
 
@@ -773,7 +773,7 @@ async def settle_booking(
 async def unsettle_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """取消结算（管理员）- 将预约状态从settled改回completed"""
 
@@ -801,7 +801,7 @@ async def delete_booking(
     booking_id: int,
     delete_reason: Optional[str] = Query(None, description="删除原因"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_super_admactiver),
+    current_user: User = Depends(get_super_admin_user),
 ):
     """删除预约（软删除，仅超级管理员）"""
 
@@ -909,7 +909,7 @@ async def calculate_fee(
 async def batch_operation(
     batch_data: BatchOperationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """批量操作预约"""
 
@@ -1073,7 +1073,7 @@ async def approve_booking_with_payment(
     ),
     payment_notes: Optional[str] = Query(None, description="收款备注"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """
     管理员审批预约并确认收款（一步完成）

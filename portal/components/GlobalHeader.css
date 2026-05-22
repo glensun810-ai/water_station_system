@@ -1,34 +1,121 @@
 /**
- * GlobalHeader组件样式（优化版）
- * 极简主义设计 + 角色驱动展示
+ * GlobalHeader v2.0 样式
+ * 玻璃质感 + 流畅动画 + 移动端底部菜单 + Tailwind兼容
  */
 
+/* ==================== Scoped Reset（兼容 Tailwind preflight） ==================== */
+.global-header,
+.global-header *,
+.global-header *::before,
+.global-header *::after {
+    box-sizing: border-box;
+}
+
+.global-header img {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.global-header a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.global-header button {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    margin: 0;
+}
+
+.global-header svg {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* ==================== Header 主体 ==================== */
 .global-header {
+    --header-height: 56px;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--spacing-md) var(--spacing-lg);
-    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    background: var(--header-gradient, linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%));
     color: white;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
     position: sticky;
     top: 0;
     z-index: 1000;
     width: 100%;
-    min-height: 56px;
+    min-height: var(--header-height);
+    transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==================== 左侧：面包屑导航 ==================== */
+/* 透明模式：初始透明，滚动后渐变显现 */
+.global-header.header-transparent {
+    background: transparent;
+    box-shadow: none;
+}
+
+.global-header.header-transparent.header-scrolled {
+    background: var(--header-gradient, linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* 确保滚动后的 header 有半透明玻璃效果 */
+.global-header.header-scrolled {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* ==================== 左侧：返回按钮 + 面包屑 ==================== */
 .header-left {
-    flex: 1;
+    flex: 0 1 auto;
     display: flex;
     align-items: center;
+    gap: var(--spacing-sm);
+    min-width: 0;
+}
+
+/* 返回按钮 */
+.header-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    padding: 6px 10px 6px 6px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+
+.header-back-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.back-icon {
+    flex-shrink: 0;
+}
+
+.back-text {
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
 }
 
 .breadcrumb-nav {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .breadcrumb-item {
@@ -39,8 +126,9 @@
     text-decoration: none;
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-sm);
-    transition: all var(--transition-fast);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .breadcrumb-item:hover {
@@ -51,6 +139,13 @@
 .breadcrumb-home {
     font-weight: 600;
     font-size: var(--font-size-base);
+    flex-shrink: 0;
+}
+
+.breadcrumb-logo {
+    height: 28px;
+    width: auto;
+    border-radius: var(--radius-sm);
 }
 
 .breadcrumb-icon {
@@ -59,13 +154,13 @@
 
 .breadcrumb-text {
     font-size: var(--font-size-sm);
-    white-space: nowrap;
 }
 
 .breadcrumb-separator {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.5);
     font-size: var(--font-size-sm);
     margin: 0 var(--spacing-xs);
+    flex-shrink: 0;
 }
 
 .breadcrumb-active {
@@ -74,12 +169,52 @@
     font-weight: 500;
 }
 
+/* ==================== 中间：页面操作区（slot） ==================== */
+.header-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    overflow: hidden;
+}
+
+.header-center > * {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.header-center a,
+.header-center button {
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-center a:hover,
+.header-center button:hover,
+.header-center a.active,
+.header-center button.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
 /* ==================== 右侧：用户操作区 ==================== */
 .header-right {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
     position: relative;
+    flex-shrink: 0;
 }
 
 /* 办公室切换器 */
@@ -91,7 +226,7 @@
     background: rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-base);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: var(--font-size-sm);
     font-weight: 500;
 }
@@ -116,7 +251,7 @@
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    transition: all var(--transition-base);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user-info-container:hover {
@@ -133,6 +268,7 @@
     justify-content: center;
     font-size: 18px;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .user-details {
@@ -174,7 +310,7 @@
 .dropdown-icon {
     font-size: 10px;
     opacity: 0.6;
-    transition: transform var(--transition-base);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dropdown-open {
@@ -189,18 +325,17 @@
     transform: translateX(50%);
     background: white;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
     min-width: 280px;
     max-width: 320px;
     padding: var(--spacing-sm);
     z-index: 1001;
-    animation: slideDown 0.2s ease;
 }
 
 @keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateX(50%) translateY(-10px);
+        transform: translateX(50%) translateY(-8px);
     }
     to {
         opacity: 1;
@@ -215,7 +350,7 @@
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .office-menu-item:hover {
@@ -272,17 +407,17 @@
     right: 0;
     background: white;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
     min-width: 260px;
     max-width: 320px;
     padding: var(--spacing-sm);
     z-index: 1001;
+    overflow-y: auto;
 }
 
 .menu-user-info {
     padding: var(--spacing-md);
     text-align: center;
-    border-bottom: 1px solid var(--border);
 }
 
 .menu-user-info .user-name {
@@ -318,7 +453,7 @@
     padding: var(--spacing-md);
     color: var(--text-primary);
     text-decoration: none;
-    transition: all var(--transition-fast);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     border: none;
     background: none;
@@ -370,18 +505,75 @@
     font-size: 16px;
     width: 20px;
     text-align: center;
+    flex-shrink: 0;
 }
 
-/* ==================== 动画 ==================== */
+/* ==================== 移动端底部 Sheet 菜单 ==================== */
+.sheet-handle {
+    display: none;
+}
+
+.user-menu.mobile-sheet {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 16px 16px 0 0;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: 65vh;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+    padding-top: 24px;
+}
+
+.user-menu.mobile-sheet .sheet-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border-dark);
+    border-radius: 2px;
+    margin: 0 auto 12px;
+}
+
+/* ==================== 菜单过渡动画 ==================== */
+/* 桌面端：fade + 微下滑 */
 .menu-fade-enter-active,
 .menu-fade-leave-active {
-    transition: all var(--transition-base);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-fade-enter-from,
 .menu-fade-leave-to {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
+}
+
+/* 通用菜单过渡（桌面 fade + 移动端 sheet slide） */
+.header-menu-trans-enter-active,
+.header-menu-trans-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-menu-trans-enter-from,
+.header-menu-trans-leave-to {
+    opacity: 0;
+}
+
+/* 桌面端使用 translateY */
+@media (min-width: 768px) {
+    .header-menu-trans-enter-from,
+    .header-menu-trans-leave-to {
+        transform: translateY(-8px);
+    }
+}
+
+/* 移动端使用底部滑入 */
+@media (max-width: 767px) {
+    .header-menu-trans-enter-from,
+    .header-menu-trans-leave-to {
+        transform: translateY(100%);
+    }
 }
 
 /* ==================== 菜单背景遮罩 ==================== */
@@ -389,6 +581,20 @@
     position: fixed;
     inset: 0;
     z-index: 999;
+    background: transparent;
+}
+
+/* 移动端打开 sheet 时加半透明遮罩 */
+@media (max-width: 767px) {
+    .menu-backdrop {
+        background: rgba(0, 0, 0, 0.4);
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* ==================== 登录按钮 ==================== */
@@ -399,7 +605,8 @@
     text-decoration: none;
     border-radius: var(--radius-md);
     font-weight: 500;
-    transition: all var(--transition-base);
+    font-size: var(--font-size-sm);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .login-btn:hover {
@@ -412,6 +619,10 @@
         padding: var(--spacing-sm) var(--spacing-md);
     }
 
+    .header-left {
+        gap: 2px;
+    }
+
     .breadcrumb-text {
         display: none;
     }
@@ -422,6 +633,10 @@
 
     .breadcrumb-separator {
         margin: 0 2px;
+    }
+
+    .header-center {
+        display: none;
     }
 
     .user-details {
@@ -443,12 +658,17 @@
         font-size: 16px;
     }
 
-    .user-menu {
-        right: -10px;
-        min-width: 240px;
+    .office-switcher {
+        display: none;
     }
 
-    .office-switcher {
+    /* 移动端返回按钮只显示箭头 */
+    .header-back-btn {
+        padding: 6px;
+        margin-right: 0;
+    }
+
+    .back-text {
         display: none;
     }
 }

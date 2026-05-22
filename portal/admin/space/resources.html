@@ -6,7 +6,7 @@
     <title>资源配置</title>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <script src="/portal/assets/js/auth.js"></script>
     <script src="/portal/components/GlobalHeader.js"></script>
     <style>
@@ -1151,7 +1151,8 @@
                     is_available: true
                 });
                 
-                const API_BASE = '/api/v2';
+                const API_BASE = '/api/v2/space/types';
+                const API_RESOURCES_BASE = '/api/v2/space/resources';
                 
                 onMounted(async () => {
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
@@ -1177,7 +1178,7 @@
                 
                 const loadStatistics = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/space/resources/statistics/overview`);
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/statistics/overview`);
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1219,7 +1220,7 @@
                             params.append('capacity_lte', filters.value.max_capacity);
                         }
                         
-                        const response = await fetch(`${API_BASE}/space/resources?${params}`);
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources?${params}`);
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1324,7 +1325,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/space/resources/batch/activate`, {
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/batch/activate`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1364,7 +1365,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/space/resources/batch/delete`, {
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/batch/delete`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1394,7 +1395,7 @@
                 const exportCSV = async () => {
                     try {
                         const typeId = selectedType.value?.id || '';
-                        const url = `${API_BASE}/space/resources/export/csv?type_id=${typeId}`;
+                        const url = `${API_RESOURCES_BASE}/space/resources/export/csv?type_id=${typeId}`;
                         
                         showToast('⏳ 正在导出...', 'success');
                         
@@ -1478,8 +1479,8 @@
                         }
                         
                         const url = editingResource.value 
-                            ? `${API_BASE}/space/resources/${editingResource.value.id}`
-                            : `${API_BASE}/space/resources`;
+                            ? `${API_RESOURCES_BASE}/space/resources/${editingResource.value.id}`
+                            : `${API_RESOURCES_BASE}/space/resources`;
                         
                         const method = editingResource.value ? 'PUT' : 'POST';
                         
@@ -1537,7 +1538,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/space/resources/${resource.id}`, {
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/${resource.id}`, {
                             method: 'DELETE',
                             headers: {
                                 'Authorization': `Bearer ${token}`
@@ -1564,7 +1565,7 @@
                     usageStats.value = null;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/space/resources/${resource.id}/usage-statistics`);
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/${resource.id}/usage-statistics`);
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1601,7 +1602,7 @@
                         importing.value = true;
                         
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/space/resources/batch/import`, {
+                        const response = await fetch(`${API_RESOURCES_BASE}/space/resources/batch/import`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

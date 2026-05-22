@@ -16,10 +16,10 @@ class OfficeAccount(Base):
     __tablename__ = "office_account"
 
     id = Column(Integer, primary_key=True, index=True)
-    office_id = Column(Integer, nullable=False)
+    office_id = Column(Integer, ForeignKey("office.id"), nullable=False)
     office_name = Column(String(100), nullable=False)
     office_room_number = Column(String(50), nullable=True)
-    product_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     product_name = Column(String(100), nullable=False)
     product_specification = Column(String(50), nullable=True)
 
@@ -52,8 +52,8 @@ class AccountTransaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("office_account.id"), nullable=False)
-    office_id = Column(Integer, nullable=False)
-    product_id = Column(Integer, nullable=False)
+    office_id = Column(Integer, ForeignKey("office.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     type = Column(String(20), nullable=False)  # in/out/adjust/reserve/unreserve
     quantity = Column(Integer, nullable=False)
     before_qty = Column(Integer, nullable=False)

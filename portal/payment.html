@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>支付</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <link rel="stylesheet" href="/portal/components/Footer.css">
+    <script src="/portal/components/Footer.js"></script>
             <style>
         [v-cloak] { display: none !important; }
         
@@ -183,6 +188,62 @@
             margin-bottom: var(--spacing-md);
         }
         
+        .qr-code-section {
+            margin-bottom: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .qr-code-container {
+            background: white;
+            border: 2px solid #09BB07;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            display: inline-block;
+            margin: 0 auto var(--spacing-lg);
+        }
+
+        .qr-code-image {
+            width: 200px;
+            height: 200px;
+            display: block;
+            border-radius: var(--radius-sm);
+        }
+
+        .qr-code-instructions {
+            background: #F0FFF4;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: left;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .qr-instruction-title {
+            font-weight: 700;
+            color: #059669;
+            font-size: var(--font-size-base);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .qr-steps {
+            padding-left: 20px;
+            margin: var(--spacing-sm) 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .qr-steps li {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .qr-notice {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            text-align: center;
+            margin-top: var(--spacing-md);
+        }
+
         .paying-spinner {
             width: 40px;
             height: 40px;
@@ -229,6 +290,7 @@
 </head>
 <body>
     <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '支付订单', icon: '💳', url: '/portal/payment.html'}]"></global-header>
         <div class="page-container">
             <div class="page-header">
                 <h1 class="page-title">支付订单</h1>
@@ -262,44 +324,47 @@
                 
                 <div class="payment-methods">
                     <h2 class="payment-methods-title">选择支付方式</h2>
-                    
-                    <div 
-                        class="payment-method-item"
-                        :class="{ selected: paymentMethod === 'alipay' }"
-                        @click="paymentMethod = 'alipay'"
-                    >
-                        <svg class="payment-method-icon" viewBox="0 0 40 40">
-                            <rect width="40" height="40" fill="#1677FF" rx="4"/>
-                            <path d="M30 20c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10z" fill="white"/>
-                        </svg>
-                        <div>
-                            <div class="payment-method-name">支付宝</div>
-                            <div class="payment-method-desc">推荐使用支付宝支付</div>
-                        </div>
-                    </div>
-                    
-                    <div 
+
+                    <div
                         class="payment-method-item"
                         :class="{ selected: paymentMethod === 'wechat' }"
                         @click="paymentMethod = 'wechat'"
                     >
                         <svg class="payment-method-icon" viewBox="0 0 40 40">
                             <rect width="40" height="40" fill="#09BB07" rx="4"/>
-                            <path d="M20 10c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z" fill="white"/>
+                            <path d="M14 18h2v2h-2v-2zm6 0h2v2h-2v-2zm4 0h2v2h-2v-2z" fill="white"/>
+                            <path d="M20 12c-4.5 0-8 3.5-8 8 0 3.5 2.5 6.5 5.5 7.5l-1 3 3.5-2c1 .3 2 .5 3 .5 4.5 0 8-3.5 8-8s-3.5-8-8-8z" fill="white"/>
                         </svg>
                         <div>
-                            <div class="payment-method-name">微信支付</div>
-                            <div class="payment-method-desc">使用微信扫码支付</div>
+                            <div class="payment-method-name">微信扫码支付</div>
+                            <div class="payment-method-desc">扫码添加微信后完成支付</div>
                         </div>
                     </div>
                 </div>
-                
-                <button 
+
+                <!-- 微信收款二维码 -->
+                <div v-if="paymentMethod === 'wechat'" class="qr-code-section">
+                    <div class="qr-code-container">
+                        <img src="/portal/assets/images/payment-qr.png" alt="收款二维码" class="qr-code-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><rect width=%22200%22 height=%22200%22 fill=%22%23f5f5f5%22/><text x=%22100%22 y=%22100%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2214%22>请放置收款二维码图片</text></svg>'">
+                    </div>
+                    <div class="qr-code-instructions">
+                        <p class="qr-instruction-title">支付步骤：</p>
+                        <ol class="qr-steps">
+                            <li>使用微信扫描上方二维码，添加好友</li>
+                            <li>添加成功后，沟通确认订单信息和支付金额</li>
+                            <li>通过微信转账或其他方式完成支付</li>
+                            <li>支付完成后，管理员将确认订单状态</li>
+                        </ol>
+                        <p class="qr-notice">如需帮助，请联系客服</p>
+                    </div>
+                </div>
+
+                <button
                     class="pay-button"
                     @click="startPayment"
                     :disabled="!paymentMethod || isPaying"
                 >
-                    {{ isPaying ? '正在支付...' : '立即支付' }}
+                    {{ isPaying ? '处理中...' : '我已扫码，确认支付' }}
                 </button>
                 
                 <a href="/portal/membership-plans.html" class="back-link">返回套餐选择</a>
@@ -315,8 +380,9 @@
                 </div>
             </div>
         </div>
+        <global-footer></global-footer>
     </div>
-    
+
     <script>
         const { createApp, ref, onMounted, computed } = Vue;
         
@@ -504,7 +570,8 @@
                     cancelPayment,
                     handleOfficeChange
                 };
-            }
+            },
+            components: { 'global-header': GlobalHeader, 'global-footer': GlobalFooter }
         }).mount('#app');
     </script>
 </body>

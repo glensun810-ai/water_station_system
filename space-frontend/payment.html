@@ -5,45 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>支付 - AI产业集群</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <script src="/portal/assets/js/auth.js"></script>
-    
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+
     <style>
         [v-cloak] { display: none !important; }
         
         body {
             background: var(--bg-secondary);
-        }
-        
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: var(--spacing-lg);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            color: white;
-            cursor: pointer;
-        }
-        
-        .page-title {
-            font-size: var(--font-size-xl);
-            font-weight: 700;
         }
         
         .main-container {
@@ -300,27 +272,8 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <!-- Header -->
-        <header class="header">
-            <!-- 面包屑导航 -->
-            <div style="background: rgba(255,255,255,0.1); padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-xs);">
-                <a href="/portal/index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Portal首页</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <a href="/space-frontend/my-bookings.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">我的预约</a>
-                <span style="margin: 0 var(--spacing-xs); color: rgba(255,255,255,0.5);">></span>
-                <span style="color: white;">支付确认</span>
-            </div>
-            
-            <div class="header-content">
-                <div class="back-btn" @click="goBack">
-                    <span>←</span>
-                    <span>返回预约</span>
-                </div>
-                <div class="page-title">支付确认</div>
-                <div></div>
-            </div>
-        </header>
-        
+        <global-header role="banner" back-url="/space-frontend/my-bookings.html" back-text="返回预约" :breadcrumbs='[{"text":"支付确认","url":"/space-frontend/payment.html"}]'></global-header>
+
         <!-- Main Content -->
         <main class="main-container">
             <!-- Loading State -->
@@ -493,12 +446,14 @@
                         </div>
                     </div>
                     
-                    <!-- QR Code Placeholder -->
-                    <div class="qr-code-placeholder">
-                        <div>
+                    <!-- 微信收款二维码 -->
+                    <div class="qr-code-placeholder" style="background: white; border: 2px solid #09BB07; border-radius: var(--radius-lg); padding: var(--spacing-lg); text-align: center;">
+                        <img src="/portal/assets/images/payment-qr.png" alt="收款二维码" style="width: 200px; height: 200px; margin: 0 auto var(--spacing-md); display: block; border-radius: var(--radius-sm);" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none;">
                             <div style="margin-bottom: var(--spacing-sm);">微信支付二维码</div>
                             <div style="font-size: 12px;">（扫码添加管理员好友）</div>
                         </div>
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">请使用微信扫描二维码添加好友后沟通支付</div>
                     </div>
                 </section>
                 
@@ -558,6 +513,7 @@
         const { createApp, ref, onMounted } = Vue;
         
         createApp({
+            components: { 'global-header': GlobalHeader },
             setup() {
                 const currentUser = ref(null);
                 const bookingId = ref(null);
@@ -604,7 +560,7 @@
                     if (!token) return;
                     
                     try {
-                        const response = await fetch(`/api/v2/space/bookings/${bookingId.value}`, {
+                        const response = await fetch(`/api/v2/space/bookings/space/bookings/${bookingId.value}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         
@@ -703,7 +659,7 @@
                             
                             // 方式2: 更新预约状态
                             if (!data || data.code !== 200) {
-                                response = await fetch(`/api/v2/space/bookings/${bookingId.value}/payment-status`, {
+                                response = await fetch(`/api/v2/space/bookings/space/bookings/${bookingId.value}/payment-status`, {
                                     method: 'PUT',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -719,7 +675,7 @@
                             
                             // 方式3: 直接更新预约
                             if (!data || data.code !== 200) {
-                                response = await fetch(`/api/v2/space/bookings/${bookingId.value}`, {
+                                response = await fetch(`/api/v2/space/bookings/space/bookings/${bookingId.value}`, {
                                     method: 'PUT',
                                     headers: {
                                         'Content-Type': 'application/json',

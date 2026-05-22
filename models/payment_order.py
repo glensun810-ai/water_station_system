@@ -2,8 +2,7 @@
 支付订单相关模型
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
-from sqlalchemy.dialects.mysql import DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -23,7 +22,7 @@ class PaymentOrder(Base):
     plan_id = Column(
         Integer, ForeignKey("membership_plans.id"), nullable=False, comment="会员套餐ID"
     )
-    amount = Column(DECIMAL(10, 2), nullable=False, comment="订单金额")
+    amount = Column(Numeric(10, 2), nullable=False, comment="订单金额")
     payment_method = Column(Enum("alipay", "wechat"), nullable=True, comment="支付方式")
     status = Column(
         Enum("pending", "paid", "cancelled", "refunded"),

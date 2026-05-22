@@ -30,13 +30,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(100), nullable=False, unique=True)
     name = Column(String(100), nullable=True)
-    department = Column(String(100), nullable=True, comment="所属办公室名称")
+    department = Column(String(100), nullable=True, index=True, comment="所属办公室名称")
     role = Column(
-        String(50), default="user", comment="角色：super_admin/admin/office_admin/user"
+        String(50), default="user", index=True, comment="角色：super_admin/admin/office_admin/user"
     )
     password_hash = Column(String(255), nullable=True)
     balance_credit = Column(Float, default=0)
-    is_active = Column(Integer, default=1)
+    is_active = Column(Integer, default=1, index=True)
     user_type = Column(
         String(20), default="internal", comment="用户类型：internal/external"
     )

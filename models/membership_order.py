@@ -12,8 +12,8 @@ from sqlalchemy import (
     Text,
     Date,
     Boolean,
+    Numeric,
 )
-from sqlalchemy.dialects.mysql import DECIMAL
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum as PyEnum
@@ -48,9 +48,9 @@ class MembershipOrder(Base):
         Integer, ForeignKey("membership_plans.id"), nullable=False, comment="会员套餐ID"
     )
 
-    amount = Column(DECIMAL(10, 2), nullable=False, comment="订单金额")
-    original_amount = Column(DECIMAL(10, 2), nullable=True, comment="原价金额")
-    discount_amount = Column(DECIMAL(10, 2), default=0, comment="优惠金额")
+    amount = Column(Numeric(10, 2), nullable=False, comment="订单金额")
+    original_amount = Column(Numeric(10, 2), nullable=True, comment="原价金额")
+    discount_amount = Column(Numeric(10, 2), default=0, comment="优惠金额")
 
     payment_type = Column(
         Enum(PaymentType), default=PaymentType.OFFLINE, comment="支付类型"
@@ -72,7 +72,7 @@ class MembershipOrder(Base):
     review_note = Column(Text, nullable=True, comment="审核备注")
     reviewed_at = Column(DateTime, nullable=True, comment="审核时间")
 
-    balance_added = Column(DECIMAL(10, 2), default=0, comment="入账余额金额")
+    balance_added = Column(Numeric(10, 2), default=0, comment="入账余额金额")
     member_start_date = Column(Date, nullable=True, comment="会员开始日期")
     member_end_date = Column(Date, nullable=True, comment="会员结束日期")
     member_days = Column(Integer, default=0, comment="会员天数")

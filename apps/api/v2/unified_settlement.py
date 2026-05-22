@@ -19,7 +19,7 @@ from models.user import User
 from models.pickup import OfficePickup
 from shared.models.space.space_booking import SpaceBooking
 
-router = APIRouter(prefix="/unified/settlements", tags=["统一结算管理"])
+router = APIRouter(prefix="/settlements", tags=["统一结算管理"])
 
 
 class SettlementSummary(BaseModel):

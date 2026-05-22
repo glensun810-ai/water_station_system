@@ -17,7 +17,7 @@ from models.user import User
 router = APIRouter(prefix="/membership", tags=["会员套餐"])
 
 # 管理员路由（创建、编辑、删除套餐）
-admin_router = APIRouter(prefix="/admin/membership/plans", tags=["管理员-会员套餐管理"])
+admin_router = APIRouter(prefix="/admin/membership-plans", tags=["管理员-会员套餐管理"])
 
 
 class MembershipPlanResponse(BaseModel):
@@ -45,6 +45,7 @@ class MembershipPlanList(BaseModel):
 async def get_membership_plans(
     is_active: Optional[bool] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取会员套餐列表"""
     try:

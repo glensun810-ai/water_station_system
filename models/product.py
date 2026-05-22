@@ -3,7 +3,7 @@
 包含Product和ProductCategory模型定义
 """
 
-from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -19,7 +19,7 @@ class ProductCategory(Base):
     name = Column(String(100), nullable=False, unique=True)
     sort_order = Column(Integer, default=0)
     is_active = Column(Integer, default=1)
-    created_at = Column(String, default=datetime.now)
+    created_at = Column(DateTime, default=datetime.now)
 
     # 关系
     products = relationship("Product", back_populates="category")

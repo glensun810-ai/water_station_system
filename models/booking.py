@@ -39,7 +39,7 @@ class MeetingBooking(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True, index=True)
     booking_no = Column(String(50), unique=True, nullable=False, index=True)
-    room_id = Column(Integer, ForeignKey("meeting_rooms.id"), nullable=False)
+    room_id = Column(Integer, ForeignKey("meeting_rooms.id"), nullable=False, index=True)
     room_name = Column(String(100))
     user_id = Column(Integer)
     user_type = Column(String(20), default="external")  # internal/external
@@ -53,7 +53,7 @@ class MeetingBooking(Base, TimestampMixin):
     duration = Column(Float)  # 注意：实际列名是 duration
     meeting_title = Column(String(200))
     attendees_count = Column(Integer, default=1)
-    status = Column(String(20), default=BookingStatus.pending.value)
+    status = Column(String(20), default=BookingStatus.pending.value, index=True)
     total_fee = Column(Float, default=0.0)
     actual_fee = Column(Float, default=0.0)
     payment_status = Column(String(20), default="pending")

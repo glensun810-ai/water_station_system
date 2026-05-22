@@ -7,7 +7,9 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <script src="/shared/static/vendor/qrcode/qrcode.min.js"></script>
     <script src="config.js"></script>
     <style>
         [v-cloak] { display: none !important; }
@@ -60,37 +62,26 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <!-- Header -->
-        <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-6 sticky top-0 z-50 no-print">
-            <div class="max-w-4xl mx-auto flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <button @click="goBack" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <div>
-                        <h1 class="text-xl font-bold">预约详情</h1>
-                        <p class="text-sm opacity-90">预约凭证与详细信息</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center gap-3">
-                    <button @click="handleShare" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                        </svg>
-                        分享
-                    </button>
-                    <button @click="handlePrint" class="bg-white hover:bg-gray-100 px-4 py-2 rounded-lg text-sm text-blue-600 font-medium transition flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-                        </svg>
-                        打印
-                    </button>
-                </div>
-            </div>
-        </header>
+        <!-- GlobalHeader 统一导航栏 -->
+        <global-header role="banner"
+            :breadcrumbs='[{"text":"预约详情","url":"/meeting/frontend/booking_detail.html"}]'
+            back-url="my_bookings.html"
+            back-text="返回列表">
+            <template #nav-actions>
+                <button @click="handleShare" class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                    </svg>
+                    分享
+                </button>
+                <button @click="handlePrint" class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    打印
+                </button>
+            </template>
+        </global-header>
         
         <!-- Main Content -->
         <main class="max-w-4xl mx-auto px-4 py-6">
@@ -333,6 +324,9 @@
         const { createApp, ref, computed, onMounted } = Vue;
         
         createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
             setup() {
                 const booking = ref({});
                 const loading = ref(true);

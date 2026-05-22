@@ -23,7 +23,7 @@ from models.user_balance import (
 )
 from models.credit_note import CreditNote, CreditNoteItem
 from shared.models.space.space_booking import SpaceBooking
-from depends.auth import get_current_user_required, get_admactiver
+from depends.auth import get_current_user_required, get_admin_user
 
 router = APIRouter(prefix="/space/payment", tags=["空间支付结算"])
 
@@ -336,7 +336,7 @@ async def deduct_balance(
 async def settle_credit_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """结算记账模式预约"""
 
@@ -402,7 +402,7 @@ async def settle_credit_booking(
 async def process_monthly_settlement(
     settlement_request: MonthlySettlementRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """处理月度记账账单结算"""
 
@@ -442,7 +442,7 @@ async def get_credit_notes(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取记账账单列表"""
 
@@ -507,7 +507,7 @@ async def get_credit_notes(
 async def get_credit_note_detail(
     note_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admactiver),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取记账账单详情"""
 

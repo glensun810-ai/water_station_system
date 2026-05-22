@@ -39,9 +39,16 @@ class Settings:
             self.CORS_ALLOW_HEADERS = ["*"]
 
         # JWT配置
-        self.SECRET_KEY: str = os.getenv(
-            "SECRET_KEY", "ai-industry-cluster-secret-key-change-in-production-2026"
-        )
+        secret_key = os.getenv("SECRET_KEY")
+        if not secret_key:
+            if self.ENVIRONMENT == "production":
+                raise ValueError(
+                    "SECRET_KEY 环境变量未设置！生产环境必须通过环境变量设置 SECRET_KEY"
+                )
+            import secrets
+            secret_key = secrets.token_urlsafe(32)
+            print(f"[DEV] 开发环境使用随机SECRET_KEY: {secret_key[:8]}...（服务重启后改变）")
+        self.SECRET_KEY: str = secret_key
         self.ALGORITHM: str = "HS256"
         self.ACCESS_TOKEN_EXPIRE_HOURS: int = int(
             os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24")
@@ -66,7 +73,7 @@ class Settings:
             os.getenv("REQUIRE_LOWERCASE", "true").lower() == "true"
         )
         self.DEFAULT_ADMIN_PASSWORD: str = os.getenv(
-            "DEFAULT_ADMIN_PASSWORD", "Admin@2026"
+            "DEFAULT_ADMIN_PASSWORD", ""
         )
 
         # 登录安全配置
@@ -97,6 +104,12 @@ class Settings:
         # 服务器配置
         self.HOST: str = os.getenv("HOST", "0.0.0.0")
         self.PORT: int = int(os.getenv("PORT", "8000"))
+
+        # 日志配置
+        self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+        self.LOG_FILE: str = os.getenv("LOG_FILE", "data/logs/app.log")
+        self.LOG_MAX_BYTES: int = int(os.getenv("LOG_MAX_BYTES", str(10 * 1024 * 1024)))
+        self.LOG_BACKUP_COUNT: int = int(os.getenv("LOG_BACKUP_COUNT", "5"))
 
 
 settings = Settings()

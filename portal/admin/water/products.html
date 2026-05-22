@@ -6,7 +6,7 @@
     <meta name="theme-color" content="var(--text-primary)">
     <title>产品管理</title>
     <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="../../assets/css/design-system.css">
     <link rel="stylesheet" href="../../components/GlobalHeader.css">
     <script src="../../components/GlobalHeader.js"></script>
@@ -688,7 +688,8 @@
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
                 const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api/v1`;
+                const API_PRODUCTS = `${protocol}//${hostname}:${port}/api/v1/products`;
+                const API_CATEGORIES = `${protocol}//${hostname}:${port}/api/v1/product-categories`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -741,7 +742,7 @@
                 
                 const loadProducts = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/products`);
+                        const res = await fetch(`${API_PRODUCTS}/products`);
                         if (res.ok) products.value = await res.json();
                     } catch (e) {
                         console.error('加载产品失败:', e);
@@ -750,7 +751,7 @@
                 
                 const loadCategories = async () => {
                     try {
-                        const res = await fetch(`${API_BASE}/admin/product-categories`);
+                        const res = await fetch(`${API_CATEGORIES}/admin/product-categories`);
                         if (res.ok) categories.value = await res.json();
                     } catch (e) {
                         console.error('加载分类失败:', e);
@@ -872,13 +873,13 @@
                         
                         let res;
                         if (editingProduct.value) {
-                            res = await fetch(`${API_BASE}/products/${editingProduct.value.id}`, {
+                            res = await fetch(`${API_PRODUCTS}/products/${editingProduct.value.id}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
                             });
                         } else {
-                            res = await fetch(`${API_BASE}/products`, {
+                            res = await fetch(`${API_PRODUCTS}/products`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
@@ -901,7 +902,7 @@
                 const deleteProduct = (product) => {
                     if (!confirm(`确定要删除产品 "${product.name} (${product.specification})" 吗？`)) return;
                     
-                    fetch(`${API_BASE}/products/${product.id}`, { method: 'DELETE' })
+                    fetch(`${API_PRODUCTS}/products/${product.id}`, { method: 'DELETE' })
                         .then(res => {
                             if (res.ok) {
                                 alert('产品已删除');
@@ -923,7 +924,7 @@
                         return;
                     }
                     
-                    fetch(`${API_BASE}/products/${product.id}/stock`, {
+                    fetch(`${API_PRODUCTS}/products/${product.id}/stock`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ product_id: product.id, stock })
@@ -960,7 +961,7 @@
                     }
                     
                     try {
-                        const res = await fetch(`${API_BASE}/products/batch-active`, {
+                        const res = await fetch(`${API_PRODUCTS}/products/batch-active`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -994,7 +995,7 @@
                     }
                     
                     try {
-                        const res = await fetch(`${API_BASE}/products/batch-delete`, {
+                        const res = await fetch(`${API_PRODUCTS}/products/batch-delete`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(selectedProducts.value)
@@ -1026,7 +1027,7 @@
                         if (showInactive.value) params.append('is_active', '0');
                         else params.append('is_active', '1');
                         
-                        const res = await fetch(`${API_BASE}/products/export?${params.toString()}`);
+                        const res = await fetch(`${API_PRODUCTS}/products/export?${params.toString()}`);
                         
                         if (res.ok) {
                             const data = await res.json();

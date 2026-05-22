@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#2563EB">
     <title>预约日历 - AI产业集群</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/portal/components/GlobalHeader.js"></script>
@@ -2871,7 +2871,9 @@
                 const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
                 const weekTimeSlots = ['08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22'];
                 
-                const API_BASE = '/api/v2';
+                const API_RESOURCES = '/api/v2/space/resources';
+                const API_BOOKINGS = '/api/v2/space/bookings';
+                const API_TYPES = '/api/v2/space/types';
                 
                 const STATUS_MAP = {
                     'pending': { text: '待审批', class: 'pending', canModify: true, canCancel: true, priority: 1 },
@@ -3524,18 +3526,13 @@
                             dateTo = selectedDate.value;
                         }
                         
-                        const endpoint = '/space/bookings';
-                        const params = new URLSearchParams({
-                            date_from: dateFrom,
-                            date_to: dateTo,
-                            limit: '100'
-                        });
+const endpoint = '/space/bookings';
                         
                         const [bookingsRes, resourcesRes] = await Promise.all([
-                            fetch(`${API_BASE}${endpoint}?${params}`, {
+                            fetch(`${API_BOOKINGS}${endpoint}?${params}`, {
                                 headers: { 'Authorization': `Bearer ${token}` }
                             }),
-                            fetch(`${API_BASE}/space/resources`, {
+                            fetch(`${API_RESOURCES}/space/resources`, {
                                 headers: { 'Authorization': `Bearer ${token}` }
                             })
                         ]);
@@ -3827,7 +3824,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/space/bookings/${selectedBooking.value.id}/cancel`, {
+                        const response = await fetch(`${API_BOOKINGS}/space/bookings/${selectedBooking.value.id}/cancel`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',

@@ -348,7 +348,7 @@ class UnifiedLauncher:
 
         print("\n  登录信息:")
         print("    - 用户名: admin")
-        print("    - 密码:   123456")
+        print("    - 密码:   首次启动时随机生成，或通过DEFAULT_ADMIN_PASSWORD环境变量预设")
         print("    - 角色:   超级管理员")
 
         print("\n  常用命令:")

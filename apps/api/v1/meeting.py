@@ -5,15 +5,15 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import date, time, datetime
-from typing import List, Optional
+from datetime import date, datetime
+from typing import Optional
 from pydantic import BaseModel, field_validator
 
 from config.database import get_db
 from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
 from models.user import User
-from depends.auth import get_current_user, get_admin_user, get_current_user
+from depends.auth import get_current_user, get_admin_user
 
 router = APIRouter(prefix="/meeting", tags=["会议室服务"])
 

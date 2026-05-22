@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from typing import List, Optional
 from datetime import datetime
+import secrets
 from pydantic import BaseModel, ConfigDict
 
 from config.database import get_db
@@ -201,7 +202,7 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
             }
         else:
             try:
-                default_password = "123456"
+                default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
                 new_user = User(
@@ -336,7 +337,7 @@ def update_office(
             }
         else:
             try:
-                default_password = "123456"
+                default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
                 new_user = User(

@@ -2,8 +2,7 @@
 用户余额账户模型 - 支持会员充值和服务充值
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Text, Date
-from sqlalchemy.dialects.mysql import DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Text, Date, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum as PyEnum
@@ -38,22 +37,22 @@ class UserBalanceAccount(Base):
         Integer, ForeignKey("users.id"), unique=True, nullable=False, comment="用户ID"
     )
 
-    membership_balance = Column(DECIMAL(10, 2), default=0, comment="会员充值余额")
-    service_balance = Column(DECIMAL(10, 2), default=0, comment="服务充值余额")
-    gift_balance = Column(DECIMAL(10, 2), default=0, comment="赠送余额")
-    total_balance = Column(DECIMAL(10, 2), default=0, comment="总余额(只读)")
+    membership_balance = Column(Numeric(10, 2), default=0, comment="会员充值余额")
+    service_balance = Column(Numeric(10, 2), default=0, comment="服务充值余额")
+    gift_balance = Column(Numeric(10, 2), default=0, comment="赠送余额")
+    total_balance = Column(Numeric(10, 2), default=0, comment="总余额(只读)")
 
     membership_expire_date = Column(Date, nullable=True, comment="会员余额过期日期")
 
     frozen_membership_balance = Column(
-        DECIMAL(10, 2), default=0, comment="冻结会员余额"
+        Numeric(10, 2), default=0, comment="冻结会员余额"
     )
-    frozen_service_balance = Column(DECIMAL(10, 2), default=0, comment="冻结服务余额")
+    frozen_service_balance = Column(Numeric(10, 2), default=0, comment="冻结服务余额")
 
-    total_membership_charged = Column(DECIMAL(10, 2), default=0, comment="累计会员充值")
-    total_service_charged = Column(DECIMAL(10, 2), default=0, comment="累计服务充值")
-    total_deducted = Column(DECIMAL(10, 2), default=0, comment="累计抵扣")
-    total_refunded = Column(DECIMAL(10, 2), default=0, comment="累计退款")
+    total_membership_charged = Column(Numeric(10, 2), default=0, comment="累计会员充值")
+    total_service_charged = Column(Numeric(10, 2), default=0, comment="累计服务充值")
+    total_deducted = Column(Numeric(10, 2), default=0, comment="累计抵扣")
+    total_refunded = Column(Numeric(10, 2), default=0, comment="累计退款")
 
     last_transaction_at = Column(DateTime, nullable=True, comment="最后交易时间")
 
@@ -102,30 +101,30 @@ class BalanceTransaction(Base):
     transaction_type = Column(Enum(TransactionType), nullable=False, comment="交易类型")
 
     amount = Column(
-        DECIMAL(10, 2), nullable=False, comment="变动金额(正数为增加,负数为减少)"
+        Numeric(10, 2), nullable=False, comment="变动金额(正数为增加,负数为减少)"
     )
 
     balance_type = Column(Enum(BalanceType), nullable=True, comment="余额类型")
 
     before_membership_balance = Column(
-        DECIMAL(10, 2), nullable=True, comment="变动前会员余额"
+        Numeric(10, 2), nullable=True, comment="变动前会员余额"
     )
     before_service_balance = Column(
-        DECIMAL(10, 2), nullable=True, comment="变动前服务余额"
+        Numeric(10, 2), nullable=True, comment="变动前服务余额"
     )
     before_gift_balance = Column(
-        DECIMAL(10, 2), nullable=True, comment="变动前赠送余额"
+        Numeric(10, 2), nullable=True, comment="变动前赠送余额"
     )
-    before_total_balance = Column(DECIMAL(10, 2), nullable=True, comment="变动前总余额")
+    before_total_balance = Column(Numeric(10, 2), nullable=True, comment="变动前总余额")
 
     after_membership_balance = Column(
-        DECIMAL(10, 2), nullable=True, comment="变动后会员余额"
+        Numeric(10, 2), nullable=True, comment="变动后会员余额"
     )
     after_service_balance = Column(
-        DECIMAL(10, 2), nullable=True, comment="变动后服务余额"
+        Numeric(10, 2), nullable=True, comment="变动后服务余额"
     )
-    after_gift_balance = Column(DECIMAL(10, 2), nullable=True, comment="变动后赠送余额")
-    after_total_balance = Column(DECIMAL(10, 2), nullable=True, comment="变动后总余额")
+    after_gift_balance = Column(Numeric(10, 2), nullable=True, comment="变动后赠送余额")
+    after_total_balance = Column(Numeric(10, 2), nullable=True, comment="变动后总余额")
 
     reference_type = Column(
         String(50),
@@ -176,15 +175,15 @@ class BalanceDeductRecord(Base):
     order_id = Column(Integer, nullable=False, comment="订单ID")
     order_no = Column(String(64), nullable=True, comment="订单编号")
 
-    total_amount = Column(DECIMAL(10, 2), nullable=False, comment="订单总金额")
-    member_discount = Column(DECIMAL(10, 2), default=0, comment="会员折扣金额")
-    member_free_amount = Column(DECIMAL(10, 2), default=0, comment="会员免费金额")
+    total_amount = Column(Numeric(10, 2), nullable=False, comment="订单总金额")
+    member_discount = Column(Numeric(10, 2), default=0, comment="会员折扣金额")
+    member_free_amount = Column(Numeric(10, 2), default=0, comment="会员免费金额")
 
-    membership_deduct = Column(DECIMAL(10, 2), default=0, comment="会员余额抵扣")
-    service_deduct = Column(DECIMAL(10, 2), default=0, comment="服务余额抵扣")
-    gift_deduct = Column(DECIMAL(10, 2), default=0, comment="赠送余额抵扣")
+    membership_deduct = Column(Numeric(10, 2), default=0, comment="会员余额抵扣")
+    service_deduct = Column(Numeric(10, 2), default=0, comment="服务余额抵扣")
+    gift_deduct = Column(Numeric(10, 2), default=0, comment="赠送余额抵扣")
 
-    cash_amount = Column(DECIMAL(10, 2), default=0, comment="现金支付金额")
+    cash_amount = Column(Numeric(10, 2), default=0, comment="现金支付金额")
 
     description = Column(Text, nullable=True, comment="抵扣说明")
 

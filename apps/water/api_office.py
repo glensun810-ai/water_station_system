@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
+import secrets
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
@@ -236,7 +237,7 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
     创建办公室
 
     - 如果填写了负责人姓名且 create_leader_account=True，会自动创建对应账号
-    - 默认密码：123456
+    - 密码：系统随机生成
     - 默认角色：办公室管理员
     - 自动绑定该办公室
     """
@@ -290,7 +291,7 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
         else:
             # 创建新用户
             try:
-                default_password = "123456"
+                default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
                 new_user = main.User(
@@ -391,7 +392,7 @@ def update_office(
     更新办公室信息
 
     - 如果更新了负责人姓名且 create_leader_account=True，会自动创建对应账号
-    - 默认密码：123456
+    - 密码：系统随机生成
     - 默认角色：普通用户
     - 自动绑定该办公室
     """
@@ -457,7 +458,7 @@ def update_office(
         else:
             # 创建新用户
             try:
-                default_password = "123456"
+                default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
                 new_user = main.User(

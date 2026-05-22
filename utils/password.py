@@ -198,10 +198,9 @@ class PasswordManager:
             - 登录成功后检查，如果工作因子低于当前标准则重新哈希
         """
         try:
-            rounds = bcrypt.hashpw(b"test", hashed_password.encode("utf-8"))
             current_rounds = int(hashed_password.split("$")[2])
             return current_rounds < PasswordManager.BCRYPT_ROUNDS
-        except:
+        except (ValueError, IndexError, AttributeError):
             return False
 
 

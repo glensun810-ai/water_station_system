@@ -20,13 +20,15 @@
     
     <title>AI产业集群</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="/shared/static/vendor/vue/vue.global.prod.js"></script>
     <link rel="stylesheet" href="/portal/assets/css/design-system.css">
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/shared/utils/api-client.js"></script>
     <script src="/shared/utils/api-endpoints.js"></script>
     <script src="/portal/assets/js/auth.js"></script>
     <script src="/portal/components/GlobalHeader.js"></script>
+    <link rel="stylesheet" href="/portal/components/Footer.css">
+    <script src="/portal/components/Footer.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -35,81 +37,6 @@
             display: flex;
             flex-direction: column;
             background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-        }
-        
-        .header-nav {
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-            color: white;
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-lg);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .header-logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            font-size: var(--font-size-xl);
-            font-weight: 700;
-        }
-        
-        .header-logo-icon {
-            font-size: 28px;
-        }
-        
-        .header-user {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        
-        .user-info {
-            text-align: right;
-        }
-        
-        .user-name {
-            font-weight: 600;
-            font-size: var(--font-size-base);
-        }
-        
-        .user-dept {
-            font-size: var(--font-size-xs);
-            opacity: 0.8;
-        }
-        
-        .logout-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: var(--spacing-sm) var(--spacing-lg);
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        
-        .logout-btn:hover {
-            background: rgba(255,255,255,0.3);
         }
         
         .main-content {
@@ -317,22 +244,6 @@
         }
         
         @media (max-width: 768px) {
-            .header-nav {
-                padding: var(--spacing-md);
-            }
-            
-            .header-logo {
-                font-size: var(--font-size-lg);
-            }
-            
-            .header-user {
-                display: none;
-            }
-            
-            .mobile-menu-btn {
-                display: block;
-            }
-            
             .main-content {
                 padding: var(--spacing-md);
             }
@@ -528,23 +439,7 @@
         </a>
         
         <!-- 全局导航栏 -->
-        <global-header v-if="userInfo && userInfo.id" role="banner"></global-header>
-
-        <!-- 未登录时的header -->
-        <header class="header-nav" v-if="!userInfo || !userInfo.id" role="banner">
-            <div class="header-content">
-                <div class="header-logo">
-                    <span class="header-logo-icon">🏢</span>
-                    <span>AI产业集群空间服务</span>
-                </div>
-                
-                <div class="header-user">
-                    <a href="./admin/login.html" class="btn btn-outline btn-md" style="text-decoration: none;">
-                        登录
-                    </a>
-                </div>
-            </div>
-        </header>
+        <global-header role="banner"></global-header>
         
         <main class="main-content" id="main-content" role="main">
             <div v-if="loading" class="loading-container">
@@ -1087,7 +982,7 @@
 <div v-if="showMobileMenu && userInfo && userInfo.id" class="modal-overlay" @click="showMobileMenu = false" style="display: none;">
             <div class="modal-content" style="max-width: 300px; padding: 0;" @click.stop>
                 <div style="background: var(--primary); color: white; padding: var(--spacing-xl); text-align: center;">
-                    <div class="user-avatar" style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto var(--spacing-md);">👤</div>
+                    <div style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto var(--spacing-md); border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;">👤</div>
                     <div class="font-bold" style="font-size: var(--font-size-lg);">
                         {{ userInfo.name || '用户' }}
                         <span v-if="userInfo && userInfo.is_admin" style="margin-left: 4px; font-size: 12px; padding: 2px 6px; border-radius: 8px; background: #FCD34D; color: #78350F;">
@@ -1105,14 +1000,15 @@
                 </div>
             </div>
         </div>
+        <global-footer></global-footer>
     </div>
-    
     <script>
         const { createApp, ref, computed, onMounted, onBeforeUnmount } = Vue;
         
         const app = createApp({
             components: {
-                'global-header': GlobalHeader
+                'global-header': GlobalHeader,
+                'global-footer': GlobalFooter
             },
             setup() {
                 const loading = ref(true);
