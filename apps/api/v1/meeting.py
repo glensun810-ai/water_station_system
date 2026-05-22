@@ -13,7 +13,9 @@ from config.database import get_db
 from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
 from models.user import User
+from models.office import Office
 from depends.auth import get_current_user, get_admin_user
+from sqlalchemy import func
 
 router = APIRouter(prefix="/meeting", tags=["会议室服务"])
 
@@ -805,7 +807,7 @@ def create_booking(
     return db_booking
 
 
-@router.get("/bookings/{booking_id}", response_model=MeetingBookingResponse)
+@router.get("/bookings/{booking_id:int}", response_model=MeetingBookingResponse)
 def get_booking(
     booking_id: int,
     db: Session = Depends(get_db),
@@ -1008,6 +1010,288 @@ def approve_booking(
 
     db.commit()
     return {"message": "预约已审批通过", "booking_id": booking_id}
+
+
+# ==================== 前端兼容别名路由 ====================
+
+
+@router.post("/bookings/{booking_id}/cancel")
+def cancel_booking_post(
+    booking_id: int,
+    reason: Optional[str] = Query(None, description="取消原因"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """取消预约（POST别名，兼容前端）"""
+    return cancel_booking(booking_id, reason, db, current_user)
+
+
+@router.delete("/bookings/{booking_id}")
+def delete_booking(
+    booking_id: int,
+    deleted_by: Optional[str] = Query(None, description="操作人"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """删除预约（软删除，仅管理员）"""
+    booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    booking.status = BookingStatus.cancelled.value
+    booking.is_deleted = True
+    booking.deleted_at = datetime.now()
+    booking.deleted_by = deleted_by
+    db.commit()
+    return {"message": "预约已删除", "booking_id": booking_id}
+
+
+@router.get("/bookings/enhanced")
+def get_bookings_enhanced(
+    page: int = Query(1, description="页码"),
+    limit: int = Query(20, description="每页数量"),
+    room_id: Optional[int] = Query(None, description="会议室ID过滤"),
+    user_type: Optional[str] = Query(None, description="用户类型过滤"),
+    status: Optional[str] = Query(None, description="状态过滤"),
+    q: Optional[str] = Query(None, description="全局搜索关键词"),
+    is_deleted: Optional[str] = Query(None, description="是否已删除"),
+    payment_status: Optional[str] = Query(None, description="支付状态过滤"),
+    start_date: Optional[str] = Query(None, description="开始日期"),
+    end_date: Optional[str] = Query(None, description="结束日期"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取预约列表（增强版，兼容管理端高级过滤）"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录或token已过期")
+
+    query = db.query(MeetingBooking)
+
+    if room_id:
+        query = query.filter(MeetingBooking.room_id == room_id)
+    if user_type:
+        query = query.filter(MeetingBooking.user_type == user_type)
+    if status:
+        query = query.filter(MeetingBooking.status == status)
+    if q:
+        query = query.filter(
+            MeetingBooking.meeting_title.contains(q)
+            | MeetingBooking.user_name.contains(q)
+        )
+    if is_deleted is not None:
+        query = query.filter(MeetingBooking.is_deleted == (is_deleted == "1" or is_deleted.lower() == "true"))
+    if payment_status:
+        query = query.filter(MeetingBooking.payment_status == payment_status)
+    if start_date:
+        query = query.filter(MeetingBooking.booking_date >= start_date)
+    if end_date:
+        query = query.filter(MeetingBooking.booking_date <= end_date)
+
+    if current_user.role not in ["admin", "super_admin"]:
+        query = query.filter(MeetingBooking.user_name == current_user.username)
+
+    total = query.count()
+    bookings = (
+        query.order_by(MeetingBooking.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    items = []
+    for b in bookings:
+        items.append({
+            "id": b.id, "booking_no": b.booking_no, "room_id": b.room_id,
+            "room_name": b.room_name, "user_name": b.user_name,
+            "user_id": b.user_id, "user_type": b.user_type,
+            "booking_date": b.booking_date.isoformat() if b.booking_date else None,
+            "start_time": b.start_time, "end_time": b.end_time,
+            "meeting_title": b.meeting_title, "status": b.status,
+            "payment_status": getattr(b, "payment_status", "pending"),
+            "total_fee": float(b.total_fee) if b.total_fee else 0.0,
+            "attendees_count": b.attendees_count,
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+            "is_deleted": getattr(b, "is_deleted", False),
+        })
+
+    return {"items": items, "total": total, "page": page, "limit": limit,
+            "pages": (total + limit - 1) // limit}
+
+
+@router.post("/approval/approve")
+def approve_booking_post(
+    booking_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """审批预约（POST别名，兼容前端 /approval/approve）"""
+    booking_id = booking_data.get("booking_id") or booking_data.get("id")
+    if not booking_id:
+        raise HTTPException(status_code=400, detail="缺少booking_id")
+    return approve_booking(booking_id, db, current_user)
+
+
+@router.post("/approval/batch-approve")
+def batch_approve_bookings(
+    booking_ids: list[int],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """批量审批预约"""
+    approved = []
+    for booking_id in booking_ids:
+        booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
+        if booking and booking.status == BookingStatus.pending.value:
+            booking.status = BookingStatus.confirmed.value
+            booking.payment_status = "confirmed"
+            approved.append(booking_id)
+    db.commit()
+    return {"message": f"已审批 {len(approved)} 个预约", "approved_ids": approved}
+
+
+@router.get("/approvals")
+def get_pending_approvals(
+    page: int = Query(1, description="页码"),
+    limit: int = Query(20, description="每页数量"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """获取待审批预约列表"""
+    query = db.query(MeetingBooking).filter(MeetingBooking.status == BookingStatus.pending.value)
+    total = query.count()
+    bookings = query.order_by(MeetingBooking.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    items = []
+    for b in bookings:
+        items.append({
+            "id": b.id, "booking_no": b.booking_no, "room_id": b.room_id,
+            "room_name": b.room_name, "user_name": b.user_name,
+            "booking_date": b.booking_date.isoformat() if b.booking_date else None,
+            "start_time": b.start_time, "end_time": b.end_time,
+            "meeting_title": b.meeting_title, "status": b.status,
+            "payment_status": getattr(b, "payment_status", "pending"),
+            "total_fee": float(b.total_fee) if b.total_fee else 0.0,
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+        })
+
+    return {"items": items, "total": total, "page": page, "limit": limit,
+            "pages": (total + limit - 1) // limit}
+
+
+# ==================== 办公室列表（会议室预约上下文） ====================
+
+
+@router.get("/offices")
+def get_meeting_offices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取办公室列表（用于会议室预约选择所属办公室）"""
+    offices = db.query(Office).filter(Office.is_active == True).order_by(Office.name).all()
+    results = []
+    for o in offices:
+        results.append({
+            "id": o.id,
+            "name": o.name,
+            "room_number": getattr(o, "room_number", "") or "",
+            "display_name": o.name,
+        })
+    return results
+
+
+# ==================== 灵活时间段检查 ====================
+
+
+class TimeSlotCheckRequest(BaseModel):
+    room_id: int
+    booking_date: date
+    start_time: str
+    end_time: str
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def validate_time_format(cls, v):
+        import re
+        if not re.match(r"^[0-9]{2}:[0-9]{2}$", v):
+            raise ValueError("时间格式必须为HH:MM（如09:00）")
+        hour = int(v.split(":")[0])
+        if hour < 7 or hour > 22:
+            raise ValueError("时间必须在07:00-22:00范围内")
+        return v
+
+
+class TimeSlotValidationResponse(BaseModel):
+    is_available: bool
+    conflict_count: int = 0
+    duration_minutes: int = 0
+    duration_hours: float = 0.0
+    is_valid: bool = True
+    message: str = ""
+    warnings: list = []
+
+
+@router.post("/flexible/check-time-slot")
+def check_flexible_time_slot(
+    request: TimeSlotCheckRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """检查灵活时间段可用性"""
+    start_minutes = int(request.start_time.split(":")[0]) * 60 + int(request.start_time.split(":")[1])
+    end_minutes = int(request.end_time.split(":")[0]) * 60 + int(request.end_time.split(":")[1])
+
+    if start_minutes >= end_minutes:
+        return {
+            "is_available": False, "duration_minutes": 0, "duration_hours": 0.0,
+            "is_valid": False, "message": "开始时间必须早于结束时间",
+            "warnings": ["请调整时间选择"], "conflict_count": 0,
+        }
+
+    duration_minutes = end_minutes - start_minutes
+    duration_hours = duration_minutes / 60.0
+
+    if duration_minutes < 30:
+        return {
+            "is_available": False, "duration_minutes": duration_minutes,
+            "duration_hours": duration_hours, "is_valid": False,
+            "message": "预约时长不能少于30分钟", "warnings": ["预约时长不能少于30分钟"],
+            "conflict_count": 0,
+        }
+    if duration_minutes > 480:
+        return {
+            "is_available": False, "duration_minutes": duration_minutes,
+            "duration_hours": duration_hours, "is_valid": False,
+            "message": "预约时长不能超过8小时", "warnings": ["预约时长不能超过480分钟（8小时）"],
+            "conflict_count": 0,
+        }
+
+    conflict_count = (
+        db.query(func.count(MeetingBooking.id))
+        .filter(
+            MeetingBooking.room_id == request.room_id,
+            MeetingBooking.booking_date == request.booking_date,
+            MeetingBooking.status.in_(["pending", "confirmed"]),
+            MeetingBooking.start_time < request.end_time,
+            MeetingBooking.end_time > request.start_time,
+        )
+        .scalar()
+        or 0
+    )
+
+    is_available = conflict_count == 0
+    warnings = []
+    if conflict_count > 0:
+        warnings.append(f"该时间段已有{conflict_count}个预约冲突")
+
+    return {
+        "is_available": is_available, "conflict_count": conflict_count,
+        "duration_minutes": duration_minutes, "duration_hours": duration_hours,
+        "is_valid": True,
+        "message": "时间段可用" if is_available else f"时间段冲突：已有{conflict_count}个预约",
+        "warnings": warnings,
+    }
+
+
+# ==================== 会议室可用性检查 ====================
 
 
 @router.get("/rooms/{room_id}/availability")

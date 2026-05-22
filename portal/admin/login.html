@@ -1013,16 +1013,25 @@
                     if (redirect) {
                         return redirect;
                     }
-                    
+
                     // 优先级2: 检查是否有保存的来源页面
                     const savedRedirect = sessionStorage.getItem('login_redirect');
                     if (savedRedirect) {
                         sessionStorage.removeItem('login_redirect');
                         return savedRedirect;
                     }
-                    
-                    // 优先级3: 根据角色跳转默认页面（统一首页）
-                    // 所有角色都跳转到统一首页，在首页根据角色显示不同内容
+
+                    // 优先级3: 根据角色跳转默认页面
+                    if (role === 'super_admin' || role === '超级管理员') {
+                        return '/portal/admin/index.html';
+                    }
+                    if (role === 'admin' || role === '管理员') {
+                        return '/portal/admin/index.html';
+                    }
+                    if (role === 'office_admin') {
+                        return '/portal/admin/water/dashboard.html';
+                    }
+                    // 普通用户（internal / external）
                     return '/portal/index.html';
                 };
                 

@@ -411,6 +411,27 @@ def mark_pickup_as_paid(
     }
 
 
+@router.post("/pickup")
+def create_water_pickup_alias(
+    pickup_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Alias for /pickups (singular form for frontend compatibility)"""
+    return create_water_pickup(pickup_data, db, current_user)
+
+
+@router.post("/pickup/{pickup_id}/pay")
+def mark_pickup_as_paid_alias(
+    pickup_id: int,
+    payment_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Alias for /pickups/{pickup_id}/pay (singular form for frontend compatibility)"""
+    return mark_pickup_as_paid(pickup_id, payment_data, db, current_user)
+
+
 @router.delete("/pickups/{pickup_id}")
 def delete_pickup(
     pickup_id: int,

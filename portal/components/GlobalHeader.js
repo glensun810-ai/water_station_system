@@ -356,9 +356,9 @@ const GlobalHeader = {
                 const protocol = window.location.protocol;
                 const hostname = window.location.hostname;
                 const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-                const API_BASE = `${protocol}//${hostname}:${port}/api`;
+                const API_BASE = `${protocol}//${hostname}:${port}/api/v1`;
 
-                const response = await fetch(`${API_BASE}/office-admins/user/${this.userInfo.id}`, {
+                const response = await fetch(`${API_BASE}/offices/office-admins/user/${this.userInfo.id}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

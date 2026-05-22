@@ -717,3 +717,44 @@ def check_user_name(name: str, db: Session = Depends(get_db)):
         }
 
     return {"exists": False}
+
+
+@router.get("/office-admins/user/{user_id}")
+def get_user_managed_offices(user_id: int, db: Session = Depends(get_db)):
+    """获取用户管理的所有办公室（GlobalHeader调用）"""
+    from sqlalchemy import text
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    result = db.execute(
+        text("""
+            SELECT r.*, u.name as user_name, o.name as office_name
+            FROM office_admin_relations r
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN office o ON r.office_id = o.id
+            WHERE r.user_id = :user_id
+            ORDER BY r.is_primary DESC, r.created_at ASC
+        """),
+        {"user_id": user_id},
+    )
+
+    offices = []
+    for row in result:
+        role_type_name = {1: "负责人", 2: "行政对接人", 3: "其他管理员"}.get(
+            row.role_type, "其他"
+        )
+        offices.append({
+            "id": row.id,
+            "office_id": row.office_id,
+            "office_name": row.office_name,
+            "user_id": row.user_id,
+            "user_name": row.user_name,
+            "is_primary": row.is_primary,
+            "role_type": row.role_type,
+            "role_type_name": role_type_name,
+            "created_at": str(row.created_at) if row.created_at else None,
+        })
+
+    return offices

@@ -31,6 +31,13 @@ from apps.api.v1.admin_membership_order import router as admin_membership_order_
 from apps.api.v1.admin_balance import router as admin_balance_router
 from apps.water.api_user_auth import router as user_auth_router
 
+# Import legacy water routers (full /api/ path routes)
+from apps.water.api_payment import router as water_payment_router
+from apps.water.api_refund import router as water_refund_router
+from apps.water.api_invoice import router as water_invoice_router
+from apps.water.api_packages import router as water_packages_router
+from apps.water.api_services import router as water_services_router
+
 # Import the unified v2 API routes (Space Service)
 from apps.api.v2.space_types import router as space_types_router
 from apps.api.v2.space_resources import router as space_resources_router
@@ -45,6 +52,13 @@ from apps.api.v2.space_payment_settlement import (
 
 from apps.water.api_login_logs import router as login_logs_router
 from apps.api.v1.upload import router as upload_router
+from apps.api.v1.office_pickup import (
+    router as office_pickup_router,
+    admin_settlement_router,
+    office_settlement_router,
+)
+from apps.api.v1.legacy_compat import router as legacy_compat_router
+from apps.api.v1.settlement_v3_compat import router as settlement_v3_compat_router
 
 from apps.error_handlers import register_exception_handlers
 from utils.logger import RequestLoggingMiddleware
@@ -116,6 +130,10 @@ v1_router.include_router(admin_balance_router, tags=["管理员-余额管理"])
 v1_router.include_router(login_logs_router, tags=["系统日志"])
 v1_router.include_router(user_auth_router, tags=["用户认证"])
 v1_router.include_router(upload_router, tags=["文件上传"])
+v1_router.include_router(office_pickup_router, tags=["办公室领水管理"])
+v1_router.include_router(admin_settlement_router, tags=["办公室结算管理"])
+v1_router.include_router(office_settlement_router, tags=["办公室结算操作"])
+v1_router.include_router(legacy_compat_router, tags=["旧版兼容"])
 
 # Create v2 version router (Space Service - 新架构)
 v2_router = APIRouter(prefix="/api/v2")
@@ -133,6 +151,14 @@ v2_router.include_router(space_payment_settlement_router)
 # Add routers to main app
 app.include_router(v1_router)
 app.include_router(v2_router)
+
+# Register legacy water payment/invoice/reund routers directly (paths include /api/ prefix)
+app.include_router(water_payment_router, tags=["支付订单"])
+app.include_router(water_refund_router, tags=["退款管理"])
+app.include_router(water_invoice_router, tags=["发票管理"])
+app.include_router(water_packages_router, tags=["套餐管理"])
+app.include_router(water_services_router, tags=["服务管理"])
+app.include_router(settlement_v3_compat_router, tags=["结算管理-v3"])
 
 # Mount static files for portal and shared resources
 portal_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "portal")

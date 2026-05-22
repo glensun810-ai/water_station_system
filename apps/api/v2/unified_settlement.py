@@ -775,3 +775,46 @@ async def export_monthly_report(
         media_type="text/csv;charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+class BatchConfirmRequest(BaseModel):
+    records: list[dict]
+
+
+@router.post("/batch-confirm")
+async def batch_confirm_settlements(
+    request: BatchConfirmRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """批量确认结算"""
+    confirmed = []
+    for record in request.records:
+        service_type = record.get("service_type", "")
+        record_id = record.get("record_id")
+        if not record_id:
+            continue
+        try:
+            rid = int(record_id.split("_")[-1]) if "_" in str(record_id) else int(record_id)
+        except (ValueError, TypeError):
+            rid = record_id
+
+        if service_type == "water":
+            pickup = db.query(OfficePickup).filter(
+                OfficePickup.id == rid, OfficePickup.is_deleted == False
+            ).first()
+            if pickup:
+                pickup.settlement_status = "settled"
+                pickup.settled_at = datetime.now()
+                confirmed.append(record_id)
+        elif service_type == "space":
+            booking = db.query(SpaceBooking).filter(
+                SpaceBooking.id == rid
+            ).first()
+            if booking:
+                booking.settlement_status = "settled"
+                booking.settled_at = datetime.now()
+                confirmed.append(record_id)
+
+    db.commit()
+    return {"success": True, "message": f"已确认 {len(confirmed)} 条记录", "confirmed_count": len(confirmed)}
