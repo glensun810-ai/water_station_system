@@ -3,6 +3,9 @@ AI产业集群空间服务系统主API路由
 统一暴露所有服务的API端点 following API design specification
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

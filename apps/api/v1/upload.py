@@ -1,7 +1,7 @@
 """文件上传 API"""
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 
 from depends.auth import get_current_user_required
@@ -26,6 +26,7 @@ def get_upload_dir() -> str:
 @router.post("/image")
 @limiter.limit("20/minute")
 async def upload_image(
+    request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user_required),
 ):
