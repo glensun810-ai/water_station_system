@@ -504,10 +504,10 @@
         const currentPort = window.location.port;
         const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
         
-        const API_BASE = isLocalhost 
-            ? `${protocol}//${hostname}:${currentPort}/api`
-            : `${protocol}//${hostname}/api/v1`;
-        
+        const API_BASE = isLocalhost
+            ? `${protocol}//${hostname}:${currentPort}`
+            : `${protocol}//${hostname}`;
+
         console.log('饮水管理API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
 
         createApp({
@@ -664,7 +664,7 @@
                             return;
                         }
                         
-                        const res = await fetch(`${API_BASE}/auth/me`, {
+                        const res = await fetch(`${API_BASE}/api/v1/user/me`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (!res.ok) throw new Error('认证失败');
@@ -678,7 +678,7 @@
                 async loadOffices() {
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/offices`, {
+                        const res = await fetch(`${API_BASE}/api/offices`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -692,7 +692,7 @@
                 async loadUsers() {
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/users`, {
+                        const res = await fetch(`${API_BASE}/api/users`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -710,7 +710,7 @@
                     }
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/offices/${officeId}/users`, {
+                        const res = await fetch(`${API_BASE}/api/offices/${officeId}/users`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -724,7 +724,7 @@
                 async loadProducts() {
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/products`, {
+                        const res = await fetch(`${API_BASE}/api/products`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -742,7 +742,7 @@
                             sort_by: this.sortConfig.field,
                             sort_order: this.sortConfig.order
                         });
-                        const res = await fetch(`${API_BASE}/office-accounts?${params}`, {
+                        const res = await fetch(`${API_BASE}/api/office-accounts?${params}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -763,7 +763,7 @@
                         if (this.rechargeFilter.officeId) {
                             params.append('office_id', this.rechargeFilter.officeId);
                         }
-                        const res = await fetch(`${API_BASE}/office-recharges?${params}`, {
+                        const res = await fetch(`${API_BASE}/api/office-recharges?${params}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -801,7 +801,7 @@
                     // 获取优惠配置
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/unified/promotion-config/${this.topupForm.productId}`, {
+                        const res = await fetch(`${API_BASE}/api/unified/promotion-config/${this.topupForm.productId}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -884,8 +884,8 @@
                     try {
                         const token = localStorage.getItem('token');
                         const url = this.accountForm.id
-                            ? `${API_BASE}/office-accounts/${this.accountForm.id}`
-                            : `${API_BASE}/office-accounts`;
+                            ? `${API_BASE}/api/office-accounts/${this.accountForm.id}`
+                            : `${API_BASE}/api/office-accounts`;
                         const method = this.accountForm.id ? 'PUT' : 'POST';
 
                         const body = {
@@ -939,7 +939,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/office-accounts/${account.id}`, {
+                        const res = await fetch(`${API_BASE}/api/office-accounts/${account.id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
@@ -994,7 +994,7 @@
                     
                     try {
                         const token = localStorage.getItem('token');
-                        const res = await fetch(`${API_BASE}/office-recharges`, {
+                        const res = await fetch(`${API_BASE}/api/office-recharges`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1044,7 +1044,7 @@
                             date_from: this.reportForm.dateFrom,
                             date_to: this.reportForm.dateTo
                         });
-                        const res = await fetch(`${API_BASE}/unified/report/financial?${params}`, {
+                        const res = await fetch(`${API_BASE}/api/unified/report/financial?${params}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -1052,7 +1052,7 @@
                         }
                         
                         // 获取充值统计
-                        const rechargeRes = await fetch(`${API_BASE}/office-recharges?limit=10000`, {
+                        const rechargeRes = await fetch(`${API_BASE}/api/office-recharges?limit=10000`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (rechargeRes.ok) {

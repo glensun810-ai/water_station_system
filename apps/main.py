@@ -30,6 +30,7 @@ from apps.api.v1.user_balance import router as user_balance_router
 from apps.api.v1.admin_membership_order import router as admin_membership_order_router
 from apps.api.v1.admin_balance import router as admin_balance_router
 from apps.water.api_user_auth import router as user_auth_router
+from apps.water.api_office import router as water_office_router
 
 # Import legacy water routers (full /api/ path routes)
 from apps.water.api_payment import router as water_payment_router
@@ -59,6 +60,7 @@ from apps.api.v1.office_pickup import (
 )
 from apps.api.v1.legacy_compat import router as legacy_compat_router
 from apps.api.v1.settlement_v3_compat import router as settlement_v3_compat_router
+from apps.api.v1.unified_compat import router as unified_compat_router
 
 from apps.error_handlers import register_exception_handlers
 from utils.logger import RequestLoggingMiddleware
@@ -159,6 +161,8 @@ app.include_router(water_invoice_router, tags=["发票管理"])
 app.include_router(water_packages_router, tags=["套餐管理"])
 app.include_router(water_services_router, tags=["服务管理"])
 app.include_router(settlement_v3_compat_router, tags=["结算管理-v3"])
+app.include_router(water_office_router, tags=["办公室管理-水站"])
+app.include_router(unified_compat_router, tags=["统一账户-兼容"])
 
 # Mount static files for portal and shared resources
 portal_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "portal")

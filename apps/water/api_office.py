@@ -18,6 +18,8 @@ from models.account import OfficeAccount
 from models.recharge import OfficeRecharge
 from models.pickup import OfficePickup
 from models.product import Product
+from models.user import User
+from models.inventory import InventoryRecord
 
 
 router = APIRouter(prefix="/api", tags=["office-management"])
@@ -173,7 +175,6 @@ def get_offices(
     """
     try:
         # 动态导入 User 模型
-        import main
 
         query = db.query(Office)
 
@@ -190,7 +191,7 @@ def get_offices(
             primary_admin_id = getattr(office, "primary_admin_id", None)
             if primary_admin_id:
                 primary_admin = (
-                    db.query(main.User).filter(main.User.id == primary_admin_id).first()
+                    db.query(User).filter(User.id == primary_admin_id).first()
                 )
                 if primary_admin:
                     primary_admin_name = primary_admin.name
@@ -216,8 +217,8 @@ def get_offices(
             }
             # 统计实际用户数（通过 department 匹配）
             user_count = (
-                db.query(main.User)
-                .filter(main.User.department == office.name, main.User.is_active == 1)
+                db.query(User)
+                .filter(User.department == office.name, User.is_active == 1)
                 .count()
             )
             office_dict["user_count"] = user_count
@@ -241,7 +242,6 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
     - 默认角色：办公室管理员
     - 自动绑定该办公室
     """
-    import main
     from passlib.context import CryptContext
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -275,7 +275,7 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
     if office.leader_name and office.create_leader_account:
         # 检查是否已存在同名用户
         existing_user = (
-            db.query(main.User).filter(main.User.name == office.leader_name).first()
+            db.query(User).filter(User.name == office.leader_name).first()
         )
 
         if existing_user:
@@ -294,7 +294,7 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
                 default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
-                new_user = main.User(
+                new_user = User(
                     name=office.leader_name,
                     password_hash=password_hash,
                     department=office.name,  # 绑定该办公室
@@ -396,7 +396,6 @@ def update_office(
     - 默认角色：普通用户
     - 自动绑定该办公室
     """
-    import main
     from passlib.context import CryptContext
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -442,7 +441,7 @@ def update_office(
     if new_leader_name and create_leader_account:
         # 检查是否已存在同名用户
         existing_user = (
-            db.query(main.User).filter(main.User.name == new_leader_name).first()
+            db.query(User).filter(User.name == new_leader_name).first()
         )
 
         if existing_user:
@@ -461,7 +460,7 @@ def update_office(
                 default_password = secrets.token_urlsafe(8)
                 password_hash = pwd_context.hash(default_password)
 
-                new_user = main.User(
+                new_user = User(
                     name=new_leader_name,
                     password_hash=password_hash,
                     department=office.name,  # 绑定该办公室
@@ -579,11 +578,10 @@ def delete_office(office_id: int, force: bool = False, db: Session = Depends(get
             db.flush()
 
     # 导入主应用中的User模型，检查是否有用户关联到此办公室
-    import main
 
     related_users = (
-        db.query(main.User)
-        .filter(main.User.department == office.name, main.User.is_active == 1)
+        db.query(User)
+        .filter(User.department == office.name, User.is_active == 1)
         .count()
     )
 
@@ -696,11 +694,10 @@ def get_admin_users(db: Session = Depends(get_db)):
     """
     获取管理员用户列表（role为admin或super_admin的用户）
     """
-    import main
 
     users = (
-        db.query(main.User)
-        .filter(main.User.role.in_(["admin", "super_admin"]), main.User.is_active == 1)
+        db.query(User)
+        .filter(User.role.in_(["admin", "super_admin"]), User.is_active == 1)
         .all()
     )
 
@@ -723,9 +720,8 @@ def get_office_users(office_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="办公室不存在")
 
     # 动态导入 User 模型
-    import main
 
-    users = db.query(main.User).filter(main.User.is_active == 1).all()
+    users = db.query(User).filter(User.is_active == 1).all()
 
     return [
         {"id": u.id, "name": u.name, "department": u.department, "role": u.role}
@@ -755,7 +751,6 @@ def get_office_accounts(
     - **sort_order**: 排序顺序 (asc/desc)
     """
     # 动态导入 User 模型
-    import main
 
     query = db.query(OfficeAccount)
 
@@ -843,8 +838,8 @@ def get_office_accounts(
         # 如果有 reserved_person_id，获取用户信息
         if acc.reserved_person_id:
             user = (
-                db.query(main.User)
-                .filter(main.User.id == acc.reserved_person_id)
+                db.query(User)
+                .filter(User.id == acc.reserved_person_id)
                 .first()
             )
             if user:
@@ -1195,7 +1190,6 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
         # 记录库存流水
         try:
-            from main import InventoryRecord
 
             inventory_record = InventoryRecord(
                 product_id=product.id,
@@ -1221,7 +1215,6 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db)):
     """批量删除办公室领水记录"""
     deleted_count = 0
-    from main import InventoryRecord
 
     for pickup_id in pickup_ids:
         pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()

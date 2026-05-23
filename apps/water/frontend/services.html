@@ -249,10 +249,10 @@
                 const currentPort = window.location.port;
                 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
                 
-                const API_BASE = isLocalhost 
-                    ? `${protocol}//${hostname}:${currentPort}/api`
-                    : `${protocol}//${hostname}/api/v1`;
-                
+                const API_BASE = isLocalhost
+                    ? `${protocol}//${hostname}:${currentPort}`
+                    : `${protocol}//${hostname}`;
+
                 console.log('服务管理API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
                 
                 const serviceTypes = ref(window.APP_CONFIG?.serviceTypes || []);
@@ -315,7 +315,7 @@
 
                 const loadServices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/products`);
+                        const response = await fetch(`${API_BASE}/api/products`);
                         if (response.ok) {
                             services.value = await response.json();
                         }
@@ -349,8 +349,8 @@
                 const saveService = async () => {
                     try {
                         const url = editingService.value 
-                            ? `${API_BASE}/products/${editingService.value.id}`
-                            : `${API_BASE}/products`;
+                            ? `${API_BASE}/api/products/${editingService.value.id}`
+                            : `${API_BASE}/api/products`;
                         const method = editingService.value ? 'PUT' : 'POST';
                         
                         const response = await fetch(url, {
@@ -370,7 +370,7 @@
 
                 const toggleServiceStatus = async (service) => {
                     try {
-                        const response = await fetch(`${API_BASE}/products/${service.id}`, {
+                        const response = await fetch(`${API_BASE}/api/products/${service.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ...service, is_active: service.is_active ? 0 : 1 })

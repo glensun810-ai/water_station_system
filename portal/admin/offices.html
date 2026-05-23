@@ -1412,7 +1412,7 @@
                 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices`);
+                        const response = await fetch(`${API_BASE}`);
                         if (response.ok) {
                             offices.value = await response.json();
                         }
@@ -1596,7 +1596,7 @@
                 
                 const toggleCommon = async (office) => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                        const response = await fetch(`${API_BASE}/${office.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_common: office.is_common ? 0 : 1 })
@@ -1612,7 +1612,7 @@
                 
                 const toggleActive = async (office) => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                        const response = await fetch(`${API_BASE}/${office.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active: office.is_active ? 0 : 1 })
@@ -1628,7 +1628,7 @@
                 
                 const batchSetActive = async (isActive) => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices/batch-active`, {
+                        const response = await fetch(`${API_BASE}/batch-active`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ office_ids: selectedIds.value, is_active: isActive })
@@ -1645,7 +1645,7 @@
                 
                 const batchSetCommon = async (isCommon) => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices/batch-common`, {
+                        const response = await fetch(`${API_BASE}/batch-common`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ office_ids: selectedIds.value, is_common: isCommon })
@@ -1666,7 +1666,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/offices/batch-delete`, {
+                        const response = await fetch(`${API_BASE}/batch-delete`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(selectedIds.value)
@@ -1707,8 +1707,8 @@
                 const saveOffice = async () => {
                     try {
                         const url = showEditModal.value 
-                            ? `${API_BASE}/offices/${editingOffice.value.id}`
-                            : `${API_BASE}/offices`;
+                            ? `${API_BASE}/${editingOffice.value.id}`
+                            : `${API_BASE}`;
                         
                         const response = await fetch(url, {
                             method: showEditModal.value ? 'PUT' : 'POST',
@@ -1764,7 +1764,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/offices/${office.id}`, {
+                        const response = await fetch(`${API_BASE}/${office.id}`, {
                             method: 'DELETE'
                         });
                         
@@ -1774,7 +1774,7 @@
                             const data = await response.json();
                             if (data.requires_confirmation) {
                                 if (confirm(data.message + '\n\n是否强制删除所有关联数据？')) {
-                                    await fetch(`${API_BASE}/offices/${office.id}?force=true`, {
+                                    await fetch(`${API_BASE}/${office.id}?force=true`, {
                                         method: 'DELETE'
                                     });
                                     await loadOffices();
@@ -1792,7 +1792,7 @@
                 const showUserList = async (office) => {
                     currentOffice.value = office;
                     try {
-                        const response = await fetch(`${API_BASE}/offices/${office.id}/users`);
+                        const response = await fetch(`${API_BASE}/${office.id}/users`);
                         if (response.ok) {
                             const users = await response.json();
                             officeUsers.value = users.filter(u => u.department === office.name);

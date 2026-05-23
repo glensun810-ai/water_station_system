@@ -466,10 +466,10 @@
                 const currentPort = window.location.port;
                 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
                 
-                const API_BASE = isLocalhost 
-                    ? `${protocol}//${hostname}:${currentPort}/api`
-                    : `${protocol}//${hostname}/api/v1`;
-                
+                const API_BASE = isLocalhost
+                    ? `${protocol}//${hostname}:${currentPort}`
+                    : `${protocol}//${hostname}`;
+
                 console.log('预约服务API配置:', { hostname, port: currentPort, isLocalhost, API_BASE });
                 
                 const serviceTypes = ref(window.APP_CONFIG?.serviceTypes || []);
@@ -548,7 +548,7 @@
 
                 const loadBookings = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices/pickups`);
+                        const response = await fetch(`${API_BASE}/api/offices/pickups`);
                         if (response.ok) {
                             bookings.value = await response.json();
                         }
@@ -559,7 +559,7 @@
 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/offices`);
+                        const response = await fetch(`${API_BASE}/api/offices`);
                         if (response.ok) {
                             offices.value = await response.json();
                         }
@@ -570,7 +570,7 @@
 
                 const loadServices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/products`);
+                        const response = await fetch(`${API_BASE}/api/products`);
                         if (response.ok) {
                             services.value = await response.json();
                         }
@@ -598,7 +598,7 @@
                     checkingAvailability.value = true;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/services/check-availability`, {
+                        const response = await fetch(`${API_BASE}/api/services/check-availability`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -679,7 +679,7 @@
                         const office = offices.value.find(o => o.id === bookingForm.value.office_id);
                         const service = services.value.find(s => s.id === bookingForm.value.product_id);
                         
-                        const response = await fetch(`${API_BASE}/offices/pickups`, {
+                        const response = await fetch(`${API_BASE}/api/offices/pickups`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -733,7 +733,7 @@
                     if (!confirm('确认完成此预约？\n完成后将无法修改。')) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/offices/pickups/${booking.id}`, {
+                        const response = await fetch(`${API_BASE}/api/offices/pickups/${booking.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ...booking, booking_status: 'completed' })
@@ -758,7 +758,7 @@
                     if (!confirm(`确认取消此预约？\n取消原因：${reason}`)) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/offices/pickups/${booking.id}`, {
+                        const response = await fetch(`${API_BASE}/api/offices/pickups/${booking.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -784,7 +784,7 @@
                     if (!confirm('确认此预约？')) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/offices/pickups/${booking.id}`, {
+                        const response = await fetch(`${API_BASE}/api/offices/pickups/${booking.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ...booking, booking_status: 'confirmed' })

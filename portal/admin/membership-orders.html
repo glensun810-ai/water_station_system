@@ -1073,7 +1073,7 @@
                 
                 const toast = ref({ show: false, type: 'success', message: '', icon: '✓' });
                 
-                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/admin/membership`;
+                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/admin/membership-orders`;
                 
                 const showToast = (type, message) => {
                     const icons = { success: '✓', error: '✗' };
@@ -1110,7 +1110,7 @@
                 
                 const loadStats = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/admin/membership/orders/stats`);
+                        const response = await fetch(`${API_BASE}/stats`);
                         if (response.ok) {
                             stats.value = await response.json();
                         }
@@ -1123,7 +1123,7 @@
                     try {
                         loading.value = true;
                         
-                        let url = `${API_BASE}/admin/membership/orders?page=${page.value}&page_size=${pageSize.value}`;
+                        let url = `${API_BASE}?page=${page.value}&page_size=${pageSize.value}`;
                         
                         if (statusFilter.value) {
                             url += `&status=${statusFilter.value}`;
@@ -1196,7 +1196,7 @@
                 
                 const loadOrderDetail = async (orderId) => {
                     try {
-                        const response = await fetch(`${API_BASE}/admin/membership/orders/${orderId}`);
+                        const response = await fetch(`${API_BASE}/${orderId}`);
                         if (response.ok) {
                             orderDetail.value = await response.json();
                         }
@@ -1230,7 +1230,7 @@
                             member_start_date: reviewForm.value.member_start_date || undefined
                         };
                         
-                        const response = await fetch(`${API_BASE}/admin/membership/orders/${currentOrder.value.id}/review`, {
+                        const response = await fetch(`${API_BASE}/${currentOrder.value.id}/review`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
