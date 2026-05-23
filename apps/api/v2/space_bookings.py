@@ -226,7 +226,7 @@ async def create_booking(
     deduct_amount = Decimal("0")
     credit_amount = Decimal("0")
 
-    if user_type == "internal":
+    if user_type in ("internal", "vip", "member"):
         from models.user_balance import UserBalanceAccount
 
         balance_account = (
@@ -286,7 +286,7 @@ async def create_booking(
             if user_type == "external"
             else f"内部员工预约高价值空间，需人工审批。支付：{payment_mode}"
         )
-        if user_type == "internal":
+        if user_type in ("internal", "vip", "member"):
             payment_status = "pending"
 
     booking = SpaceBooking(
@@ -666,10 +666,16 @@ async def cancel_booking(
     if booking.status in ["cancelled", "completed", "rejected"]:
         raise HTTPException(status_code=400, detail="预约状态不允许取消")
 
-    booking.status = "cancelled"
-    booking.cancelled_at = datetime.now()
-    booking.cancelled_by = current_user.name
-    booking.cancel_reason = cancel_data.cancel_reason
+    if cancel_data.cancel_type == "admin_rejected":
+        booking.status = "rejected"
+        booking.rejected_at = datetime.now()
+        booking.rejected_by = current_user.name
+        booking.rejected_reason = cancel_data.cancel_reason
+    else:
+        booking.status = "cancelled"
+        booking.cancelled_at = datetime.now()
+        booking.cancelled_by = current_user.name
+        booking.cancel_reason = cancel_data.cancel_reason
     booking.cancel_type = cancel_data.cancel_type
 
     if booking.deposit_paid and not booking.deposit_refunded:
@@ -824,6 +830,7 @@ async def delete_booking(
 async def calculate_fee(
     fee_request: FeeCalculationRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """计算费用"""
 

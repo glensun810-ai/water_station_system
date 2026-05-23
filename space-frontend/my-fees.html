@@ -640,19 +640,19 @@
                     const currentMonth = new Date().toISOString().slice(0, 7);
                     
                     stats.value.monthlyFee = fees.value
-                        .filter(f => !f.isFree && f.bookingDate.startsWith(currentMonth))
+                        .filter(f => !f.isFree && f.bookingDate?.startsWith(currentMonth))
                         .reduce((sum, f) => sum + f.amount, 0);
-                    
+
                     stats.value.pendingFee = fees.value
                         .filter(f => !f.isFree && f.status === 'pending')
                         .reduce((sum, f) => sum + f.amount, 0);
-                    
+
                     stats.value.paidFee = fees.value
                         .filter(f => !f.isFree && (f.status === 'paid' || f.status === 'settled'))
                         .reduce((sum, f) => sum + f.amount, 0);
-                    
+
                     stats.value.freeHours = fees.value
-                        .filter(f => f.isFree && f.bookingDate.startsWith(currentMonth))
+                        .filter(f => f.isFree && f.bookingDate?.startsWith(currentMonth))
                         .reduce((sum, f) => {
                             const [start, end] = f.timeSlot.split('-');
                             return sum + (parseInt(end) - parseInt(start));
@@ -669,7 +669,8 @@
                 };
                 
                 const payFee = (fee) => {
-                    alert(`即将跳转支付页面支付 ¥${fee.amount.toFixed(2)}\n\n支付方式：预付账户扣款 / 线下结算`);
+                    if (!fee || !fee.id) return;
+                    window.location.href = `/portal/payment.html?fee_id=${fee.id}&amount=${fee.amount}`;
                 };
                 
                 const viewBooking = (fee) => {

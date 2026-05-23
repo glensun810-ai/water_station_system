@@ -23,10 +23,10 @@ class SpaceResourceBase(BaseModel):
     facilities: Optional[str] = None
     facilities_status: Optional[str] = None
 
-    base_price: float = 0.0
+    base_price: Optional[float] = 0.0
     price_unit: Optional[str] = None
-    member_price: float = 0.0
-    vip_price: float = 0.0
+    member_price: Optional[float] = 0.0
+    vip_price: Optional[float] = 0.0
 
     peak_time_price: Optional[float] = None
     off_peak_price: Optional[float] = None
@@ -68,7 +68,7 @@ class SpaceResourceBase(BaseModel):
 
     @field_validator("base_price")
     def price_must_be_non_negative(cls, v):
-        if v < 0:
+        if v is not None and v < 0:
             raise ValueError("基础价格不能为负数")
         return v
 

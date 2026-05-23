@@ -753,7 +753,7 @@
                                     <span v-else style="color: var(--text-tertiary);">-</span>
                                 </td>
                                 <td>
-                                    <span class="resource-status" :class="resource.is_active ? 'status-active' : 'status-inactive'">
+                                    <span class="resource-status" :class="resource.is_active ? 'status-active' : 'status-inactive'" style="cursor: pointer;" @click="toggleActive(resource)" :title="resource.is_active ? '点击停用' : '点击激活'">
                                         <span>{{ resource.is_active ? '✓' : '✗' }}</span>
                                         <span>{{ resource.is_active ? '激活' : '停用' }}</span>
                                     </span>
@@ -1164,7 +1164,10 @@
                 
                 const loadSpaceTypes = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}`);
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_BASE}`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1178,7 +1181,10 @@
                 
                 const loadStatistics = async () => {
                     try {
-                        const response = await fetch(`${API_RESOURCES_BASE}/statistics/overview`);
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_RESOURCES_BASE}/statistics/overview`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1220,7 +1226,10 @@
                             params.append('capacity_lte', filters.value.max_capacity);
                         }
                         
-                        const response = await fetch(`${API_RESOURCES_BASE}?${params}`);
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_RESOURCES_BASE}?${params}`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1560,12 +1569,36 @@
                     }
                 };
                 
+                const toggleActive = async (resource) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_RESOURCES_BASE}/${resource.id}/toggle-active`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        if (data.code === 200) {
+                            resource.is_active = !resource.is_active;
+                            showToast(`✓ ${data.message || '状态切换成功'}`, 'success');
+                            await loadStatistics();
+                        } else {
+                            showToast(`✗ 操作失败: ${data.message || data.detail}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('切换状态失败:', error);
+                        showToast('✗ 操作失败，请重试', 'error');
+                    }
+                };
+
                 const showUsageStats = async (resource) => {
                     showStatsModal.value = true;
                     usageStats.value = null;
                     
                     try {
-                        const response = await fetch(`${API_RESOURCES_BASE}/${resource.id}/usage-statistics`);
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${API_RESOURCES_BASE}/${resource.id}/usage-statistics`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
                         const data = await response.json();
                         
                         if (data.code === 200) {
@@ -1685,6 +1718,7 @@
                     closeModal,
                     saveResource,
                     deleteResource,
+                    toggleActive,
                     showUsageStats,
                     openImportModal,
                     executeImport

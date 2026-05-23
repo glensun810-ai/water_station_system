@@ -485,7 +485,7 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
         
         createApp({
             setup() {
@@ -514,6 +514,18 @@
                     if (userType.value === 'external' && !phone.value) return false;
                     return !Object.values(errors.value).some(e => e);
                 });
+
+                // 实时校验用户名
+                const validateUsername = () => {
+                    if (username.value.length < 2 || username.value.length > 50) {
+                        errors.value.name = '用户名长度应在2-50个字符之间';
+                    } else if (!/^[\w一-龥]+$/.test(username.value)) {
+                        errors.value.name = '用户名只能包含字母、数字、下划线和中文';
+                    } else {
+                        errors.value.name = '';
+                    }
+                };
+                watch(username, () => validateUsername());
                 
                 const getAPIBase = () => {
                     const protocol = window.location.protocol;
@@ -524,7 +536,7 @@
                 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch(`${getAPIBase()}/offices?is_active=true`);
+                        const response = await fetch(`${getAPIBase()}/offices?is_active=1`);
                         if (response.ok) {
                             offices.value = await response.json();
                         }

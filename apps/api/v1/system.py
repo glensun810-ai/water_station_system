@@ -320,26 +320,30 @@ def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
             },
         )
 
-        db.execute(
-            text("""
-                INSERT INTO user_login_logs 
-                (user_id, username, role, login_time, ip_address, user_agent,
-                 device_type, browser, os, login_method, status)
-                VALUES (:user_id, :username, :role, :login_time, :ip_address, 
-                        :user_agent, :device_type, :browser, :os, 'password', 'success')
-            """),
-            {
-                "user_id": user.id,
-                "username": user.username,
-                "role": user.role,
-                "login_time": datetime.now().isoformat(),
-                "ip_address": client_host,
-                "user_agent": user_agent,
-                "device_type": device_info["device_type"],
-                "browser": device_info["browser"],
-                "os": device_info["os"],
-            },
-        )
+        try:
+            db.execute(
+                text("""
+                    INSERT INTO user_login_logs
+                    (user_id, username, role, login_time, ip_address, user_agent,
+                     device_type, browser, os, login_method, status)
+                    VALUES (:user_id, :username, :role, :login_time, :ip_address,
+                            :user_agent, :device_type, :browser, :os, 'password', 'success')
+                """),
+                {
+                    "user_id": user.id,
+                    "username": user.username,
+                    "role": user.role,
+                    "login_time": datetime.now().isoformat(),
+                    "ip_address": client_host,
+                    "user_agent": user_agent,
+                    "device_type": device_info["device_type"],
+                    "browser": device_info["browser"],
+                    "os": device_info["os"],
+                },
+            )
+        except Exception:
+            db.rollback()
+
 
         user.last_login = datetime.now()
         db.commit()
@@ -816,6 +820,9 @@ def create_user(
 
     if not password:
         raise HTTPException(status_code=400, detail="密码不能为空，必须提供初始密码")
+
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="密码长度不能少于6位")
 
     existing = db.query(User).filter(User.username == username).first()
     if existing:

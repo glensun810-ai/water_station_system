@@ -106,7 +106,11 @@ async def get_my_approvals(
 ):
     """获取我提交的审批"""
 
-    query = db.query(SpaceApproval).filter(SpaceApproval.approver_id == current_user.id)
+    query = (
+        db.query(SpaceApproval)
+        .join(SpaceBooking, SpaceApproval.booking_id == SpaceBooking.id)
+        .filter(SpaceBooking.user_id == current_user.id)
+    )
 
     total = query.count()
     approvals = (

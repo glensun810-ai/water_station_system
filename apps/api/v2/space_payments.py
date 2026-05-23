@@ -344,9 +344,9 @@ async def verify_payment(
         if payment.payment_type == "deposit":
             booking.deposit_paid = True
             booking.deposit_paid_at = datetime.now()
-            booking.status = "deposit_paid"
         elif payment.payment_type == "full":
-            booking.status = "confirmed"
+            if booking.status not in ("confirmed", "active"):
+                booking.status = "confirmed"
             booking.confirmed_at = datetime.now()
             booking.confirmed_by = current_user.name
 

@@ -256,6 +256,61 @@ async def get_dashboard_data(
         else 0
     )
 
+    # 按类型统计
+    types_data = []
+    all_types = db.query(SpaceType).filter(SpaceType.is_active == True).all()
+    for t in all_types:
+        resources_count = (
+            db.query(SpaceResource)
+            .filter(SpaceResource.type_id == t.id, SpaceResource.is_active == True)
+            .count()
+        )
+        today_type_bookings = (
+            db.query(SpaceBooking)
+            .filter(
+                SpaceBooking.type_id == t.id,
+                SpaceBooking.booking_date == today,
+                SpaceBooking.is_deleted == 0,
+            )
+            .count()
+        )
+        month_start = today.replace(day=1)
+        monthly_type_bookings = (
+            db.query(SpaceBooking)
+            .filter(
+                SpaceBooking.type_id == t.id,
+                SpaceBooking.booking_date >= month_start,
+                SpaceBooking.booking_date <= today,
+                SpaceBooking.is_deleted == 0,
+            )
+            .count()
+        )
+        pending_type_count = (
+            db.query(SpaceBooking)
+            .filter(
+                SpaceBooking.type_id == t.id,
+                SpaceBooking.status == "pending",
+                SpaceBooking.is_deleted == 0,
+            )
+            .count()
+        )
+        # usage rate = today's bookings / resources count (simple ratio)
+        usage_rate = (
+            round(today_type_bookings / resources_count * 100, 1)
+            if resources_count > 0
+            else 0
+        )
+        types_data.append(
+            {
+                "code": t.type_code,
+                "resource_count": resources_count,
+                "today_bookings": today_type_bookings,
+                "monthly_bookings": monthly_type_bookings,
+                "pending_count": pending_type_count,
+                "usage_rate": usage_rate,
+            }
+        )
+
     return ApiResponse(
         data={
             "today": {
@@ -273,6 +328,7 @@ async def get_dashboard_data(
                 "bookings": yesterday_bookings,
                 "revenue": yesterday_revenue,
             },
+            "types": types_data,
         }
     )
 

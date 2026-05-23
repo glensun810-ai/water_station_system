@@ -467,6 +467,29 @@ async def get_resources_statistics(
     )
 
 
+@router.put("/{resource_id}/toggle-active", response_model=ApiResponse)
+async def toggle_resource_active(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """切换资源激活/停用状态（仅管理员）"""
+
+    resource = db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
+
+    if not resource:
+        raise HTTPException(status_code=404, detail="空间资源不存在")
+
+    resource.is_active = not resource.is_active
+    db.commit()
+    db.refresh(resource)
+
+    return ApiResponse(
+        message=f"资源已{'激活' if resource.is_active else '停用'}",
+        data={"id": resource.id, "is_active": resource.is_active},
+    )
+
+
 @router.get("/{resource_id}/usage-statistics", response_model=ApiResponse)
 async def get_resource_usage_statistics(
     resource_id: int,
@@ -493,8 +516,8 @@ async def get_resource_usage_statistics(
 
     # 统计数据
     total_bookings = len(bookings)
-    total_hours = sum(b.duration_hours or 0 for b in bookings)
-    total_revenue = sum(b.total_price or 0 for b in bookings)
+    total_hours = sum(b.duration or 0 for b in bookings)
+    total_revenue = sum(b.total_fee or 0 for b in bookings)
 
     # 按状态统计
     status_count = {}
@@ -509,8 +532,8 @@ async def get_resource_usage_statistics(
         if month_key not in monthly_stats:
             monthly_stats[month_key] = {"booking_count": 0, "hours": 0, "revenue": 0}
         monthly_stats[month_key]["booking_count"] += 1
-        monthly_stats[month_key]["hours"] += b.duration_hours or 0
-        monthly_stats[month_key]["revenue"] += b.total_price or 0
+        monthly_stats[month_key]["hours"] += b.duration or 0
+        monthly_stats[month_key]["revenue"] += b.total_fee or 0
 
     return ApiResponse(
         data={

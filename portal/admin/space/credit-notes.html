@@ -726,7 +726,7 @@
                         
                         const data = await response.json();
                         
-                        notes.value = data.items || [];
+                        notes.value = (data.data && data.data.items) || data.items || [];
                         
                         stats.value.totalNotes = notes.value.length;
                         stats.value.pendingNotes = notes.value.filter(n => n.status === 'pending').length;
@@ -750,8 +750,9 @@
                         const response = await fetch(`${API_BASE}/credit-notes/${note.id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        
-                        selectedNote.value = await response.json();
+
+                        const respData = await response.json();
+                        selectedNote.value = respData.data || respData;
                         showDetailModal.value = true;
                         
                     } catch (error) {

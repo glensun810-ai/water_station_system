@@ -594,7 +594,7 @@ def get_office_admins(office_id: int, db: Session = Depends(get_db)):
             SELECT oar.id, oar.office_id, oar.user_id, oar.is_primary, oar.role_type,
                    u.name as user_name, u.role, u.department
             FROM office_admin_relations oar
-            LEFT JOIN user u ON oar.user_id = u.id
+            LEFT JOIN users u ON oar.user_id = u.id
             WHERE oar.office_id = :office_id
         """),
             {"office_id": office_id},

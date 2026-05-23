@@ -1461,14 +1461,17 @@
                         <label class="form-label">
                             <span>预约日期</span>
                         </label>
-                        <div class="date-picker-wrapper">
-                            <input 
-                                type="date" 
+                        <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
+                            <input
+                                type="date"
                                 class="date-input"
                                 v-model="bookingDate"
                                 :min="minDate"
                                 @change="loadTimeSlots"
+                                style="flex: 1;"
                             >
+                            <button type="button" class="btn btn-outline btn-sm" @click="goToNextDay" title="后一天" style="padding: 8px 12px; font-size: 14px;">▶</button>
                         </div>
                         <div class="date-hint">
                             <span class="hint-icon">💡</span>
@@ -1932,6 +1935,9 @@
                 const selectResource = (resource) => {
                     selectedResource.value = resource
                     console.log('选中资源:', resource.name)
+                    if (bookingDate.value) {
+                        loadTimeSlots()
+                    }
                 }
                 
                 const isSlotSelected = (slot) => {
@@ -2032,7 +2038,26 @@
                                 userType: user.user_type || 'internal',
                                 balanceCredit: user.balance_credit || 0
                             }
-                            userType.value = 'internal'
+                            userType.value = user.user_type || 'internal'
+
+                            // Load user's free hours from statistics API
+                            try {
+                                const token = localStorage.getItem('token')
+                                if (token) {
+                                    const statsResp = await fetch('/api/v2/space/statistics/my', {
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                    })
+                                    if (statsResp.ok) {
+                                        const statsData = await statsResp.json()
+                                        if (statsData.success && statsData.data) {
+                                            freeHoursRemaining.value = statsData.data.free_hours_remaining || 0
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('加载免费小时数失败:', e)
+                                freeHoursRemaining.value = 0
+                            }
                         } else {
                             currentUser.value = {
                                 name: '访客',
@@ -2340,6 +2365,27 @@
                     selectedTimeSlots.value = [];
                 }
                 
+                const goToPrevDay = () => {
+                    const d = new Date(bookingDate.value + 'T00:00:00');
+                    d.setDate(d.getDate() - 1);
+                    const minD = new Date(minDate.value + 'T00:00:00');
+                    if (d >= minD) {
+                        bookingDate.value = d.toISOString().split('T')[0];
+                        loadTimeSlots();
+                    }
+                };
+
+                const goToNextDay = () => {
+                    const d = new Date(bookingDate.value + 'T00:00:00');
+                    d.setDate(d.getDate() + 1);
+                    const maxD = new Date();
+                    maxD.setDate(maxD.getDate() + 7);
+                    if (d <= maxD) {
+                        bookingDate.value = d.toISOString().split('T')[0];
+                        loadTimeSlots();
+                    }
+                };
+
 const submitBooking = async () => {
                      submitting.value = true
                      
@@ -2435,11 +2481,27 @@ const submitBooking = async () => {
                 onMounted(async () => {
                     await loadUserData()
                     await loadPaymentModes()
-                    loadSpaceType()
-                    
+                    await loadSpaceType()
+
+                    // Auto-select resource from recId URL parameter
+                    const urlParams = new URLSearchParams(window.location.search)
+                    const recId = urlParams.get('recId')
+                    if (recId && availableResources.value.length > 0) {
+                        const resource = availableResources.value.find(
+                            r => String(r.id) === String(recId) || String(r.resource_id) === String(recId)
+                        )
+                        if (resource) {
+                            selectResource(resource)
+                        }
+                    }
+
                     if (!bookingDate.value) {
                         const today = new Date();
                         bookingDate.value = today.toISOString().split('T')[0];
+                    }
+
+                    if (selectedResource.value && bookingDate.value) {
+                        await loadTimeSlots()
                     }
                 })
                 
@@ -2481,6 +2543,8 @@ const submitBooking = async () => {
                     formatSelectedSlots,
                     calculateFee,
                     loadTimeSlots,
+                    goToPrevDay,
+                    goToNextDay,
                     selectPaymentMode,
                     submitBooking,
                     showToast,

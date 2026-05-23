@@ -444,8 +444,12 @@
                         });
                         
                         const data = await response.json();
-                        if (data.code === 200) {
-                            overview.value = data.data;
+                        if (data.code === 200 && data.data) {
+                            overview.value = {
+                                ...data.data.summary || {},
+                                by_type: data.data.by_type || [],
+                                by_status: data.data.by_status || {}
+                            };
                         }
                     } catch (error) {
                         console.error('加载概览失败:', error);
@@ -578,9 +582,9 @@
                             labels: ['未付款', '已付定金', '已付全款', '已退款'],
                             datasets: [{
                                 data: [
-                                    paymentStatus.unpaid || 0,
+                                    paymentStatus.pending || paymentStatus.unpaid || 0,
                                     paymentStatus.deposit_paid || 0,
-                                    paymentStatus.fully_paid || 0,
+                                    paymentStatus.paid || paymentStatus.fully_paid || 0,
                                     paymentStatus.refunded || 0
                                 ],
                                 backgroundColor: [
