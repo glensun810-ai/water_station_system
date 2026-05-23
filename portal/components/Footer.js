@@ -25,7 +25,7 @@ const GlobalFooter = {
                     <h4>关于我们</h4>
                     <p>AI产业集群空间服务</p>
                     <p>进化湾 · 智慧空间管理平台</p>
-                    <p>服务热线：400-XXX-XXXX</p>
+                    <p>服务热线：18718052868</p>
                 </div>
                 <div class="footer-section">
                     <h4>帮助支持</h4>
@@ -50,7 +50,7 @@ const GlobalFooter = {
     },
     methods: {
         showContactDialog() {
-            alert('客服热线：400-XXX-XXXX\n工作时间：周一至周五 9:00-18:00');
+            alert('客服热线：18718052868\n工作时间：周一至周五 9:00-18:00');
         }
     }
 };

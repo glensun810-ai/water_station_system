@@ -25,8 +25,8 @@ const AuthManager = {
     getApiBase() {
         const protocol = window.location.protocol;
         const hostname = window.location.hostname;
-        const port = window.location.port || '8008';
-        return `${protocol}//${hostname}:${port}/api/v1/system`;
+        const port = window.location.port ? ':' + window.location.port : '';
+        return `${protocol}//${hostname}${port}/api/v1/system`;
     },
     
     // Token过期时间（24小时，与后端一致）

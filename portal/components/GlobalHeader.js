@@ -134,6 +134,10 @@ const GlobalHeader = {
                                 <span class="menu-icon">💰</span>
                                 <span class="menu-text">我的余额</span>
                             </a>
+                            <a href="/space-frontend/my-bookings.html" class="menu-item">
+                                <span class="menu-icon">📅</span>
+                                <span class="menu-text">我的预约</span>
+                            </a>
                             <a href="#" class="menu-item" @click.prevent="showReferralDialog = true">
                                 <span class="menu-icon">🎁</span>
                                 <span class="menu-text">分享得权益</span>
@@ -152,7 +156,7 @@ const GlobalHeader = {
                                 <span class="menu-icon">💳</span>
                                 <span class="menu-text">充值/缴费</span>
                             </a>
-                            <a href="#" class="menu-item" @click.prevent="showComingSoon('我的优惠券')">
+                            <a href="/water/user-coupons.html" class="menu-item">
                                 <span class="menu-icon">🎫</span>
                                 <span class="menu-text">我的优惠券</span>
                             </a>
@@ -161,7 +165,7 @@ const GlobalHeader = {
                                 <span class="menu-text">邀请好友</span>
                             </a>
                             <div class="menu-divider"></div>
-                            <a href="#" class="menu-item" @click.prevent="showComingSoon('我的预约')">
+                            <a href="/meeting-frontend/my_bookings.html" class="menu-item">
                                 <span class="menu-icon">📅</span>
                                 <span class="menu-text">我的预约（会议室）</span>
                             </a>

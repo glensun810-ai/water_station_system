@@ -3,20 +3,16 @@
  * 封装所有与后端API的交互
  */
 
-const API_BASE_URL = '/api/v2/space/types';
-const API_RESOURCES_URL = '/api/v2/space/resources';
-const API_BOOKINGS_URL = '/api/v2/space/bookings';
+const SPACE_API_BASE = '/api/v2/space';
 
 class SpaceAPI {
     constructor() {
-        this.baseURL = API_BASE_URL;
-        this.resourcesURL = API_RESOURCES_URL;
-        this.bookingsURL = API_BOOKINGS_URL;
+        this.baseURL = SPACE_API_BASE;
     }
 
-    async request(endpoint, options = {}, baseURL = this.baseURL) {
-        const url = `${baseURL}${endpoint}`;
-        
+    async request(endpoint, options = {}) {
+        const url = `${SPACE_API_BASE}${endpoint}`;
+
         const defaultHeaders = {
             'Content-Type': 'application/json',
         };
@@ -36,16 +32,13 @@ class SpaceAPI {
 
         try {
             const response = await fetch(url, config);
-            
-            // 检查响应的Content-Type
+
             const contentType = response.headers.get('content-type');
-            
-            // 如果响应不是JSON格式，尝试读取文本并抛出友好错误
+
             if (!contentType || !contentType.includes('application/json')) {
                 const textResponse = await response.text();
                 console.error('非JSON响应:', textResponse.substring(0, 200));
-                
-                // 射取有用的错误信息
+
                 let errorMsg = '服务器返回非预期格式';
                 if (textResponse.includes('Internal Server Error')) {
                     errorMsg = '服务器内部错误，请联系管理员';
@@ -56,16 +49,13 @@ class SpaceAPI {
                 } else if (response.status === 403) {
                     errorMsg = '无权限执行此操作';
                 }
-                
+
                 throw new Error(errorMsg);
             }
-            
-            // 解析JSON响应
+
             const data = await response.json();
 
-            // 处理错误状态
             if (!response.ok) {
-                // 优先使用detail字段（FastAPI标准），其次使用message
                 const errorMsg = data.detail || data.message || data.error?.message || '请求失败';
                 throw new Error(errorMsg);
             }
@@ -81,142 +71,266 @@ class SpaceAPI {
         }
     }
 
-    async get(endpoint, params = {}, baseURL = this.baseURL) {
+    async get(endpoint, params = {}) {
         const queryString = new URLSearchParams(params).toString();
         const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-        return this.request(url, { method: 'GET' }, baseURL);
+        return this.request(url, { method: 'GET' });
     }
 
-    async post(endpoint, data = {}, baseURL = this.baseURL) {
+    async post(endpoint, data = {}) {
         return this.request(endpoint, {
             method: 'POST',
             body: JSON.stringify(data),
-        }, baseURL);
+        });
     }
 
-    async put(endpoint, data = {}, baseURL = this.baseURL) {
+    async put(endpoint, data = {}) {
         return this.request(endpoint, {
             method: 'PUT',
             body: JSON.stringify(data),
-        }, baseURL);
+        });
     }
 
-    async delete(endpoint, baseURL = this.baseURL) {
-        return this.request(endpoint, { method: 'DELETE' }, baseURL);
+    async delete(endpoint) {
+        return this.request(endpoint, { method: 'DELETE' });
     }
 
     // ========== 空间类型 API ==========
-    
+
     async getSpaceTypes() {
-        return this.get('/space/types');
+        return this.get('/types');
     }
 
     async getSpaceType(typeCode) {
-        return this.get(`/space/types/${typeCode}`);
+        return this.get(`/types/${typeCode}`);
     }
 
+    // ========== 空间资源 API ==========
+
     async getResources(params = {}) {
-        return this.get('/space/resources', params, this.resourcesURL);
+        return this.get('/resources', params);
     }
 
     async getResource(resourceId) {
-        return this.get(`/space/resources/${resourceId}`, {}, this.resourcesURL);
+        return this.get(`/resources/${resourceId}`);
     }
 
     async getResourceAvailability(resourceId, date) {
-        return this.get(`/space/resources/${resourceId}/availability`, { date }, this.resourcesURL);
+        return this.get(`/resources/${resourceId}/availability`, { date });
     }
 
+    // ========== 预约管理 API ==========
+
     async getBookings(params = {}) {
-        return this.get('/space/bookings', params, this.bookingsURL);
+        return this.get('/bookings', params);
     }
 
     async getMyBookings(params = {}) {
-        return this.get('/space/bookings/my', params, this.bookingsURL);
+        return this.get('/bookings/my', params);
     }
 
     async getBooking(bookingId) {
-        return this.get(`/space/bookings/${bookingId}`, {}, this.bookingsURL);
+        return this.get(`/bookings/${bookingId}`);
     }
 
     async createBooking(bookingData) {
-        return this.post('/space/bookings', bookingData, this.bookingsURL);
+        return this.post('/bookings', bookingData);
     }
 
     async updateBooking(bookingId, updateData) {
-        return this.put(`/space/bookings/${bookingId}`, updateData, this.bookingsURL);
+        return this.put(`/bookings/${bookingId}`, updateData);
     }
 
     async cancelBooking(bookingId, cancelReason, cancelType = 'user_cancel') {
-        return this.put(`/space/bookings/${bookingId}/cancel`, {
+        return this.put(`/bookings/${bookingId}/cancel`, {
             cancel_reason: cancelReason,
             cancel_type: cancelType,
-        }, this.bookingsURL);
+        });
     }
 
     async deleteBooking(bookingId, deleteReason = '') {
-        return this.delete(`/space/bookings/${bookingId}?delete_reason=${encodeURIComponent(deleteReason)}`, this.bookingsURL);
+        return this.delete(`/bookings/${bookingId}?delete_reason=${encodeURIComponent(deleteReason)}`);
     }
 
     async calculateFee(feeData) {
-        return this.post('/space/bookings/calculate-fee', feeData, this.bookingsURL);
+        return this.post('/bookings/calculate-fee', feeData);
     }
 
+    async approveBookingDirect(bookingId, approveData = {}) {
+        return this.put(`/bookings/${bookingId}/approve`, approveData);
+    }
+
+    async approveWithPayment(bookingId, paymentData = {}) {
+        return this.post(`/bookings/${bookingId}/approve-with-payment`, paymentData);
+    }
+
+    async confirmBooking(bookingId) {
+        return this.put(`/bookings/${bookingId}/confirm`);
+    }
+
+    async completeBooking(bookingId) {
+        return this.put(`/bookings/${bookingId}/complete`);
+    }
+
+    async settleBooking(bookingId) {
+        return this.put(`/bookings/${bookingId}/settle`);
+    }
+
+    async unsettleBooking(bookingId) {
+        return this.put(`/bookings/${bookingId}/unsettle`);
+    }
+
+    async batchOperation(data) {
+        return this.post('/bookings/batch-operation', data);
+    }
+
+    // ========== 审批管理 API ==========
+
     async getApprovals(params = {}) {
-        return this.get('/space/approvals', params, this.bookingsURL);
+        return this.get('/approvals', params);
     }
 
     async getApproval(approvalId) {
-        return this.get(`/space/approvals/${approvalId}`, {}, this.bookingsURL);
+        return this.get(`/approvals/${approvalId}`);
+    }
+
+    async getMyApprovals() {
+        return this.get('/approvals/my');
+    }
+
+    async getPendingApprovals() {
+        return this.get('/approvals/pending');
     }
 
     async approveBooking(approvalId, approveData = {}) {
-        return this.put(`/space/approvals/${approvalId}/approve`, approveData, this.bookingsURL);
+        return this.put(`/approvals/${approvalId}/approve`, approveData);
+    }
+
+    async batchApprove(approvalData) {
+        return this.post('/approvals/batch-approve', approvalData);
     }
 
     async rejectBooking(approvalId, rejectReason) {
-        return this.put(`/space/approvals/${approvalId}/reject`, {
+        return this.put(`/approvals/${approvalId}/reject`, {
             rejected_reason: rejectReason,
-        }, this.bookingsURL);
+        });
     }
 
+    async requestModify(approvalId, modifyData) {
+        return this.put(`/approvals/${approvalId}/request-modify`, modifyData);
+    }
+
+    // ========== 支付管理 API ==========
+
     async getPayments(params = {}) {
-        return this.get('/space/payments', params, this.bookingsURL);
+        return this.get('/payments', params);
     }
 
     async getPayment(paymentId) {
-        return this.get(`/space/payments/${paymentId}`, {}, this.bookingsURL);
+        return this.get(`/payments/${paymentId}`);
+    }
+
+    async getMyPayments() {
+        return this.get('/payments/my');
+    }
+
+    async getPendingPayments() {
+        return this.get('/payments/pending');
     }
 
     async confirmOfflinePayment(bookingId, paymentData) {
-        return this.post(`/space/payments/confirm-offline`, {
+        return this.post('/payments/confirm-offline', {
             booking_id: bookingId,
             ...paymentData,
         });
     }
 
+    async confirmPayment(paymentId) {
+        return this.put(`/payments/${paymentId}/confirm`);
+    }
+
+    async verifyPayment(paymentId) {
+        return this.put(`/payments/${paymentId}/verify`);
+    }
+
+    async refundPayment(paymentId, refundData = {}) {
+        return this.put(`/payments/${paymentId}/refund`, refundData);
+    }
+
+    async getPaymentModes(bookingId) {
+        return this.get(`/payment/modes/${bookingId}`);
+    }
+
+    async deductPayment(data) {
+        return this.post('/payment/deduct', data);
+    }
+
+    async settleCredit(bookingId) {
+        return this.post(`/payment/settle-credit/${bookingId}`);
+    }
+
+    async monthlySettlement(data) {
+        return this.post('/payment/monthly-settlement', data);
+    }
+
+    async getCreditNotes(params = {}) {
+        return this.get('/payment/credit-notes', params);
+    }
+
+    async getCreditNote(noteId) {
+        return this.get(`/payment/credit-notes/${noteId}`);
+    }
+
     // ========== 统计信息 API ==========
-    
+
     async getStatistics(params = {}) {
-        return this.get('/space/statistics', params);
+        return this.get('/statistics/overview', params);
+    }
+
+    async getDashboard() {
+        return this.get('/statistics/dashboard');
+    }
+
+    async getRevenueStats(params = {}) {
+        return this.get('/statistics/revenue', params);
+    }
+
+    async getUsageStats(params = {}) {
+        return this.get('/statistics/usage', params);
+    }
+
+    async getTrendsStats(params = {}) {
+        return this.get('/statistics/trends', params);
     }
 
     async getMyStatistics() {
-        return this.get('/space/statistics/my');
+        return this.get('/statistics/my');
     }
 
     // ========== 用户认证 API ==========
-    
+
     async login(username, password) {
-        return this.post('/auth/login', { username, password });
+        return fetch('/api/v1/system/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        }).then(r => r.json());
     }
 
     async logout() {
-        return this.post('/auth/logout');
+        return fetch('/api/v1/system/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+        }).then(r => r.json());
     }
 
     async getCurrentUser() {
-        return this.get('/auth/me');
+        return fetch('/api/v1/user/me', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }).then(r => r.json());
     }
 
     async updateProfile(profileData) {
@@ -231,7 +345,7 @@ class SpaceAPI {
     }
 
     // ========== 通知管理 API ==========
-    
+
     async getNotifications(params = {}) {
         return this.get('/notifications', params);
     }
@@ -248,4 +362,4 @@ class SpaceAPI {
 const spaceAPI = new SpaceAPI();
 
 export default spaceAPI;
-export { SpaceAPI, API_BASE_URL };
+export { SpaceAPI, SPACE_API_BASE };

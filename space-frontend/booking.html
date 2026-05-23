@@ -1271,6 +1271,43 @@
                 border: 1px solid #e8e8e8;
             }
         }
+        /* ===== Toast 通知 ===== */
+        .toast {
+            position: fixed;
+            bottom: var(--spacing-xl);
+            right: var(--spacing-xl);
+            background: var(--bg-card, #fff);
+            border-radius: var(--radius-lg, 12px);
+            padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
+            box-shadow: var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.15));
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+            max-width: 420px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success, #10b981);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger, #ef4444);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning, #f59e0b);
+        }
+
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -1779,8 +1816,13 @@
                 
             </form>
         </main>
+
+        <div v-if="showToast" class="toast" :class="toastType">
+            <div class="toast-title">{{ toastType === 'error' ? '操作失败' : toastType === 'warning' ? '提示' : '操作成功' }}</div>
+            <div v-html="toastMessage"></div>
+        </div>
     </div>
-    
+
     <script type="module">
         import spaceAPI from './api.js';
         
@@ -1789,6 +1831,19 @@
         createApp({
             components: { 'global-header': GlobalHeader },
             setup() {
+                const toastMessage = ref('')
+                const toastType = ref('success')
+                const showToast = ref(false)
+                let toastTimer = null
+
+                function displayToast(message, type = 'error') {
+                    if (toastTimer) clearTimeout(toastTimer)
+                    toastMessage.value = message
+                    toastType.value = type
+                    showToast.value = true
+                    toastTimer = setTimeout(() => { showToast.value = false }, 5000)
+                }
+
                 const currentStep = ref(1)
                 const currentUser = ref(null)
                 const userType = ref('external')
@@ -2286,7 +2341,7 @@ const submitBooking = async () => {
                      
                      try {
                          if (selectedTimeSlots.value.length === 0) {
-                             alert('请选择预约时段');
+                             displayToast('请选择预约时段', 'warning');
                              submitting.value = false;
                              return;
                          }
@@ -2319,7 +2374,7 @@ const submitBooking = async () => {
                          
                          const token = localStorage.getItem('token')
                          
-                         let apiUrl = `/api/v2/space/bookings/space/bookings`;
+                         let apiUrl = `/api/v2/space/bookings`;
                          if (userType.value === 'external') {
                              apiUrl += `?payment_mode=${selectedPaymentMode.value || 'prepay'}`;
                          }
@@ -2363,7 +2418,7 @@ const submitBooking = async () => {
                      } catch (error) {
                          console.error('预约提交失败:', error);
                          const errorMsg = error.message || '网络请求失败';
-                         alert(`预约提交失败：${errorMsg}\n\n请检查：\n1. 是否已登录\n2. 时段是否已被预约\n3. 网络连接是否正常`);
+                        displayToast(`预约提交失败：${errorMsg}<br>请检查：是否已登录、时段是否已被预约、网络连接是否正常`, 'error');
                      } finally {
                          submitting.value = false;
                      }
@@ -2423,7 +2478,11 @@ const submitBooking = async () => {
                     calculateFee,
                     loadTimeSlots,
                     selectPaymentMode,
-                    submitBooking
+                    submitBooking,
+                    showToast,
+                    toastMessage,
+                    toastType,
+                    displayToast
                 }
             }
         }).mount('#app')
