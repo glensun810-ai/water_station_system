@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <title>常见问题 - 进化湾</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="/shared/static/vendor/vue/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/assets/js/auth.js"></script>
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <link rel="stylesheet" href="/portal/components/Footer.css">
+    <script src="/portal/components/Footer.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        .faq-container { min-height: 100vh; display: flex; flex-direction: column; background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); }
+        .faq-content { flex: 1; padding: var(--spacing-xl); max-width: 900px; margin: 0 auto; width: 100%; }
+        .faq-header { text-align: center; padding: var(--spacing-xl) 0; }
+        .faq-header h1 { font-size: var(--font-size-3xl); font-weight: 700; color: var(--text-primary); margin-bottom: var(--spacing-sm); }
+        .faq-header p { color: var(--text-secondary); font-size: var(--font-size-lg); }
+        .faq-category { margin-bottom: var(--spacing-xl); }
+        .faq-category h2 { font-size: var(--font-size-xl); font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-md); padding: var(--spacing-sm) var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md); }
+        .faq-item { background: white; border-radius: var(--radius-lg); padding: var(--spacing-lg); margin-bottom: var(--spacing-sm); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .faq-item .q { font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-xs); cursor: pointer; display: flex; align-items: flex-start; gap: var(--spacing-sm); }
+        .faq-item .q .arrow { transition: transform 0.2s; color: var(--primary); }
+        .faq-item .q .arrow.open { transform: rotate(90deg); }
+        .faq-item .a { font-size: var(--font-size-md); color: var(--text-secondary); line-height: 1.8; padding-left: var(--spacing-xl); display: none; }
+        .faq-item .a.show { display: block; }
+        .contact-box { background: var(--primary-light); border-left: 4px solid var(--primary); padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-md); margin-top: var(--spacing-xl); }
+        .contact-box strong { color: var(--primary); }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <global-header :breadcrumbs="[{text: '常见问题', url: '#'}]"></global-header>
+    <div class="faq-container">
+        <div class="faq-content">
+            <div class="faq-header">
+                <h1>常见问题</h1>
+                <p>查找您遇到的常见问题及解答</p>
+            </div>
+
+            <div class="faq-category">
+                <h2>账户相关</h2>
+                <div class="faq-item" v-for="(item, idx) in accountFaqs" :key="idx">
+                    <div class="q" @click="toggle(idx)"><span class="arrow" :class="{open: openIdx === idx}">▶</span>{{ item.q }}</div>
+                    <div class="a" :class="{show: openIdx === idx}" v-html="item.a"></div>
+                </div>
+            </div>
+
+            <div class="faq-category">
+                <h2>空间预约</h2>
+                <div class="faq-item" v-for="(item, idx) in spaceFaqs" :key="'s'+idx">
+                    <div class="q" @click="toggleSpace(idx)"><span class="arrow" :class="{open: openSpaceIdx === idx}">▶</span>{{ item.q }}</div>
+                    <div class="a" :class="{show: openSpaceIdx === idx}" v-html="item.a"></div>
+                </div>
+            </div>
+
+            <div class="faq-category">
+                <h2>用水服务</h2>
+                <div class="faq-item" v-for="(item, idx) in waterFaqs" :key="'w'+idx">
+                    <div class="q" @click="toggleWater(idx)"><span class="arrow" :class="{open: openWaterIdx === idx}">▶</span>{{ item.q }}</div>
+                    <div class="a" :class="{show: openWaterIdx === idx}" v-html="item.a"></div>
+                </div>
+            </div>
+
+            <div class="faq-category">
+                <h2>支付与退款</h2>
+                <div class="faq-item" v-for="(item, idx) in paymentFaqs" :key="'p'+idx">
+                    <div class="q" @click="togglePayment(idx)"><span class="arrow" :class="{open: openPaymentIdx === idx}">▶</span>{{ item.q }}</div>
+                    <div class="a" :class="{show: openPaymentIdx === idx}" v-html="item.a"></div>
+                </div>
+            </div>
+
+            <div class="contact-box">
+                <p>没有找到答案？请联系客服：<strong>18718052868</strong></p>
+                <p>工作时间：周一至周五 9:00 - 18:00</p>
+            </div>
+        </div>
+    </div>
+    <global-footer></global-footer>
+</div>
+<script>
+const { createApp, ref } = Vue;
+createApp({
+    components: { GlobalHeader, GlobalFooter },
+    setup() {
+        const openIdx = ref(-1), openSpaceIdx = ref(-1), openWaterIdx = ref(-1), openPaymentIdx = ref(-1);
+        const toggle = (i) => { openIdx.value = openIdx.value === i ? -1 : i; };
+        const toggleSpace = (i) => { openSpaceIdx.value = openSpaceIdx.value === i ? -1 : i; };
+        const toggleWater = (i) => { openWaterIdx.value = openWaterIdx.value === i ? -1 : i; };
+        const togglePayment = (i) => { openPaymentIdx.value = openPaymentIdx.value === i ? -1 : i; };
+
+        const accountFaqs = [
+            { q: '如何注册账号？', a: '目前系统采用邀请制注册，请联系管理员获取账号。已注册用户可直接登录使用。' },
+            { q: '忘记密码怎么办？', a: '请联系客服热线 18718052868，核实身份后管理员将协助重置密码。' },
+            { q: '如何修改密码？', a: '登录后点击右上角用户头像，在下拉菜单中选择"修改密码"，输入旧密码和新密码即可完成修改。' },
+            { q: '为什么我的账户被锁定？', a: '多次输入错误密码可能导致账户暂时锁定。请等待15分钟后重试，或联系客服解锁。' }
+        ];
+
+        const spaceFaqs = [
+            { q: '如何预约会议室？', a: '登录后进入"空间服务"页面，选择会议室类型和时间段，填写预约信息后提交申请。管理员审批通过后即可使用。' },
+            { q: '预约需要提前多久？', a: '建议至少提前1小时预约。紧急使用请联系管理员协调安排。' },
+            { q: '可以取消预约吗？', a: '可以在"我的预约"页面取消未开始的预约。已开始的预约无法取消，如需调整请联系管理员。' },
+            { q: '取消预约会扣费吗？', a: '预约开始前取消一般不扣费，具体规则以各空间类型的收费政策为准。' }
+        ];
+
+        const waterFaqs = [
+            { q: '如何订购桶装水？', a: '进入"用水服务"页面，选择水产品类型和数量，确认订单并完成支付即可。' },
+            { q: '订购后多久能送达？', a: '一般情况下当天可送达，具体时间取决于配送安排。如有紧急需求请备注说明。' },
+            { q: '在哪里领水？', a: '已订购的水产品可在办公室指定领水点领取，请查看订单详情中的领水地址。' }
+        ];
+
+        const paymentFaqs = [
+            { q: '支持哪些支付方式？', a: '目前支持微信支付、余额扣款和线下转账。选择线下转账方式的用户，请转账后联系管理员确认。' },
+            { q: '如何充值余额？', a: '进入"充值/缴费"页面，选择或输入充值金额，选择支付方式完成支付即可。' },
+            { q: '退款多久到账？', a: '退款申请提交后，管理员审核通过即可到账。一般处理时间为1-3个工作日。' }
+        ];
+
+        return { openIdx, openSpaceIdx, openWaterIdx, openPaymentIdx, toggle, toggleSpace, toggleWater, togglePayment, accountFaqs, spaceFaqs, waterFaqs, paymentFaqs };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -763,17 +763,29 @@
                 const markPaid = async (note) => {
                     const amount = prompt(`确认支付金额：\n\n账单金额：¥${note.total_amount.toFixed(2)}\n\n请输入支付金额：`, note.total_amount.toFixed(2));
                     if (!amount) return;
-                    
+
                     try {
                         const token = localStorage.getItem('token');
-                        
-                        // 这里需要调用API标记支付，目前简化处理
+                        const response = await fetch(`${API_BASE}/credit-notes/${note.id}/pay`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ paid_amount: parseFloat(amount) })
+                        });
+
+                        if (!response.ok) {
+                            const errData = await response.json().catch(() => ({}));
+                            throw new Error(errData.detail || '支付确认失败');
+                        }
+
                         alert(`支付确认成功！\n\n账单：${note.note_no}\n支付金额：¥${parseFloat(amount).toFixed(2)}`);
                         loadNotes();
-                        
+
                     } catch (error) {
                         console.error('支付确认失败:', error);
-                        alert('操作失败');
+                        alert('操作失败：' + error.message);
                     }
                 };
                 
