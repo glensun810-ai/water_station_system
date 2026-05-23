@@ -12,6 +12,7 @@ from config.database import get_db
 from models.user import User
 from models.product import Product
 from models.office import Office
+from models.office_admin import OfficeAdminRelation
 from models.pickup import OfficePickup
 from depends.auth import get_current_user, get_admin_user, get_super_admin_user
 # Note: schemas are not yet unified, using placeholder imports
@@ -142,9 +143,26 @@ def get_user_pickups(
 
     query = db.query(OfficePickup).filter(OfficePickup.is_deleted == False)
 
+    # 未认证用户只能查看自己的记录（通过pickup_person_id匹配，但无法匹配因为不知道用户ID）
+    if current_user is None:
+        return []
+
     # 普通用户只能查看自己的记录
     if current_user.role not in ["admin", "super_admin", "office_admin"]:
         query = query.filter(OfficePickup.pickup_person_id == current_user.id)
+
+    # office_admin 只能查看所管辖办公室的记录
+    if current_user.role == "office_admin":
+        managed_office_ids = [
+            r.office_id for r in
+            db.query(OfficeAdminRelation).filter(
+                OfficeAdminRelation.user_id == current_user.id
+            ).all()
+        ]
+        if managed_office_ids:
+            query = query.filter(OfficePickup.office_id.in_(managed_office_ids))
+        else:
+            query = query.filter(OfficePickup.office_id == -1)  # 无管辖办公室时返回空
 
     if office_id:
         query = query.filter(OfficePickup.office_id == office_id)

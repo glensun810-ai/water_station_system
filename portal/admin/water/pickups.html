@@ -1089,6 +1089,22 @@
                 width: 100%;
                 min-height: 48px;
             }
+
+            .stat-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            .empty-state-icon {
+                font-size: 36px;
+            }
+            .module-container [style*="font-size: 64px"] {
+                font-size: 40px !important;
+            }
+
+            .bottom-nav {
+                display: block;
+            }
         }
         
         /* 平板适配 (769px - 1024px) */
@@ -1476,6 +1492,31 @@
                 </div>
             </div>
         </div>
+
+        <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
+            <div style="display: flex; justify-content: space-around;">
+                <a href="/portal/admin/water/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 12px;">工作台</span>
+                </a>
+                <a href="/portal/admin/water/products.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">📦</span>
+                    <span style="font-size: 12px;">套餐</span>
+                </a>
+                <a href="/portal/admin/water/pickups.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--primary); text-decoration: none;">
+                    <span style="font-size: 24px;">💧</span>
+                    <span style="font-size: 12px;">领水</span>
+                </a>
+                <a href="/portal/admin/water/accounts.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">💰</span>
+                    <span style="font-size: 12px;">账户</span>
+                </a>
+                <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 12px;">首页</span>
+                </a>
+            </div>
+        </nav>
     </div>
     
     <script>
@@ -1537,7 +1578,7 @@
                     
                     user.value = JSON.parse(userInfoStr);
                     
-                    if (user.value.role !== 'admin' && user.value.role !== 'super_admin') {
+                    if (user.value.role !== 'admin' && user.value.role !== 'super_admin' && user.value.role !== 'office_admin') {
                         authError.value = '您没有权限访问此页面';
                         loading.value = false;
                         setTimeout(() => { window.location.href = '/portal/index.html'; }, 1500);
@@ -1552,9 +1593,27 @@
                         const token = localStorage.getItem('token');
                         const headers = {};
                         if (token) headers['Authorization'] = `Bearer ${token}`;
-                        
-                        const res = await fetch(window.buildApiUrl('/system/offices'), { headers });
-                        if (res.ok) offices.value = await res.json();
+
+                        // office_admin 只加载所管辖的办公室
+                        if (user.value && user.value.role === 'office_admin') {
+                            const managedRes = await fetch(window.buildApiUrl(`/system/users/${user.value.id}/managed-offices`), { headers });
+                            if (managedRes.ok) {
+                                const data = await managedRes.json();
+                                offices.value = (data.managed_offices || []).map(o => ({
+                                    id: o.id,
+                                    name: o.name,
+                                    room_number: o.room_number
+                                }));
+                            }
+                        } else {
+                            // admin/super_admin 加载全部办公室
+                            const res = await fetch(window.buildApiUrl('/offices'), { headers });
+                            if (res.ok) {
+                                const data = await res.json();
+                                // 兼容数组和 {items: [...]} 两种返回格式
+                                offices.value = Array.isArray(data) ? data : (data.items || []);
+                            }
+                        }
                     } catch (e) {
                         console.error('加载办公室失败:', e);
                     }

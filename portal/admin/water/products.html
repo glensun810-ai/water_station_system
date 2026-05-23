@@ -432,6 +432,10 @@
             .form-row {
                 grid-template-columns: 1fr;
             }
+
+            .bottom-nav {
+                display: block;
+            }
         }
     </style>
 </head>
@@ -677,6 +681,31 @@
                 </div>
             </div>
         </template>
+
+        <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
+            <div style="display: flex; justify-content: space-around;">
+                <a href="/portal/admin/water/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 12px;">工作台</span>
+                </a>
+                <a href="/portal/admin/water/products.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--primary); text-decoration: none;">
+                    <span style="font-size: 24px;">📦</span>
+                    <span style="font-size: 12px;">套餐</span>
+                </a>
+                <a href="/portal/admin/water/pickups.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">💧</span>
+                    <span style="font-size: 12px;">领水</span>
+                </a>
+                <a href="/portal/admin/water/accounts.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">💰</span>
+                    <span style="font-size: 12px;">账户</span>
+                </a>
+                <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: var(--text-secondary); text-decoration: none;">
+                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 12px;">首页</span>
+                </a>
+            </div>
+        </nav>
     </div>
     
     <script>
@@ -689,7 +718,7 @@
                 const hostname = window.location.hostname;
                 const port = window.location.port || (protocol === 'https:' ? '443' : '80');
                 const API_PRODUCTS = `${protocol}//${hostname}:${port}/api/v1/products`;
-                const API_CATEGORIES = `${protocol}//${hostname}:${port}/api/v1/product-categories`;
+                const API_CATEGORIES = `${protocol}//${hostname}:${port}/api/v1/admin/product-categories`;
                 
                 const loading = ref(true);
                 const authError = ref('');
@@ -742,16 +771,16 @@
                 
                 const loadProducts = async () => {
                     try {
-                        const res = await fetch(`${API_PRODUCTS}/products`);
+                        const res = await fetch(`${API_PRODUCTS}`);
                         if (res.ok) products.value = await res.json();
                     } catch (e) {
                         console.error('加载产品失败:', e);
                     }
                 };
-                
+
                 const loadCategories = async () => {
                     try {
-                        const res = await fetch(`${API_CATEGORIES}/admin/product-categories`);
+                        const res = await fetch(`${API_CATEGORIES}`);
                         if (res.ok) categories.value = await res.json();
                     } catch (e) {
                         console.error('加载分类失败:', e);
@@ -831,9 +860,9 @@
                             unit: product.unit || '桶',
                             category_id: product.category_id,
                             description: product.description || '',
-                            promo_threshold: product.promo_threshold || 10,
-                            promo_gift: product.promo_gift || 1,
-                            stock_alert: product.stock_alert || 10,
+                            promo_threshold: product.promo_threshold != null ? product.promo_threshold : 10,
+                            promo_gift: product.promo_gift != null ? product.promo_gift : 1,
+                            stock_alert: product.stock_alert != null ? product.stock_alert : 10,
                             is_active: product.is_active
                         };
                     } else {
@@ -867,19 +896,19 @@
                     
                     try {
                         const payload = { ...productForm.value };
-                        if (!payload.cost_price) delete payload.cost_price;
+                        if (payload.cost_price == null || payload.cost_price === '') delete payload.cost_price;
                         if (!payload.category_id) delete payload.category_id;
                         if (!payload.description) delete payload.description;
                         
                         let res;
                         if (editingProduct.value) {
-                            res = await fetch(`${API_PRODUCTS}/products/${editingProduct.value.id}`, {
+                            res = await fetch(`${API_PRODUCTS}/${editingProduct.value.id}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
                             });
                         } else {
-                            res = await fetch(`${API_PRODUCTS}/products`, {
+                            res = await fetch(`${API_PRODUCTS}`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
@@ -902,7 +931,7 @@
                 const deleteProduct = (product) => {
                     if (!confirm(`确定要删除产品 "${product.name} (${product.specification})" 吗？`)) return;
                     
-                    fetch(`${API_PRODUCTS}/products/${product.id}`, { method: 'DELETE' })
+                    fetch(`${API_PRODUCTS}/${product.id}`, { method: 'DELETE' })
                         .then(res => {
                             if (res.ok) {
                                 alert('产品已删除');
@@ -924,7 +953,7 @@
                         return;
                     }
                     
-                    fetch(`${API_PRODUCTS}/products/${product.id}/stock`, {
+                    fetch(`${API_PRODUCTS}/${product.id}/stock`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ product_id: product.id, stock })
@@ -961,7 +990,7 @@
                     }
                     
                     try {
-                        const res = await fetch(`${API_PRODUCTS}/products/batch-active`, {
+                        const res = await fetch(`${API_PRODUCTS}/batch-active`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -995,7 +1024,7 @@
                     }
                     
                     try {
-                        const res = await fetch(`${API_PRODUCTS}/products/batch-delete`, {
+                        const res = await fetch(`${API_PRODUCTS}/batch-delete`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(selectedProducts.value)
@@ -1027,7 +1056,7 @@
                         if (showInactive.value) params.append('is_active', '0');
                         else params.append('is_active', '1');
                         
-                        const res = await fetch(`${API_PRODUCTS}/products/export?${params.toString()}`);
+                        const res = await fetch(`${API_PRODUCTS}/export?${params.toString()}`);
                         
                         if (res.ok) {
                             const data = await res.json();
