@@ -2264,13 +2264,13 @@ class="px-2 py-0.5 rounded text-xs font-medium">
 
 <!-- 操作按钮 -->
 <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
-<button v-if="selectedBooking.status === 'pending'" 
-@click="confirmBooking(selectedBooking.id); showBookingDetail = false"
+<button v-if="selectedBooking.status === 'pending'"
+@click="confirmBooking(selectedBooking.id)"
 class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm font-medium">
 确认预约
 </button>
 <button v-if="selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'completed'"
-@click="cancelBooking(selectedBooking.id); showBookingDetail = false"
+@click="cancelBooking(selectedBooking.id)"
 class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm font-medium">
 取消预约
 </button>
@@ -2533,8 +2533,15 @@ const showConfirm = (options) => {
 };
 
 // 统一退出登录
-const handleLogout = () => {
-    if (confirm('确定要退出登录吗？')) {
+const handleLogout = async () => {
+    const confirmed = await showConfirm({
+        type: 'warning',
+        title: '退出登录',
+        message: '确定要退出登录吗？',
+        confirmText: '退出',
+        cancelText: '取消'
+    });
+    if (confirmed) {
         localStorage.removeItem('token');
         localStorage.removeItem('userInfo');
         localStorage.removeItem('admin_token');
@@ -2624,7 +2631,14 @@ selectedBookingIds.value = [];
 const batchConfirmBookings = async () => {
 if (selectedBookingIds.value.length === 0) return;
 
-if (!confirm(`确认要批量确认 ${selectedBookingIds.value.length} 条预约吗？`)) return;
+const batchConfirmOk = await showConfirm({
+type: 'warning',
+title: '批量确认预约',
+message: `确认要批量确认 ${selectedBookingIds.value.length} 条预约吗？`,
+confirmText: '确认',
+cancelText: '取消'
+});
+if (!batchConfirmOk) return;
 
 try {
 let successCount = 0;
@@ -2645,7 +2659,15 @@ showToast('批量确认失败', 'error');
 const batchCancelBookings = async () => {
 if (selectedBookingIds.value.length === 0) return;
 
-const reason = prompt(`请输入批量取消原因（${selectedBookingIds.value.length} 条）：`);
+const reason = await showConfirm({
+type: 'danger',
+title: '批量取消预约',
+message: `请输入批量取消原因（${selectedBookingIds.value.length} 条）：`,
+confirmText: '确认取消',
+cancelText: '返回',
+inputLabel: '取消原因',
+inputPlaceholder: '请输入取消原因...'
+});
 if (!reason) return;
 
 try {
@@ -3047,7 +3069,14 @@ console.error('加载预约失败:', e);
                 };
 
                 const deleteRoom = async (id) => {
-                    if (!confirm('确定要删除这个会议室吗？此操作不可恢复。')) return;
+                    const deleteOk = await showConfirm({
+                        type: 'danger',
+                        title: '删除会议室',
+                        message: '确定要删除这个会议室吗？此操作不可恢复。',
+                        confirmText: '删除',
+                        cancelText: '取消'
+                    });
+                    if (!deleteOk) return;
                     
                     try {
                         const res = await authFetch(`${API_BASE}/rooms/${id}`, { method: 'DELETE' });
@@ -3089,12 +3118,20 @@ console.error('加载预约失败:', e);
                 };
 
 const confirmBooking = async (id) => {
-if (!confirm('确认此预约？')) return;
+const confirmed = await showConfirm({
+type: 'warning',
+title: '确认预约',
+message: '确定要确认此预约吗？确认后将通知预约人。',
+confirmText: '确认预约',
+cancelText: '返回'
+});
+if (!confirmed) return;
 
 try {
 const res = await authFetch(`${API_BASE}/bookings/${id}/confirm`, { method: 'PUT' });
 if (res.ok) {
 showToast('预约已确认', 'success');
+showBookingDetail.value = false;
 loadBookings();
 } else {
 showToast('确认失败，请重试', 'error');
@@ -3106,7 +3143,15 @@ showToast('确认失败：网络错误', 'error');
 };
 
 const cancelBooking = async (id) => {
-const reason = prompt('请输入取消原因：');
+const reason = await showConfirm({
+type: 'danger',
+title: '取消预约',
+message: '请输入取消原因，此操作不可恢复。',
+confirmText: '确认取消',
+cancelText: '返回',
+inputLabel: '取消原因',
+inputPlaceholder: '请输入取消原因...'
+});
 if (!reason) return;
 
 try {
@@ -3115,6 +3160,7 @@ method: 'PUT'
 });
 if (res.ok) {
 showToast('预约已取消', 'success');
+showBookingDetail.value = false;
 loadBookings();
 } else {
 showToast('取消失败，请重试', 'error');
@@ -3261,7 +3307,19 @@ sortOrder.value = 'asc';
                 };
                 
                 const approveRequest = async (id, result) => {
-                    const reason = result === 'rejected' ? prompt('请输入拒绝原因：') : '';
+                    let reason = '';
+                    if (result === 'rejected') {
+                        reason = await showConfirm({
+                            type: 'danger',
+                            title: '拒绝申请',
+                            message: '请输入拒绝原因：',
+                            confirmText: '确认拒绝',
+                            cancelText: '返回',
+                            inputLabel: '拒绝原因',
+                            inputPlaceholder: '请输入拒绝原因...'
+                        });
+                        if (!reason) return;
+                    }
                     if (result === 'rejected' && !reason) return;
                     
                     try {
@@ -3287,7 +3345,14 @@ sortOrder.value = 'asc';
                 };
                 
                 const batchApproveApprovals = async () => {
-                    if (!confirm(`确认批量批准${selectedApprovals.value.length}条审批申请？`)) return;
+                    const batchApproveOk = await showConfirm({
+                        type: 'warning',
+                        title: '批量批准',
+                        message: `确认批量批准 ${selectedApprovals.value.length} 条审批申请？`,
+                        confirmText: '批准',
+                        cancelText: '取消'
+                    });
+                    if (!batchApproveOk) return;
                     
                     try {
                         const res = await authFetch(`${API_BASE}/approval/batch-approve`, {
@@ -3421,7 +3486,14 @@ sortOrder.value = 'asc';
                 };
                 
                 const confirmPayment = async (id) => {
-                    if (!confirm('确认此支付？')) return;
+                    const payOk = await showConfirm({
+                        type: 'warning',
+                        title: '确认支付',
+                        message: '确认此支付？',
+                        confirmText: '确认支付',
+                        cancelText: '取消'
+                    });
+                    if (!payOk) return;
                     
                     try {
                         const res = await authFetch(`${API_BASE}/payment/confirm`, {
@@ -3525,8 +3597,15 @@ sortOrder.value = 'asc';
                     alert('设置已保存');
                 };
                 
-                const resetSettings = () => {
-                    if (!confirm('确认重置为默认设置？')) return;
+                const resetSettings = async () => {
+                    const resetOk = await showConfirm({
+                        type: 'warning',
+                        title: '重置设置',
+                        message: '确认重置为默认设置？',
+                        confirmText: '确认重置',
+                        cancelText: '取消'
+                    });
+                    if (!resetOk) return;
                     settings.value = {
                         businessStartTime: '08:00',
                         businessEndTime: '20:00',
