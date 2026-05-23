@@ -35,13 +35,44 @@ const GlobalFooter = {
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; {{ currentYear }} 进化湾 AI产业集群空间服务 版权所有</p>
-                <p v-if="icpNo">ICP备案号：{{ icpNo }}</p>
+                <p class="footer-company">&copy; {{ currentYear }} {{ companyName }} 版权所有</p>
+                <div class="footer-beian">
+                    <a v-if="gonganBeian"
+                       :href="'https://beian.mps.gov.cn/#/query/webSearch?code=' + gonganBeianCode"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="beian-link">
+                        <svg class="beian-icon" viewBox="0 0 20 20" width="16" height="16" fill="none">
+                            <rect x="3" y="3" width="14" height="14" rx="2" fill="#3B82F6"/>
+                            <path d="M6 10.5L8.5 13L14 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {{ gonganBeian }}
+                    </a>
+                    <a v-if="icpNo"
+                       href="https://beian.miit.gov.cn/"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="beian-link">
+                        {{ icpNo }}
+                    </a>
+                </div>
             </div>
         </footer>
     `,
     props: {
-        icpNo: { type: String, default: '' }
+        icpNo: { type: String, default: '' },
+        companyName: {
+            type: String,
+            default: '深圳云程企航商务服务有限公司'
+        },
+        gonganBeian: {
+            type: String,
+            default: '粤公网安备44030002012802号'
+        },
+        gonganBeianCode: {
+            type: String,
+            default: '44030002012802'
+        }
     },
     data() {
         return {
