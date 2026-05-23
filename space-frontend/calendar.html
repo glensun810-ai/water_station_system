@@ -129,12 +129,83 @@
             display: grid;
             grid-template-columns: 280px 1fr;
             gap: var(--spacing-xl);
+            transition: grid-template-columns 0.3s ease;
         }
-        
+
+        .calendar-layout.sidebar-collapsed {
+            grid-template-columns: 0px 1fr;
+            gap: 0;
+        }
+
         .sidebar {
             background: var(--bg-card);
             border-radius: var(--radius-xl);
             padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            overflow: visible;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: absolute;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 24px;
+            text-align: center;
+            z-index: 10;
+            box-shadow: var(--shadow-md);
+            transition: all 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.15);
+        }
+
+        .calendar-layout.sidebar-collapsed .sidebar {
+            padding: 0;
+            width: 0;
+            border-radius: 0;
+            box-shadow: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .calendar-main {
+            min-width: 0;
+            transition: all 0.3s ease;
+        }
+
+        .expand-sidebar-btn {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: var(--spacing-md);
+            padding: 8px 16px;
+            background: var(--bg-card);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+        }
+        .expand-sidebar-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
             box-shadow: var(--shadow-md);
         }
         
@@ -1309,13 +1380,52 @@
             white-space: nowrap;
         }
         
+        @media (min-width: 1025px) {
+            .sidebar-toggle {
+                display: block;
+            }
+            .expand-sidebar-btn {
+                display: inline-block;
+            }
+        }
+
         @media (max-width: 1024px) {
             .calendar-layout {
                 grid-template-columns: 1fr;
             }
-            
+
             .sidebar {
                 order: -1;
+            }
+            .sidebar-toggle {
+                display: none;
+            }
+
+            /* 移动端筛选面板作为可折叠区域 */
+            .sidebar {
+                max-height: 60px;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+                cursor: pointer;
+            }
+            .sidebar.mobile-drawer-open {
+                max-height: 2000px;
+                cursor: default;
+            }
+            .mobile-filter-handle {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                padding: var(--spacing-md) 0;
+                font-weight: 600;
+                color: var(--primary);
+                cursor: pointer;
+            }
+            .mobile-filter-handle-icon {
+                transition: transform 0.3s ease;
+            }
+            .sidebar.mobile-drawer-open .mobile-filter-handle-icon {
+                transform: rotate(180deg);
             }
             
             .stats-mini {
@@ -2187,8 +2297,16 @@
                 </div>
             </div>
             
-            <div class="calendar-layout">
-                <aside class="sidebar">
+            <div class="calendar-layout" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+                <aside class="sidebar" :class="{ 'mobile-drawer-open': mobileFilterDrawerOpen }">
+                    <button class="sidebar-toggle" @click.stop="toggleSidebar" :title="sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'">
+                        {{ sidebarCollapsed ? '▶' : '◀' }}
+                    </button>
+                    <!-- 移动端筛选面板手柄 -->
+                    <div class="mobile-filter-handle" style="display: none;" @click="toggleMobileFilter">
+                        <span>🔍 筛选与工具面板</span>
+                        <span class="mobile-filter-handle-icon">▼</span>
+                    </div>
                     <div class="sidebar-section">
                         <div class="sidebar-title">🔍 搜索预约</div>
                         <div class="search-box">
@@ -2414,6 +2532,9 @@
                 </aside>
                 
                 <section class="calendar-main">
+                    <button v-if="sidebarCollapsed" class="expand-sidebar-btn" @click="toggleSidebar" title="展开侧边栏">
+                        ☰ 筛选面板
+                    </button>
                     <div class="calendar-header" v-if="viewMode !== 'timeline'">
                         <div class="calendar-nav">
                             <button class="nav-btn" @click="prevPeriod" title="上一页">◀</button>
@@ -2438,8 +2559,8 @@
                         </div>
                         
                         <div class="calendar-grid">
-                            <div 
-                                v-for="day in calendarDays" 
+                            <div
+                                v-for="day in calendarDays"
                                 :key="day.date"
                                 class="calendar-day"
                                 :class="[
@@ -2451,6 +2572,8 @@
                                     day.isFull ? 'full' : ''
                                 ]"
                                 @click="selectDate(day)"
+                                @dblclick="handleDayDoubleClick(day)"
+                                :title="(day.isPast && !day.isToday) ? '' : '双击日期快速预约 ' + day.date + ' 的空间'"
                             >
                                 <div class="day-header">
                                     <span class="day-number">{{ day.dayNumber }}</span>
@@ -2522,6 +2645,8 @@
                                 class="week-day-header"
                                 :class="{ today: day.isToday }"
                                 @click="selectedDate = day.date; viewMode = 'timeline'"
+                                @dblclick="handleWeekDayDoubleClick(day)"
+                                :title="(day.isPast && !day.isToday) ? '' : '双击快速预约 ' + day.date + ' 的空间'"
                             >
                                 <div class="week-day-name">{{ day.dayName }}</div>
                                 <div class="week-day-date">{{ day.dayNumber }}</div>
@@ -2833,7 +2958,18 @@
                 const resources = ref([]);
                 const showDetailModal = ref(false);
                 const selectedBooking = ref(null);
-                
+                const sidebarCollapsed = ref(false);
+                const mobileFilterDrawerOpen = ref(false);
+
+                const toggleSidebar = () => {
+                    sidebarCollapsed.value = !sidebarCollapsed.value;
+                    localStorage.setItem('calendar_sidebar_collapsed', sidebarCollapsed.value);
+                };
+
+                const toggleMobileFilter = () => {
+                    mobileFilterDrawerOpen.value = !mobileFilterDrawerOpen.value;
+                };
+
                 const stats = ref({
                     totalBookings: 0,
                     pendingCount: 0,
@@ -3784,8 +3920,26 @@ const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, limit
                     params.append('date', date);
                     if (selectedType.value !== 'all') params.append('type', selectedType.value);
                     if (selectedResource.value) params.append('resourceId', selectedResource.value);
-                    
+
                     window.location.href = `/space-frontend/booking.html?${params.toString()}`;
+                };
+
+                // 双击日期快捷预约（仅月视图日单元格）
+                const handleDayDoubleClick = (day) => {
+                    if (day.isPast && !day.isToday) {
+                        showToastMessage('无法对过去日期进行预约', 'warning');
+                        return;
+                    }
+                    quickBookingForDate(day.date);
+                };
+
+                // 双击周日视图标题快捷预约
+                const handleWeekDayDoubleClick = (day) => {
+                    if (day.isPast && !day.isToday) {
+                        showToastMessage('无法对过去日期进行预约', 'warning');
+                        return;
+                    }
+                    quickBookingForDate(day.date);
                 };
                 
                 const quickBookingForTime = (date, hour) => {
@@ -3999,7 +4153,13 @@ const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, limit
                     performSearch,
                     clearSearch,
                     showToastMessage,
-                    getTypeInfo
+                    getTypeInfo,
+                    sidebarCollapsed,
+                    mobileFilterDrawerOpen,
+                    toggleSidebar,
+                    toggleMobileFilter,
+                    handleDayDoubleClick,
+                    handleWeekDayDoubleClick
                 };
             }
         }).mount('#app');
