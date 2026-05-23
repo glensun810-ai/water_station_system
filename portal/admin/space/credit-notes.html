@@ -427,7 +427,7 @@
         <div class="container">
             <div class="header-section">
                 <h1 class="page-title">📋 记账账单管理</h1>
-                <button class="btn btn-primary" @click="processMonthlySettlement">月度结算处理</button>
+                <button class="btn btn-primary" @click="openSettleModal">月度结算处理</button>
             </div>
             
             <div class="stats-grid">
@@ -506,8 +506,7 @@
                                 <button 
                                     v-if="note.status === 'pending'" 
                                     class="btn btn-success btn-sm"
-                                    @click="markPaid(note)"
-                                >确认支付</button>
+                                    @click="openPayModal(note)"    >确认支付</button>
                                 <button 
                                     v-if="note.status === 'paid'" 
                                     class="btn btn-primary btn-sm"
@@ -566,10 +565,10 @@
                         <button 
                             v-if="note.status === 'pending'" 
                             class="btn btn-success btn-sm"
-                            @click="markPaid(note)"
+                            @click="openPayModal(note)"
                         >确认支付</button>
-                        <button 
-                            v-if="note.status === 'paid'" 
+                        <button
+                            v-if="note.status === 'paid'"
                             class="btn btn-primary btn-sm"
                             @click="markSettled(note)"
                         >确认结算</button>
@@ -640,6 +639,57 @@
             </div>
         </div>
         
+        <!-- 支付确认弹窗 -->
+        <div class="modal-overlay" v-if="showPayModal" @click.self="showPayModal = false">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">确认支付</h3>
+                    <button class="modal-close" @click="showPayModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <div style="margin-bottom: var(--spacing-sm);"><strong>账单编号：</strong>{{ payTarget?.note_no }}</div>
+                        <div style="margin-bottom: var(--spacing-sm);"><strong>待付金额：</strong>¥{{ (payTarget?.total_amount - payTarget?.paid_amount).toFixed(2) }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">支付金额（元）</label>
+                        <input type="number" class="form-input" v-model="payAmount" step="0.01" min="0.01" placeholder="请输入支付金额">
+                        <div class="form-error" v-if="payAmountError">{{ payAmountError }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="showPayModal = false">取消</button>
+                    <button class="btn btn-primary" @click="submitPay" :disabled="paySubmitting">
+                        {{ paySubmitting ? '提交中...' : '确认支付' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 月度结算弹窗 -->
+        <div class="modal-overlay" v-if="showSettleModal" @click.self="showSettleModal = false">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">月度结算处理</h3>
+                    <button class="modal-close" @click="showSettleModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">结算月份</label>
+                        <input type="month" class="form-input" v-model="settleMonth" placeholder="如 2026-04">
+                        <div class="form-error" v-if="settleMonthError">{{ settleMonthError }}</div>
+                        <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-sm);">
+                            将对所选月份内所有待处理账单执行结算操作
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="showSettleModal = false">取消</button>
+                    <button class="btn btn-primary" @click="submitSettlement">确认结算</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 移动端底部导航 -->
         <nav class="bottom-nav">
             <div class="bottom-nav-items">
@@ -688,9 +738,16 @@
                     status: ''
                 });
                 const availableMonths = ref([]);
-                const showDetailModal = ref(false);
-                const selectedNote = ref(null);
-                
+                const showPayModal = ref(false);
+                const payTarget = ref(null);
+                const payAmount = ref('');
+                const payAmountError = ref('');
+                const paySubmitting = ref(false);
+
+                const showSettleModal = ref(false);
+                const settleMonth = ref('');
+                const settleMonthError = ref('');
+
                 const API_BASE = '/api/v2/space/payment';
                 
                 const getStatusText = (status) => {
@@ -761,19 +818,34 @@
                     }
                 };
                 
-                const markPaid = async (note) => {
-                    const amount = prompt(`确认支付金额：\n\n账单金额：¥${note.total_amount.toFixed(2)}\n\n请输入支付金额：`, note.total_amount.toFixed(2));
-                    if (!amount) return;
+                const openPayModal = (note) => {
+                    payTarget.value = note;
+                    payAmount.value = note.total_amount.toFixed(2);
+                    payAmountError.value = '';
+                    showPayModal.value = true;
+                };
 
+                const submitPay = async () => {
+                    const amount = parseFloat(payAmount.value);
+                    if (isNaN(amount) || amount <= 0) {
+                        payAmountError.value = '请输入有效的支付金额';
+                        return;
+                    }
+                    if (amount > (payTarget.value.total_amount - payTarget.value.paid_amount)) {
+                        payAmountError.value = '支付金额不能超过未付金额';
+                        return;
+                    }
+
+                    paySubmitting.value = true;
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BASE}/credit-notes/${note.id}/pay`, {
+                        const response = await fetch(`${API_BASE}/credit-notes/${payTarget.value.id}/pay`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
                             },
-                            body: JSON.stringify({ paid_amount: parseFloat(amount) })
+                            body: JSON.stringify({ paid_amount: amount })
                         });
 
                         if (!response.ok) {
@@ -781,12 +853,15 @@
                             throw new Error(errData.detail || '支付确认失败');
                         }
 
-                        alert(`支付确认成功！\n\n账单：${note.note_no}\n支付金额：¥${parseFloat(amount).toFixed(2)}`);
+                        showPayModal.value = false;
+                        alert(`支付确认成功！\n账单：${payTarget.value.note_no}\n支付金额：¥${amount.toFixed(2)}`);
                         loadNotes();
 
                     } catch (error) {
                         console.error('支付确认失败:', error);
                         alert('操作失败：' + error.message);
+                    } finally {
+                        paySubmitting.value = false;
                     }
                 };
                 
@@ -817,12 +892,21 @@
                     }
                 };
                 
-                const processMonthlySettlement = async () => {
-                    const month = prompt('请输入要处理的月份（如 2026-04）：', new Date().toISOString().slice(0, 7));
-                    if (!month) return;
-                    
+                const openSettleModal = () => {
+                    settleMonth.value = new Date().toISOString().slice(0, 7);
+                    settleMonthError.value = '';
+                    showSettleModal.value = true;
+                };
+
+                const submitSettlement = async () => {
+                    const month = settleMonth.value.trim();
+                    if (!/^\d{4}-\d{2}$/.test(month)) {
+                        settleMonthError.value = '请输入正确的月份格式（如 2026-04）';
+                        return;
+                    }
+
                     if (!confirm(`确认处理 ${month} 月份的所有记账账单结算？`)) return;
-                    
+
                     try {
                         const token = localStorage.getItem('token');
                         const response = await fetch(`${API_BASE}/monthly-settlement`, {
@@ -833,11 +917,12 @@
                             },
                             body: JSON.stringify({ month })
                         });
-                        
+
                         const data = await response.json();
+                        showSettleModal.value = false;
                         alert(data.message || '月度结算处理完成');
                         loadNotes();
-                        
+
                     } catch (error) {
                         console.error('月度结算失败:', error);
                         alert('月度结算失败');
@@ -859,13 +944,23 @@
                     availableMonths,
                     showDetailModal,
                     selectedNote,
+                    showPayModal,
+                    payTarget,
+                    payAmount,
+                    payAmountError,
+                    paySubmitting,
+                    showSettleModal,
+                    settleMonth,
+                    settleMonthError,
                     getStatusText,
                     formatTime,
                     loadNotes,
                     viewDetail,
-                    markPaid,
+                    openPayModal,
+                    submitPay,
                     markSettled,
-                    processMonthlySettlement
+                    openSettleModal,
+                    submitSettlement
                 };
             }
         }).mount('#app');

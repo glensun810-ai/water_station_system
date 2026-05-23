@@ -414,6 +414,16 @@
         
         <!-- 主内容 -->
         <main class="main-content">
+            <!-- 数据加载错误提示 -->
+            <div v-if="loadError" style="background: var(--warning-light); border: 2px solid var(--warning); border-radius: var(--radius-lg); padding: var(--spacing-xl); margin-bottom: var(--spacing-xl); text-align: center;">
+                <div style="font-size: 48px; margin-bottom: var(--spacing-md);">⚠️</div>
+                <h3 style="font-weight: 700; color: var(--warning-dark); margin-bottom: var(--spacing-sm);">数据加载失败</h3>
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg);">统计数据 API 暂时不可用，当前显示的是从预约和资源 API 获取的基础数据，可能不完整。</p>
+                <button class="btn btn-primary" @click="loadDashboardData" style="font-weight: 600;">
+                    🔄 重新加载
+                </button>
+            </div>
+
             <!-- 页面标题 -->
             <div style="max-width: 1400px; margin: 0 auto; padding: var(--spacing-xl) var(--spacing-lg);">
                 <h1 style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: var(--spacing-md);">
@@ -636,6 +646,8 @@
                     todayBookings: 0,
                     todayRevenue: 0
                 });
+
+                const loadError = ref(false);
                 
                 const spaceTypes = ref([
                     {
@@ -751,77 +763,56 @@
                         }
                     } catch (error) {
                         console.error('加载Dashboard数据失败:', error);
-                        // 使用模拟数据展示功能
-                        loadMockData();
+                        // 尝试从资源和预订 API 获取基础数据
+                        await loadFallbackData();
+                        loadError.value = true;
                     }
                 };
                 
-                const loadMockData = async () => {
+                // 当统计 API 失败时，尝试从资源和预订 API 获取基本数据作为补充
+                const loadFallbackData = async () => {
                     const token = localStorage.getItem('token');
-                    
                     try {
-                        // 加载资源数据
                         const resourcesRes = await fetch(`${API_RESOURCES}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        
                         const resourcesData = await resourcesRes.json();
                         if (resourcesData.code === 200) {
                             const resources = resourcesData.data || [];
-                            
-                            // 统计各类型资源数
                             spaceTypes.value.forEach(type => {
                                 type.resourceCount = resources.filter(r => r.type_code === type.code).length;
                             });
                         }
-                        
-                        // 加载预约数据
+
                         const bookingsRes = await fetch(`${API_BOOKINGS}?limit=100`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        
                         const bookingsData = await bookingsRes.json();
                         if (bookingsData.code === 200) {
                             const bookings = bookingsData.data.items || [];
                             const today = new Date().toISOString().split('T')[0];
                             const currentMonth = today.slice(0, 7);
-                            
+
                             spaceTypes.value.forEach(type => {
                                 const typeBookings = bookings.filter(b => b.type_code === type.code);
                                 type.todayBookings = typeBookings.filter(b => b.booking_date === today).length;
                                 type.monthlyBookings = typeBookings.filter(b => b.booking_date.startsWith(currentMonth)).length;
                                 type.pendingCount = typeBookings.filter(b => b.status === 'pending').length;
-                                
-                                // 计算使用率（基于今日预约数和资源数）
                                 if (type.resourceCount > 0) {
-                                    const totalSlots = type.resourceCount * 12; // 每天12个时段
-                                    const usedSlots = type.todayBookings * 2; // 平均每个预约2个时段
-                                    type.usageRate = Math.min(Math.round((usedSlots / totalSlots) * 100), 100);
+                                    type.usageRate = Math.min(Math.round((type.todayBookings / type.resourceCount) * 100), 100);
                                 }
                             });
-                            
-                            // 更新总统计
+
                             stats.value.todayBookings = bookings.filter(b => b.booking_date === today).length;
                             stats.value.pendingApprovals = bookings.filter(b => b.status === 'pending').length;
-                            
                             const monthBookings = bookings.filter(b => b.booking_date.startsWith(currentMonth));
                             stats.value.todayRevenue = monthBookings.reduce((sum, b) => sum + (b.total_fee || b.actual_fee || 0), 0);
                         }
-                        
-                    } catch (error) {
-                        console.error('加载模拟数据失败:', error);
-                        
-                        // 设置默认展示数据
-                        spaceTypes.value.forEach((type, index) => {
-                            type.resourceCount = index === 0 ? 8 : (index < 3 ? 2 : 1);
-                            type.todayBookings = Math.floor(Math.random() * 5);
-                            type.monthlyBookings = Math.floor(Math.random() * 20) + 5;
-                            type.pendingCount = Math.floor(Math.random() * 3);
-                            type.usageRate = Math.floor(Math.random() * 60) + 20;
-                        });
+                    } catch (e) {
+                        console.error('备用数据加载也失败:', e);
                     }
                 };
-                
+
                 onMounted(async () => {
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
                     if (!user) return;
@@ -832,9 +823,11 @@
                 return {
                     stats,
                     spaceTypes,
+                    loadError,
                     getUsageClass,
                     goToTypeBookings,
-                    goToResources
+                    goToResources,
+                    loadDashboardData
                 };
             }
         }).mount('#app');

@@ -261,6 +261,7 @@ async def get_unified_settlement_records(
     current_month = now.month
     current_year = now.year
 
+    # 统一时间范围计算
     if month == "current":
         month_start = datetime(current_year, current_month, 1)
         month_end = now
@@ -272,7 +273,12 @@ async def get_unified_settlement_records(
             month_start = datetime(current_year, current_month - 1, 1)
             month_end = datetime(current_year, current_month, 1) - timedelta(seconds=1)
     elif month == "quarter":
-        month_start = datetime(current_year, max(1, current_month - 2), 1)
+        if current_month <= 2:
+            month_start = datetime(current_year - 1, current_month + 10, 1)
+        elif current_month == 3:
+            month_start = datetime(current_year, 1, 1)
+        else:
+            month_start = datetime(current_year, current_month - 2, 1)
         month_end = now
     else:
         month_start = None
@@ -297,6 +303,13 @@ async def get_unified_settlement_records(
                     OfficePickup.settlement_status.in_(["confirmed", "settled"])
                 )
 
+            # 月份过滤在数据库层执行
+            if month_start and month_end:
+                water_query = water_query.filter(
+                    OfficePickup.pickup_time >= month_start,
+                    OfficePickup.pickup_time <= month_end,
+                )
+
             if search:
                 water_query = water_query.filter(
                     or_(
@@ -315,7 +328,10 @@ async def get_unified_settlement_records(
                 )
 
             water_pickups = (
-                water_query.order_by(OfficePickup.pickup_time.desc()).limit(limit).all()
+                water_query.order_by(OfficePickup.pickup_time.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
             )
 
             for pickup in water_pickups:
@@ -331,11 +347,6 @@ async def get_unified_settlement_records(
                     status_text = "待付款"
 
                 record_time = pickup.pickup_time or pickup.created_at
-                if month_start and month_end:
-                    if not (
-                        month_start <= record_time <= month_end if record_time else True
-                    ):
-                        continue
 
                 records.append(
                     SettlementRecord(
@@ -364,7 +375,8 @@ async def get_unified_settlement_records(
     if service_type == "all" or service_type == "space":
         try:
             space_query = db.query(SpaceBooking).filter(
-                SpaceBooking.status.in_(["completed", "settled"])
+                SpaceBooking.status.in_(["completed", "settled"]),
+                SpaceBooking.is_deleted == 0,
             )
 
             if status == "pending":
@@ -373,6 +385,15 @@ async def get_unified_settlement_records(
                 space_query = space_query.filter(SpaceBooking.status == "settled")
             elif status == "waiting":
                 pass
+
+            # 月份过滤在数据库层执行
+            if month_start and month_end:
+                space_query = space_query.filter(
+                    or_(
+                        SpaceBooking.settled_at.between(month_start, month_end),
+                        SpaceBooking.created_at.between(month_start, month_end),
+                    )
+                )
 
             if department:
                 space_query = space_query.filter(SpaceBooking.department == department)
@@ -392,7 +413,10 @@ async def get_unified_settlement_records(
                 space_query = space_query.filter(SpaceBooking.total_fee <= max_amount)
 
             space_bookings = (
-                space_query.order_by(SpaceBooking.created_at.desc()).limit(limit).all()
+                space_query.order_by(SpaceBooking.created_at.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
             )
 
             for booking in space_bookings:
@@ -405,11 +429,6 @@ async def get_unified_settlement_records(
                     status_text = "待确认收款"
 
                 record_time = booking.settled_at or booking.created_at
-                if month_start and month_end:
-                    if not (
-                        month_start <= record_time <= month_end if record_time else True
-                    ):
-                        continue
 
                 records.append(
                     SettlementRecord(
@@ -440,17 +459,16 @@ async def get_unified_settlement_records(
     records.sort(key=lambda x: x.created_at or "", reverse=True)
 
     total_count = len(records)
-    paginated_records = records[offset : offset + limit]
 
     summary = {
         "total_count": total_count,
-        "total_amount": sum(r.amount for r in paginated_records),
-        "water_count": len([r for r in paginated_records if r.service_type == "water"]),
-        "space_count": len([r for r in paginated_records if r.service_type == "space"]),
+        "total_amount": sum(r.amount for r in records),
+        "water_count": len([r for r in records if r.service_type == "water"]),
+        "space_count": len([r for r in records if r.service_type == "space"]),
     }
 
     return SettlementRecordList(
-        items=paginated_records, total=total_count, summary=summary
+        items=records, total=total_count, summary=summary
     )
 
 
@@ -787,8 +805,9 @@ async def batch_confirm_settlements(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """批量确认结算"""
+    """批量确认结算（统一处理水站和空间服务）"""
     confirmed = []
+    skipped = []
     for record in request.records:
         service_type = record.get("service_type", "")
         record_id = record.get("record_id")
@@ -804,17 +823,33 @@ async def batch_confirm_settlements(
                 OfficePickup.id == rid, OfficePickup.is_deleted == False
             ).first()
             if pickup:
-                pickup.settlement_status = "settled"
-                pickup.settled_at = datetime.now()
+                if pickup.settlement_status in ("confirmed", "settled"):
+                    pickup.settlement_status = "settled"
+                    pickup.confirmed_time = pickup.confirmed_time or datetime.now()
+                else:
+                    skipped.append(f"water_{rid}: 状态为{pickup.settlement_status}，无法结算")
+                    continue
                 confirmed.append(record_id)
         elif service_type == "space":
             booking = db.query(SpaceBooking).filter(
-                SpaceBooking.id == rid
+                SpaceBooking.id == rid, SpaceBooking.is_deleted == 0
             ).first()
             if booking:
-                booking.settlement_status = "settled"
-                booking.settled_at = datetime.now()
+                if booking.status == "completed":
+                    booking.status = "settled"
+                    booking.settled_at = datetime.now()
+                    booking.settled_by = current_user.name
+                elif booking.status == "settled":
+                    pass  # 已经是结算状态
+                else:
+                    skipped.append(f"space_{rid}: 状态为{booking.status}，只有completed状态才能结算")
+                    continue
                 confirmed.append(record_id)
 
     db.commit()
-    return {"success": True, "message": f"已确认 {len(confirmed)} 条记录", "confirmed_count": len(confirmed)}
+    return {
+        "success": True,
+        "message": f"已确认 {len(confirmed)} 条记录" + (f"，跳过 {len(skipped)} 条" if skipped else ""),
+        "confirmed_count": len(confirmed),
+        "skipped": skipped if skipped else None,
+    }

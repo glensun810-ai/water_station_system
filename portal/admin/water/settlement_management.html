@@ -186,10 +186,20 @@
         </div>
         
         <div v-else class="page-container">
+            <!-- 版本提示 -->
+            <div style="background: var(--info-light); border: 2px solid var(--info); border-radius: var(--radius-lg); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-lg);">
+                <span style="font-size: 24px;">ℹ️</span>
+                <div style="flex: 1;">
+                    <strong>新版月度结算已上线</strong>
+                    <p style="margin: var(--spacing-xs) 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">推荐使用新版月度结算功能，支持申请→审批→确认→结算的完整流程，并生成正式结算单据。</p>
+                </div>
+                <a href="/portal/admin/water/monthly_settlement.html" class="btn btn-primary btn-sm" style="white-space: nowrap;">前往新版 →</a>
+            </div>
+
             <!-- 页面标题 -->
             <div class="page-header">
                 <div class="page-title-group">
-                    <h1 class="page-title">💰 结算管理中心</h1>
+                    <h1 class="page-title">💰 结算管理中心（旧版）</h1>
                     <p class="page-subtitle">以办公室为维度汇总展示结算情况，支持一键发送账单和批量操作</p>
                 </div>
                 <div class="page-actions">
@@ -987,7 +997,22 @@
                 // 删除
                 const deleteOfficeRecords = async (office) => {
                     if (!confirm(`删除 ${office.name} 的所有未结清记录？\n共 ${office.unsettledRecords.length}笔 ¥${office.unsettledAmount.toFixed(2)}`)) return;
-                    alert('删除成功');
+                    try {
+                        const token = localStorage.getItem('token');
+                        const pickupIds = office.unsettledRecords.map(r => r.id);
+                        const response = await fetch('/api/v1/office-pickup/batch-delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(pickupIds)
+                        });
+                        const data = await response.json();
+                        alert(data.message || '删除成功');
+                    } catch (e) {
+                        alert('删除失败：' + e.message);
+                    }
                     loadData();
                 };
                 
@@ -1009,7 +1034,28 @@
                     });
                     
                     if (!confirm(`批量删除 ${selectedUnsettled.value.length}个办公室的所有未结清记录？\n共 ${totalRecords}笔 ¥${totalAmount.toFixed(2)}`)) return;
-                    alert('批量删除成功');
+                    try {
+                        const token = localStorage.getItem('token');
+                        let allPickupIds = [];
+                        selectedUnsettled.value.forEach(id => {
+                            const office = summary[id];
+                            if (office) {
+                                allPickupIds.push(...office.unsettledRecords.map(r => r.id));
+                            }
+                        });
+                        const response = await fetch('/api/v1/office-pickup/batch-delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(allPickupIds)
+                        });
+                        const data = await response.json();
+                        alert(data.message || '批量删除成功');
+                    } catch (e) {
+                        alert('批量删除失败：' + e.message);
+                    }
                     selectedUnsettled.value = [];
                     loadData();
                 };

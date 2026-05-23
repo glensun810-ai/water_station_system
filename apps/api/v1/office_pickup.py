@@ -120,13 +120,17 @@ def remind_office_pickup(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """发送催缴提醒"""
+    """发送催缴提醒（需配置通知服务后生效）"""
     pickup = db.query(OfficePickup).filter(
         OfficePickup.id == pickup_id, OfficePickup.is_deleted == False
     ).first()
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
-    return {"message": f"已向 {pickup.pickup_person} 发送催缴提醒"}
+    # 通知服务尚未接入，返回明确提示
+    return {
+        "message": f"催缴提醒已记录（通知服务未接入，请通过其他渠道联系 {pickup.pickup_person}）",
+        "warning": "通知服务尚未配置，催缴消息不会实际发送",
+    }
 
 
 @router.post("/batch-confirm")
@@ -232,17 +236,65 @@ def auto_generate_monthly_settlement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """自动生成月度结算单"""
-    # 查询所有已确认但未结算的领水记录
+    """自动生成月度结算单（已升级为正式结算流程，创建 MonthlySettlement 记录）"""
+    from models.settlement_v2 import MonthlySettlement
+    from datetime import date
+
     pickups = db.query(OfficePickup).filter(
         OfficePickup.is_deleted == False,
         OfficePickup.settlement_status == "confirmed",
     ).all()
 
-    count = 0
+    if not pickups:
+        return {"message": "没有需要结算的记录", "settlement_count": 0}
+
+    # 按办公室分组
+    office_groups = {}
     for p in pickups:
-        p.settlement_status = "settled"
-        count += 1
+        oid = p.office_id
+        if oid not in office_groups:
+            office_groups[oid] = {"pickups": [], "total_amount": 0.0}
+        office_groups[oid]["pickups"].append(p)
+        office_groups[oid]["total_amount"] += float(p.total_amount or 0)
+
+    today = date.today()
+    period = today.strftime("%Y-%m")
+    settlements_created = 0
+
+    for idx, (oid, group) in enumerate(office_groups.items(), 1):
+        # 生成结算单号
+        seq = db.query(MonthlySettlement).count() + idx
+        settlement_no = f"MS{today.strftime('%Y%m')}{seq:04d}"
+
+        # 创建正式的月度结算单
+        settlement = MonthlySettlement(
+            settlement_no=settlement_no,
+            office_id=oid,
+            office_name=group["pickups"][0].office_name or f"办公室{oid}",
+            settlement_period=period,
+            start_date=today.replace(day=1),
+            end_date=today,
+            record_count=len(group["pickups"]),
+            total_amount=group["total_amount"],
+            status="approved",
+            approved_at=datetime.now(),
+            approved_by=current_user.id,
+            approved_by_name=current_user.name,
+            note=f"由 {current_user.name} 自动生成",
+        )
+        db.add(settlement)
+        db.flush()
+
+        # 更新对应 pickup 记录为已结算
+        for p in group["pickups"]:
+            p.settlement_status = "settled"
+
+        settlements_created += 1
+
     db.commit()
 
-    return {"message": f"已生成月度结算单，共结算 {count} 条记录"}
+    return {
+        "message": f"已生成 {settlements_created} 份月度结算单，共结算 {len(pickups)} 条记录",
+        "settlement_count": settlements_created,
+        "record_count": len(pickups),
+    }

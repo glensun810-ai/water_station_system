@@ -14,6 +14,7 @@ from depends.auth import get_admin_user, get_current_user_required
 from shared.models.space.space_booking import SpaceBooking
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
+from shared.models.space.user_space_quota import UserSpaceQuota
 from shared.schemas.space.response import ApiResponse
 
 router = APIRouter(prefix="/space/statistics", tags=["统计分析"])
@@ -57,15 +58,26 @@ async def get_my_statistics(
         or 0
     )
 
-    free_hours_remaining = 0
-    if current_user.role in ["member", "vip"]:
-        free_hours_remaining = 2
+    # 从 UserSpaceQuota 表读取实际免费额度
+    current_month = date.today().strftime("%Y-%m")
+    quota = (
+        db.query(UserSpaceQuota)
+        .filter(
+            UserSpaceQuota.user_id == current_user.id,
+            UserSpaceQuota.quota_month == current_month,
+        )
+        .first()
+    )
+    free_hours_remaining = float(quota.free_quota_remaining) if quota and quota.free_quota_remaining else 0.0
 
-    saved_amount = 0
-    if current_user.role == "member":
-        saved_amount = total_fee * 0.2
-    elif current_user.role == "vip":
-        saved_amount = total_fee * 0.3
+    # 从 UserMemberInfo 读取折扣率
+    from shared.models.space.user_member_info import UserMemberInfo
+    member_info = db.query(UserMemberInfo).filter(
+        UserMemberInfo.user_id == current_user.id
+    ).first()
+    discount_rate = float(member_info.discount_rate) if member_info else 0.0
+
+    saved_amount = total_fee * discount_rate if discount_rate > 0 else 0.0
 
     return ApiResponse(
         data={

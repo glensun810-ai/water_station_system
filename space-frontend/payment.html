@@ -633,73 +633,29 @@
                     if (confirm('确认您已完成线下支付？\n\n点击确认后，系统将通知管理员审核收款，确认后预约将生效。')) {
                         try {
                             const token = localStorage.getItem('token');
-                            
-                            // 尝试多种API endpoint
-                            let response;
-                            let data;
-                            
-                            // 方式1: 使用payments API with body
-                            try {
-                                response = await fetch(`/api/v2/space/payments/confirm-offline`, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify({
-                                        booking_id: parseInt(bookingId.value),
-                                        payment_method: 'offline',
-                                        status: 'pending_payment'
-                                    })
-                                });
-                                data = await response.json();
-                            } catch (e) {
-                                console.log('方式1失败，尝试方式2');
-                            }
-                            
-                            // 方式2: 更新预约状态
-                            if (!data || data.code !== 200) {
-                                response = await fetch(`/api/v2/space/bookings/${bookingId.value}/payment-status`, {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify({
-                                        payment_status: 'pending_payment',
-                                        payment_method: 'offline'
-                                    })
-                                });
-                                data = await response.json();
-                            }
-                            
-                            // 方式3: 直接更新预约
-                            if (!data || data.code !== 200) {
-                                response = await fetch(`/api/v2/space/bookings/${bookingId.value}`, {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify({
-                                        payment_status: 'pending_payment'
-                                    })
-                                });
-                                data = await response.json();
-                            }
-                            
+                            const response = await fetch('/api/v2/space/payments/confirm-offline', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    booking_id: parseInt(bookingId.value),
+                                    payment_method: 'offline'
+                                })
+                            });
+
+                            const data = await response.json();
+
                             if (data && (data.code === 200 || data.code === 201)) {
                                 paymentCompleted.value = true;
                                 alert('支付确认已提交，请等待管理员审核确认收款');
                             } else {
-                                // 即使API失败，也显示成功（模拟处理）
-                                paymentCompleted.value = true;
-                                console.log('支付状态更新API暂未实现，模拟处理');
+                                alert('支付确认提交失败：' + (data.detail || data.message || '未知错误，请稍后重试'));
                             }
                         } catch (error) {
                             console.error('支付确认失败:', error);
-                            // 模拟处理成功
-                            paymentCompleted.value = true;
+                            alert('网络错误，支付确认失败，请检查网络后重试');
                         }
                     }
                 };

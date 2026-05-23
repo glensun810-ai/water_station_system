@@ -733,46 +733,70 @@
                             window.location.href = '/portal/admin/login.html';
                             return;
                         }
-                        
-                        // 获取预约数据，筛选已完成的预约用于结算
-                        const response = await fetch(`${API_BOOKINGS}?limit=100`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
+
+                        // 使用统一结算 API 获取空间服务结算记录（支持服务端分页）
+                        const response = await fetch(`/api/v2/settlements/records?service_type=space&limit=500&offset=0`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        
+
                         const data = await response.json();
-                        
-                        if (data.code === 200) {
-                            const items = data.data.items || [];
-                            
-                            // 筛选有费用的预约
-                            settlements.value = items
-                                .filter(b => b.total_fee > 0 || b.actual_fee > 0)
-                                .map(b => ({
-                                    id: b.id,
-                                    bookingNo: b.booking_no || `BK${b.id}`,
-                                    title: b.title,
-                                    typeName: b.type_name,
-                                    typeCode: b.type_code,
-                                    spaceName: b.resource_name,
-                                    userName: b.user_name,
-                                    bookingDate: b.booking_date,
-                                    timeSlot: `${b.start_time}-${b.end_time}`,
-                                    amount: b.actual_fee || b.total_fee || 0,
-                                    status: b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment'),
-                                    statusText: getStatusText(b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment')),
-                                    statusClass: getStatusClass(b.payment_status || (b.status === 'completed' ? 'settled' : 'pending_payment'))
-                                }));
-                            
+
+                        if (response.ok && data.items) {
+                            settlements.value = data.items.map(r => ({
+                                id: parseInt(r.id.replace('space_', '')),
+                                bookingNo: r.record_no,
+                                typeName: '-',
+                                typeCode: '-',
+                                spaceName: '-',
+                                userName: r.payer,
+                                bookingDate: r.created_at ? r.created_at.slice(0, 10) : '-',
+                                timeSlot: '-',
+                                amount: r.amount,
+                                status: r.status === 'settled' ? 'settled' : 'pending_payment',
+                                statusText: r.status_text,
+                                statusClass: r.status_class
+                            }));
+
                             updateStats();
-                            updateDepartmentSummary();
+                            // 对于完整详情，额外加载 booking 数据
+                            await enrichSettlementDetails();
                         }
-                        
+
                     } catch (error) {
                         console.error('加载结算数据失败:', error);
                     } finally {
                         loading.value = false;
+                    }
+                };
+
+                const enrichSettlementDetails = async () => {
+                    // 补充空间名称和部门信息（从结算记录中获取的基础数据可能不完整）
+                    try {
+                        const token = localStorage.getItem('token');
+                        const bookingIds = settlements.value.map(s => s.id).join(',');
+                        if (!bookingIds) return;
+
+                        const detailRes = await fetch(`/api/v2/space/bookings?ids=${bookingIds}&limit=500`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const detailData = await detailRes.json();
+                        if (detailData.code === 200 && detailData.data?.items) {
+                            const details = detailData.data.items;
+                            settlements.value.forEach(s => {
+                                const detail = details.find(d => d.id === s.id);
+                                if (detail) {
+                                    s.typeName = detail.type_name || '-';
+                                    s.typeCode = detail.type_code || '-';
+                                    s.spaceName = detail.resource_name || '-';
+                                    s.department = detail.department || '';
+                                    s.timeSlot = `${detail.start_time || ''}-${detail.end_time || ''}`;
+                                    s.title = detail.title || '';
+                                }
+                            });
+                            updateDepartmentSummary();
+                        }
+                    } catch (e) {
+                        console.error('加载详情失败:', e);
                     }
                 };
                 
