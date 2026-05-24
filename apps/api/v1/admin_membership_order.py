@@ -4,7 +4,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional, List
 from decimal import Decimal
 from pydantic import BaseModel, Field
@@ -119,7 +119,11 @@ async def get_orders(
 ):
     """获取订单列表 - 管理员"""
     try:
-        query = db.query(MembershipOrder)
+        query = db.query(MembershipOrder).options(
+            joinedload(MembershipOrder.user),
+            joinedload(MembershipOrder.plan),
+            joinedload(MembershipOrder.admin),
+        )
 
         if status:
             try:
@@ -163,17 +167,9 @@ async def get_orders(
 
         order_responses = []
         for order in orders:
-            user = db.query(User).filter(User.id == order.user_id).first()
-            plan = (
-                db.query(MembershipPlan)
-                .filter(MembershipPlan.id == order.plan_id)
-                .first()
-            )
-            admin = (
-                db.query(User).filter(User.id == order.admin_id).first()
-                if order.admin_id
-                else None
-            )
+            user = order.user
+            plan = order.plan
+            admin = order.admin
 
             order_responses.append(
                 AdminOrderResponse(
@@ -308,6 +304,9 @@ async def get_pending_orders(
     try:
         query = db.query(MembershipOrder).filter(
             MembershipOrder.status == MembershipOrderStatus.PENDING_REVIEW
+        ).options(
+            joinedload(MembershipOrder.user),
+            joinedload(MembershipOrder.plan),
         )
 
         total = query.count()
@@ -321,12 +320,8 @@ async def get_pending_orders(
 
         order_responses = []
         for order in orders:
-            user = db.query(User).filter(User.id == order.user_id).first()
-            plan = (
-                db.query(MembershipPlan)
-                .filter(MembershipPlan.id == order.plan_id)
-                .first()
-            )
+            user = order.user
+            plan = order.plan
 
             order_responses.append(
                 AdminOrderResponse(

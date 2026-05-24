@@ -125,10 +125,12 @@ def get_user_balance(
 
 @router.get("/pickups")
 def get_user_pickups(
-    limit: int = Query(100, description="返回记录数量限制"),
-    offset: int = Query(0, description="偏移量"),
+    limit: int = Query(50, ge=1, le=200, description="返回记录数量限制（最大200）"),
+    offset: int = Query(0, ge=0, description="偏移量"),
     office_id: Optional[int] = Query(None, description="办公室ID过滤"),
     status: Optional[str] = Query(None, description="状态过滤"),
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -166,6 +168,21 @@ def get_user_pickups(
 
     if office_id:
         query = query.filter(OfficePickup.office_id == office_id)
+
+    # 日期范围过滤（服务端筛选，避免全量加载）
+    if start_date:
+        try:
+            dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(OfficePickup.pickup_time >= dt)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            dt = datetime.strptime(end_date, "%Y-%m-%d")
+            dt = dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(OfficePickup.pickup_time <= dt)
+        except ValueError:
+            pass
 
     # 状态过滤（兼容新旧状态名称）
     if status and status != "all":
@@ -550,10 +567,12 @@ def get_active_offices(
 
 @router.get("/settlements")
 def get_settlement_records(
-    limit: int = Query(100, description="返回记录数量限制"),
-    offset: int = Query(0, description="偏移量"),
+    limit: int = Query(50, ge=1, le=200, description="返回记录数量限制（最大200）"),
+    offset: int = Query(0, ge=0, description="偏移量"),
     office_id: Optional[int] = Query(None, description="办公室ID过滤"),
     status: Optional[str] = Query(None, description="结算状态过滤"),
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -566,6 +585,21 @@ def get_settlement_records(
 
     if office_id:
         query = query.filter(OfficePickup.office_id == office_id)
+
+    # 日期范围过滤
+    if start_date:
+        try:
+            dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(OfficePickup.pickup_time >= dt)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            dt = datetime.strptime(end_date, "%Y-%m-%d")
+            dt = dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(OfficePickup.pickup_time <= dt)
+        except ValueError:
+            pass
 
     # 状态过滤（兼容新旧状态名称）
     if status and status != "all":

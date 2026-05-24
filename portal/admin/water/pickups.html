@@ -1624,8 +1624,16 @@
                         const token = localStorage.getItem('token');
                         const headers = { 'Cache-Control': 'no-cache' };
                         if (token) headers['Authorization'] = `Bearer ${token}`;
-                        
-                        const res = await fetch(window.buildApiUrl('/water/pickups?limit=10000'), { headers });
+
+                        const params = new URLSearchParams();
+                        params.append('limit', '200');
+                        const f = officePickupFilter.value;
+                        if (f.dateFrom) params.append('start_date', f.dateFrom);
+                        if (f.dateTo) params.append('end_date', f.dateTo);
+                        if (f.officeId) params.append('office_id', f.officeId);
+                        if (f.status && f.status !== 'overdue') params.append('status', f.status);
+
+                        const res = await fetch(window.buildApiUrl('/water/pickups?' + params), { headers });
                         if (res.ok) {
                             officePickups.value = await res.json();
                         }

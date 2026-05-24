@@ -39,6 +39,8 @@ class Office(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
+    primary_admin = relationship("User", foreign_keys=[primary_admin_id])
+
     admin_relations = relationship(
         "OfficeAdminRelation", back_populates="office", lazy="dynamic"
     )

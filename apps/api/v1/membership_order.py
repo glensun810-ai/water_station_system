@@ -4,7 +4,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional, List
 from decimal import Decimal
 from pydantic import BaseModel, Field
@@ -188,7 +188,7 @@ async def get_my_orders(
     try:
         query = db.query(MembershipOrder).filter(
             MembershipOrder.user_id == current_user.id
-        )
+        ).options(joinedload(MembershipOrder.plan))
 
         if status:
             try:
@@ -208,11 +208,7 @@ async def get_my_orders(
 
         order_responses = []
         for order in orders:
-            plan = (
-                db.query(MembershipPlan)
-                .filter(MembershipPlan.id == order.plan_id)
-                .first()
-            )
+            plan = order.plan
             order_responses.append(
                 OrderResponse(
                     id=order.id,

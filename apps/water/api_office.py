@@ -4,7 +4,7 @@ Office Management API Routes - 办公室管理 API 路由
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from datetime import datetime
 import secrets
@@ -174,28 +174,28 @@ def get_offices(
     - **is_active**: 筛选启用/禁用的办公室
     """
     try:
-        # 动态导入 User 模型
-
-        query = db.query(Office)
+        query = db.query(Office).options(joinedload(Office.primary_admin))
 
         if is_active is not None:
             query = query.filter(Office.is_active == is_active)
 
         offices = query.offset(skip).limit(limit).all()
 
+        # Pre-fetch user counts per department in a single query
+        dept_names = [o.name for o in offices]
+        user_counts = {}
+        if dept_names:
+            rows = (
+                db.query(User.department, func.count(User.id))
+                .filter(User.is_active == 1, User.department.in_(dept_names))
+                .group_by(User.department)
+                .all()
+            )
+            user_counts = {row[0]: row[1] for row in rows}
+
         # 为每个办公室添加实际用户数（通过 department 匹配）
         result = []
         for office in offices:
-            # 获取主要管理员信息
-            primary_admin_name = None
-            primary_admin_id = getattr(office, "primary_admin_id", None)
-            if primary_admin_id:
-                primary_admin = (
-                    db.query(User).filter(User.id == primary_admin_id).first()
-                )
-                if primary_admin:
-                    primary_admin_name = primary_admin.name
-
             office_dict = {
                 "id": office.id,
                 "name": office.name,
@@ -206,8 +206,8 @@ def get_offices(
                 "water_user_count": office.water_user_count,
                 "is_common": office.is_common,
                 "is_active": office.is_active,
-                "primary_admin_id": primary_admin_id,
-                "primary_admin_name": primary_admin_name,
+                "primary_admin_id": office.primary_admin_id,
+                "primary_admin_name": office.primary_admin.name if office.primary_admin else None,
                 "created_at": office.created_at.isoformat()
                 if office.created_at
                 else None,
@@ -215,13 +215,7 @@ def get_offices(
                 if office.updated_at
                 else None,
             }
-            # 统计实际用户数（通过 department 匹配）
-            user_count = (
-                db.query(User)
-                .filter(User.department == office.name, User.is_active == 1)
-                .count()
-            )
-            office_dict["user_count"] = user_count
+            office_dict["user_count"] = user_counts.get(office.name, 0)
             result.append(office_dict)
 
         return result

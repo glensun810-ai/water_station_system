@@ -650,7 +650,11 @@
             </div>
             
             <div v-show="activeTab === 'records'" class="pb-4">
-                <div class="px-3 pt-4">
+                <div v-if="recordsLoading" class="flex items-center justify-center py-20">
+                    <div class="spinner"></div>
+                    <span class="ml-3 text-slate-400 text-sm">加载中...</span>
+                </div>
+                <div v-else class="px-3 pt-4">
                     <!-- 日期快捷筛选 - 移动端优化 -->
                     <div class="flex flex-wrap gap-1 mb-2">
                         <button @click="setRecordDateFilter('today')" :class="recordQuickDate === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-1.5 py-1 rounded-lg text-[10px] font-medium">今天</button>
@@ -1213,6 +1217,7 @@
                     selectedRecords: [],
                     recordDateFrom: '',
                     recordDateTo: '',
+                    recordsLoading: false,
                     recordSortField: 'pickup_time',
                     recordSortOrder: 'desc',
                     officeTab: 'all',  // 默认显示所有办公室（超级管理员）
@@ -1691,42 +1696,36 @@
                     } 
                 },
 async loadRecordList() {
+                    this.recordsLoading = true;
                     try {
-                        console.log('开始加载领水记录，API_BASE:', API_BASE);
-                        const res = await fetch(API_BASE + '/water/pickups?limit=10000', { headers: this.getAuthHeaders() });
-                        console.log('API响应状态:', res.status);
-                        
+                        const params = new URLSearchParams();
+                        params.append('limit', '200');
+                        if (this.recordDateFrom) params.append('start_date', this.recordDateFrom);
+                        if (this.recordDateTo) params.append('end_date', this.recordDateTo);
+                        const res = await fetch(API_BASE + '/water/pickups?' + params, { headers: this.getAuthHeaders() });
+
                         if (res.ok) {
                             let records = await res.json();
-                            console.log('原始领水记录:', records.length, '条');
-                            
+
                             if (records && records.length > 0) {
-                                // 如果用户有办公室权限，按办公室过滤
                                 if (this.userOffices && this.userOffices.length > 0) {
                                     const userOfficeIds = this.userOffices.map(uo => uo.id);
-                                    console.log('用户办公室ID列表:', userOfficeIds);
-                                    const filteredRecords = records.filter(r => userOfficeIds.includes(r.office_id));
-                                    console.log('匹配的领水记录:', filteredRecords.length, '条');
-                                    this.recordList = filteredRecords;
+                                    this.recordList = records.filter(r => userOfficeIds.includes(r.office_id));
                                 } else {
-                                    // 如果没有办公室权限，显示所有记录（访客模式）
-                                    console.log('用户没有办公室权限，显示所有记录');
                                     this.recordList = records;
                                 }
                             } else {
-                                console.log('数据库中没有领水记录');
                                 this.recordList = [];
                             }
-                            
-                            console.log('最终recordList:', this.recordList);
                         } else {
-                            console.error('加载领水记录失败:', res.status, res.statusText);
+                            console.error('加载领水记录失败:', res.status);
                             this.recordList = [];
                         }
                     } catch (e) {
                         console.error('加载领水记录错误:', e);
-                        console.error('错误详情:', e.message);
                         this.recordList = [];
+                    } finally {
+                        this.recordsLoading = false;
                     }
                 },
 async loadRecords(officeId, status) {

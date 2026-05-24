@@ -3,7 +3,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import date, datetime
 from typing import Optional, List
 from datetime import datetime as dt
@@ -49,7 +49,9 @@ async def get_bookings(
 ):
     """获取预约列表"""
 
-    query = db.query(SpaceBooking).filter(SpaceBooking.is_deleted == 0)
+    query = db.query(SpaceBooking).filter(SpaceBooking.is_deleted == 0).options(
+        joinedload(SpaceBooking.resource).joinedload(SpaceResource.space_type)
+    )
 
     if type_code:
         query = query.filter(SpaceBooking.type_code == type_code)
@@ -104,6 +106,8 @@ async def get_my_bookings(
 
     query = db.query(SpaceBooking).filter(
         SpaceBooking.user_id == current_user.id, SpaceBooking.is_deleted == 0
+    ).options(
+        joinedload(SpaceBooking.resource).joinedload(SpaceResource.space_type)
     )
 
     if status:
@@ -1099,14 +1103,8 @@ async def batch_operation(
 def _format_booking(booking: SpaceBooking, db: Session) -> dict:
     """格式化预约数据"""
 
-    resource = (
-        db.query(SpaceResource).filter(SpaceResource.id == booking.resource_id).first()
-    )
-    space_type = (
-        db.query(SpaceType).filter(SpaceType.id == booking.type_id).first()
-        if booking.type_id
-        else None
-    )
+    resource = booking.resource
+    space_type = resource.space_type if resource else None
 
     return {
         "id": booking.id,
