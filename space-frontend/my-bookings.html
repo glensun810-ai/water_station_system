@@ -546,7 +546,7 @@
                         </div>
                         <div class="info-item">
                             <span class="info-label">预估费用：</span>
-                            <span class="info-value" style="color: var(--primary); font-weight: 600;">¥{{ booking.fee }}</span>
+                            <span class="info-value" style="color: var(--primary); font-weight: 600;">¥{{ booking.fee }}<span v-if="booking.feeLabel" style="font-size:12px; color: var(--text-tertiary); font-weight:400;"> /{{ booking.feeLabel }}</span></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">提交时间：</span>
@@ -776,23 +776,41 @@
                             console.log('第一条预约数据示例:', items[0]);
                         }
                         
-                        bookings.value = items.map(item => ({
-                            id: item.id,
-                            bookingNo: item.booking_no,
-                            title: item.title || '未命名预约',
-                            spaceType: item.type_name || '未知类型',
-                            spaceName: item.resource_name || '未知空间',
-                            bookingDate: item.booking_date,
-                            timeSlot: `${item.start_time}-${item.end_time}`,
-                            attendeesCount: item.attendees_count,
-                            fee: item.total_fee ? item.total_fee.toFixed(2) : '0.00',
-                            status: mapBookingStatus(item.status),
-                            paymentStatus: item.payment_status || 'unpaid',
-                            submittedAt: formatDateTime(item.created_at),
-                            rejectionReason: item.rejected_reason || null,
-                            canModify: item.can_modify,
-                            canCancel: item.can_cancel
-                        }));
+                        const UNIT_LABELS = { hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' };
+
+                        bookings.value = items.map(item => {
+                            const bu = item.booking_unit || 'hour';
+                            const unitLabel = UNIT_LABELS[bu] || '小时';
+
+                            let timeSlotLabel = `${item.start_time || ''}-${item.end_time || ''}`;
+                            if (bu === 'half_day' || bu === 'session') {
+                                timeSlotLabel = item.time_slot_key || timeSlotLabel;
+                            } else if (bu === 'day' || bu === 'week' || bu === 'month') {
+                                timeSlotLabel = `${item.booking_date || ''} ~ ${item.end_date || ''}`;
+                            } else if (bu === 'meal') {
+                                timeSlotLabel = `${item.meal_session || item.time_slot_key || ''} ${item.guests_count || ''}人`;
+                            }
+
+                            return {
+                                id: item.id,
+                                bookingNo: item.booking_no,
+                                title: item.title || '未命名预约',
+                                spaceType: item.type_name || '未知类型',
+                                spaceName: item.resource_name || '未知空间',
+                                bookingDate: item.booking_date,
+                                timeSlot: timeSlotLabel,
+                                attendeesCount: item.attendees_count,
+                                fee: item.total_fee ? item.total_fee.toFixed(2) : '0.00',
+                                feeLabel: unitLabel,
+                                bookingUnit: bu,
+                                status: mapBookingStatus(item.status),
+                                paymentStatus: item.payment_status || 'unpaid',
+                                submittedAt: formatDateTime(item.created_at),
+                                rejectionReason: item.rejected_reason || null,
+                                canModify: item.can_modify,
+                                canCancel: item.can_cancel
+                            };
+                        });
                         
                         console.log('预约列表处理完成:', bookings.value.length, '条');
                     } catch (error) {

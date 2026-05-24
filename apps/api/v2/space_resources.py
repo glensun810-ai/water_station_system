@@ -4,6 +4,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
+from sqlalchemy import exc as sa_exc
 from datetime import date
 from typing import Optional, List
 from datetime import datetime as dt
@@ -186,8 +187,25 @@ async def delete_space_resource(
     if not resource:
         raise HTTPException(status_code=404, detail="空间资源不存在")
 
-    db.delete(resource)
-    db.commit()
+    booking_count = db.query(SpaceBooking).filter(
+        SpaceBooking.resource_id == resource_id
+    ).count()
+
+    if booking_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"该资源下有 {booking_count} 条预约记录，请先处理相关预约后再删除",
+        )
+
+    try:
+        db.delete(resource)
+        db.commit()
+    except sa_exc.IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="删除失败：该资源存在关联数据，无法删除",
+        )
 
     return ApiResponse(message="空间资源已删除")
 
@@ -317,7 +335,15 @@ def _calculate_available_slots(
 
         return available
 
-    # Fallback: no time_slots configured — use legacy hourly calculation
+    # Fallback: no time_slots configured — generate defaults per booking_unit
+    if booking_unit in ("half_day", "session"):
+        return _generate_default_session_slots(query_date, booked_slots)
+    elif booking_unit == "meal":
+        return _generate_default_meal_slots(query_date, booked_slots)
+    elif booking_unit in ("day", "week", "month"):
+        return [{"slot_key": "date_range", "slot_name": "日期范围", "slot_type": booking_unit, "is_available": True}]
+
+    # Legacy hourly fallback
     hourly_booked = [b for b in booked_slots if b.get("booking_unit", "hour") == "hour"]
 
     if not hourly_booked:
@@ -367,6 +393,49 @@ def _date_ranges_overlap(start1, end1, start2, end2):
     return start1 <= end2 and start2 <= end1
 
 
+def _generate_default_session_slots(query_date, booked_slots):
+    """Generate default half-day session slots when no ResourceTimeSlot configured"""
+    default_sessions = [
+        {"slot_key": "morning", "slot_name": "上午 (08:00-12:00)", "start_time": "08:00", "end_time": "12:00", "duration_value": 0.5, "duration_unit": "half_day"},
+        {"slot_key": "afternoon", "slot_name": "下午 (13:00-17:00)", "start_time": "13:00", "end_time": "17:00", "duration_value": 0.5, "duration_unit": "half_day"},
+        {"slot_key": "evening", "slot_name": "晚场 (18:00-22:00)", "start_time": "18:00", "end_time": "22:00", "duration_value": 0.5, "duration_unit": "half_day"},
+        {"slot_key": "full_day", "slot_name": "全天 (08:00-22:00)", "start_time": "08:00", "end_time": "22:00", "duration_value": 1.0, "duration_unit": "half_day"},
+    ]
+    booked_session_keys = set()
+    for b in booked_slots:
+        if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key"):
+            booked_session_keys.add(b["time_slot_key"])
+            if b.get("time_slot_key") != "full_day":
+                booked_session_keys.add("full_day")
+    if "full_day" in booked_session_keys:
+        booked_session_keys.update(["morning", "afternoon", "evening"])
+
+    result = []
+    for s in default_sessions:
+        is_booked = s["slot_key"] in booked_session_keys
+        result.append({**s, "slot_type": "session", "is_available": not is_booked, "max_bookings": 1, "booked_count": 1 if is_booked else 0})
+    return result
+
+
+def _generate_default_meal_slots(query_date, booked_slots):
+    """Generate default meal session slots when no ResourceTimeSlot configured"""
+    default_meals = [
+        {"slot_key": "breakfast", "slot_name": "早餐 (07:00-09:00)", "start_time": "07:00", "end_time": "09:00", "duration_value": 1, "duration_unit": "meal"},
+        {"slot_key": "lunch", "slot_name": "午餐 (11:30-13:30)", "start_time": "11:30", "end_time": "13:30", "duration_value": 1, "duration_unit": "meal"},
+        {"slot_key": "dinner", "slot_name": "晚餐 (17:30-20:00)", "start_time": "17:30", "end_time": "20:00", "duration_value": 1, "duration_unit": "meal"},
+    ]
+    booked_meal_keys = set()
+    for b in booked_slots:
+        if b.get("booking_date") == query_date.isoformat() and b.get("meal_session"):
+            booked_meal_keys.add(b["meal_session"])
+
+    result = []
+    for m in default_meals:
+        is_booked = m["slot_key"] in booked_meal_keys
+        result.append({**m, "slot_type": "session", "is_available": not is_booked, "max_bookings": 1, "booked_count": 1 if is_booked else 0})
+    return result
+
+
 # ==================== 批量操作API ====================
 
 
@@ -411,18 +480,30 @@ async def batch_delete_resources(
         raise HTTPException(status_code=400, detail="资源ID列表不能为空")
 
     deleted_count = 0
+    skipped_count = 0
     for resource_id in resource_ids:
         resource = (
             db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
         )
-        if resource:
+        if not resource:
+            continue
+        booking_count = db.query(SpaceBooking).filter(
+            SpaceBooking.resource_id == resource_id
+        ).count()
+        if booking_count > 0:
+            skipped_count += 1
+            continue
+        try:
             db.delete(resource)
+            db.commit()
             deleted_count += 1
-
-    db.commit()
+        except sa_exc.IntegrityError:
+            db.rollback()
+            skipped_count += 1
 
     return ApiResponse(
-        message=f"成功删除{deleted_count}个资源", data={"deleted_count": deleted_count}
+        message=f"成功删除{deleted_count}个资源" + (f"，跳过{skipped_count}个" if skipped_count > 0 else ""),
+        data={"deleted_count": deleted_count, "skipped_count": skipped_count},
     )
 
 

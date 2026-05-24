@@ -120,8 +120,10 @@ class SpaceAPI {
         return this.get(`/resources/${resourceId}`);
     }
 
-    async getResourceAvailability(resourceId, date) {
-        return this.get(`/resources/${resourceId}/availability`, { date });
+    async getResourceAvailability(resourceId, date, bookingUnit = null) {
+        const params = { date };
+        if (bookingUnit) params.booking_unit = bookingUnit;
+        return this.get(`/resources/${resourceId}/availability`, params);
     }
 
     // ========== 预约管理 API ==========

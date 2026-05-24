@@ -31,7 +31,7 @@ class SpaceResourceBase(BaseModel):
     peak_time_price: Optional[float] = None
     off_peak_price: Optional[float] = None
 
-    free_hours_per_month: int = 0
+    free_hours_per_month: Optional[int] = 0
 
     meal_standard_price: Optional[float] = None
     meal_vip_price: Optional[float] = None
@@ -41,7 +41,7 @@ class SpaceResourceBase(BaseModel):
     booth_position: Optional[str] = None
 
     venue_level: Optional[str] = None
-    setup_time_hours: int = 2
+    setup_time_hours: Optional[int] = None
     setup_fee_per_hour: Optional[float] = None
 
     photos: Optional[str] = None
@@ -49,7 +49,7 @@ class SpaceResourceBase(BaseModel):
 
     is_active: bool = True
     is_available: bool = True
-    maintenance_status: str = "normal"
+    maintenance_status: Optional[str] = "normal"
     maintenance_note: Optional[str] = None
 
     office_id: Optional[int] = None
@@ -62,8 +62,8 @@ class SpaceResourceBase(BaseModel):
 
     @field_validator("capacity")
     def capacity_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError("容纳人数必须大于0")
+        if v is not None and v < 0:
+            raise ValueError("容纳人数不能为负数")
         return v
 
     @field_validator("base_price")
@@ -81,6 +81,8 @@ class SpaceResourceCreate(SpaceResourceBase):
 
 class SpaceResourceUpdate(BaseModel):
     """更新空间资源"""
+
+    model_config = {"extra": "ignore"}
 
     name: Optional[str] = None
     name_en: Optional[str] = None

@@ -809,68 +809,78 @@
                 const userType = ref('external')
                 
                 console.log('setup函数初始化完成，准备定义响应式变量');
-                const spaceTypes = ref([
-                    {
-                        id: 1,
-                        code: 'meeting_room',
-                        name: '会议室',
-                        icon: '🏢',
-                        description: '小型会议室，适合10-20人会议',
-                        unit: '按小时',
-                        capacityRange: '10-20人',
-                        priceFrom: '¥50/h',
-                        themeColor: '#2563EB',
-                        requiresApproval: false
-                    },
-                    {
-                        id: 2,
-                        code: 'auditorium',
-                        name: '会场/多功能厅',
-                        icon: '🎭',
-                        description: '大型会场，适合50-500人活动',
-                        unit: '按半天/全天',
-                        capacityRange: '50-500人',
-                        priceFrom: '¥500/半天',
-                        themeColor: '#7C3AED',
-                        requiresApproval: true
-                    },
-                    {
-                        id: 3,
-                        code: 'lobby_screen',
-                        name: '大堂大屏',
-                        icon: '📺',
-                        description: '大堂LED大屏，投放广告或展示',
-                        unit: '按时段',
-                        capacityRange: '不限',
-                        priceFrom: '¥200/时段',
-                        themeColor: '#F59E0B',
-                        requiresApproval: true
-                    },
-                    {
-                        id: 4,
-                        code: 'lobby_booth',
-                        name: '大堂展位',
-                        icon: '🏪',
-                        description: '大堂展示展位，产品展示促销',
-                        unit: '按天/周',
-                        capacityRange: '不限',
-                        priceFrom: '¥300/天',
-                        themeColor: '#10B981',
-                        requiresApproval: true
-                    },
-                    {
-                        id: 5,
-                        code: 'vip_dining',
-                        name: 'VIP餐厅',
-                        icon: '🍽️',
-                        description: 'VIP餐厅包厢，高端商务用餐',
-                        unit: '按餐段',
-                        capacityRange: '6-12人',
-                        priceFrom: '¥800/餐',
-                        themeColor: '#DC2626',
-                        requiresApproval: false
+                const spaceTypes = ref([])
+
+                const UNIT_LABEL_MAP = {
+                    'hour': '按小时',
+                    'half_day': '按半天',
+                    'day': '按天',
+                    'week': '按周',
+                    'month': '按月',
+                    'meal': '按餐段',
+                    'session': '按时段',
+                    'slot': '按时段',
+                }
+
+                const COLOR_NAME_TO_HEX = {
+                    'amber': '#F59E0B',
+                    'indigo': '#6366F1',
+                    'orange': '#F97316',
+                    'teal': '#14B8A6',
+                }
+
+                const DEFAULT_ICONS = {
+                    'meeting_room': '🏢',
+                    'auditorium': '🎭',
+                    'lobby_screen': '📺',
+                    'lobby_booth': '🏪',
+                    'vip_dining': '🍽️',
+                    'booth': '🏪',
+                    'venue': '🎭',
+                    'dining_room': '🍽️',
+                    'office_desk': '💻',
+                }
+
+                const formatPriceFrom = (priceFrom, priceUnit, minDurationUnit) => {
+                    if (priceFrom == null) return null
+                    const unitLabel = UNIT_LABEL_MAP[priceUnit] || UNIT_LABEL_MAP[minDurationUnit] || ''
+                    const shortUnit = unitLabel.replace('按', '/').replace('段', '')
+                    return `¥${priceFrom}${shortUnit || `/${priceUnit || minDurationUnit}`}`
+                }
+
+                const formatCapacityRange = (minCap, maxCap) => {
+                    if (!minCap && !maxCap) return '不限'
+                    if (minCap && maxCap && minCap !== maxCap) return `${minCap}-${maxCap}人`
+                    const cap = minCap || maxCap
+                    return `${cap}人`
+                }
+
+                const loadSpaceTypes = async () => {
+                    try {
+                        const response = await spaceAPI.getSpaceTypes()
+                        const types = response.data?.items || response.items || []
+
+                        if (types.length > 0) {
+                            spaceTypes.value = types
+                                .filter(t => t.is_active !== false)
+                                .map(t => ({
+                                    id: t.id,
+                                    code: t.type_code,
+                                    name: t.type_name,
+                                    icon: t.icon || DEFAULT_ICONS[t.type_code] || '🏢',
+                                    description: t.description || '',
+                                    unit: UNIT_LABEL_MAP[t.min_duration_unit] || `按${t.min_duration_unit || '小时'}`,
+                                    capacityRange: formatCapacityRange(t.min_capacity, t.max_capacity),
+                                    priceFrom: formatPriceFrom(t.price_from, t.price_unit, t.min_duration_unit) || '价格详询',
+                                    themeColor: COLOR_NAME_TO_HEX[t.color_theme] || t.color_theme || '#2563EB',
+                                    requiresApproval: t.requires_approval || false,
+                                }))
+                            console.log(`已从API加载 ${spaceTypes.value.length} 个空间类型`)
+                        }
+                    } catch (error) {
+                        console.error('加载空间类型失败，使用默认数据:', error.message)
                     }
-])
+                }
 
                 const recommendations = ref([])
                 const stats = ref(null)
@@ -1051,6 +1061,7 @@
                 
                 onMounted(() => {
                     loadUserData()
+                    loadSpaceTypes()
                     loadRecommendations()
                     loadStats()
                 })

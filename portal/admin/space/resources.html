@@ -1167,21 +1167,151 @@
                             </div>
                         </div>
                         
+                        <div class="form-group" style="margin-top: var(--spacing-md);">
+                            <label class="form-label">计价单位</label>
+                            <select class="form-select" v-model="formData.price_unit">
+                                <option v-for="u in parseSupportedUnits()" :key="u" :value="u">
+                                    {{ formatPriceUnit(u) }}
+                                </option>
+                                <option v-if="parseSupportedUnits().length === 0" :value="selectedType?.min_duration_unit">
+                                    {{ formatPriceUnit(selectedType?.min_duration_unit) }}
+                                </option>
+                            </select>
+                        </div>
+
                         <div class="form-group" v-if="selectedType?.type_code === 'meeting_room'">
                             <label class="form-label">每月免费时长（小时）</label>
-                            <input 
-                                type="number" 
+                            <input
+                                type="number"
                                 class="form-input"
                                 v-model.number="formData.free_hours_per_month"
                                 min="0"
                                 placeholder="内部用户每月免费使用时长"
                             >
-                            <p style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
-                                仅会议室类型支持免费时长配置
-                            </p>
                         </div>
+
+                        <!-- 餐厅专属字段 -->
+                        <template v-if="selectedType?.type_code === 'vip_dining' || selectedType?.type_code === 'dining_room'">
+                            <h5 style="margin:var(--spacing-md) 0;color:var(--text-secondary);">餐厅定价</h5>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">标准餐标 (¥)</label>
+                                    <input type="number" class="form-input" v-model.number="formData.meal_standard_price" min="0" step="0.01" placeholder="普通用餐标准">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">VIP餐标 (¥)</label>
+                                    <input type="number" class="form-input" v-model.number="formData.meal_vip_price" min="0" step="0.01" placeholder="VIP用餐标准">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">豪华餐标 (¥)</label>
+                                <input type="number" class="form-input" v-model.number="formData.meal_luxury_price" min="0" step="0.01" placeholder="豪华用餐标准">
+                            </div>
+                        </template>
+
+                        <!-- 展位专属字段 -->
+                        <template v-if="selectedType?.type_code === 'booth' || selectedType?.type_code === 'lobby_booth'">
+                            <h5 style="margin:var(--spacing-md) 0;color:var(--text-secondary);">展位规格</h5>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">展位大小</label>
+                                    <select class="form-select" v-model="formData.booth_size">
+                                        <option value="">请选择</option>
+                                        <option value="small">小型 (3x3m)</option>
+                                        <option value="medium">中型 (6x3m)</option>
+                                        <option value="large">大型 (9x6m)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">展位区域</label>
+                                    <select class="form-select" v-model="formData.booth_position">
+                                        <option value="">请选择</option>
+                                        <option value="A区">A区 (主通道)</option>
+                                        <option value="B区">B区 (中庭)</option>
+                                        <option value="C区">C区 (侧廊)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- 会场专属字段 -->
+                        <template v-if="selectedType?.type_code === 'auditorium' || selectedType?.type_code === 'venue'">
+                            <h5 style="margin:var(--spacing-md) 0;color:var(--text-secondary);">会场配置</h5>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">会场等级</label>
+                                    <select class="form-select" v-model="formData.venue_level">
+                                        <option value="">请选择</option>
+                                        <option value="standard">标准</option>
+                                        <option value="premium">高级</option>
+                                        <option value="luxury">豪华</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">布场时间 (小时)</label>
+                                    <input type="number" class="form-input" v-model.number="formData.setup_time_hours" min="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">布场费用 (¥/小时)</label>
+                                <input type="number" class="form-input" v-model.number="formData.setup_fee_per_hour" min="0" step="0.01" placeholder="布场每小时费用">
+                            </div>
+                        </template>
                     </div>
-                    
+
+                    <!-- 时段管理面板 (仅编辑时显示) -->
+                    <div v-if="editingResource" style="margin-bottom: var(--spacing-xl);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-md);">
+                            <h4 style="font-size:var(--font-size-lg);font-weight:600;color:var(--text-primary);margin:0;">
+                                时段管理
+                            </h4>
+                            <button type="button" class="btn btn-sm btn-primary" @click="addTimeSlot">+ 添加时段</button>
+                        </div>
+                        <div v-if="resourceTimeSlots.length === 0" style="color:var(--text-tertiary);font-size:var(--font-size-sm);padding:var(--spacing-lg);text-align:center;border:1px dashed var(--border);border-radius:var(--radius-md);">
+                            暂未配置时段，将使用系统默认时段模板
+                        </div>
+                        <div v-for="(slot, idx) in resourceTimeSlots" :key="idx" v-show="!slot._isDeleted"
+                             style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--spacing-md);margin-bottom:var(--spacing-sm);background:var(--bg-secondary);">
+                            <div style="display:flex;gap:var(--spacing-sm);flex-wrap:wrap;align-items:flex-end;">
+                                <div style="flex:1;min-width:100px;">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">键名</label>
+                                    <input class="form-input" v-model="slot.slot_key" placeholder="morning" style="padding:4px 6px;font-size:12px;">
+                                </div>
+                                <div style="flex:1;min-width:120px;">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">显示名</label>
+                                    <input class="form-input" v-model="slot.slot_name" placeholder="上午 (08:00-12:00)" style="padding:4px 6px;font-size:12px;">
+                                </div>
+                                <div style="width:100px;">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">类型</label>
+                                    <select class="form-select" v-model="slot.slot_type" style="padding:4px 6px;font-size:12px;">
+                                        <option value="fixed_time">固定时间</option>
+                                        <option value="session">场次</option>
+                                        <option value="day">按天</option>
+                                    </select>
+                                </div>
+                                <div style="width:80px;" v-if="slot.slot_type === 'fixed_time'">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">开始</label>
+                                    <input class="form-input" v-model="slot.start_time" placeholder="08:00" style="padding:4px 6px;font-size:12px;">
+                                </div>
+                                <div style="width:80px;" v-if="slot.slot_type === 'fixed_time'">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">结束</label>
+                                    <input class="form-input" v-model="slot.end_time" placeholder="12:00" style="padding:4px 6px;font-size:12px;">
+                                </div>
+                                <div style="width:90px;">
+                                    <label style="font-size:11px;color:var(--text-tertiary);">覆盖价格</label>
+                                    <input class="form-input" type="number" v-model.number="slot.price_override" placeholder="可选" step="0.01" style="padding:4px 6px;font-size:12px;">
+                                </div>
+                                <div style="display:flex;align-items:flex-end;padding-bottom:4px;">
+                                    <button type="button" class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;border:none;" @click="removeTimeSlot(idx)">删除</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button v-if="resourceTimeSlots.some(s => s._isNew || s._isDeleted) || resourceTimeSlots.some(s => !s._isNew && !s._isDeleted)"
+                                type="button" class="btn btn-primary btn-sm" @click="saveTimeSlots" style="margin-top:var(--spacing-sm);">
+                            保存时段配置
+                        </button>
+                    </div>
+
                     <!-- 状态设置 -->
                     <div style="margin-bottom: var(--spacing-xl);">
                         <h4 style="font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-md);">
@@ -1434,11 +1564,25 @@
                     location: '',
                     capacity: null,
                     base_price: null,
+                    price_unit: null,
                     member_price: null,
                     free_hours_per_month: 0,
                     is_active: true,
-                    is_available: true
+                    is_available: true,
+                    // Meal-specific
+                    meal_standard_price: null,
+                    meal_vip_price: null,
+                    meal_luxury_price: null,
+                    // Booth-specific
+                    booth_size: null,
+                    booth_position: null,
+                    // Venue-specific
+                    venue_level: null,
+                    setup_time_hours: 2,
+                    setup_fee_per_hour: null,
                 });
+
+                const resourceTimeSlots = ref([]);
                 
                 const API_BASE = '/api/v2/space/types';
                 const API_RESOURCES_BASE = '/api/v2/space/resources';
@@ -1726,32 +1870,132 @@
                 
                 const openCreateModal = () => {
                     editingResource.value = null;
+                    resourceTimeSlots.value = [];
+                    const units = parseSupportedUnits();
                     formData.value = {
                         name: '',
                         location: '',
                         capacity: selectedType.value?.min_capacity || null,
                         base_price: 50,
+                        price_unit: units.length > 0 ? units[0] : (selectedType.value?.min_duration_unit || null),
                         member_price: null,
                         free_hours_per_month: selectedType.value?.type_code === 'meeting_room' ? 4 : 0,
                         is_active: true,
-                        is_available: true
+                        is_available: true,
+                        meal_standard_price: null, meal_vip_price: null, meal_luxury_price: null,
+                        booth_size: null, booth_position: null,
+                        venue_level: null, setup_time_hours: 2, setup_fee_per_hour: null,
                     };
                     showModal.value = true;
                 };
-                
-                const openEditModal = (resource) => {
+
+                const loadResourceTimeSlots = async (resourceId) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_RESOURCES_BASE}/${resourceId}/time-slots`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            resourceTimeSlots.value = (data.data || []).map(s => ({
+                                ...s, _isNew: false, _isDeleted: false
+                            }));
+                        }
+                    } catch (e) {
+                        console.error('加载时段失败:', e);
+                        resourceTimeSlots.value = [];
+                    }
+                };
+
+                const openEditModal = async (resource) => {
                     editingResource.value = resource;
-                    formData.value = {
-                        name: resource.name,
-                        location: resource.location,
-                        capacity: resource.capacity,
-                        base_price: resource.base_price,
-                        member_price: resource.member_price,
-                        free_hours_per_month: resource.free_hours_per_month || 0,
-                        is_active: resource.is_active,
-                        is_available: resource.is_available
-                    };
+                    resourceTimeSlots.value = [];
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_RESOURCES_BASE}/${resource.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        const r = data.code === 200 ? data.data : resource;
+                        formData.value = {
+                            name: r.name || resource.name,
+                            location: r.location || resource.location,
+                            capacity: r.capacity ?? resource.capacity,
+                            base_price: r.base_price ?? resource.base_price,
+                            price_unit: r.price_unit || null,
+                            member_price: r.member_price ?? resource.member_price,
+                            free_hours_per_month: r.free_hours_per_month || 0,
+                            is_active: r.is_active !== false,
+                            is_available: r.is_available !== false,
+                            meal_standard_price: r.meal_standard_price ?? null,
+                            meal_vip_price: r.meal_vip_price ?? null,
+                            meal_luxury_price: r.meal_luxury_price ?? null,
+                            booth_size: r.booth_size || null,
+                            booth_position: r.booth_position || null,
+                            venue_level: r.venue_level || null,
+                            setup_time_hours: r.setup_time_hours ?? 2,
+                            setup_fee_per_hour: r.setup_fee_per_hour ?? null,
+                        };
+                    } catch (e) {
+                        console.error('加载资源详情失败:', e);
+                    }
+                    await loadResourceTimeSlots(resource.id);
                     showModal.value = true;
+                };
+
+                const addTimeSlot = () => {
+                    resourceTimeSlots.value.push({
+                        slot_key: '', slot_name: '', slot_type: 'fixed_time',
+                        start_time: '', end_time: '',
+                        duration_value: 1, duration_unit: 'hour',
+                        max_bookings_per_slot: 1, price_override: null,
+                        is_active: true, sort_order: resourceTimeSlots.value.length,
+                        _isNew: true, _isDeleted: false
+                    });
+                };
+
+                const removeTimeSlot = (index) => {
+                    if (resourceTimeSlots.value[index]._isNew) {
+                        resourceTimeSlots.value.splice(index, 1);
+                    } else {
+                        resourceTimeSlots.value[index]._isDeleted = true;
+                    }
+                };
+
+                const saveTimeSlots = async () => {
+                    if (!editingResource.value) return;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const activeSlots = resourceTimeSlots.value
+                            .filter(s => !s._isDeleted)
+                            .map(({ _isNew, _isDeleted, ...slot }) => slot);
+                        const resp = await fetch(`${API_RESOURCES_BASE}/${editingResource.value.id}/time-slots`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(activeSlots)
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            showToast('时段配置已保存', 'success');
+                            await loadResourceTimeSlots(editingResource.value.id);
+                        } else {
+                            showToast(`保存失败: ${data.message || data.detail}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('保存时段失败:', e);
+                        showToast('保存时段失败', 'error');
+                    }
+                };
+
+                const parseSupportedUnits = () => {
+                    try {
+                        const raw = selectedType.value?.supported_duration_units;
+                        if (!raw) return [];
+                        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    } catch { return []; }
                 };
                 
                 const closeModal = () => {
@@ -1787,22 +2031,44 @@
                         const method = editingResource.value ? 'PUT' : 'POST';
                         
                         const submitData = {
-                            type_id: selectedType.value.id,
                             name: formData.value.name,
                             location: formData.value.location,
                             base_price: formData.value.base_price
                         };
-                        
-                        // 添加可选字段（如果填写了）
-                        if (formData.value.capacity && formData.value.capacity > 0) {
+
+                        if (!editingResource.value) {
+                            submitData.type_id = selectedType.value.id;
+                        }
+
+                        if (formData.value.capacity != null && formData.value.capacity >= 0) {
                             submitData.capacity = formData.value.capacity;
                         }
-                        if (formData.value.member_price && formData.value.member_price > 0) {
+                        if (formData.value.price_unit) {
+                            submitData.price_unit = formData.value.price_unit;
+                        }
+                        if (formData.value.member_price != null) {
                             submitData.member_price = formData.value.member_price;
                         }
                         if (formData.value.free_hours_per_month > 0) {
                             submitData.free_hours_per_month = formData.value.free_hours_per_month;
                         }
+
+                        const tc = selectedType.value?.type_code || '';
+                        if (tc === 'vip_dining' || tc === 'dining_room') {
+                            if (formData.value.meal_standard_price != null) submitData.meal_standard_price = formData.value.meal_standard_price;
+                            if (formData.value.meal_vip_price != null) submitData.meal_vip_price = formData.value.meal_vip_price;
+                            if (formData.value.meal_luxury_price != null) submitData.meal_luxury_price = formData.value.meal_luxury_price;
+                        }
+                        if (tc === 'booth' || tc === 'lobby_booth') {
+                            if (formData.value.booth_size) submitData.booth_size = formData.value.booth_size;
+                            if (formData.value.booth_position) submitData.booth_position = formData.value.booth_position;
+                        }
+                        if (tc === 'auditorium' || tc === 'venue') {
+                            if (formData.value.venue_level) submitData.venue_level = formData.value.venue_level;
+                            if (formData.value.setup_time_hours != null) submitData.setup_time_hours = formData.value.setup_time_hours;
+                            if (formData.value.setup_fee_per_hour != null) submitData.setup_fee_per_hour = formData.value.setup_fee_per_hour;
+                        }
+
                         submitData.is_active = formData.value.is_active;
                         submitData.is_available = formData.value.is_available;
                         
@@ -2015,7 +2281,12 @@
                     toggleActive,
                     showUsageStats,
                     openImportModal,
-                    executeImport
+                    executeImport,
+                    parseSupportedUnits,
+                    resourceTimeSlots,
+                    addTimeSlot,
+                    removeTimeSlot,
+                    saveTimeSlots
                 };
             }
         }).mount('#app');

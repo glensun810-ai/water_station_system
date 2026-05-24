@@ -571,9 +571,21 @@
             statusBadge.textContent = status.text;
             statusBadge.className = 'status-badge ' + status.class;
 
+            const bu = currentBooking.booking_unit || 'hour';
+            const UNIT_LABELS = { hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' };
+            const unitLabel = UNIT_LABELS[bu] || '小时';
+
             document.getElementById('bookingDate').textContent = currentBooking.booking_date;
-            document.getElementById('bookingTime').textContent = `${currentBooking.start_time} - ${currentBooking.end_time}`;
-            document.getElementById('duration').textContent = currentBooking.duration ? `${currentBooking.duration}小时` : '-';
+            if (bu === 'day' || bu === 'week' || bu === 'month') {
+                document.getElementById('bookingTime').textContent = `${currentBooking.booking_date || ''} ~ ${currentBooking.end_date || ''}`;
+            } else if (bu === 'meal') {
+                document.getElementById('bookingTime').textContent = currentBooking.meal_session || currentBooking.time_slot_key || '-';
+            } else if (bu === 'half_day' || bu === 'session') {
+                document.getElementById('bookingTime').textContent = currentBooking.time_slot_key || '-';
+            } else {
+                document.getElementById('bookingTime').textContent = `${currentBooking.start_time || ''} - ${currentBooking.end_time || ''}`;
+            }
+            document.getElementById('duration').textContent = currentBooking.duration ? `${currentBooking.duration}${unitLabel}` : '-';
 
             if (!['pending', 'pending_approval', 'approved', 'confirmed'].includes(currentBooking.status)) {
                 document.getElementById('cancelBookingBtn').style.display = 'none';
@@ -595,6 +607,9 @@
         async function updateFeePreview() {
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
+            const bu = currentBooking?.booking_unit || 'hour';
+            const UNIT_LABELS = { hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' };
+            const unitLabel = UNIT_LABELS[bu] || '小时';
 
             if (!startTime || !endTime) {
                 document.getElementById('feePreview').style.display = 'none';
@@ -602,17 +617,21 @@
             }
 
             try {
-                const response = await spaceAPI.calculateFee({
+                const payload = {
                     resource_id: currentBooking.resource_id,
                     booking_date: currentBooking.booking_date,
                     start_time: startTime,
                     end_time: endTime,
-                });
+                    booking_unit: bu,
+                };
+                const response = await spaceAPI.calculateFee(payload);
 
                 const data = response.data;
-                document.getElementById('baseFee').textContent = `¥${data.fee_summary.base_fee.toFixed(2)}`;
-                document.getElementById('durationText').textContent = `${data.fee_summary.base_fee / (data.calculation_detail.base_fee.price_per_unit || 1)}小时`;
-                document.getElementById('totalFee').textContent = `¥${data.fee_summary.final_fee.toFixed(2)}`;
+                const baseFee = data.fee_summary?.base_fee || data.base_fee || data.baseFee || 0;
+                const finalFee = data.fee_summary?.final_fee || data.total_fee || data.totalFee || 0;
+                document.getElementById('baseFee').textContent = `¥${Number(baseFee).toFixed(2)}`;
+                document.getElementById('durationText').textContent = `${Number(baseFee).toFixed(2)} / ${unitLabel}`;
+                document.getElementById('totalFee').textContent = `¥${Number(finalFee).toFixed(2)}`;
                 document.getElementById('feePreview').style.display = 'block';
             } catch (error) {
                 console.error('计算费用失败:', error);

@@ -12,8 +12,8 @@ class SpaceBookingBase(BaseModel):
 
     resource_id: int
     booking_date: date
-    start_time: str
-    end_time: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
     user_name: Optional[str] = None  # 改为可选，由后端自动填充
     user_phone: Optional[str] = None
@@ -40,10 +40,12 @@ class SpaceBookingBase(BaseModel):
         if v is None:
             return v
         from datetime import datetime as dt
-        try:
-            dt.strptime(v, "%H:%M")
-        except ValueError:
-            raise ValueError("时间格式必须为HH:MM")
+        for fmt in ("%H:%M", "%Y-%m-%d"):
+            try:
+                dt.strptime(v, fmt)
+                return v
+            except ValueError:
+                continue
         return v
 
     @field_validator("attendees_count")
@@ -136,10 +138,16 @@ class SpaceBookingResponse(BaseModel):
     office_id: Optional[int] = None
 
     booking_date: date
-    start_time: str
-    end_time: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     duration: Optional[float] = None
     duration_unit: Optional[str] = None
+    booking_unit: str = "hour"
+    time_slot_key: Optional[str] = None
+    end_date: Optional[date] = None
+    booking_days: int = 1
+    meal_session: Optional[str] = None
+    guests_count: int = 1
 
     purpose: Optional[str] = None
     title: Optional[str] = None
@@ -212,10 +220,12 @@ class FeeCalculationRequest(BaseModel):
         if v is None:
             return v
         from datetime import datetime as dt
-        try:
-            dt.strptime(v, "%H:%M")
-        except ValueError:
-            raise ValueError("时间格式必须为HH:MM")
+        for fmt in ("%H:%M", "%Y-%m-%d"):
+            try:
+                dt.strptime(v, fmt)
+                return v
+            except ValueError:
+                continue
         return v
 
 

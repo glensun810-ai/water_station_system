@@ -1348,6 +1348,178 @@
         .nav-label {
             font-size: var(--font-size-xs, 12px);
         }
+
+        /* ===== 单位切换器 ===== */
+        .unit-switcher {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        .unit-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        .unit-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .unit-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* ===== 场次/餐次卡片网格 ===== */
+        .session-card-grid,
+        .meal-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        .session-card,
+        .meal-card {
+            background: white;
+            border-radius: 16px;
+            padding: var(--spacing-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid var(--border);
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+        .session-card:hover:not(.disabled),
+        .meal-card:hover:not(.disabled) {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.1);
+        }
+        .session-card.selected,
+        .meal-card.selected {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+            transform: scale(1.02);
+        }
+        .session-card.selected .session-name,
+        .session-card.selected .session-time,
+        .session-card.selected .session-price,
+        .meal-card.selected .meal-name,
+        .meal-card.selected .meal-time,
+        .meal-card.selected .meal-price {
+            color: white;
+        }
+        .session-card.disabled,
+        .meal-card.disabled {
+            background: linear-gradient(135deg, #fff1f0 0%, #ffe7e6 100%);
+            border-color: var(--danger-light);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .session-name,
+        .meal-name {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .session-time,
+        .meal-time {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        .session-price,
+        .meal-price {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .session-badge,
+        .meal-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .session-card,
+        .meal-card {
+            position: relative;
+        }
+
+        /* ===== 日期范围选择器 ===== */
+        .date-range-picker {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        .date-range-picker .date-input {
+            flex: 1;
+            min-width: 160px;
+            padding: var(--spacing-lg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            background: white;
+            transition: all 0.3s;
+        }
+        .date-range-picker .date-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        .date-range-sep {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .date-range-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 12px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            color: white;
+            text-align: center;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+        }
+
+        /* ===== 用餐人数 ===== */
+        .guests-input-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        .guests-input-row .form-label {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        .guests-input-row .form-input {
+            width: 120px;
+        }
     </style>
 </head>
 <body>
@@ -1477,10 +1649,21 @@
                         <div class="card-icon">📅</div>
                         <div>
                             <div class="card-title">选择预约时段</div>
-                            <div class="card-subtitle">已选择 {{ selectedResource?.name }} | 可连续选择多个时段</div>
+                            <div class="card-subtitle">已选择 {{ selectedResource?.name }} | 预订单位：{{ typeUnit }}</div>
                         </div>
                     </div>
-                    
+
+                    <!-- 单位切换器（多单位资源） -->
+                    <div v-if="supportedUnits.length > 1" class="unit-switcher">
+                        <button
+                            v-for="unit in supportedUnits"
+                            :key="unit"
+                            class="unit-btn"
+                            :class="{ active: bookingUnit === unit }"
+                            @click="switchBookingUnit(unit)"
+                        >{{ ({ hour: '按小时', half_day: '按半天', session: '按场次', slot: '按时段', day: '按天', week: '按周', month: '按月', meal: '按餐次' })[unit] || unit }}</button>
+                    </div>
+
                     <!-- 选择提示 -->
                     <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%); border-radius: 12px; padding: var(--spacing-lg); margin-bottom: var(--spacing-xl); border: 1px solid rgba(37, 99, 235, 0.2);">
                         <div style="display: flex; align-items: center; gap: var(--spacing-md);">
@@ -1488,37 +1671,37 @@
                             <div>
                                 <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">时段选择说明</div>
                                 <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
-                                    点击时段卡片即可选择，可连续选择多个时段（如08:00-12:00共4小时）。
-                                    <span v-if="selectedTimeSlots.length > 0" style="color: var(--success); font-weight: 500;">
-                                        已选择 {{ selectedTimeSlots.length }} 个时段，共 {{ totalSelectedHours }} 小时
-                                    </span>
+                                    <span v-if="bookingUnit === 'hour'">点击时段卡片即可选择，可连续选择多个时段（如08:00-12:00共4小时）。</span>
+                                    <span v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session'">选择一个场次时段，支持多选。</span>
+                                    <span v-else-if="bookingUnit === 'day' || bookingUnit === 'week' || bookingUnit === 'month'">选择起止日期，系统将按{{ typeUnit }}计算费用。</span>
+                                    <span v-else-if="bookingUnit === 'meal'">选择餐次并填写用餐人数。</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
+                    <!-- 日期选择（通用） -->
                     <div class="date-picker-container">
-                        <label class="form-label">
-                            <span>预约日期</span>
-                        </label>
+                        <label class="form-label"><span>预约日期</span></label>
                         <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
                             <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
-                            <input
-                                type="date"
-                                class="date-input"
-                                v-model="bookingDate"
-                                :min="minDate"
-                                @change="loadTimeSlots"
-                                style="flex: 1;"
-                            >
+                            <input type="date" class="date-input" v-model="bookingDate" :min="minDate" @change="loadTimeSlots" style="flex: 1;">
                             <button type="button" class="btn btn-outline btn-sm" @click="goToNextDay" title="后一天" style="padding: 8px 12px; font-size: 14px;">▶</button>
                         </div>
-                        <div class="date-hint">
-                            <span class="hint-icon">💡</span>
-                            <span>可预约未来7天内的时段</span>
+                    </div>
+
+                    <!-- 结束日期（天/周/月单位） -->
+                    <div v-if="bookingUnit === 'day' || bookingUnit === 'week' || bookingUnit === 'month'" style="margin-bottom: var(--spacing-lg);">
+                        <label class="form-label"><span>结束日期</span></label>
+                        <input type="date" class="form-input" v-model="endDate" :min="bookingDate" @change="calculateFee" style="max-width: 250px;">
+                        <div v-if="endDate && bookingDate" class="date-range-summary" style="margin-top: var(--spacing-md); max-width: 350px;">
+                            共 {{ computeDateRangeDays() }} {{ typeUnit }}
+                            <span style="opacity:0.8; font-weight:400; margin-left:8px;" v-if="selectedResource?.basePrice">
+                                预估 ¥{{ computeDateRangeFee() }}
+                            </span>
                         </div>
                     </div>
-                    
+
                     <!-- 冲突提示 -->
                     <div v-if="conflictDetected" class="conflict-banner">
                         <div class="conflict-icon">⚠️</div>
@@ -1532,80 +1715,99 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 时段统计 -->
-                    <div class="time-section-header">
-                        <div class="time-stats">
-                            <div class="stat-item">
-                                <div class="stat-dot available"></div>
-                                <span class="stat-text">可用</span>
-                                <span class="stat-value">{{ availableHoursCount }}h</span>
+
+                    <!-- ===== 按小时：时段网格 ===== -->
+                    <template v-if="bookingUnit === 'hour'">
+                        <div class="time-section-header">
+                            <div class="time-stats">
+                                <div class="stat-item">
+                                    <div class="stat-dot available"></div>
+                                    <span class="stat-text">可用</span>
+                                    <span class="stat-value">{{ availableHoursCount }}h</span>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-dot booked"></div>
+                                    <span class="stat-text">已预约</span>
+                                    <span class="stat-value">{{ bookedHoursCount }}h</span>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-dot booked"></div>
-                                <span class="stat-text">已预约</span>
-                                <span class="stat-value">{{ bookedHoursCount }}h</span>
+                        </div>
+                        <div class="time-legend">
+                            <div class="legend-item"><div class="legend-dot available"></div><span>可预约</span></div>
+                            <div class="legend-item"><div class="legend-dot selected"></div><span>已选中</span></div>
+                            <div class="legend-item"><div class="legend-dot booked"></div><span>已被预约</span></div>
+                        </div>
+                        <div class="time-picker-grid">
+                            <div v-for="slot in timeSlots" :key="slot.time"
+                                class="time-slot"
+                                :class="{ available: slot.available && !isSlotSelected(slot), selected: isSlotSelected(slot), disabled: !slot.available }"
+                                @click="toggleTimeSlot(slot)">
+                                <span class="slot-time">{{ slot.time.split('-')[0] }}</span>
+                                <span class="slot-status">
+                                    <span v-if="isSlotSelected(slot)">已选中</span>
+                                    <span v-else-if="slot.available">可预约</span>
+                                    <span v-else>已预约</span>
+                                </span>
+                                <span v-if="isSlotSelected(slot)" class="slot-check">✓</span>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- 时段图例 -->
-                    <div class="time-legend">
-                        <div class="legend-item">
-                            <div class="legend-dot available"></div>
-                            <span>可预约</span>
+                        <div v-if="selectedTimeSlots.length > 0" class="selection-summary">
+                            <div class="summary-header">
+                                <span class="summary-icon">✓</span>
+                                <span class="summary-title">已选择时段</span>
+                            </div>
+                            <div class="summary-content">
+                                <span class="summary-slots">{{ formatSelectedSlots() }}</span>
+                                <span class="summary-hours">{{ totalSelectedHours }}<span class="summary-hours-unit">小时</span></span>
+                            </div>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-dot selected"></div>
-                            <span>已选中</span>
+                    </template>
+
+                    <!-- ===== 按半天/场次：场次卡片 ===== -->
+                    <template v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session'">
+                        <div class="session-card-grid">
+                            <div v-for="s in sessionSlots" :key="s.slot_key"
+                                class="session-card"
+                                :class="{ selected: selectedSession === s.slot_key, disabled: !s.is_available }"
+                                @click="toggleSession(s)">
+                                <div class="session-name">{{ s.slot_name }}</div>
+                                <div class="session-time">{{ s.start_time }} - {{ s.end_time }}</div>
+                                <div class="session-price">¥{{ s.price || selectedResource?.basePrice || 0 }}</div>
+                                <div v-if="!s.is_available" style="font-size:12px; color:var(--danger); margin-top:4px;">已约满</div>
+                                <span v-if="selectedSession === s.slot_key" class="session-badge">✓</span>
+                            </div>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-dot booked"></div>
-                            <span>已被预约</span>
+                        <div v-if="selectedResource?.basePrice" style="text-align:center; color:var(--text-tertiary); font-size:var(--font-size-sm); margin-top:var(--spacing-sm);">
+                            单价仅供参考，实际费用以结算为准
                         </div>
-                    </div>
-                    
-                    <!-- 时段网格 -->
-                    <div class="time-picker-grid">
-                        <div 
-                            v-for="slot in timeSlots" 
-                            :key="slot.time"
-                            class="time-slot"
-                            :class="{
-                                available: slot.available && !isSlotSelected(slot),
-                                selected: isSlotSelected(slot),
-                                disabled: !slot.available
-                            }"
-                            @click="toggleTimeSlot(slot)"
-                        >
-                            <span class="slot-time">{{ slot.time.split('-')[0] }}</span>
-                            <span class="slot-status">
-                                <span v-if="isSlotSelected(slot)">已选中</span>
-                                <span v-else-if="slot.available">可预约</span>
-                                <span v-else>已预约</span>
-                            </span>
-                            <span v-if="isSlotSelected(slot)" class="slot-check">✓</span>
+                    </template>
+
+                    <!-- ===== 按餐次：餐次卡片 ===== -->
+                    <template v-else-if="bookingUnit === 'meal'">
+                        <div class="guests-input-row">
+                            <label class="form-label"><span>用餐人数</span></label>
+                            <input type="number" class="form-input" v-model.number="guestsCount" :min="1" :max="selectedResource?.capacity || 100" @change="calculateFee">
                         </div>
-                    </div>
-                    
-                    <!-- 选择摘要 -->
-                    <div v-if="selectedTimeSlots.length > 0" class="selection-summary">
-                        <div class="summary-header">
-                            <span class="summary-icon">✓</span>
-                            <span class="summary-title">已选择时段</span>
+                        <div class="meal-card-grid">
+                            <div v-for="s in mealSlots" :key="s.slot_key"
+                                class="meal-card"
+                                :class="{ selected: selectedMealSession === s.slot_key, disabled: !s.is_available }"
+                                @click="toggleMealSession(s)">
+                                <div class="meal-name">{{ s.slot_name }}</div>
+                                <div class="meal-time">{{ s.start_time }} - {{ s.end_time }}</div>
+                                <div class="meal-price">¥{{ s.price || selectedResource?.basePrice || 0 }}/人</div>
+                                <div v-if="guestsCount > 1" style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+                                    {{ guestsCount }}人 小计 ¥{{ (s.price || selectedResource?.basePrice || 0) * guestsCount }}
+                                </div>
+                                <div v-if="!s.is_available" style="font-size:12px; color:var(--danger); margin-top:4px;">已约满</div>
+                                <span v-if="selectedMealSession === s.slot_key" class="meal-badge">✓</span>
+                            </div>
                         </div>
-                        <div class="summary-content">
-                            <span class="summary-slots">{{ formatSelectedSlots() }}</span>
-                            <span class="summary-hours">
-                                {{ totalSelectedHours }}
-                                <span class="summary-hours-unit">小时</span>
-                            </span>
-                        </div>
-                    </div>
+                    </template>
                 </section>
                 
                 <!-- 步骤3：填写信息 -->
-                <section class="form-card" v-if="currentStep === 3 && selectedResource && selectedTimeSlots.length > 0">
+                <section class="form-card" v-if="currentStep === 3 && selectedResource && hasValidSelection">
                     <div class="card-header">
                         <div class="card-icon">📝</div>
                         <div>
@@ -1938,10 +2140,18 @@
                 const availableResources = ref([])
                 const selectedResource = ref(null)
                 const typeUnit = ref('小时')
-                
+                const bookingUnit = ref('hour')
+                const supportedUnits = ref(['hour'])
+
                 const bookingDate = ref('')
+                const endDate = ref('')
                 const timeSlots = ref([])
                 const selectedTimeSlots = ref([])
+                const selectedSession = ref(null)
+                const selectedMealSession = ref(null)
+                const guestsCount = ref(1)
+                const sessionSlots = ref([])
+                const mealSlots = ref([])
                 
                 const conflictDetected = ref(false)
                 const conflictBookings = ref([])
@@ -1975,13 +2185,29 @@
                 
                 const canProceedToNext = computed(() => {
                     if (currentStep.value === 1) return selectedResource.value !== null
-                    if (currentStep.value === 2) return selectedTimeSlots.value.length > 0 && isConsecutive.value
+                    if (currentStep.value === 2) {
+                        const unit = bookingUnit.value
+                        if (unit === 'hour') return selectedTimeSlots.value.length > 0 && isConsecutive.value
+                        if (unit === 'half_day' || unit === 'session') return selectedSession.value !== null
+                        if (unit === 'day' || unit === 'week' || unit === 'month') return endDate.value !== ''
+                        if (unit === 'meal') return selectedMealSession.value !== null
+                        return selectedTimeSlots.value.length > 0
+                    }
                     if (currentStep.value === 3) return meetingTitle.value.trim() !== ''
                     return true
                 })
                 
                 const totalSelectedHours = computed(() => {
                     return selectedTimeSlots.value.length
+                })
+
+                const hasValidSelection = computed(() => {
+                    const unit = bookingUnit.value
+                    if (unit === 'hour') return selectedTimeSlots.value.length > 0
+                    if (unit === 'half_day' || unit === 'session') return selectedSession.value !== null
+                    if (unit === 'day' || unit === 'week' || unit === 'month') return endDate.value !== ''
+                    if (unit === 'meal') return selectedMealSession.value !== null
+                    return selectedTimeSlots.value.length > 0
                 })
                 
                 const isConsecutive = computed(() => {
@@ -2020,9 +2246,30 @@
                     }
                 }
                 
-                const selectResource = (resource) => {
+                const selectResource = async (resource) => {
                     selectedResource.value = resource
                     console.log('选中资源:', resource.name)
+
+                    // Detect booking unit from space type
+                    try {
+                        const typesResp = await spaceAPI.getSpaceTypes()
+                        const types = typesResp.data?.items || typesResp.items || []
+                        const matchedType = types.find(t => t.type_code === resource.type_code)
+                        if (matchedType) {
+                            let units = []
+                            try {
+                                const raw = matchedType.supported_duration_units
+                                units = typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
+                            } catch { units = [matchedType.min_duration_unit || 'hour'] }
+                            supportedUnits.value = units.length > 0 ? units : ['hour']
+                            bookingUnit.value = supportedUnits.value[0]
+                            typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[bookingUnit.value] || '小时'
+                            console.log('检测到预订单位:', bookingUnit.value, '支持:', supportedUnits.value)
+                        }
+                    } catch (e) {
+                        console.error('检测预订单位失败:', e)
+                    }
+
                     if (bookingDate.value) {
                         loadTimeSlots()
                     }
@@ -2063,50 +2310,126 @@
                     return `${slots[0].time.split('-')[0]} - ${slots[slots.length-1].time.split('-')[1]}`
                 }
                 
-                const calculateFee = () => {
-                    if (!selectedResource.value || selectedTimeSlots.value.length === 0) {
+                const calculateFee = async () => {
+                    const unit = bookingUnit.value
+
+                    // Build fee calculation request payload
+                    const payload = {
+                        resource_id: selectedResource.value?.id,
+                        booking_unit: unit,
+                    }
+
+                    if (unit === 'hour') {
+                        if (!selectedResource.value || selectedTimeSlots.value.length === 0) {
+                            feeDetail.value = { baseFee: 0, memberDiscount: 0, freeHoursUsed: 0, freeHoursDiscount: 0, totalFee: 0, depositAmount: 0, depositPercentage: 0 }
+                            return
+                        }
+                        const slots = [...selectedTimeSlots.value].sort((a, b) => {
+                            return parseInt(a.time.split(':')[0]) - parseInt(b.time.split(':')[0])
+                        })
+                        payload.start_time = slots[0].time.split('-')[0]
+                        payload.end_time = slots[slots.length - 1].time.split('-')[1]
+                        payload.booking_date = bookingDate.value
+                    } else if (unit === 'half_day' || unit === 'session') {
+                        if (!selectedSession.value) {
+                            feeDetail.value = { baseFee: 0, memberDiscount: 0, freeHoursUsed: 0, freeHoursDiscount: 0, totalFee: 0, depositAmount: 0, depositPercentage: 0 }
+                            return
+                        }
+                        payload.time_slot_key = selectedSession.value
+                        payload.booking_date = bookingDate.value
+                    } else if (unit === 'day' || unit === 'week' || unit === 'month') {
+                        if (!endDate.value) {
+                            feeDetail.value = { baseFee: 0, memberDiscount: 0, freeHoursUsed: 0, freeHoursDiscount: 0, totalFee: 0, depositAmount: 0, depositPercentage: 0 }
+                            return
+                        }
+                        payload.booking_date = bookingDate.value
+                        payload.end_date = endDate.value
+                        const days = computeDateRangeDays()
+                        payload.booking_days = days
+                    } else if (unit === 'meal') {
+                        if (!selectedMealSession.value) {
+                            feeDetail.value = { baseFee: 0, memberDiscount: 0, freeHoursUsed: 0, freeHoursDiscount: 0, totalFee: 0, depositAmount: 0, depositPercentage: 0 }
+                            return
+                        }
+                        payload.time_slot_key = selectedMealSession.value
+                        payload.meal_session = selectedMealSession.value
+                        payload.guests_count = guestsCount.value
+                        payload.booking_date = bookingDate.value
+                    }
+
+                    try {
+                        const resp = await spaceAPI.calculateFee(payload)
+                        const data = resp.data || resp
                         feeDetail.value = {
-                            baseFee: 0,
-                            memberDiscount: 0,
+                            baseFee: data.base_fee || data.baseFee || 0,
+                            memberDiscount: data.member_discount || data.memberDiscount || 0,
+                            freeHoursUsed: data.free_hours_used || data.freeHoursUsed || 0,
+                            freeHoursDiscount: data.free_hours_discount || data.freeHoursDiscount || 0,
+                            totalFee: data.total_fee || data.totalFee || 0,
+                            depositAmount: data.deposit_amount || data.depositAmount || 0,
+                            depositPercentage: data.deposit_percentage || data.depositPercentage || 0,
+                        }
+                    } catch (e) {
+                        console.error('费用计算API失败，使用本地估算:', e)
+                        // Fallback: local estimation
+                        const basePrice = selectedResource.value?.basePrice || 0
+                        let est = 0
+                        if (unit === 'hour') est = selectedTimeSlots.value.length * basePrice
+                        else if (unit === 'half_day' || unit === 'session') est = basePrice
+                        else if (unit === 'day') est = computeDateRangeDays() * basePrice
+                        else if (unit === 'week') est = Math.max(1, Math.ceil(computeDateRangeDays() / 7)) * basePrice
+                        else if (unit === 'month') est = Math.max(1, Math.ceil(computeDateRangeDays() / 30)) * basePrice
+                        else if (unit === 'meal') est = basePrice * guestsCount.value
+                        feeDetail.value = {
+                            baseFee: est,
+                            memberDiscount: userType.value === 'internal' ? est * 0.2 : 0,
                             freeHoursUsed: 0,
                             freeHoursDiscount: 0,
-                            totalFee: 0,
+                            totalFee: est * (userType.value === 'internal' ? 0.8 : 1),
                             depositAmount: 0,
-                            depositPercentage: 0
+                            depositPercentage: 0,
                         }
-                        return
                     }
-                    
-                    const hours = totalSelectedHours.value
-                    const basePrice = selectedResource.value.basePrice
-                    const baseFee = hours * basePrice
-                    
-                    let memberDiscount = 0
-                    if (userType.value === 'internal') {
-                        memberDiscount = baseFee * 0.2
-                    }
-                    
-                    const feeAfterMemberDiscount = baseFee - memberDiscount
-                    
-                    let freeHoursUsed = 0
-                    let freeHoursDiscount = 0
-                    
-                    if (userType.value === 'internal' && freeHoursRemaining.value > 0) {
-                        freeHoursUsed = Math.min(freeHoursRemaining.value, hours)
-                        freeHoursDiscount = freeHoursUsed * basePrice
-                    }
-                    
-                    const totalFee = Math.max(0, feeAfterMemberDiscount - freeHoursDiscount)
-                    
-                    feeDetail.value = {
-                        baseFee,
-                        memberDiscount,
-                        freeHoursUsed,
-                        freeHoursDiscount,
-                        totalFee,
-                        depositAmount: 0,
-                        depositPercentage: 0
-                    }
+                }
+
+                const switchBookingUnit = (unit) => {
+                    bookingUnit.value = unit
+                    typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[unit] || '小时'
+                    selectedTimeSlots.value = []
+                    selectedSession.value = null
+                    selectedMealSession.value = null
+                    endDate.value = ''
+                    loadTimeSlots()
+                }
+
+                const toggleSession = (s) => {
+                    if (!s.is_available) return
+                    selectedSession.value = selectedSession.value === s.slot_key ? null : s.slot_key
+                    calculateFee()
+                }
+
+                const toggleMealSession = (s) => {
+                    if (!s.is_available) return
+                    selectedMealSession.value = selectedMealSession.value === s.slot_key ? null : s.slot_key
+                    calculateFee()
+                }
+
+                const computeDateRangeDays = () => {
+                    if (!bookingDate.value || !endDate.value) return 0
+                    const start = new Date(bookingDate.value + 'T00:00:00')
+                    const end = new Date(endDate.value + 'T00:00:00')
+                    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+                    return Math.max(1, diff)
+                }
+
+                const computeDateRangeFee = () => {
+                    const days = computeDateRangeDays()
+                    const basePrice = selectedResource.value?.basePrice || 0
+                    const unit = bookingUnit.value
+                    let units = days
+                    if (unit === 'week') units = Math.max(1, Math.ceil(days / 7))
+                    else if (unit === 'month') units = Math.max(1, Math.ceil(days / 30))
+                    return '¥' + (units * basePrice)
                 }
                 
                 const loadUserData = async () => {
@@ -2349,67 +2672,101 @@
                 const loadTimeSlots = async () => {
                     if (!selectedResource.value || !bookingDate.value) {
                         timeSlots.value = [];
+                        sessionSlots.value = [];
                         conflictDetected.value = false;
                         conflictBookings.value = [];
                         return;
                     }
-                    
+
+                    const unit = bookingUnit.value;
+
                     try {
                         const response = await spaceAPI.getResourceAvailability(
                             selectedResource.value.id,
-                            bookingDate.value
+                            bookingDate.value,
+                            unit
                         );
-                        
+
                         const availableSlots = response.data.available_slots || [];
                         const bookedSlots = response.data.booked_slots || [];
-                        
+
                         bookedSlotsInfo.value = bookedSlots;
-                        
-                        availableHoursCount.value = response.data.total_available_hours || 0;
-                        bookedHoursCount.value = bookedSlots.reduce((sum, b) => {
-                            const start = parseInt(b.start_time.split(':')[0]);
-                            const end = parseInt(b.end_time.split(':')[0]);
-                            return sum + (end - start);
-                        }, 0);
-                        
-                        const allSlots = [
-                            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
-                            '12:00-13:00', '13:00-14:00', '14:00-15:00', '15:00-16:00',
-                            '16:00-17:00', '17:00-18:00', '18:00-19:00', '19:00-20:00',
-                            '20:00-21:00', '21:00-22:00', '22:00-23:00'
-                        ];
-                        
-                        timeSlots.value = allSlots.map(time => {
-                            const slotStart = parseInt(time.split('-')[0].split(':')[0]);
-                            const slotEnd = parseInt(time.split('-')[1].split(':')[0]);
-                            
-                            const matchingBooking = bookedSlots.find(booked => {
-                                const bookedStart = parseInt(booked.start_time.split(':')[0]);
-                                const bookedEnd = parseInt(booked.end_time.split(':')[0]);
-                                return slotStart >= bookedStart && slotStart < bookedEnd;
-                            });
-                            
-                            const isBooked = !!matchingBooking;
-                            
-                            return {
-                                time: time,
-                                available: !isBooked,
-                                hasConflict: isBooked,
-                                bookingInfo: matchingBooking ? {
-                                    booking_id: matchingBooking.booking_id,
-                                    title: matchingBooking.booking_title || '未知',
-                                    user_name: matchingBooking.user_name || '未知',
-                                    start_time: matchingBooking.start_time,
-                                    end_time: matchingBooking.end_time
-                                } : null
-                            };
-                        });
-                        
+
+                        if (unit === 'hour') {
+                            // Build hourly grid from available slots
+                            const allHourSlots = [];
+                            let hour = 8;
+                            while (hour < 23) {
+                                const timeKey = `${String(hour).padStart(2, '0')}:00-${String(hour + 1).padStart(2, '0')}:00`;
+                                const isInAvailable = availableSlots.some(s => {
+                                    const sStart = parseInt((s.start_time || '').split(':')[0]);
+                                    const sEnd = parseInt((s.end_time || '').split(':')[0]);
+                                    return hour >= sStart && hour < sEnd;
+                                });
+                                const conflictingBooking = bookedSlots.find(b => {
+                                    const bStart = parseInt((b.start_time || '').split(':')[0]);
+                                    const bEnd = parseInt((b.end_time || '').split(':')[0]);
+                                    return hour >= bStart && hour < bEnd;
+                                });
+                                allHourSlots.push({
+                                    time: timeKey,
+                                    available: isInAvailable && !conflictingBooking,
+                                    hasConflict: !!conflictingBooking,
+                                    bookingInfo: conflictingBooking ? {
+                                        booking_id: conflictingBooking.booking_id,
+                                        title: conflictingBooking.booking_title || '未知',
+                                        user_name: conflictingBooking.user_name || '未知',
+                                        start_time: conflictingBooking.start_time,
+                                        end_time: conflictingBooking.end_time
+                                    } : null
+                                });
+                                hour++;
+                            }
+                            timeSlots.value = allHourSlots;
+                            availableHoursCount.value = availableSlots.reduce((sum, s) => sum + (s.duration || 0), 0);
+                            bookedHoursCount.value = bookedSlots.filter(b => b.booking_unit === 'hour').reduce((sum, b) => {
+                                const start = parseInt((b.start_time || '').split(':')[0]);
+                                const end = parseInt((b.end_time || '').split(':')[0]);
+                                return sum + (end - start);
+                            }, 0);
+                        } else if (unit === 'half_day' || unit === 'session') {
+                            // Build session cards from API response
+                            sessionSlots.value = availableSlots.map(s => ({
+                                slot_key: s.slot_key,
+                                slot_name: s.slot_name,
+                                start_time: s.start_time,
+                                end_time: s.end_time,
+                                duration_value: s.duration_value,
+                                duration_unit: s.duration_unit,
+                                is_available: s.is_available,
+                                price: s.price_override || selectedResource.value.basePrice * (s.duration_value || 0.5),
+                            }));
+                            availableHoursCount.value = availableSlots.filter(s => s.is_available).length;
+                            bookedHoursCount.value = availableSlots.filter(s => !s.is_available).length;
+                        } else if (unit === 'meal') {
+                            // Build meal cards from API response
+                            mealSlots.value = availableSlots.map(s => ({
+                                slot_key: s.slot_key,
+                                slot_name: s.slot_name,
+                                start_time: s.start_time,
+                                end_time: s.end_time,
+                                is_available: s.is_available,
+                                price: s.price_override || selectedResource.value.basePrice || 0,
+                            }));
+                            availableHoursCount.value = availableSlots.filter(s => s.is_available).length;
+                            bookedHoursCount.value = availableSlots.filter(s => !s.is_available).length;
+                        } else if (unit === 'day' || unit === 'week' || unit === 'month') {
+                            // Date range mode: just set the flag
+                            availableHoursCount.value = 1;
+                            bookedHoursCount.value = 0;
+                        }
+
+                        // Build conflict info
                         if (bookedSlots.length > 0) {
                             conflictDetected.value = true;
                             conflictBookings.value = bookedSlots.map(b => ({
                                 booking_id: b.booking_id,
-                                time_range: `${b.start_time}-${b.end_time}`,
+                                time_range: unit === 'hour' ? `${b.start_time}-${b.end_time}` : (b.time_slot_key || b.booking_date),
                                 title: b.booking_title || '未知预约',
                                 user_name: b.user_name || '未知用户'
                             }));
@@ -2417,40 +2774,19 @@
                             conflictDetected.value = false;
                             conflictBookings.value = [];
                         }
-                        
+
                     } catch (error) {
                         console.error('加载时段失败:', error);
-                        
-                        timeSlots.value = [
-                            { time: '08:00-09:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '09:00-10:00', available: false, hasConflict: true, bookingInfo: { title: '项目会议', user_name: '张三' } },
-                            { time: '10:00-11:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '11:00-12:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '12:00-13:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '13:00-14:00', available: false, hasConflict: true, bookingInfo: { title: '客户洽谈', user_name: '李四' } },
-                            { time: '14:00-15:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '15:00-16:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '16:00-17:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '17:00-18:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '18:00-19:00', available: false, hasConflict: true, bookingInfo: { title: '团队复盘', user_name: '王五' } },
-                            { time: '19:00-20:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '20:00-21:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '21:00-22:00', available: true, hasConflict: false, bookingInfo: null },
-                            { time: '22:00-23:00', available: true, hasConflict: false, bookingInfo: null }
-                        ];
-                        
-                        conflictDetected.value = true;
-                        conflictBookings.value = [
-                            { time_range: '09:00-10:00', title: '项目会议', user_name: '张三' },
-                            { time_range: '13:00-14:00', title: '客户洽谈', user_name: '李四' },
-                            { time_range: '18:00-19:00', title: '团队复盘', user_name: '王五' }
-                        ];
-                        
-                        availableHoursCount.value = 12;
-                        bookedHoursCount.value = 3;
+                        timeSlots.value = [];
+                        sessionSlots.value = [];
+                        mealSlots.value = [];
+                        conflictDetected.value = false;
+                        conflictBookings.value = [];
                     }
-                    
+
                     selectedTimeSlots.value = [];
+                    selectedSession.value = null;
+                    selectedMealSession.value = null;
                 }
                 
                 const goToPrevDay = () => {
@@ -2476,29 +2812,35 @@
 
 const submitBooking = async () => {
                      submitting.value = true
-                     
+
                      try {
-                         if (selectedTimeSlots.value.length === 0) {
+                         const unit = bookingUnit.value
+
+                         // Validate selection based on unit type
+                         if (unit === 'hour' && selectedTimeSlots.value.length === 0) {
                              displayToast('请选择预约时段', 'warning');
                              submitting.value = false;
                              return;
                          }
-                         
-                         const slots = [...selectedTimeSlots.value].sort((a, b) => {
-                             const aStart = parseInt(a.time.split(':')[0]);
-                             const bStart = parseInt(b.time.split(':')[0]);
-                             return aStart - bStart;
-                         });
-                         
-                         const startTime = slots[0].time.split('-')[0];
-                         const endTime = slots[slots.length - 1].time.split('-')[1];
-                         const durationHours = slots.length;
-                         
+                         if ((unit === 'half_day' || unit === 'session') && !selectedSession.value) {
+                             displayToast('请选择场次', 'warning');
+                             submitting.value = false;
+                             return;
+                         }
+                         if ((unit === 'day' || unit === 'week' || unit === 'month') && !endDate.value) {
+                             displayToast('请选择结束日期', 'warning');
+                             submitting.value = false;
+                             return;
+                         }
+                         if (unit === 'meal' && !selectedMealSession.value) {
+                             displayToast('请选择餐次', 'warning');
+                             submitting.value = false;
+                             return;
+                         }
+
                          const bookingData = {
                              resource_id: selectedResource.value.id,
                              booking_date: bookingDate.value,
-                             start_time: startTime,
-                             end_time: endTime,
                              title: meetingTitle.value,
                              attendees_count: attendeesCount.value,
                              special_requests: specialRequests.value,
@@ -2507,16 +2849,34 @@ const submitBooking = async () => {
                              user_phone: currentUser.value?.phone || '',
                              user_email: currentUser.value?.email || '',
                              department: currentUser.value?.department || '',
-                             duration_hours: durationHours
+                             booking_unit: unit,
                          };
-                         
+
+                         if (unit === 'hour') {
+                             const slots = [...selectedTimeSlots.value].sort((a, b) => {
+                                 return parseInt(a.time.split(':')[0]) - parseInt(b.time.split(':')[0])
+                             });
+                             bookingData.start_time = slots[0].time.split('-')[0];
+                             bookingData.end_time = slots[slots.length - 1].time.split('-')[1];
+                             bookingData.duration_hours = slots.length;
+                         } else if (unit === 'half_day' || unit === 'session') {
+                             bookingData.time_slot_key = selectedSession.value;
+                         } else if (unit === 'day' || unit === 'week' || unit === 'month') {
+                             bookingData.end_date = endDate.value;
+                             bookingData.booking_days = computeDateRangeDays();
+                         } else if (unit === 'meal') {
+                             bookingData.time_slot_key = selectedMealSession.value;
+                             bookingData.meal_session = selectedMealSession.value;
+                             bookingData.guests_count = guestsCount.value;
+                         }
+
                          const token = localStorage.getItem('token')
-                         
+
                          let apiUrl = `/api/v2/space/bookings`;
                          if (userType.value === 'external') {
                              apiUrl += `?payment_mode=${selectedPaymentMode.value || 'prepay'}`;
                          }
-                         
+
                          const response = await fetch(apiUrl, {
                              method: 'POST',
                              headers: {
@@ -2525,34 +2885,41 @@ const submitBooking = async () => {
                              },
                              body: JSON.stringify(bookingData)
                          })
-                         
+
                          const result = await response.json()
                          console.log('预约创建响应:', result);
-                         
+
                          if (!response.ok || result.success === false) {
                              throw new Error(result.detail || result.message || '预约创建失败')
                          }
-                         
+
                          const bookingNo = result.data?.booking_no || '';
                          const status = result.data?.status || 'pending';
                          const message = result.message || '预约提交成功';
-                         
+
+                         let timeLabel = '';
+                         if (unit === 'hour') timeLabel = `${bookingData.start_time}-${bookingData.end_time}`;
+                         else if (unit === 'half_day' || unit === 'session') timeLabel = selectedSession.value;
+                         else if (unit === 'day' || unit === 'week' || unit === 'month') timeLabel = `${bookingDate.value} ~ ${endDate.value}`;
+                         else if (unit === 'meal') timeLabel = `${selectedMealSession.value} ${guestsCount.value}人`;
+
                          localStorage.setItem('booking_success', JSON.stringify({
                              booking_no: bookingNo,
                              space_name: selectedResource.value.name,
                              date: bookingDate.value,
-                             time: `${startTime}-${endTime}`,
-                             duration: durationHours,
+                             time: timeLabel,
+                             duration: bookingData.duration_hours || bookingData.booking_days || 1,
                              status: status,
+                             booking_unit: unit,
                              payment_mode: result.data?.payment_mode || selectedPaymentMode.value,
                              deduct_amount: result.data?.deduct_amount || 0,
                              credit_amount: result.data?.credit_amount || 0,
                              message: message,
                              timestamp: Date.now()
                          }));
-                         
+
                          window.location.href = '/space-frontend/my-bookings.html?success=1';
-                         
+
                      } catch (error) {
                          console.error('预约提交失败:', error);
                          const errorMsg = error.message || '网络请求失败';
@@ -2597,13 +2964,17 @@ const submitBooking = async () => {
                     currentStep,
                     spaceType,
                     typeUnit,
+                    bookingUnit,
+                    supportedUnits,
                     availableResources,
                     selectedResource,
                     bookingDate,
+                    endDate,
                     minDate,
                     timeSlots,
                     selectedTimeSlots,
                     totalSelectedHours,
+                    hasValidSelection,
                     isConsecutive,
                     meetingTitle,
                     attendeesCount,
@@ -2622,6 +2993,11 @@ const submitBooking = async () => {
                     paymentModes,
                     selectedPaymentMode,
                     userBalance,
+                    sessionSlots,
+                    mealSlots,
+                    selectedSession,
+                    selectedMealSession,
+                    guestsCount,
                     nextStep,
                     prevStep,
                     cancelBooking,
@@ -2636,6 +3012,11 @@ const submitBooking = async () => {
                     goToNextDay,
                     selectPaymentMode,
                     submitBooking,
+                    switchBookingUnit,
+                    toggleSession,
+                    toggleMealSession,
+                    computeDateRangeDays,
+                    computeDateRangeFee,
                     showToast,
                     toastMessage,
                     toastType,

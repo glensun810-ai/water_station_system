@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>空间类型管理</title>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+
+        .types-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        .filter-bar {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filter-left {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            min-width: 200px;
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .btn-sm {
+            padding: 4px var(--spacing-sm);
+            font-size: var(--font-size-xs);
+        }
+
+        .btn-danger {
+            background: var(--danger, #DC2626);
+            color: white;
+        }
+        .btn-danger:hover { opacity: 0.9; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: var(--bg-hover); }
+
+        /* Table */
+        .table-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--border);
+            font-size: var(--font-size-sm);
+        }
+
+        .type-icon-cell {
+            font-size: 1.5em;
+            text-align: center;
+            width: 60px;
+        }
+
+        .type-code-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--font-size-xs);
+            font-family: monospace;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .unit-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .unit-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--font-size-xs);
+        }
+        .status-active { background: #D1FAE5; color: #065F46; }
+        .status-inactive { background: #FEE2E2; color: #991B1B; }
+
+        .actions-cell {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 5vh;
+            overflow-y: auto;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .modal-header {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+
+        .modal-header h2 {
+            font-size: var(--font-size-xl);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+
+        .modal-footer {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-card);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all var(--transition-base);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            box-sizing: border-box;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+
+        .form-hint {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        /* Checkbox group */
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all var(--transition-base);
+        }
+
+        .checkbox-item.checked {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .checkbox-item input {
+            display: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+        .toast-success { background: #10B981; }
+        .toast-error { background: #EF4444; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .types-container { padding: var(--spacing-sm); }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-left { flex-direction: column; }
+            .filter-input { min-width: auto; width: 100%; }
+            .form-row { grid-template-columns: 1fr; }
+            .modal { max-width: 100%; margin: 10px; max-height: 90vh; }
+            .modal-body { padding: var(--spacing-md); }
+            .tabs { overflow-x: auto; }
+            .tab { padding: var(--spacing-sm); white-space: nowrap; font-size: var(--font-size-xs); }
+            table { font-size: var(--font-size-xs); }
+            th, td { padding: var(--spacing-sm); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div id="global-header-container"></div>
+
+        <div class="types-container">
+            <nav class="breadcrumb" style="margin-bottom:var(--spacing-lg);font-size:var(--font-size-sm);color:var(--text-secondary);">
+                <a href="/portal/admin/space/dashboard.html" style="color:var(--primary);text-decoration:none;">空间管理</a> &rsaquo; 空间类型管理
+            </nav>
+
+            <div class="filter-bar">
+                <div class="filter-left">
+                    <input class="filter-input" v-model="searchQuery" placeholder="搜索类型名称/编码..." @input="filterTypes">
+                    <select class="form-select" v-model="statusFilter" @change="filterTypes" style="width:auto;min-width:120px;">
+                        <option value="">全部状态</option>
+                        <option value="active">已启用</option>
+                        <option value="inactive">已停用</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" @click="openCreateModal">+ 新增类型</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:50px;"></th>
+                            <th>类型名称</th>
+                            <th>编码</th>
+                            <th>计价单位</th>
+                            <th>预订单位</th>
+                            <th>容量</th>
+                            <th>审批</th>
+                            <th>状态</th>
+                            <th style="width:140px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="t in filteredTypes" :key="t.id">
+                            <td class="type-icon-cell">{{ t.icon || '🏢' }}</td>
+                            <td>
+                                <strong>{{ t.type_name }}</strong>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:2px;">{{ t.description?.substring(0, 40) }}{{ t.description?.length > 40 ? '...' : '' }}</div>
+                            </td>
+                            <td><span class="type-code-badge">{{ t.type_code }}</span></td>
+                            <td>{{ formatUnit(t.min_duration_unit) }}</td>
+                            <td>
+                                <div class="unit-tags">
+                                    <span class="unit-tag" v-for="u in parseUnits(t.supported_duration_units)" :key="u">{{ formatUnit(u) }}</span>
+                                </div>
+                            </td>
+                            <td>{{ t.min_capacity || 0 }}{{ t.max_capacity ? '-' + t.max_capacity : '' }}{{ !t.min_capacity && !t.max_capacity ? '不限' : '' }}</td>
+                            <td>{{ t.requires_approval ? '需要' : '无需' }}</td>
+                            <td><span :class="['status-badge', t.is_active ? 'status-active' : 'status-inactive']">{{ t.is_active ? '启用' : '停用' }}</span></td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-ghost btn-sm" @click="openEditModal(t)">编辑</button>
+                                    <button class="btn btn-danger btn-sm" @click="confirmDelete(t)">删除</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredTypes.length === 0">
+                            <td colspan="9" style="text-align:center;padding:var(--spacing-2xl);color:var(--text-tertiary);">
+                                {{ loading ? '加载中...' : '暂无数据' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Create/Edit Modal -->
+        <div class="modal-overlay" v-if="showModal" @click.self="closeModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>{{ editingType ? '编辑类型' : '新增类型' }}</h2>
+                    <button class="modal-close" @click="closeModal">&times;</button>
+                </div>
+
+                <div class="tabs">
+                    <button :class="['tab', { active: activeTab === 'basic' }]" @click="activeTab = 'basic'">基础信息</button>
+                    <button :class="['tab', { active: activeTab === 'duration' }]" @click="activeTab = 'duration'">时长规则</button>
+                    <button :class="['tab', { active: activeTab === 'capacity' }]" @click="activeTab = 'capacity'">容量与审批</button>
+                    <button :class="['tab', { active: activeTab === 'slots' }]" @click="activeTab = 'slots'">时段预设</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Tab 1: Basic Info -->
+                    <div v-show="activeTab === 'basic'">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">类型编码 *</label>
+                                <input class="form-input" v-model="form.type_code" placeholder="如: meeting_room" :disabled="!!editingType">
+                                <div class="form-hint">创建后不可修改，英文下划线命名</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">类型名称 *</label>
+                                <input class="form-input" v-model="form.type_name" placeholder="如: 会议室">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Icon (Emoji)</label>
+                                <input class="form-input" v-model="form.icon" placeholder="如: 🏢">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">主题色</label>
+                                <input class="form-input" v-model="form.color_theme" placeholder="如: #2563EB 或 amber">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-textarea" v-model="form.description" placeholder="描述此类空间的特点和用途" style="min-height:60px;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Duration Rules -->
+                    <div v-show="activeTab === 'duration'">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">最小预订单位</label>
+                                <select class="form-select" v-model="form.min_duration_unit">
+                                    <option value="hour">小时 (hour)</option>
+                                    <option value="half_day">半天 (half_day)</option>
+                                    <option value="session">场次 (session)</option>
+                                    <option value="slot">时段 (slot)</option>
+                                    <option value="day">天 (day)</option>
+                                    <option value="week">周 (week)</option>
+                                    <option value="month">月 (month)</option>
+                                    <option value="meal">餐次 (meal)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">最小预订数量</label>
+                                <input class="form-input" type="number" v-model.number="form.min_duration_value" min="1">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">最大预订数量</label>
+                                <input class="form-input" type="number" v-model.number="form.max_duration_value" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">提前预订天数</label>
+                                <input class="form-input" type="number" v-model.number="form.advance_booking_days" min="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">支持的预订单位</label>
+                            <div class="checkbox-group">
+                                <label v-for="u in allDurationUnits" :key="u.value" :class="['checkbox-item', { checked: supportedUnitsChecked[u.value] }]" @click="toggleUnit(u.value)">
+                                    <input type="checkbox" :checked="supportedUnitsChecked[u.value]">
+                                    {{ u.label }}
+                                </label>
+                            </div>
+                            <div class="form-hint">勾选此类型支持的预订单位。用户在预约时将使用第一个勾选的单位作为默认单位。</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Capacity & Approval -->
+                    <div v-show="activeTab === 'capacity'">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">最小容量</label>
+                                <input class="form-input" type="number" v-model.number="form.min_capacity" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">最大容量</label>
+                                <input class="form-input" type="number" v-model.number="form.max_capacity" min="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" v-model="form.requires_approval" style="margin-right:8px;">
+                                需要审批
+                            </label>
+                        </div>
+                        <div class="form-group" v-if="form.requires_approval">
+                            <label class="form-label">审批类型</label>
+                            <select class="form-select" v-model="form.approval_type">
+                                <option value="">无</option>
+                                <option value="manager_approval">管理员审批</option>
+                                <option value="super_admin_approval">超级管理员审批</option>
+                            </select>
+                        </div>
+                        <div class="form-group" v-if="form.requires_approval">
+                            <label class="form-label">审批截止时间(小时)</label>
+                            <input class="form-input" type="number" v-model.number="form.approval_deadline_hours" min="1">
+                            <div class="form-hint">距离预约开始时间多久之前需要完成审批</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" v-model="form.requires_deposit" style="margin-right:8px;">
+                                需要押金
+                            </label>
+                        </div>
+                        <div class="form-group" v-if="form.requires_deposit">
+                            <label class="form-label">押金比例</label>
+                            <input class="form-input" type="number" v-model.number="form.deposit_percentage" min="0" max="1" step="0.1">
+                            <div class="form-hint">0-1之间，如 0.3 表示押金为总费用的30%</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Time Slot Preset & Facilities -->
+                    <div v-show="activeTab === 'slots'">
+                        <div class="form-group">
+                            <label class="form-label">设施模板 (JSON)</label>
+                            <textarea class="form-textarea" v-model="form.standard_facilities" placeholder='["投影仪", "白板", "音响", "空调", "WiFi"]'></textarea>
+                            <div class="form-hint">JSON数组格式，新建资源时将作为默认设施列表</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">可选附加服务 (JSON)</label>
+                            <textarea class="form-textarea" v-model="form.optional_addons" placeholder='["茶歇", "视频会议设备", "翻译设备"]'></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">时段预设模板 (JSON)</label>
+                            <textarea class="form-textarea" v-model="form.time_slot_preset" placeholder='[{"slot_key":"morning","slot_name":"上午(08:00-12:00)","slot_type":"fixed_time","start_time":"08:00","end_time":"12:00","duration_value":0.5,"duration_unit":"half_day"}]' style="min-height:120px;"></textarea>
+                            <div class="form-hint">JSON数组格式，新建此类型资源时可用此模板快速配置时段</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveType" :disabled="saving">
+                        {{ saving ? '保存中...' : '保存' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirm Modal -->
+        <div class="modal-overlay" v-if="showDeleteModal" @click.self="showDeleteModal = false">
+            <div class="modal" style="max-width:400px;">
+                <div class="modal-header">
+                    <h2>确认删除</h2>
+                    <button class="modal-close" @click="showDeleteModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除类型 <strong>{{ deletingType?.type_name }}</strong> ({{ deletingType?.type_code }}) 吗？</p>
+                    <p style="color:var(--danger,#DC2626);font-size:var(--font-size-sm);">此操作不可撤销，且仅超级管理员可执行。</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" @click="showDeleteModal = false">取消</button>
+                    <button class="btn btn-danger" @click="deleteType" :disabled="saving">{{ saving ? '删除中...' : '确认删除' }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp, ref, computed, onMounted } from '/shared/static/vendor/vue/vue.global.js';
+
+        const app = createApp({
+            components: {
+                'global-header': GlobalHeader
+            },
+            setup() {
+                const API_BASE = '/api/v2/space/types';
+                const UNIT_LABELS = {
+                    hour: '按小时', half_day: '按半天', session: '按时段',
+                    slot: '按时段', day: '按天', week: '按周', month: '按月', meal: '按餐'
+                };
+
+                const allDurationUnits = [
+                    { value: 'hour', label: '小时' },
+                    { value: 'half_day', label: '半天' },
+                    { value: 'session', label: '场次' },
+                    { value: 'slot', label: '时段' },
+                    { value: 'day', label: '天' },
+                    { value: 'week', label: '周' },
+                    { value: 'month', label: '月' },
+                    { value: 'meal', label: '餐次' },
+                ];
+
+                const types = ref([]);
+                const loading = ref(false);
+                const saving = ref(false);
+                const searchQuery = ref('');
+                const statusFilter = ref('');
+                const showModal = ref(false);
+                const showDeleteModal = ref(false);
+                const editingType = ref(null);
+                const deletingType = ref(null);
+                const activeTab = ref('basic');
+
+                const defaultForm = {
+                    type_code: '', type_name: '', description: '',
+                    icon: '🏢', color_theme: '#2563EB',
+                    min_duration_unit: 'hour', min_duration_value: 1, max_duration_value: 24,
+                    advance_booking_days: 0,
+                    min_capacity: 1, max_capacity: 500,
+                    requires_approval: false, approval_type: '', approval_deadline_hours: 24,
+                    requires_deposit: false, deposit_percentage: 0,
+                    standard_facilities: '', optional_addons: '', time_slot_preset: '',
+                    supported_duration_units: '["hour"]',
+                };
+
+                const form = ref({...defaultForm});
+                const supportedUnitsChecked = ref({});
+
+                const filteredTypes = computed(() => {
+                    let result = types.value;
+                    if (searchQuery.value) {
+                        const q = searchQuery.value.toLowerCase();
+                        result = result.filter(t =>
+                            t.type_name?.toLowerCase().includes(q) ||
+                            t.type_code?.toLowerCase().includes(q)
+                        );
+                    }
+                    if (statusFilter.value === 'active') result = result.filter(t => t.is_active);
+                    if (statusFilter.value === 'inactive') result = result.filter(t => !t.is_active);
+                    return result;
+                });
+
+                const formatUnit = (u) => UNIT_LABELS[u] || u || '';
+
+                const parseUnits = (raw) => {
+                    if (!raw) return [];
+                    try {
+                        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    } catch { return []; }
+                };
+
+                const toggleUnit = (unit) => {
+                    supportedUnitsChecked.value[unit] = !supportedUnitsChecked.value[unit];
+                };
+
+                const syncSupportedUnitsToForm = () => {
+                    const units = Object.entries(supportedUnitsChecked.value)
+                        .filter(([_, v]) => v)
+                        .map(([k]) => k);
+                    form.value.supported_duration_units = JSON.stringify(units.length > 0 ? units : ['hour']);
+                };
+
+                const syncFormToSupportedUnits = () => {
+                    const units = parseUnits(form.value.supported_duration_units);
+                    supportedUnitsChecked.value = {};
+                    allDurationUnits.forEach(u => { supportedUnitsChecked.value[u.value] = false; });
+                    units.forEach(u => { supportedUnitsChecked.value[u] = true; });
+                };
+
+                const loadTypes = async () => {
+                    loading.value = true;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}?limit=100`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            types.value = data.data.items || [];
+                        }
+                    } catch (e) {
+                        console.error('加载类型失败:', e);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const openCreateModal = () => {
+                    editingType.value = null;
+                    form.value = {...defaultForm};
+                    activeTab.value = 'basic';
+                    syncFormToSupportedUnits();
+                    showModal.value = true;
+                };
+
+                const openEditModal = async (type) => {
+                    editingType.value = type;
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}/${type.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            const t = data.data;
+                            form.value = {
+                                type_code: t.type_code || '',
+                                type_name: t.type_name || '',
+                                description: t.description || '',
+                                icon: t.icon || '🏢',
+                                color_theme: t.color_theme || '#2563EB',
+                                min_duration_unit: t.min_duration_unit || 'hour',
+                                min_duration_value: t.min_duration_value || 1,
+                                max_duration_value: t.max_duration_value || 24,
+                                advance_booking_days: t.advance_booking_days || 0,
+                                min_capacity: t.min_capacity ?? 1,
+                                max_capacity: t.max_capacity ?? 500,
+                                requires_approval: t.requires_approval || false,
+                                approval_type: t.approval_type || '',
+                                approval_deadline_hours: t.approval_deadline_hours || 24,
+                                requires_deposit: t.requires_deposit || false,
+                                deposit_percentage: t.deposit_percentage ?? 0,
+                                standard_facilities: t.standard_facilities || '',
+                                optional_addons: t.optional_addons || '',
+                                time_slot_preset: t.time_slot_preset || '',
+                                supported_duration_units: t.supported_duration_units || '["hour"]',
+                            };
+                        }
+                    } catch (e) {
+                        console.error('加载类型详情失败:', e);
+                    }
+                    activeTab.value = 'basic';
+                    syncFormToSupportedUnits();
+                    showModal.value = true;
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                    editingType.value = null;
+                };
+
+                const showToast = (msg, type = 'success') => {
+                    const toast = document.createElement('div');
+                    toast.className = `toast toast-${type}`;
+                    toast.textContent = msg;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                };
+
+                const saveType = async () => {
+                    if (!form.value.type_code || !form.value.type_name) {
+                        showToast('请填写类型编码和名称', 'error');
+                        return;
+                    }
+
+                    syncSupportedUnitsToForm();
+                    saving.value = true;
+
+                    try {
+                        const token = localStorage.getItem('token');
+                        const url = editingType.value
+                            ? `${API_BASE}/${editingType.value.id}`
+                            : API_BASE;
+                        const method = editingType.value ? 'PUT' : 'POST';
+
+                        const resp = await fetch(url, {
+                            method,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(form.value)
+                        });
+
+                        const data = await resp.json();
+                        if (data.code === 200 || data.code === 201) {
+                            showToast(`类型${editingType.value ? '更新' : '创建'}成功`);
+                            closeModal();
+                            await loadTypes();
+                        } else {
+                            showToast(`操作失败: ${data.message || data.detail || '未知错误'}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('保存失败:', e);
+                        showToast('保存失败，请重试', 'error');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                const confirmDelete = (type) => {
+                    deletingType.value = type;
+                    showDeleteModal.value = true;
+                };
+
+                const deleteType = async () => {
+                    if (!deletingType.value) return;
+                    saving.value = true;
+
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}/${deletingType.value.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            showToast('类型已删除');
+                            showDeleteModal.value = false;
+                            deletingType.value = null;
+                            await loadTypes();
+                        } else {
+                            showToast(`删除失败: ${data.message || data.detail || '未知错误'}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('删除失败:', e);
+                        showToast('删除失败，请重试', 'error');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                onMounted(() => {
+                    loadTypes();
+                    if (typeof initGlobalHeader === 'function') {
+                        initGlobalHeader('global-header-container');
+                    }
+                });
+
+                return {
+                    types, loading, saving, searchQuery, statusFilter,
+                    filteredTypes, showModal, showDeleteModal,
+                    editingType, deletingType, activeTab,
+                    form, supportedUnitsChecked, allDurationUnits,
+                    formatUnit, parseUnits, toggleUnit,
+                    openCreateModal, openEditModal, closeModal,
+                    saveType, confirmDelete, deleteType,
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

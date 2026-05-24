@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
+from sqlalchemy import func
 from config.database import get_db
 from models.user import User
 from depends.auth import get_admin_user, get_super_admin_user  # noqa: F811
 from shared.models.space.space_type import SpaceType
+from shared.models.space.space_resource import SpaceResource
 from shared.schemas.space.space_type import (
     SpaceTypeCreate,
     SpaceTypeUpdate,
@@ -44,6 +46,17 @@ async def get_space_types(
 
     items = []
     for t in types:
+        price_from = db.query(func.min(SpaceResource.base_price)).filter(
+            SpaceResource.type_id == t.id,
+            SpaceResource.is_active == True,
+            SpaceResource.base_price > 0,
+        ).scalar()
+
+        price_unit = db.query(SpaceResource.price_unit).filter(
+            SpaceResource.type_id == t.id,
+            SpaceResource.is_active == True,
+        ).order_by(SpaceResource.base_price.asc()).limit(1).scalar()
+
         items.append(
             {
                 "id": t.id,
@@ -66,6 +79,10 @@ async def get_space_types(
                 "is_active": t.is_active,
                 "icon": t.icon,
                 "color_theme": t.color_theme,
+                "price_from": float(price_from) if price_from else None,
+                "price_unit": price_unit or t.min_duration_unit,
+                "supported_duration_units": t.supported_duration_units,
+                "time_slot_preset": t.time_slot_preset,
             }
         )
 
