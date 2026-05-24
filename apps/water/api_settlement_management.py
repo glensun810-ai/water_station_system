@@ -10,6 +10,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+from depends.auth import get_admin_user
+from models.user import User
+
 router = APIRouter(prefix="/api/settlements", tags=["settlement_management"])
 
 
@@ -61,7 +64,7 @@ class SettlementResponse(BaseModel):
 
 
 @router.get("/summary")
-async def get_settlement_summary(db: Session = Depends(get_db)):
+async def get_settlement_summary(db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """获取结算概览"""
     try:
         # 水站待结算
@@ -167,6 +170,7 @@ async def list_pending_settlements(
     office_id: Optional[int] = None,
     service_type: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取待结算列表"""
     try:
@@ -244,7 +248,7 @@ async def list_pending_settlements(
 
 
 @router.post("/apply")
-async def apply_settlement(settlement: SettlementApply, db: Session = Depends(get_db)):
+async def apply_settlement(settlement: SettlementApply, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """申请结算"""
     try:
         updated_count = 0
@@ -283,7 +287,7 @@ async def apply_settlement(settlement: SettlementApply, db: Session = Depends(ge
 
 @router.post("/confirm")
 async def confirm_settlement(
-    settlement: SettlementConfirm, db: Session = Depends(get_db)
+    settlement: SettlementConfirm, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """确认结算"""
     try:

@@ -9,16 +9,10 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
 
-from depends.auth import get_current_user
+from depends.auth import get_admin_user
 from config.database import get_db
 
 router = APIRouter(prefix="/office-accounts", tags=["办公室账户管理"])
-
-
-def _require_auth(current_user):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="请先登录")
-    return current_user
 
 
 class OfficeAccountCreate(BaseModel):
@@ -49,10 +43,9 @@ def get_office_accounts(
     product_id: Optional[int] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    _require_auth(current_user)
     from models.account import OfficeAccount
 
     query = db.query(OfficeAccount)
@@ -106,10 +99,9 @@ def get_office_accounts(
 @router.post("")
 def create_office_account(
     account: OfficeAccountCreate,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    _require_auth(current_user)
     from models.account import OfficeAccount
     from models.office import Office
     from models.product import Product
@@ -169,10 +161,9 @@ def create_office_account(
 def update_office_account(
     account_id: int,
     account: OfficeAccountUpdate,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    _require_auth(current_user)
     from models.account import OfficeAccount
     from models.office import Office
     from models.product import Product
@@ -228,10 +219,9 @@ def update_office_account(
 @router.delete("/{account_id}")
 def delete_office_account(
     account_id: int,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    _require_auth(current_user)
     from models.account import OfficeAccount
 
     account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()
@@ -248,10 +238,9 @@ def delete_office_account(
 def recharge_office_account(
     account_id: int,
     recharge: OfficeAccountRecharge,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    _require_auth(current_user)
     from models.account import OfficeAccount
 
     account = db.query(OfficeAccount).filter(OfficeAccount.id == account_id).first()

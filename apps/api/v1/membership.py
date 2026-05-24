@@ -84,6 +84,7 @@ async def get_membership_plans(
 async def get_membership_plan(
     plan_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取单个会员套餐详情"""
     try:

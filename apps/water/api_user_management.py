@@ -13,6 +13,8 @@ import secrets
 from passlib.context import CryptContext
 
 from config.database import get_db
+from depends.auth import get_admin_user, get_super_admin_user
+from models.user import User
 
 router = APIRouter(prefix="/api/users", tags=["user_management"])
 
@@ -55,7 +57,7 @@ class UserBatchUpdate(BaseModel):
 
 
 @router.get("/stats/overview")
-def get_user_stats(db: Session = Depends(get_db)):
+def get_user_stats(db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """获取用户统计概览"""
     try:
         import main
@@ -181,6 +183,7 @@ def list_users(
     is_active: Optional[int] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取用户列表（包含user_type和详细信息）"""
     try:
@@ -241,7 +244,7 @@ def list_users(
 
 
 @router.post("")
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     创建用户
 
@@ -367,7 +370,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}")
-def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     更新用户
 
@@ -460,7 +463,7 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_super_admin_user)):
     """删除用户"""
     try:
         import main
@@ -491,7 +494,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{user_id}/activate")
-def activate_user(user_id: int, db: Session = Depends(get_db)):
+def activate_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     激活用户
 
@@ -526,7 +529,7 @@ def activate_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/batch/activate")
-def batch_activate_users(user_ids: List[int], db: Session = Depends(get_db)):
+def batch_activate_users(user_ids: List[int], db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     批量激活用户
     """
@@ -562,7 +565,7 @@ def batch_activate_users(user_ids: List[int], db: Session = Depends(get_db)):
 
 
 @router.post("/batch")
-def batch_update_users(data: UserBatchUpdate, db: Session = Depends(get_db)):
+def batch_update_users(data: UserBatchUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     批量更新用户
 
@@ -634,7 +637,7 @@ def batch_update_users(data: UserBatchUpdate, db: Session = Depends(get_db)):
 
 
 @router.post("/batch-delete")
-def batch_delete_users(user_ids: List[int], db: Session = Depends(get_db)):
+def batch_delete_users(user_ids: List[int], db: Session = Depends(get_db), current_user: User = Depends(get_super_admin_user)):
     """批量删除用户"""
     try:
         import main
@@ -675,7 +678,7 @@ def batch_delete_users(user_ids: List[int], db: Session = Depends(get_db)):
 
 @router.post("/{user_id}/reset-password")
 def reset_user_password(
-    user_id: int, new_password: Optional[str] = None, db: Session = Depends(get_db)
+    user_id: int, new_password: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """重置用户密码"""
     try:

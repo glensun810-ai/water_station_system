@@ -19,6 +19,7 @@ from config.database import get_db
 from models import User, PaymentOrder
 from models.payment_order import PaymentOrder as PaymentOrderModel
 from models.invoice import Invoice
+from depends.auth import get_current_user_required, get_admin_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -68,14 +69,14 @@ def generate_invoice_no():
 
 @router.post("/api/invoices")
 async def apply_invoice(
-    invoice_data: InvoiceApply, request: Request, db: Session = Depends(get_db)
+    invoice_data: InvoiceApply, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     申请发票
     """
     try:
         # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
+        user_id = str(current_user.id)
         if not user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -147,13 +148,13 @@ async def apply_invoice(
 
 
 @router.get("/api/invoices/{invoice_no}", response_model=InvoiceResponse)
-async def get_invoice(invoice_no: str, request: Request, db: Session = Depends(get_db)):
+async def get_invoice(invoice_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     查询发票详情
     """
     try:
         # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
+        user_id = str(current_user.id)
         if not user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -192,7 +193,6 @@ async def get_invoice(invoice_no: str, request: Request, db: Session = Depends(g
 @router.get("/api/invoices/user/{user_id}", response_model=InvoiceList)
 async def get_user_invoices(
     user_id: int,
-    request: Request,
     status: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
@@ -203,7 +203,7 @@ async def get_user_invoices(
     """
     try:
         # 验证权限
-        current_user_id = request.headers.get("X-User-Id")
+        current_user_id = str(current_user.id)
         if not current_user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -255,14 +255,14 @@ async def get_user_invoices(
 
 @router.get("/api/invoices/{invoice_no}/download")
 async def download_invoice(
-    invoice_no: str, request: Request, db: Session = Depends(get_db)
+    invoice_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     下载发票PDF
     """
     try:
         # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
+        user_id = str(current_user.id)
         if not user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -304,7 +304,7 @@ async def download_invoice(
 
 @router.post("/api/admin/invoices/{invoice_no}/issue")
 async def issue_invoice(
-    invoice_no: str, request: Request, db: Session = Depends(get_db)
+    invoice_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     管理员开具发票
@@ -344,7 +344,7 @@ async def issue_invoice(
 
 @router.post("/api/admin/invoices/{invoice_no}/send")
 async def send_invoice(
-    invoice_no: str, request: Request, db: Session = Depends(get_db)
+    invoice_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     管理员发送发票到邮箱

@@ -10,7 +10,7 @@ from config.database import get_db
 from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
 from models.user import User
-from depends.auth import get_current_user
+from depends.auth import get_current_user, get_admin_user
 
 router = APIRouter(prefix="/api/meeting", tags=["会议室管理"])
 
@@ -144,7 +144,7 @@ def get_meeting_rooms(
 
 
 @router.post("/rooms", response_model=MeetingRoomResponse)
-def create_meeting_room(room: MeetingRoomCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_meeting_room(room: MeetingRoomCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """创建会议室"""
     db_room = MeetingRoom(**room.model_dump())
     db.add(db_room)
@@ -167,7 +167,7 @@ def update_meeting_room(
     room_id: int,
     room_update: MeetingRoomUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """更新会议室信息"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
@@ -185,7 +185,7 @@ def update_meeting_room(
 
 
 @router.delete("/rooms/{room_id}")
-def delete_meeting_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_meeting_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """删除会议室"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
     if not room:

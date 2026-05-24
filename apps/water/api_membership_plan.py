@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from config.database import get_db
 from models.membership_plan import MembershipPlan
+from depends.auth import get_admin_user
+from models.user import User
 
 router = APIRouter()
 
@@ -134,7 +136,7 @@ class MembershipPlanUpdate(BaseModel):
 
 @router.post("/api/admin/membership/plans")
 async def create_membership_plan(
-    plan_data: MembershipPlanCreate, db: Session = Depends(get_db)
+    plan_data: MembershipPlanCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     创建会员套餐（管理员）
@@ -166,7 +168,7 @@ async def create_membership_plan(
 
 @router.put("/api/admin/membership/plans/{plan_id}")
 async def update_membership_plan(
-    plan_id: int, plan_data: MembershipPlanUpdate, db: Session = Depends(get_db)
+    plan_id: int, plan_data: MembershipPlanUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     更新会员套餐（管理员）
@@ -207,7 +209,7 @@ async def update_membership_plan(
 
 
 @router.delete("/api/admin/membership/plans/{plan_id}")
-async def delete_membership_plan(plan_id: int, db: Session = Depends(get_db)):
+async def delete_membership_plan(plan_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     删除会员套餐（管理员）
     """

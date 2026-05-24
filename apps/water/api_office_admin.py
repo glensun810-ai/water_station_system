@@ -10,6 +10,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+from depends.auth import get_admin_user, get_current_user_required
+from models.user import User
+
 router = APIRouter(prefix="/api/office-admins", tags=["office_admin_management"])
 
 
@@ -75,7 +78,7 @@ def init_office_admin_table(db: Session):
 
 
 @router.get("/office/{office_id}")
-def get_office_admins(office_id: int, db: Session = Depends(get_db)):
+def get_office_admins(office_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     获取办公室的所有管理员
 
@@ -128,7 +131,7 @@ def get_office_admins(office_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/user/{user_id}")
-def get_user_managed_offices(user_id: int, db: Session = Depends(get_db)):
+def get_user_managed_offices(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     获取用户管理的所有办公室
 
@@ -181,7 +184,7 @@ def get_user_managed_offices(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("")
-def add_office_admin(data: OfficeAdminCreate, db: Session = Depends(get_db)):
+def add_office_admin(data: OfficeAdminCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     添加办公室管理员
 
@@ -276,6 +279,7 @@ def update_office_admin(
     is_primary: Optional[int] = None,
     role_type: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """更新办公室管理员信息"""
     try:
@@ -339,7 +343,7 @@ def update_office_admin(
 
 
 @router.delete("/{relation_id}")
-def remove_office_admin(relation_id: int, db: Session = Depends(get_db)):
+def remove_office_admin(relation_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     移除办公室管理员
 
@@ -399,7 +403,7 @@ def remove_office_admin(relation_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/office/{office_id}/user/{user_id}")
 def remove_admin_from_office(
-    office_id: int, user_id: int, db: Session = Depends(get_db)
+    office_id: int, user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """从办公室移除指定管理员"""
     try:
@@ -424,7 +428,7 @@ def remove_admin_from_office(
 
 
 @router.get("/candidates")
-def get_admin_candidates(db: Session = Depends(get_db)):
+def get_admin_candidates(db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     获取可设置为办公室管理员的候选人列表
 

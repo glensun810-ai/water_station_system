@@ -19,7 +19,7 @@ from models.user_balance import (
     BalanceType,
 )
 from models.user import User
-from depends.auth import get_current_user
+from depends.auth import get_current_user_required
 
 router = APIRouter(prefix="/balance", tags=["用户余额"])
 
@@ -112,7 +112,7 @@ def get_transaction_type_text(transaction_type: TransactionType) -> str:
 @router.get("/my", response_model=BalanceInfoResponse)
 async def get_my_balance(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取我的余额信息"""
     try:
@@ -168,7 +168,7 @@ async def get_transactions(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=50, description="每页数量"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取余额变动记录"""
     try:
@@ -243,7 +243,7 @@ async def get_deduct_records(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=50, description="每页数量"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取抵扣记录"""
     try:
@@ -298,7 +298,7 @@ async def get_deduct_records(
 @router.get("/summary", response_model=dict)
 async def get_balance_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取余额统计摘要"""
     try:

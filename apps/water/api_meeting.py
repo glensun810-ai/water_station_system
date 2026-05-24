@@ -16,6 +16,9 @@ import os
 
 router = APIRouter(prefix="/api/meeting", tags=["meeting"])
 
+from depends.auth import get_admin_user, get_current_user_required
+from models.user import User
+
 # ==================== 数据库配置（模块级别，避免重复创建）====================
 # 使用环境变量或相对路径，支持本地和云服务器环境
 current_dir = os.path.dirname(__file__)
@@ -221,7 +224,7 @@ def get_room(room_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/rooms", response_model=MeetingRoomResponse)
-def create_room(room: MeetingRoomCreate, db: Session = Depends(get_db)):
+def create_room(room: MeetingRoomCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     try:
         from sqlalchemy import text
 
@@ -268,7 +271,7 @@ def create_room(room: MeetingRoomCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/rooms/{room_id}", response_model=MeetingRoomResponse)
-def update_room(room_id: int, room: MeetingRoomUpdate, db: Session = Depends(get_db)):
+def update_room(room_id: int, room: MeetingRoomUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     try:
         from sqlalchemy import text
 
@@ -326,7 +329,7 @@ def update_room(room_id: int, room: MeetingRoomUpdate, db: Session = Depends(get
 
 
 @router.delete("/rooms/{room_id}")
-def delete_room(room_id: int, db: Session = Depends(get_db)):
+def delete_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     try:
         from sqlalchemy import text
 

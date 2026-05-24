@@ -12,7 +12,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
 from config.database import get_db
-from depends.auth import get_current_user, get_admin_user
+from depends.auth import get_current_user, get_current_user_required, get_admin_user
 from models.office import Office
 from models.account import OfficeAccount
 from models.recharge import OfficeRecharge
@@ -233,7 +233,7 @@ def get_offices(
 
 
 @router.post("/offices")
-def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
+def create_office(office: OfficeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     创建办公室
 
@@ -386,7 +386,7 @@ def get_office(office_id: int, db: Session = Depends(get_db)):
 
 @router.put("/offices/{office_id}")
 def update_office(
-    office_id: int, office_update: OfficeUpdate, db: Session = Depends(get_db)
+    office_id: int, office_update: OfficeUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     更新办公室信息
@@ -536,7 +536,7 @@ def update_office(
 
 
 @router.delete("/offices/{office_id}")
-def delete_office(office_id: int, force: bool = False, db: Session = Depends(get_db)):
+def delete_office(office_id: int, force: bool = False, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     删除办公室
     - force=False: 软删除（仅禁用）
@@ -604,7 +604,7 @@ def delete_office(office_id: int, force: bool = False, db: Session = Depends(get
 
 
 @router.post("/offices/batch-delete")
-def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db)):
+def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     批量删除办公室（软删除）
     """
@@ -641,7 +641,7 @@ def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db)):
 
 @router.post("/offices/batch-common")
 def batch_set_common(
-    office_ids: List[int], is_common: int = 1, db: Session = Depends(get_db)
+    office_ids: List[int], is_common: int = 1, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     批量设置常用/不常用状态
@@ -666,7 +666,7 @@ def batch_set_common(
 
 @router.post("/offices/batch-active")
 def batch_set_active(
-    office_ids: List[int], is_active: int = 1, db: Session = Depends(get_db)
+    office_ids: List[int], is_active: int = 1, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     批量设置启用/禁用状态
@@ -852,7 +852,7 @@ def get_office_accounts(
 
 
 @router.post("/office-accounts", response_model=OfficeAccountResponse)
-def create_office_account(account: OfficeAccountCreate, db: Session = Depends(get_db)):
+def create_office_account(account: OfficeAccountCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     创建办公室账户
     """
@@ -917,7 +917,7 @@ def get_office_account(account_id: int, db: Session = Depends(get_db)):
 
 @router.put("/office-accounts/{account_id}", response_model=OfficeAccountResponse)
 def update_office_account(
-    account_id: int, account_update: OfficeAccountUpdate, db: Session = Depends(get_db)
+    account_id: int, account_update: OfficeAccountUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     更新办公室账户
@@ -963,7 +963,7 @@ def update_office_account(
 
 
 @router.delete("/office-accounts/{account_id}")
-def delete_office_account(account_id: int, db: Session = Depends(get_db)):
+def delete_office_account(account_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     删除办公室账户
     """
@@ -987,6 +987,7 @@ def recharge_office_account(
     account_id: int,
     request: OfficeAccountRechargeRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """
     充值/扣减办公室账户桶数
@@ -1028,6 +1029,7 @@ def recharge_office_account(
 def reset_office_account(
     account_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """
     重置办公室账户（将剩余桶数重置为预留桶数）
@@ -1106,7 +1108,7 @@ def get_office_recharges(
 
 @router.post("/office-recharges", response_model=OfficeRechargeResponse)
 def create_office_recharge(
-    recharge: OfficeAccountCreate, db: Session = Depends(get_db)
+    recharge: OfficeAccountCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     创建办公室充值记录
@@ -1161,7 +1163,7 @@ def get_office_pickups(
 
 
 @router.post("/office-pickup/{pickup_id}/settle")
-def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """结算办公室领水记录"""
     pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
     if not pickup:
@@ -1174,7 +1176,7 @@ def settle_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/office-pickup/{pickup_id}")
-def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
+def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """删除办公室领水记录"""
     pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
     if not pickup:
@@ -1212,7 +1214,7 @@ def delete_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickups/batch-delete")
-def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db)):
+def batch_delete_office_pickups(pickup_ids: List[int], db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """批量删除办公室领水记录"""
     deleted_count = 0
 
@@ -1264,7 +1266,7 @@ def remind_office_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickup/{pickup_id}/pay")
-def user_pay_pickup(pickup_id: int, db: Session = Depends(get_db)):
+def user_pay_pickup(pickup_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """用户标记已付款 - 将状态从待付款改为付款待确认"""
     pickup = db.query(OfficePickup).filter(OfficePickup.id == pickup_id).first()
     if not pickup:
@@ -1280,7 +1282,7 @@ def user_pay_pickup(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickup/{pickup_id}/confirm")
-def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db)):
+def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """管理员确认收款 - 支持pending和applied两种状态的确认
     - pending: 待付款状态，直接确认收款（用户可能线下已付款但未在系统操作）
     - applied: 付款待确认状态，确认后转为已结清
@@ -1302,7 +1304,7 @@ def admin_confirm_payment(pickup_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-pickups/batch-pay")
-def batch_user_pay(pickup_ids: List[int], db: Session = Depends(get_db)):
+def batch_user_pay(pickup_ids: List[int], db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """批量用户标记已付款"""
     updated_count = 0
     for pickup_id in pickup_ids:
@@ -1408,7 +1410,7 @@ class AutoSettlementRequest(BaseModel):
 
 @router.post("/office-settlements/auto-generate")
 def auto_generate_settlement(
-    request: AutoSettlementRequest, db: Session = Depends(get_db)
+    request: AutoSettlementRequest, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     自动生成结算单
@@ -1472,7 +1474,7 @@ def auto_generate_settlement(
 
 
 @router.post("/office-settlements/auto-generate-monthly")
-def auto_generate_monthly_settlement(db: Session = Depends(get_db)):
+def auto_generate_monthly_settlement(db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     每月末自动生成结算单（定时任务调用接口）
     将所有待付款记录按办公室合并生成结算单
@@ -1757,7 +1759,7 @@ def get_user_office_settlements(
 
 @router.delete("/office-settlements/{office_id}/pickups")
 def delete_office_settlement_pickups(
-    office_id: int, status: Optional[str] = None, db: Session = Depends(get_db)
+    office_id: int, status: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     删除某个办公室的结算相关领水记录（超级管理员权限）

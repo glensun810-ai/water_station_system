@@ -16,6 +16,9 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 import json
 
+from depends.auth import get_current_user_required
+from models.user import User
+
 # 使用相对导入从 main.py 获取依赖
 try:
     from main import get_db, Product, OfficePickup
@@ -218,7 +221,7 @@ def get_service_config():
 
 
 @router.get("/types")
-def get_service_types(db: Session = Depends(get_db)):
+def get_service_types(db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     获取服务类型列表（从数据库）
 
@@ -254,7 +257,7 @@ def get_service_types(db: Session = Depends(get_db)):
 
 
 @router.get("/types/{service_type}")
-def get_service_type_detail(service_type: str, db: Session = Depends(get_db)):
+def get_service_type_detail(service_type: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     获取特定服务类型的详细信息
 
@@ -296,7 +299,7 @@ def get_service_type_detail(service_type: str, db: Session = Depends(get_db)):
 
 @router.post("/check-availability", response_model=AvailabilityResponse)
 def check_service_availability(
-    request: AvailabilityRequest, db: Session = Depends(get_db)
+    request: AvailabilityRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     检查服务资源可用性
@@ -392,7 +395,7 @@ def check_service_availability(
 
 
 @router.get("/stats", response_model=ServiceStatsResponse)
-def get_service_stats(db: Session = Depends(get_db)):
+def get_service_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     获取服务统计信息
 

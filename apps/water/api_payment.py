@@ -18,6 +18,7 @@ import logging
 from config.database import get_db
 from models import User, MembershipPlan, PaymentOrder
 from models.payment_order import PaymentOrder as PaymentOrderModel
+from depends.auth import get_current_user_required
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -58,19 +59,13 @@ def generate_order_no():
 
 @router.post("/api/payment/orders")
 async def create_order(
-    order_data: OrderCreate, request: Request, db: Session = Depends(get_db)
+    order_data: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     创建支付订单
     """
     try:
-        # 获取当前用户（从请求中获取）
-        # TODO: 从JWT token中获取用户ID，这里暂时使用测试用户
-        user_id = request.headers.get("X-User-Id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        user_id = int(user_id)
+        user_id = int(str(current_user.id))
 
         # 验证用户是否存在
         user = db.query(User).filter(User.id == user_id).first()
@@ -144,17 +139,12 @@ async def create_order(
 
 
 @router.get("/api/payment/orders/{order_no}", response_model=OrderResponse)
-async def get_order(order_no: str, request: Request, db: Session = Depends(get_db)):
+async def get_order(order_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     查询订单详情
     """
     try:
-        # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        user_id = int(user_id)
+        user_id = int(str(current_user.id))
 
         order = (
             db.query(PaymentOrderModel)
@@ -191,26 +181,22 @@ async def get_order(order_no: str, request: Request, db: Session = Depends(get_d
 @router.get("/api/payment/orders/user/{user_id}", response_model=OrderList)
 async def get_user_orders(
     user_id: int,
-    request: Request,
     status: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """
     获取用户订单列表
     """
     try:
-        # 验证权限
-        current_user_id = request.headers.get("X-User-Id")
-        if not current_user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        current_user_id = int(current_user_id)
+        current_user_id = int(str(current_user.id))
 
         # 只能查看自己的订单（管理员可以查看所有）
-        # TODO: 添加管理员权限判断
-        if current_user_id != user_id:
+        if current_user.role in ("admin", "super_admin"):
+            pass
+        elif current_user_id != user_id:
             raise HTTPException(status_code=403, detail="无权查看此用户订单")
 
         query = db.query(PaymentOrderModel).filter(PaymentOrderModel.user_id == user_id)
@@ -252,17 +238,12 @@ async def get_user_orders(
 
 
 @router.post("/api/payment/orders/{order_no}/cancel")
-async def cancel_order(order_no: str, request: Request, db: Session = Depends(get_db)):
+async def cancel_order(order_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     取消订单
     """
     try:
-        # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        user_id = int(user_id)
+        user_id = int(str(current_user.id))
 
         order = (
             db.query(PaymentOrderModel)
@@ -301,18 +282,13 @@ async def cancel_order(order_no: str, request: Request, db: Session = Depends(ge
 
 @router.post("/api/payment/alipay/create")
 async def create_alipay_payment(
-    order_no: str, request: Request, db: Session = Depends(get_db)
+    order_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     创建支付宝支付
     """
     try:
-        # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        user_id = int(user_id)
+        user_id = int(str(current_user.id))
 
         # 查询订单
         order = (
@@ -452,18 +428,13 @@ async def alipay_callback(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/api/payment/orders/{order_no}/status")
 async def get_payment_status(
-    order_no: str, request: Request, db: Session = Depends(get_db)
+    order_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     查询订单支付状态（轮询接口）
     """
     try:
-        # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="未登录")
-
-        user_id = int(user_id)
+        user_id = int(str(current_user.id))
 
         order = (
             db.query(PaymentOrderModel)

@@ -15,6 +15,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models_unified import UserAccount, AccountWallet, SettlementBatch, TransactionV2
 from dual_write_service import DualWriteService, get_dual_write_service
+from depends.auth import get_super_admin_user
+from models.user import User
 
 router = APIRouter(prefix="/api/migration", tags=["migration"])
 
@@ -33,7 +35,7 @@ def get_db_session():
 # ==================== 数据迁移 API ====================
 
 @router.post("/migrate-all")
-async def migrate_all_data(background_tasks: BackgroundTasks, db: Session = Depends(get_db_session)):
+async def migrate_all_data(background_tasks: BackgroundTasks, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """
     执行完整数据迁移
     
@@ -77,7 +79,7 @@ async def migrate_all_data(background_tasks: BackgroundTasks, db: Session = Depe
 
 
 @router.post("/migrate/users")
-def migrate_users(db: Session = Depends(get_db_session)):
+def migrate_users(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """迁移用户账户"""
     try:
         from migrate_full import DataMigration
@@ -89,7 +91,7 @@ def migrate_users(db: Session = Depends(get_db_session)):
 
 
 @router.post("/migrate/wallets")
-def migrate_wallets(db: Session = Depends(get_db_session)):
+def migrate_wallets(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """迁移预付订单到钱包"""
     try:
         from migrate_full import DataMigration
@@ -101,7 +103,7 @@ def migrate_wallets(db: Session = Depends(get_db_session)):
 
 
 @router.post("/migrate/transactions")
-def migrate_transactions(batch_size: int = 1000, db: Session = Depends(get_db_session)):
+def migrate_transactions(batch_size: int = 1000, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """迁移交易记录"""
     try:
         from migrate_full import DataMigration
@@ -113,7 +115,7 @@ def migrate_transactions(batch_size: int = 1000, db: Session = Depends(get_db_se
 
 
 @router.post("/migrate/promotions")
-def migrate_promotions(db: Session = Depends(get_db_session)):
+def migrate_promotions(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """迁移优惠配置"""
     try:
         from migrate_full import DataMigration
@@ -127,7 +129,7 @@ def migrate_promotions(db: Session = Depends(get_db_session)):
 # ==================== 双写管理 API ====================
 
 @router.post("/dual-write/sync-user/{user_id}")
-def sync_user_account(user_id: int, db: Session = Depends(get_db_session)):
+def sync_user_account(user_id: int, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """同步单个用户账户"""
     service = DualWriteService(db)
     result = service.sync_user_account(user_id)
@@ -139,7 +141,7 @@ def sync_user_account(user_id: int, db: Session = Depends(get_db_session)):
 
 
 @router.post("/dual-write/sync-order/{order_id}")
-def sync_prepaid_order(order_id: int, db: Session = Depends(get_db_session)):
+def sync_prepaid_order(order_id: int, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """同步单个预付订单到钱包"""
     service = DualWriteService(db)
     result = service.sync_wallet_from_prepaid_order(order_id)
@@ -151,7 +153,7 @@ def sync_prepaid_order(order_id: int, db: Session = Depends(get_db_session)):
 
 
 @router.post("/dual-write/sync-transaction/{transaction_id}")
-def sync_transaction(transaction_id: int, db: Session = Depends(get_db_session)):
+def sync_transaction(transaction_id: int, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """同步单个交易记录"""
     service = DualWriteService(db)
     result = service.sync_transaction_v2(transaction_id)
@@ -163,7 +165,7 @@ def sync_transaction(transaction_id: int, db: Session = Depends(get_db_session))
 
 
 @router.post("/dual-write/batch-sync-users")
-def batch_sync_users(limit: int = 100, db: Session = Depends(get_db_session)):
+def batch_sync_users(limit: int = 100, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """批量同步用户账户"""
     service = DualWriteService(db)
     result = service.batch_sync_users(limit)
@@ -171,7 +173,7 @@ def batch_sync_users(limit: int = 100, db: Session = Depends(get_db_session)):
 
 
 @router.post("/dual-write/batch-sync-orders")
-def batch_sync_orders(limit: int = 100, db: Session = Depends(get_db_session)):
+def batch_sync_orders(limit: int = 100, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """批量同步预付订单"""
     service = DualWriteService(db)
     result = service.batch_sync_prepaid_orders(limit)
@@ -179,7 +181,7 @@ def batch_sync_orders(limit: int = 100, db: Session = Depends(get_db_session)):
 
 
 @router.post("/dual-write/batch-sync-transactions")
-def batch_sync_transactions(limit: int = 500, db: Session = Depends(get_db_session)):
+def batch_sync_transactions(limit: int = 500, db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """批量同步交易记录"""
     service = DualWriteService(db)
     result = service.batch_sync_transactions(limit)
@@ -187,7 +189,7 @@ def batch_sync_transactions(limit: int = 500, db: Session = Depends(get_db_sessi
 
 
 @router.get("/dual-write/stats")
-def get_dual_write_stats(db: Session = Depends(get_db_session)):
+def get_dual_write_stats(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """获取双写统计信息"""
     service = DualWriteService(db)
     return service.get_sync_stats()
@@ -196,7 +198,7 @@ def get_dual_write_stats(db: Session = Depends(get_db_session)):
 # ==================== 数据一致性校验 API ====================
 
 @router.get("/verify/consistency")
-def verify_data_consistency(db: Session = Depends(get_db_session)):
+def verify_data_consistency(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """校验数据一致性"""
     service = DualWriteService(db)
     result = service.verify_data_consistency()
@@ -217,7 +219,7 @@ def verify_data_consistency(db: Session = Depends(get_db_session)):
 
 
 @router.get("/verify/stats")
-def get_migration_stats(db: Session = Depends(get_db_session)):
+def get_migration_stats(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """获取迁移统计信息"""
     try:
         conn = db.bind.connect()
@@ -262,7 +264,7 @@ def get_migration_stats(db: Session = Depends(get_db_session)):
 # ==================== 回滚 API ====================
 
 @router.post("/rollback")
-def rollback_migration(db: Session = Depends(get_db_session)):
+def rollback_migration(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """
     回滚迁移（从备份恢复）
     
@@ -289,7 +291,7 @@ def rollback_migration(db: Session = Depends(get_db_session)):
 # ==================== 系统状态 API ====================
 
 @router.get("/status")
-def get_migration_status(db: Session = Depends(get_db_session)):
+def get_migration_status(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """获取迁移状态"""
     try:
         # 检查新表是否存在
@@ -326,7 +328,7 @@ def get_migration_status(db: Session = Depends(get_db_session)):
 
 
 @router.get("/tables")
-def list_tables(db: Session = Depends(get_db_session)):
+def list_tables(db: Session = Depends(get_db_session), current_user: User = Depends(get_super_admin_user)):
     """列出所有表"""
     try:
         tables = db.execute(text("""

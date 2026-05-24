@@ -18,6 +18,7 @@ from config.database import get_db
 from models import User, PaymentOrder, MembershipPlan
 from models.payment_order import PaymentOrder as PaymentOrderModel
 from models.refund_record import RefundRecord
+from depends.auth import get_current_user_required, get_admin_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,14 +83,14 @@ def calculate_refund_amount(original_amount, total_days, used_days):
 
 @router.post("/api/payment/refund")
 async def apply_refund(
-    refund_data: RefundApply, request: Request, db: Session = Depends(get_db)
+    refund_data: RefundApply, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """
     申请退款
     """
     try:
         # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
+        user_id = str(current_user.id)
         if not user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -188,13 +189,13 @@ async def apply_refund(
 
 
 @router.get("/api/payment/refund/{refund_no}", response_model=RefundResponse)
-async def get_refund(refund_no: str, request: Request, db: Session = Depends(get_db)):
+async def get_refund(refund_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """
     查询退款详情
     """
     try:
         # 获取当前用户
-        user_id = request.headers.get("X-User-Id")
+        user_id = str(current_user.id)
         if not user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -234,7 +235,6 @@ async def get_refund(refund_no: str, request: Request, db: Session = Depends(get
 @router.get("/api/payment/refunds/user/{user_id}", response_model=RefundList)
 async def get_user_refunds(
     user_id: int,
-    request: Request,
     status: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
@@ -245,7 +245,7 @@ async def get_user_refunds(
     """
     try:
         # 验证权限
-        current_user_id = request.headers.get("X-User-Id")
+        current_user_id = str(current_user.id)
         if not current_user_id:
             raise HTTPException(status_code=401, detail="未登录")
 
@@ -299,7 +299,7 @@ async def get_user_refunds(
 
 @router.post("/api/admin/payment/refund/{refund_no}/approve")
 async def approve_refund(
-    refund_no: str, request: Request, db: Session = Depends(get_db)
+    refund_no: str, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     管理员批准退款
@@ -359,7 +359,7 @@ async def approve_refund(
 
 @router.post("/api/admin/payment/refund/{refund_no}/reject")
 async def reject_refund(
-    refund_no: str, reject_reason: str, request: Request, db: Session = Depends(get_db)
+    refund_no: str, reject_reason: str, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """
     管理员拒绝退款

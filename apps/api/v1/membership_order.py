@@ -26,7 +26,7 @@ from models.user_balance import (
     BalanceType,
 )
 from models.user import User
-from depends.auth import get_current_user
+from depends.auth import get_current_user_required
 
 router = APIRouter(prefix="/membership/orders", tags=["会员订单"])
 
@@ -107,7 +107,7 @@ def get_status_text(status: MembershipOrderStatus) -> str:
 async def create_order(
     request: OrderCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """创建会员订单 - 提交线下支付申请"""
     try:
@@ -182,7 +182,7 @@ async def get_my_orders(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=50, description="每页数量"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取我的订单列表"""
     try:
@@ -263,7 +263,7 @@ async def get_my_orders(
 async def get_order_detail(
     order_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取订单详情"""
     try:
@@ -363,7 +363,7 @@ async def cancel_order(
     order_id: int,
     reason: Optional[str] = Query(None, description="取消原因"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """取消订单"""
     try:
@@ -413,7 +413,7 @@ async def cancel_order(
 @router.get("/pending-count", response_model=dict)
 async def get_pending_count(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取待审核订单数量"""
     try:

@@ -16,6 +16,9 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 import json
 
+from depends.auth import get_admin_user, get_current_user_required
+from models.user import User
+
 try:
     from main import get_db
     from models_unified import Package, PackageItem, PackageOrder
@@ -206,6 +209,7 @@ def list_packages(
         None, description="Filter by status: active, inactive"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """
     获取套餐列表
@@ -265,7 +269,7 @@ def list_packages(
 
 
 @router.get("/{package_id}", response_model=PackageResponse)
-def get_package(package_id: int, db: Session = Depends(get_db)):
+def get_package(package_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """获取单个套餐详情"""
     pkg = db.query(Package).filter(Package.id == package_id).first()
 
@@ -308,7 +312,7 @@ def get_package(package_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=PackageResponse)
-def create_package(package_data: PackageCreate, db: Session = Depends(get_db)):
+def create_package(package_data: PackageCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """创建新套餐"""
     db_package = Package(
         name=package_data.name,
@@ -381,7 +385,7 @@ def create_package(package_data: PackageCreate, db: Session = Depends(get_db)):
 
 @router.put("/{package_id}", response_model=PackageResponse)
 def update_package(
-    package_id: int, package_data: PackageUpdate, db: Session = Depends(get_db)
+    package_id: int, package_data: PackageUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """更新套餐信息"""
     pkg = db.query(Package).filter(Package.id == package_id).first()
@@ -451,7 +455,7 @@ def update_package(
 
 
 @router.delete("/{package_id}")
-def delete_package(package_id: int, db: Session = Depends(get_db)):
+def delete_package(package_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """删除套餐（软删除，改为 inactive 状态）"""
     pkg = db.query(Package).filter(Package.id == package_id).first()
 
@@ -467,7 +471,7 @@ def delete_package(package_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{package_id}/order", response_model=PackageOrderResponse)
 def create_package_order(
-    package_id: int, order_data: PackageOrderCreate, db: Session = Depends(get_db)
+    package_id: int, order_data: PackageOrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)
 ):
     """订购套餐"""
     pkg = db.query(Package).filter(Package.id == package_id).first()
@@ -534,6 +538,7 @@ def list_package_orders(
         None, description="Filter by status: pending, active, completed, expired"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取套餐订单列表"""
     query = db.query(PackageOrder)
@@ -578,6 +583,7 @@ def update_order_status(
         ..., description="New status: pending, active, completed, expired"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """更新套餐订单状态"""
     order = db.query(PackageOrder).filter(PackageOrder.id == order_id).first()
@@ -599,7 +605,7 @@ def update_order_status(
 
 
 @router.get("/stats/summary")
-def get_package_stats(db: Session = Depends(get_db)):
+def get_package_stats(db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """获取套餐统计信息"""
     total_packages = db.query(func.count(Package.id)).scalar()
     active_packages = (

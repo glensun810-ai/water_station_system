@@ -14,7 +14,7 @@ from models.product import Product
 from models.office import Office
 from models.office_admin import OfficeAdminRelation
 from models.pickup import OfficePickup
-from depends.auth import get_current_user, get_admin_user, get_super_admin_user
+from depends.auth import get_current_user, get_current_user_required, get_admin_user, get_super_admin_user
 # Note: schemas are not yet unified, using placeholder imports
 
 router = APIRouter(prefix="/water", tags=["水站服务"])
@@ -234,7 +234,7 @@ def get_user_pickups(
 def create_water_pickup(
     pickup_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """
     创建领水记录（权限验证）
@@ -375,7 +375,7 @@ def mark_pickup_as_paid(
     pickup_id: int,
     payment_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """
     用户付款（标记领水记录为已付款）
@@ -428,7 +428,7 @@ def mark_pickup_as_paid(
 def create_water_pickup_alias(
     pickup_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """Alias for /pickups (singular form for frontend compatibility)"""
     return create_water_pickup(pickup_data, db, current_user)
@@ -439,7 +439,7 @@ def mark_pickup_as_paid_alias(
     pickup_id: int,
     payment_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """Alias for /pickups/{pickup_id}/pay (singular form for frontend compatibility)"""
     return mark_pickup_as_paid(pickup_id, payment_data, db, current_user)

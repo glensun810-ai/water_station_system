@@ -12,7 +12,7 @@ from models.approval import MeetingApproval, MeetingPayment
 from models.booking import MeetingBooking, BookingStatus
 from models.meeting import MeetingRoom
 from models.user import User
-from depends.auth import get_current_user
+from depends.auth import get_current_user, get_admin_user
 
 router = APIRouter(prefix="/api/meeting", tags=["会议室审批和支付"])
 
@@ -156,7 +156,7 @@ def approve_approval(
     approver_id: int,
     approver_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """审批通过"""
     approval = (
@@ -194,7 +194,7 @@ def batch_approve(
     approver_id: int,
     approver_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """批量审批"""
     approved_count = 0
@@ -292,7 +292,7 @@ def confirm_payment(
     payment_id: int,
     transaction_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """确认支付"""
     payment = db.query(MeetingPayment).filter(MeetingPayment.id == payment_id).first()
@@ -322,7 +322,7 @@ def confirm_payment(
 def batch_confirm_payment(
     payment_ids: List[int],
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """批量确认支付"""
     confirmed_count = 0
@@ -437,7 +437,7 @@ def create_settlement(
     user_id: int,
     user_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """创建结算（支付请求）"""
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()

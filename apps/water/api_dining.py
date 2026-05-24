@@ -16,6 +16,9 @@ import json
 import random
 import string
 
+from depends.auth import get_admin_user, get_current_user_required
+from models.user import User
+
 # 导入数据库依赖
 try:
     from main import get_db
@@ -138,6 +141,7 @@ def get_dining_rooms(
         None, description="筛选状态: available/occupied/maintenance"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取包间列表"""
     try:
@@ -185,7 +189,7 @@ def get_dining_rooms(
 
 
 @router.get("/rooms/{room_id}", response_model=DiningRoomResponse)
-def get_dining_room(room_id: int, db: Session = Depends(get_db)):
+def get_dining_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """获取包间详情"""
     try:
         from sqlalchemy import Table, MetaData
@@ -235,6 +239,7 @@ def get_dining_packages(
         None, description="套餐类型: standard/business/luxury/custom"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取套餐列表"""
     try:
@@ -282,7 +287,7 @@ def get_dining_packages(
 
 
 @router.get("/packages/{package_id}", response_model=DiningPackageResponse)
-def get_dining_package(package_id: int, db: Session = Depends(get_db)):
+def get_dining_package(package_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """获取套餐详情"""
     try:
         from sqlalchemy import Table, MetaData
@@ -388,7 +393,7 @@ def check_booking_conflict(
 
 
 @router.post("/bookings", response_model=DiningBookingResponse)
-def create_dining_booking(booking: DiningBookingCreate, db: Session = Depends(get_db)):
+def create_dining_booking(booking: DiningBookingCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """创建餐厅预约"""
     try:
         from sqlalchemy import Table, MetaData, insert
@@ -541,6 +546,7 @@ def get_dining_bookings(
     booking_date: Optional[date] = Query(None),
     room_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
 ):
     """获取预约列表"""
     try:
@@ -604,7 +610,7 @@ def get_dining_bookings(
 
 
 @router.get("/bookings/{booking_id}", response_model=DiningBookingResponse)
-def get_dining_booking(booking_id: int, db: Session = Depends(get_db)):
+def get_dining_booking(booking_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """获取预约详情"""
     try:
         from sqlalchemy import Table, MetaData
@@ -654,7 +660,7 @@ def get_dining_booking(booking_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/bookings/{booking_id}/confirm")
-def confirm_dining_booking(booking_id: int, db: Session = Depends(get_db)):
+def confirm_dining_booking(booking_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """确认预约"""
     try:
         from sqlalchemy import Table, MetaData, update
@@ -700,7 +706,7 @@ def confirm_dining_booking(booking_id: int, db: Session = Depends(get_db)):
 
 @router.put("/bookings/{booking_id}/cancel")
 def cancel_dining_booking(
-    booking_id: int, reason: str = Query(None), db: Session = Depends(get_db)
+    booking_id: int, reason: str = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)
 ):
     """取消预约"""
     try:
@@ -747,7 +753,7 @@ def cancel_dining_booking(
 
 
 @router.get("/availability")
-def check_availability(room_id: int, booking_date: date, db: Session = Depends(get_db)):
+def check_availability(room_id: int, booking_date: date, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_required)):
     """检查包间可用时间"""
     try:
         from sqlalchemy import Table, MetaData
