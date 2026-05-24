@@ -16,6 +16,7 @@ from depends.auth import get_current_user_required, get_admin_user, get_super_ad
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
+from apps.api.v2.space_notifications import create_notification
 from shared.schemas.space.space_booking import (
     SpaceBookingCreate,
     SpaceBookingUpdate,
@@ -465,6 +466,16 @@ async def create_booking(
     db.commit()
     db.refresh(booking)
 
+    # 创建预约成功通知
+    status_text = "已通过，可直接使用" if initial_status == "approved" else "已提交，等待审批"
+    create_notification(
+        db,
+        current_user.id,
+        "预约创建成功",
+        f"您的预约「{booking.title}」{status_text}。预约编号：{booking.booking_no}，空间：{booking.resource_name}，日期：{booking.booking_date} {booking.start_time}-{booking.end_time}",
+        "info",
+    )
+
     payment_mode_text = {
         "credit": "记账模式（使用后结算）",
         "balance_deduct": "余额抵扣（已全额扣款）",
@@ -684,6 +695,24 @@ async def cancel_booking(
         booking.deposit_refund_at = datetime.now()
 
     db.commit()
+
+    # 创建取消/拒绝通知
+    if cancel_data.cancel_type == "admin_rejected":
+        create_notification(
+            db,
+            booking.user_id,
+            "预约已被拒绝",
+            f"您的预约「{booking.title}」已被管理员拒绝。原因：{cancel_data.cancel_reason or '未说明'}。预约编号：{booking.booking_no}",
+            "warning",
+        )
+    else:
+        create_notification(
+            db,
+            booking.user_id,
+            "预约已取消",
+            f"您的预约「{booking.title}」已取消。原因：{cancel_data.cancel_reason or '用户主动取消'}。预约编号：{booking.booking_no}",
+            "info",
+        )
 
     return ApiResponse(message="预约已取消", data=_format_booking(booking, db))
 

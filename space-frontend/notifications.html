@@ -10,6 +10,8 @@
     <script src="/portal/assets/js/auth.js"></script>
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/portal/components/GlobalHeader.js"></script>
+    <script type="module" src="./api.js"></script>
+    <script src="./toast.js"></script>
 
     <style>
         [v-cloak] { display: none !important; }
@@ -160,11 +162,50 @@
                 flex-direction: column;
                 gap: var(--spacing-md);
             }
-            
+
             .notification-icon {
                 width: 40px;
                 height: 40px;
             }
+        }
+
+        .bottom-nav {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs, 4px);
+            padding: var(--spacing-md, 8px);
+            min-height: 44px;
+            min-width: 44px;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+        }
+        .nav-item:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+        .nav-label {
+            font-size: var(--font-size-xs, 12px);
         }
     </style>
 </head>
@@ -243,21 +284,14 @@
                         <div class="notification-text">{{ notification.text }}</div>
                         
                         <div class="notification-action">
-                            <button 
-                                v-if="notification.actionType === 'viewBooking'"
+                            <button
+                                v-if="notification.bookingNo"
                                 class="action-btn btn-primary"
-                                @click.stop="viewBooking(notification.bookingId)"
+                                @click.stop="viewBooking()"
                             >
                                 查看预约
                             </button>
-                            <button 
-                                v-if="notification.actionType === 'goToPayment'"
-                                class="action-btn btn-primary"
-                                @click.stop="goToPayment(notification.bookingId)"
-                            >
-                                确认支付
-                            </button>
-                            <button 
+                            <button
                                 v-if="!notification.read"
                                 class="action-btn btn-secondary"
                                 @click.stop="markAsRead(notification.id)"
@@ -280,8 +314,31 @@
                 </div>
             </div>
         </main>
+
+        <nav class="bottom-nav" role="navigation" aria-label="底部导航">
+            <a href="/space-frontend/index.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">首页</span>
+            </a>
+            <a href="/space-frontend/calendar.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📅</span>
+                <span class="nav-label">日历</span>
+            </a>
+            <a href="/space-frontend/my-bookings.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📋</span>
+                <span class="nav-label">预约</span>
+            </a>
+            <a href="/space-frontend/notifications.html" class="nav-item active" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">🔔</span>
+                <span class="nav-label">通知</span>
+            </a>
+            <a href="/space-frontend/profile.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">👤</span>
+                <span class="nav-label">我的</span>
+            </a>
+        </nav>
     </div>
-    
+
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
         
@@ -325,67 +382,43 @@
                 };
                 
                 const loadNotificationData = async () => {
-                    const token = localStorage.getItem('token');
-                    if (!token) return;
-                    
                     try {
-                        const response = await fetch(`/api/v2/space/bookings/my`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        
-                        const data = await response.json();
-                        
+                        const data = await window.spaceAPI.getNotifications({ limit: 50 });
+
                         if (data.code === 200 && data.data.items) {
-                            notifications.value = data.data.items.map(b => {
-                                let type = 'booking';
+                            notifications.value = data.data.items.map(n => {
                                 let icon = '📋';
-                                let title = '';
-                                let text = '';
-                                let actionType = 'viewBooking';
-                                
-                                if (b.status === 'approved') {
-                                    type = 'approval';
-                                    icon = '✅';
-                                    title = '预约审批通过';
-                                    text = `您的预约（${b.booking_no}）已通过审批`;
-                                    if (b.payment_status === 'unpaid') {
-                                        actionType = 'goToPayment';
-                                        text += '，请完成支付确认。';
-                                    }
-                                } else if (b.status === 'rejected') {
-                                    type = 'approval';
+                                let actionType = null;
+                                let bookingId = null;
+
+                                // 根据通知类型和标题设置图标和行为
+                                if (n.type === 'warning') {
                                     icon = '❌';
-                                    title = '预约审批拒绝';
-                                    text = `您的预约（${b.booking_no}）已被拒绝`;
-                                } else if (b.status === 'pending') {
-                                    type = 'booking';
+                                } else if (n.title.includes('取消')) {
                                     icon = '📋';
-                                    title = '预约创建成功';
-                                    text = `您的预约（${b.booking_no}）已提交，等待审批`;
-                                } else if (b.status === 'completed') {
-                                    type = 'reminder';
+                                } else if (n.title.includes('成功') || n.title.includes('通过')) {
                                     icon = '✅';
-                                    title = '预约已完成';
-                                    text = `您的预约（${b.title}）已完成`;
-                                } else {
-                                    title = '预约状态更新';
-                                    text = `您的预约（${b.booking_no}）状态已更新`;
+                                } else if (n.title.includes('拒绝')) {
+                                    icon = '❌';
                                 }
-                                
+
+                                // 尝试从content中提取booking_no
+                                const bookingNoMatch = n.content?.match(/预约编号[：:]\s*(\w+)/);
+                                const bookingNo = bookingNoMatch ? bookingNoMatch[1] : '';
+
                                 return {
-                                    id: b.id,
-                                    type,
+                                    id: n.id,
+                                    type: n.type || 'info',
                                     icon,
-                                    title,
-                                    text,
-                                    time: b.created_at ? new Date(b.created_at).toLocaleDateString() : '',
-                                    read: b.status !== 'pending',
+                                    title: n.title,
+                                    text: n.content || '',
+                                    time: n.created_at ? new Date(n.created_at).toLocaleDateString() : '',
+                                    read: n.is_read === 1,
                                     actionType,
-                                    bookingId: b.id
+                                    bookingId,
+                                    bookingNo,
                                 };
                             });
-                            
-                            unreadCount.value = notifications.value.filter(n => !n.read).length;
                         }
                     } catch (error) {
                         console.error('加载通知失败:', error);
@@ -405,42 +438,33 @@
                 
                 const markAsRead = async (notificationId) => {
                     try {
-                        // 实际应该调用API标记已读
-                        // /api/v2/space/notifications/{notificationId}/read
-                        
+                        await window.spaceAPI.markNotificationRead(notificationId);
+
                         const notification = notifications.value.find(n => n.id === notificationId);
                         if (notification) {
                             notification.read = true;
                         }
-                        
-                        console.log('通知已标记已读:', notificationId);
                     } catch (error) {
                         console.error('标记已读失败:', error);
                     }
                 };
-                
+
                 const markAllRead = async () => {
                     try {
-                        // 实际应该调用API批量标记已读
-                        
+                        await window.spaceAPI.markAllNotificationsRead();
+
                         notifications.value.forEach(n => {
                             n.read = true;
                         });
-                        
-                        console.log('全部通知已标记已读');
                     } catch (error) {
                         console.error('批量标记已读失败:', error);
                     }
                 };
                 
-                const viewBooking = (bookingId) => {
-                    window.location.href = `/space-frontend/my-bookings.html`;
+                const viewBooking = () => {
+                    window.location.href = '/space-frontend/my-bookings.html';
                 };
-                
-                const goToPayment = (bookingId) => {
-                    window.location.href = `/space-frontend/payment.html?booking_id=${bookingId}`;
-                };
-                
+
                 const goBack = () => {
                     window.location.href = '/portal/index.html';
                 };
@@ -460,7 +484,6 @@
                     markAsRead,
                     markAllRead,
                     viewBooking,
-                    goToPayment,
                     goBack
                 };
             }

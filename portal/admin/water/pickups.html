@@ -1169,11 +1169,11 @@
                             <div class="stat-hint">点击筛选</div>
                         </div>
                     </div>
-                    <div class="stat-card" :class="{ 'active-info': officePickupFilter.status === 'applied' }" @click="filterByStatus('applied')">
+                    <div class="stat-card" :class="{ 'active-info': officePickupFilter.status === 'paid' }" @click="filterByStatus('paid')">
                         <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">✅</div>
                         <div class="stat-info">
                             <div class="stat-value">{{ pickupStats.applied }}</div>
-                            <div class="stat-label">待确认</div>
+                            <div class="stat-label">已付款</div>
                             <div class="stat-amount">¥{{ pickupStats.appliedAmount.toFixed(2) }}</div>
                             <div class="stat-hint">点击筛选</div>
                         </div>
@@ -1209,8 +1209,8 @@
                         <button class="tab-btn" :class="{ active: officePickupFilter.status === 'pending' }" @click="filterByStatus('pending')">
                             待付款 <span class="count">{{ pickupStats.pending }}</span>
                         </button>
-                        <button class="tab-btn" :class="{ active: officePickupFilter.status === 'applied' }" @click="filterByStatus('applied')">
-                            待确认 <span class="count">{{ pickupStats.applied }}</span>
+                        <button class="tab-btn" :class="{ active: officePickupFilter.status === 'paid' }" @click="filterByStatus('paid')">
+                            已付款 <span class="count">{{ pickupStats.applied }}</span>
                         </button>
                         <button class="tab-btn" :class="{ active: officePickupFilter.status === 'settled' }" @click="filterByStatus('settled')">
                             已结清 <span class="count">{{ pickupStats.settled }}</span>
@@ -1352,13 +1352,10 @@
                                             <button class="btn-action btn-warning" @click="sendRemindForPickup(pickup)" v-if="pickup.settlement_status === 'pending'" title="发送付款提醒">
                                                 提醒付款
                                             </button>
-                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'pending'" title="手动确认线下收款">
+                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'paid'" title="确认收款">
                                                 确认收款
                                             </button>
-                                            <button class="btn-action btn-success" @click="confirmSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'applied'" title="确认用户付款申请">
-                                                确认收款
-                                            </button>
-                                            <button class="btn-action btn-secondary" @click="revertToPending(pickup.id)" v-if="pickup.settlement_status === 'applied'" title="退回到待付款状态">
+                                            <button class="btn-action btn-secondary" @click="revertToPending(pickup.id)" v-if="pickup.settlement_status === 'paid' || pickup.settlement_status === 'settled'" title="退回到待付款状态">
                                                 退回
                                             </button>
                                             <button class="btn-action btn-danger" @click="deleteSinglePickup(pickup.id)" v-if="pickup.settlement_status === 'settled'" title="删除历史记录">
@@ -1446,24 +1443,17 @@
                                     >
                                         提醒付款
                                     </button>
-                                    <button 
-                                        class="btn-action-mobile btn-success" 
-                                        @click="confirmSinglePickup(pickup.id)" 
-                                        v-if="pickup.settlement_status === 'pending'"
+                                    <button
+                                        class="btn-action-mobile btn-success"
+                                        @click="confirmSinglePickup(pickup.id)"
+                                        v-if="pickup.settlement_status === 'paid'"
                                     >
                                         确认收款
                                     </button>
-                                    <button 
-                                        class="btn-action-mobile btn-success" 
-                                        @click="confirmSinglePickup(pickup.id)" 
-                                        v-if="pickup.settlement_status === 'applied'"
-                                    >
-                                        确认收款
-                                    </button>
-                                    <button 
-                                        class="btn-action-mobile btn-secondary" 
-                                        @click="revertToPending(pickup.id)" 
-                                        v-if="pickup.settlement_status === 'applied'"
+                                    <button
+                                        class="btn-action-mobile btn-secondary"
+                                        @click="revertToPending(pickup.id)"
+                                        v-if="pickup.settlement_status === 'paid' || pickup.settlement_status === 'settled'"
                                     >
                                         退回待付
                                     </button>
@@ -1660,7 +1650,12 @@
                             return days > 30;
                         });
                     } else if (officePickupFilter.value.status) {
-                        result = result.filter(p => p.settlement_status === officePickupFilter.value.status);
+                        const filterStatus = officePickupFilter.value.status;
+                        result = result.filter(p => {
+                            if (filterStatus === 'paid') return p.settlement_status === 'paid' || p.settlement_status === 'applied';
+                            if (filterStatus === 'settled') return p.settlement_status === 'settled' || p.settlement_status === 'confirmed';
+                            return p.settlement_status === filterStatus;
+                        });
                     }
                     
                     if (officePickupFilter.value.officeId) {
@@ -1726,8 +1721,8 @@
                     const now = new Date();
                     
                     const pendingList = pickups.filter(p => p.settlement_status === 'pending');
-                    const appliedList = pickups.filter(p => p.settlement_status === 'applied');
-                    const settledList = pickups.filter(p => p.settlement_status === 'settled');
+                    const appliedList = pickups.filter(p => p.settlement_status === 'paid' || p.settlement_status === 'applied');
+                    const settledList = pickups.filter(p => p.settlement_status === 'settled' || p.settlement_status === 'confirmed');
                     
                     // 逾期计算：超过30天未结清
                     const overdueList = pickups.filter(p => {
@@ -1772,7 +1767,7 @@
                 
                 const selectedAppliedCount = computed(() => {
                     return filteredPickups.value.filter(p => 
-                        selectedPickups.value.includes(p.id) && p.settlement_status === 'applied'
+                        selectedPickups.value.includes(p.id) && p.settlement_status === 'paid'
                     ).length;
                 });
                 
@@ -1883,7 +1878,7 @@
                 };
                 
                 const getStatusText = (status) => {
-                    const map = { pending: '待付款', applied: '待确认', settled: '已结清' };
+                    const map = { pending: '待付款', paid: '已付款', applied: '已付款', settled: '已结清', confirmed: '已结清' };
                     return map[status] || status;
                 };
                 
@@ -2027,7 +2022,7 @@
                             headers: { 'Content-Type': 'application/json' }
                         });
                         if (res.ok) {
-                            alert('已发送付款提醒');
+                            alert('催款请求已记录。当前系统暂不支持自动通知，建议通过电话或微信直接联系用户。');
                         } else {
                             const err = await res.json();
                             alert(err.detail || '发送失败');
@@ -2086,7 +2081,7 @@
                                 });
                             }
                         }
-                        alert('批量提醒发送成功');
+                        alert('催款请求已记录。当前系统暂不支持自动通知，建议通过电话或微信直接联系用户。');
                         selectedPickups.value = [];
                     } catch (e) {
                         alert('批量提醒失败: ' + e.message);

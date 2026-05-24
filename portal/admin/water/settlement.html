@@ -302,11 +302,11 @@
             color: var(--warning-dark);
         }
         
-        .status-applied {
+        .status-applied, .status-paid {
             background: var(--info-light);
             color: var(--info-dark);
         }
-        
+
         .status-settled {
             background: var(--success-light);
             color: var(--success-dark);
@@ -418,6 +418,9 @@
             .settlement-stats {
                 display: none;
             }
+            .bottom-nav {
+                display: block !important;
+            }
         }
     </style>
 </head>
@@ -473,7 +476,7 @@
                         <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">📝</div>
                         <div class="stat-info">
                             <div class="stat-value">{{ settlementStats.appliedOfficeCount }}</div>
-                            <div class="stat-label">待确认办公室</div>
+                            <div class="stat-label">已付款办公室</div>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -494,8 +497,8 @@
                 
 <div class="filter-section">
                     <div class="tab-filters">
-                        <button class="tab-btn" :class="{ active: settlementTab === 'applied' }" @click="settlementTab = 'applied'">
-                            待确认 <span class="count">{{ settlementStats.appliedOfficeCount }}</span>
+                        <button class="tab-btn" :class="{ active: settlementTab === 'paid' }" @click="settlementTab = 'paid'">
+                            已付款 <span class="count">{{ settlementStats.appliedOfficeCount }}</span>
                         </button>
                         <button class="tab-btn" :class="{ active: settlementTab === 'pending' }" @click="settlementTab = 'pending'">
                             待付款 <span class="count">{{ settlementStats.pendingOfficeCount }}</span>
@@ -512,7 +515,7 @@
                         <div class="filter-group">
                             <span class="filter-label">办公室:</span>
                             <select class="filter-select" v-model="settlementFilter" @change="filterOfficeSettlements">
-                                <option value="applied">待确认</option>
+                                <option value="paid">已付款</option>
                                 <option value="pending">待付款</option>
                                 <option value="settled">已结清</option>
                                 <option value="all">全部</option>
@@ -556,7 +559,7 @@
                                     </div>
                                     <div class="settlement-stat">
                                         <div class="settlement-stat-value" style="color: var(--info-dark);">{{ record.applied_count || 0 }}</div>
-                                        <div class="settlement-stat-label">待确认</div>
+                                        <div class="settlement-stat-label">已付款</div>
                                     </div>
                                     <div class="settlement-stat">
                                         <div class="settlement-stat-value" style="color: var(--success-dark);">{{ record.confirmed_count || 0 }}</div>
@@ -624,6 +627,31 @@
                 </div>
             </div>
         </template>
+
+        <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
+            <div style="display: flex; justify-content: space-around;">
+                <a href="/portal/admin/water/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #3B82F6; text-decoration: none;">
+                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 12px;">工作台</span>
+                </a>
+                <a href="/portal/admin/water/products.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
+                    <span style="font-size: 24px;">📦</span>
+                    <span style="font-size: 12px;">套餐</span>
+                </a>
+                <a href="/portal/admin/water/pickups.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
+                    <span style="font-size: 24px;">💧</span>
+                    <span style="font-size: 12px;">领水</span>
+                </a>
+                <a href="/portal/admin/water/accounts.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
+                    <span style="font-size: 24px;">💰</span>
+                    <span style="font-size: 12px;">账户</span>
+                </a>
+                <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
+                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 12px;">首页</span>
+                </a>
+            </div>
+        </nav>
     </div>
     
     <script>
@@ -641,8 +669,8 @@
                 const authError = ref('');
                 
                 const officeSettlements = ref([]);
-                const settlementTab = ref('applied');
-                const settlementFilter = ref('applied');
+                const settlementTab = ref('paid');
+                const settlementFilter = ref('paid');
                 const expandedSettlementId = ref(null);
                 
                 const checkAuth = async () => {
@@ -689,7 +717,7 @@
                             return r.confirmed_count > 0 && r.pending_count === 0 && r.applied_count === 0;
                         } else if (settlementTab.value === 'pending') {
                             return r.pending_count > 0;
-                        } else if (settlementTab.value === 'applied') {
+                        } else if (settlementTab.value === 'paid') {
                             return r.applied_count > 0;
                         }
                         return true;
@@ -712,10 +740,10 @@ const settlementStats = computed(() => {
                 if (p.settlement_status === 'pending') {
                     pendingRecordCount++;
                     pendingAmount += (p.total_amount || 0);
-                } else if (p.settlement_status === 'applied') {
+                } else if (p.settlement_status === 'paid' || p.settlement_status === 'applied') {
                     appliedRecordCount++;
                     appliedAmount += (p.total_amount || 0);
-                } else if (p.settlement_status === 'settled') {
+                } else if (p.settlement_status === 'settled' || p.settlement_status === 'confirmed') {
                     settledRecordCount++;
                     settledAmount += (p.total_amount || 0);
                 }
@@ -748,7 +776,7 @@ const settlementStats = computed(() => {
                 };
                 
                 const getStatusText = (status) => {
-                    const map = { pending: '待付款', applied: '待确认', settled: '已结清' };
+                    const map = { pending: '待付款', paid: '已付款', applied: '已付款', settled: '已结清', confirmed: '已结清' };
                     return map[status] || status;
                 };
                 
@@ -771,11 +799,11 @@ const settlementStats = computed(() => {
                     const totalCount = pendingCount + appliedCount;
                     
                     if (totalCount === 0) {
-                        alert('没有待确认的记录');
+                        alert('没有待处理的记录');
                         return;
                     }
                     
-                    if (!confirm(`确认收到办公室"${officeName}"的结算款项？\n\n待付款: ${pendingCount}笔\n待确认: ${appliedCount}笔`)) return;
+                    if (!confirm(`确认收到办公室"${officeName}"的结算款项？\n\n待付款: ${pendingCount}笔\n已付款: ${appliedCount}笔`)) return;
                     
                     try {
                         const token = localStorage.getItem('token');
@@ -785,7 +813,7 @@ const settlementStats = computed(() => {
                         };
                         
                         const pickupIds = (record.pickups || [])
-                            .filter(p => p && (p.settlement_status === 'pending' || p.settlement_status === 'applied'))
+                            .filter(p => p && (p.settlement_status === 'pending' || p.settlement_status === 'paid' || p.settlement_status === 'applied'))
                             .map(p => p.id);
                         
                         if (pickupIds.length === 0) {
@@ -845,7 +873,7 @@ const settlementStats = computed(() => {
                             }
                         }
                         
-                        alert(`已发送 ${successCount} 条付款提醒`);
+                        alert(`催款请求已记录（共 ${successCount} 条）。当前系统暂不支持自动通知，建议通过电话或微信直接联系用户。`);
                     } catch (e) {
                         alert('发送提醒失败: ' + e.message);
                     }
@@ -854,7 +882,7 @@ const settlementStats = computed(() => {
                 const batchConfirmAllSettlements = async () => {
                     const stats = settlementStats.value;
                     if (stats.appliedOfficeCount === 0) {
-                        alert('没有已申请待确认的记录');
+                        alert('没有已付款的记录');
                         return;
                     }
                     
@@ -865,10 +893,10 @@ const settlementStats = computed(() => {
 `确认批量确认收款?
 
 涉及办公室: ${stats.appliedOfficeCount}个
-待确认记录: ${appliedCount}条
+已付款记录: ${appliedCount}条
 总金额: ¥${appliedAmount.toFixed(2)}
 
-⚠️ 提示: 此操作将确认所有已申请待审核的记录,确认后不可撤销。`
+⚠️ 提示: 此操作将确认所有已付款的记录,确认后不可撤销。`
                     );
                     
                     if (!confirmed) return;
@@ -884,7 +912,7 @@ const settlementStats = computed(() => {
                         for (const o of officeSettlements.value) {
                             if (o.applied_count > 0) {
                                 const appliedPickupIds = (o.pickups || [])
-                                    .filter(p => p.settlement_status === 'applied')
+                                    .filter(p => p.settlement_status === 'paid' || p.settlement_status === 'applied')
                                     .map(p => p.id);
                                 allAppliedPickupIds = allAppliedPickupIds.concat(appliedPickupIds);
                             }
@@ -989,7 +1017,7 @@ await loadOfficeSettlements();
                         return;
                     }
                     
-                    let csv = '办公室,房间号,待付款数,待确认数,已结清数,总金额\n';
+                    let csv = '办公室,房间号,待付款数,已付款数,已结清数,总金额\n';
                     filteredOfficeSettlements.value.forEach(r => {
                         csv += `${r.office_name || r.name || ''},${r.office_room_number || ''},${r.pending_count || 0},${r.applied_count || 0},${r.confirmed_count || 0},${(r.total_amount || 0).toFixed(2)}\n`;
                     });

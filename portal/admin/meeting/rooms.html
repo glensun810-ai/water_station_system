@@ -333,7 +333,11 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header :breadcrumbs="[{text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html'}, {text: '资源配置', icon: '🏢', url: '/portal/admin/meeting/rooms.html'}]"></global-header>
+        <global-header :breadcrumbs="[{text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html'}, {text: '资源配置', icon: '🏢', url: '/portal/admin/meeting/rooms.html'}]">
+            <template #nav-actions>
+                <a href="/meeting-frontend/admin.html">会议SPA管理</a>
+            </template>
+        </global-header>
         <div v-if="loading" class="loading-overlay">
             <div class="loading-spinner"></div>
         </div>
@@ -385,11 +389,11 @@
                             <div class="room-price">
                                 <div class="price-row">
                                     <span class="price-label">工作时段</span>
-                                    <span class="price-value">¥{{ room.weekday_price || room.hourly_rate || 0 }}/小时</span>
+                                    <span class="price-value">¥{{ room.price_per_hour || 0 }}/小时</span>
                                 </div>
                                 <div class="price-row">
                                     <span class="price-label">休息时段</span>
-                                    <span class="price-value">¥{{ room.weekend_price || room.hourly_rate || 0 }}/小时</span>
+                                    <span class="price-value">¥{{ room.member_price_per_hour || 0 }}/小时</span>
                                 </div>
                             </div>
                             
@@ -434,11 +438,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">工作时段单价(元/小时)</label>
-                                <input type="number" class="form-input" v-model.number="roomForm.weekday_price" min="0">
+                                <input type="number" class="form-input" v-model.number="roomForm.price_per_hour" min="0">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">休息时段单价(元/小时)</label>
-                                <input type="number" class="form-input" v-model.number="roomForm.weekend_price" min="0">
+                                <input type="number" class="form-input" v-model.number="roomForm.member_price_per_hour" min="0">
                             </div>
                         </div>
                         <div class="form-group">
@@ -483,8 +487,8 @@
                     name: '',
                     location: '',
                     capacity: 10,
-                    weekday_price: 0,
-                    weekend_price: 0,
+                    price_per_hour: 0,
+                    member_price_per_hour: 0,
                     facilities: [],
                     description: ''
                 });
@@ -559,9 +563,9 @@ const loadRooms = async () => {
                             id: room.id,
                             name: room.name,
                             location: room.location || room.floor || '',
-                            capacity: room.capacity || room.seats || 10,
-                            weekday_price: room.weekday_price || room.hourly_rate || 0,
-                            weekend_price: room.weekend_price || room.hourly_rate || 0,
+                            capacity: room.capacity || 10,
+                            price_per_hour: room.price_per_hour || 0,
+                            member_price_per_hour: room.member_price_per_hour || 0,
                             facilities: getFacilities(room),
                             description: room.description || ''
                         };
@@ -570,8 +574,8 @@ const loadRooms = async () => {
                             name: '',
                             location: '',
                             capacity: 10,
-                            weekday_price: 0,
-                            weekend_price: 0,
+                            price_per_hour: 0,
+                            member_price_per_hour: 0,
                             facilities: [],
                             description: ''
                         };
@@ -593,10 +597,13 @@ const loadRooms = async () => {
                         };
                         
                         const payload = {
-                            ...roomForm.value,
-                            seats: roomForm.value.capacity,
-                            hourly_rate: roomForm.value.weekday_price,
-                            equipment: roomForm.value.facilities.join(',')
+                            name: roomForm.value.name,
+                            location: roomForm.value.location,
+                            capacity: roomForm.value.capacity,
+                            price_per_hour: roomForm.value.price_per_hour,
+                            member_price_per_hour: roomForm.value.member_price_per_hour,
+                            facilities: roomForm.value.facilities.join(','),
+                            description: roomForm.value.description
                         };
                         if (editingRoom.value) {
                             payload.id = editingRoom.value.id;

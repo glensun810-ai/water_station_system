@@ -46,27 +46,11 @@
         
         .page-actions { display: flex; gap: var(--spacing-sm); }
         
-        .btn {
-            padding: 8px 16px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            cursor: pointer;
-            background: white;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-            font-weight: 500;
-        }
-        .btn:hover { background: var(--bg-secondary); }
-        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-success { background: var(--success); color: white; border-color: var(--success); }
-        .btn-success:hover { background: #059669; }
+        /* 按钮使用 design-system.css 统一样式，此处仅保留必要覆盖 */
+        .btn-success:hover { background: var(--success-dark); }
         .btn-outline { background: white; color: var(--text-primary); }
         .btn-outline:hover { background: var(--bg-secondary); border-color: var(--primary); color: var(--primary); }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; min-height: 36px; }
         
         /* 一、汇总统计卡片区 */
         .stats-grid {
@@ -1675,7 +1659,9 @@
                     }
                 });
                 
-                onMounted(() => {
+                onMounted(async () => {
+                    const user = await checkAuth({ requireAuth: true, requireAdmin: true });
+                    if (!user) return;
                     loadFiltersFromUrl();
                     loadAllData();
                 });

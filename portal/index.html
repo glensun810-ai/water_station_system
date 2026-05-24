@@ -363,6 +363,11 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
         
         /* 系统管理模块响应式布局 */
         .system-management-section {
@@ -670,11 +675,10 @@
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-secondary">今日领水：<span class="font-bold text-primary">{{ waterTodayCount }}次</span></span>
                                         <span class="text-sm text-secondary">待结算：<span class="font-bold text-warning">¥{{ waterPendingAmount.toFixed(2) }}</span></span>
-                                        <span class="text-sm text-secondary"></span>
-                                        <span class="text-sm text-secondary"></span>
                                     </div>
-                                    <div v-if="waterAlerts > 0" class="alert-badge" style="margin-top: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-sm); background: var(--danger-light); color: var(--danger); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
-                                        ⚠️ 库存预警 {{ waterAlerts }} 个
+                                    <div class="flex items-center justify-between" style="margin-top: var(--spacing-sm);">
+                                        <span class="text-sm text-secondary">库存状态：<span :class="waterAlerts > 0 ? 'font-bold text-danger' : 'font-bold text-success'">{{ waterAlerts > 0 ? '⚠️ ' + waterAlerts + '项预警' : '✅ 正常' }}</span></span>
+                                        <span class="text-sm text-secondary">数据刷新：<span class="font-bold text-primary">{{ waterTodayCount > 0 ? '今日有记录' : '暂无数据' }}</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -735,7 +739,7 @@
                                 <a href="/portal/admin/space/bookings.html" class="btn btn-outline btn-sm" style="justify-content: center;" title="预约管理与审批">
                                     预约管理
                                 </a>
-                                <a href="/portal/admin/space/settlements.html" class="btn btn-outline btn-sm" style="justify-content: center; border-color: var(--success); color: var(--success);" title="费用结算管理">
+                                <a href="/portal/admin/space/settlements.html" class="btn btn-outline btn-sm" style="justify-content: center;" title="费用结算管理">
                                     结算管理
                                 </a>
                                 <a href="/portal/admin/space/resources.html" class="btn btn-outline btn-sm" style="justify-content: center;">
@@ -747,9 +751,6 @@
                                 <a href="/space-frontend/calendar.html" class="btn btn-outline btn-sm" style="justify-content: center;">
                                     预约日历
                                 </a>
-                            </div>
-                            <div style="margin-top: var(--spacing-sm); padding: var(--spacing-sm); background: var(--info-light); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--info-dark);">
-                                💡 审批功能已整合至预约管理，无需单独跳转
                             </div>
                         </div>
                         
@@ -807,13 +808,6 @@
                                 </div>
                             </div>
                             
-                            <!-- 动画样式 -->
-                            <style>
-                                @keyframes pulse {
-                                    0%, 100% { opacity: 1; transform: scale(1); }
-                                    50% { opacity: 0.6; transform: scale(1.1); }
-                                }
-                            </style>
                         </div>
                     </div>
                     
@@ -981,7 +975,7 @@
         </nav>
         
 <!-- 移动端菜单（仅在已登录时显示） -->
-<div v-if="showMobileMenu && userInfo && userInfo.id" class="modal-overlay" @click="showMobileMenu = false" style="display: none;">
+<div v-if="showMobileMenu && userInfo && userInfo.id" class="modal-overlay" @click="showMobileMenu = false">
             <div class="modal-content" style="max-width: 300px; padding: 0;" @click.stop>
                 <div style="background: var(--primary); color: white; padding: var(--spacing-xl); text-align: center;">
                     <div style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto var(--spacing-md); border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;">👤</div>
@@ -1089,7 +1083,7 @@ const waterNavLabel = computed(() => {
                                 role: user.role,
                                 roleName: user.roleName,
                                 user_type: user.user_type || 'internal',
-                                is_admin: user.role === '超级管理员' || user.role === 'admin' || user.role === 'super_admin' || user.is_admin === true
+                                is_admin: user.is_admin === true
                             };
                             console.log('用户已登录:', userInfo.value);
                             console.log('userInfo.id:', userInfo.value.id);

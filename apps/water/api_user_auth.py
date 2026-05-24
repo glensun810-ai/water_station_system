@@ -84,11 +84,17 @@ def get_role_display_name(role: str, department: str = None) -> str:
     return role_names.get(role, role)
 
 
+def _prepare_password(password: str) -> bytes:
+    """bcrypt 最大 72 字节限制，超长密码截断"""
+    pw = password.encode("utf-8")
+    return pw[:72] if len(pw) > 72 else pw
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     if not hashed_password:
         return False
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_prepare_password(plain_password), hashed_password)
 
 
 def parse_user_agent(user_agent: str) -> dict:
@@ -274,7 +280,7 @@ def user_register(
             )
 
     # 创建用户
-    password_hash = pwd_context.hash(register_data.password)
+    password_hash = pwd_context.hash(_prepare_password(register_data.password))
 
     # 外部用户直接激活，内部用户需要管理员审核
     is_active = 1 if register_data.user_type == "external" else 0
@@ -666,7 +672,7 @@ def change_password(
         )
 
     # 更新密码
-    new_hash = pwd_context.hash(request_data.new_password)
+    new_hash = pwd_context.hash(_prepare_password(request_data.new_password))
     db.execute(
         text("""
         UPDATE users SET password_hash = :hash, updated_at = :now WHERE id = :id

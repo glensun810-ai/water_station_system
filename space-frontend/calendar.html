@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/portal/components/GlobalHeader.js"></script>
     <script src="/portal/assets/js/auth.js"></script>
+    <script type="module" src="./api.js"></script>
     
     <style>
         [v-cloak] { display: none !important; }
@@ -2248,6 +2249,45 @@
                 display: none;
             }
         }
+
+        .bottom-nav {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-md);
+            min-height: 44px;
+            min-width: 44px;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+        }
+        .nav-item:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+        .nav-label {
+            font-size: var(--font-size-xs);
+        }
     </style>
 </head>
 <body>
@@ -2941,8 +2981,31 @@
             <span class="keyboard-hint">←→</span> 上/下页 
             <span class="keyboard-hint">ESC</span> 关闭
         </div>
+
+        <nav class="bottom-nav" role="navigation" aria-label="底部导航">
+            <a href="/space-frontend/index.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">首页</span>
+            </a>
+            <a href="/space-frontend/calendar.html" class="nav-item active" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">📅</span>
+                <span class="nav-label">日历</span>
+            </a>
+            <a href="/space-frontend/my-bookings.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📋</span>
+                <span class="nav-label">预约</span>
+            </a>
+            <a href="/space-frontend/notifications.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🔔</span>
+                <span class="nav-label">通知</span>
+            </a>
+            <a href="/space-frontend/profile.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">👤</span>
+                <span class="nav-label">我的</span>
+            </a>
+        </nav>
     </div>
-    
+
     <script>
         const { createApp, ref, computed, watch, onMounted } = Vue;
         
@@ -3640,7 +3703,7 @@
                         const user = await checkAuth({ requireAuth: false, validateToken: true });
                         if (user) {
                             currentUser.value = user;
-                            isAdmin.value = ['admin', 'super_admin', 'space_manager'].includes(user.role);
+                            isAdmin.value = ['admin', 'super_admin', 'space_manager', 'office_admin'].includes(user.role);
                             dataMode.value = isAdmin.value ? 'all' : 'my';
                         }
                         
@@ -3671,17 +3734,10 @@
                         
 const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, limit: '100' });
                         
-                        const [bookingsRes, resourcesRes] = await Promise.all([
-                            fetch(`${API_BOOKINGS}?${params}`, {
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            }),
-                            fetch(`${API_RESOURCES}`, {
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            })
+                        const [bookingsData, resourcesData] = await Promise.all([
+                            window.spaceAPI.getBookings({ date_from: dateFrom, date_to: dateTo, limit: '100' }),
+                            window.spaceAPI.getResources()
                         ]);
-                        
-                        const bookingsData = await bookingsRes.json();
-                        const resourcesData = await resourcesRes.json();
                         
                         if (bookingsData.code === 200 && bookingsData.data) {
                             const items = bookingsData.data.items || bookingsData.data.bookings || [];
@@ -3984,20 +4040,11 @@ const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, limit
                     if (!confirm(`确认取消预约「${selectedBooking.value.title}」？\n\n取消后可能涉及退款，请确认操作。`)) return;
                     
                     try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch(`${API_BOOKINGS}/${selectedBooking.value.id}/cancel`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ 
-                                cancel_reason: '用户主动取消',
-                                cancel_type: 'user_cancel'
-                            })
-                        });
-                        
-                        const data = await response.json();
+                        const data = await window.spaceAPI.cancelBooking(
+                            selectedBooking.value.id,
+                            '用户主动取消',
+                            'user_cancel'
+                        );
                         
                         if (data.code === 200) {
                             alert('预约已取消');

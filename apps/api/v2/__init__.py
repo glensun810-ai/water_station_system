@@ -8,6 +8,7 @@ from .space_bookings import router as space_bookings_router
 from .space_approvals import router as space_approvals_router
 from .space_payments import router as space_payments_router
 from .space_statistics import router as space_statistics_router
+from .space_notifications import router as space_notifications_router
 
 __all__ = [
     "space_types_router",
@@ -16,4 +17,5 @@ __all__ = [
     "space_approvals_router",
     "space_payments_router",
     "space_statistics_router",
+    "space_notifications_router",
 ]

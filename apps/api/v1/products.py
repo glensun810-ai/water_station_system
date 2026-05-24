@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 from config.database import get_db
 from models.product import Product, ProductCategory
+from depends.auth import get_admin_user
+from models.user import User
 
 router = APIRouter(prefix="/products", tags=["产品管理"])
 
@@ -93,6 +95,7 @@ def get_products(
         None, description="状态筛选：1-在售，0-停售，None-全部"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     query = db.query(Product)
 
@@ -134,6 +137,7 @@ def export_products(
     is_active: Optional[int] = Query(None, description="状态筛选"),
     category_id: Optional[int] = Query(None, description="分类筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     from datetime import datetime
     import json
@@ -175,7 +179,11 @@ def export_products(
 
 
 @router.post("/batch-active")
-def batch_set_active(request: dict, db: Session = Depends(get_db)):
+def batch_set_active(
+    request: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     product_ids = request.get("product_ids", [])
     is_active = request.get("is_active", 1)
 
@@ -201,7 +209,11 @@ def batch_set_active(request: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/batch-delete")
-def batch_delete_products(product_ids: List[int], db: Session = Depends(get_db)):
+def batch_delete_products(
+    product_ids: List[int],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     deleted_count = 0
     errors = []
 
@@ -228,7 +240,11 @@ def batch_delete_products(product_ids: List[int], db: Session = Depends(get_db))
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -238,7 +254,11 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ProductResponse)
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(
+    product: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     db_product = Product(**product.model_dump())
     db.add(db_product)
     db.commit()
@@ -249,7 +269,10 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
 
 @router.put("/{product_id}", response_model=ProductResponse)
 def update_product(
-    product_id: int, product_update: ProductUpdate, db: Session = Depends(get_db)
+    product_id: int,
+    product_update: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
 
@@ -268,7 +291,10 @@ def update_product(
 
 @router.put("/{product_id}/stock")
 def update_product_stock(
-    product_id: int, stock_update: dict, db: Session = Depends(get_db)
+    product_id: int,
+    stock_update: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
 
@@ -287,7 +313,11 @@ def update_product_stock(
 
 
 @router.delete("/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -303,7 +333,11 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}/toggle")
-def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
+def toggle_product_status(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="产品不存在")
@@ -321,7 +355,11 @@ def toggle_product_status(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}/protect")
-def toggle_product_protection(product_id: int, db: Session = Depends(get_db)):
+def toggle_product_protection(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="产品不存在")
@@ -340,7 +378,10 @@ def toggle_product_protection(product_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{product_id}/promo-toggle")
 def toggle_product_promotion(
-    product_id: int, enable: bool, db: Session = Depends(get_db)
+    product_id: int,
+    enable: bool,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -368,13 +409,20 @@ def toggle_product_promotion(
 
 
 @category_router.get("", response_model=List[CategoryResponse])
-def get_categories(db: Session = Depends(get_db)):
+def get_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     categories = db.query(ProductCategory).all()
     return [CategoryResponse.model_validate(c) for c in categories]
 
 
 @category_router.post("", response_model=CategoryResponse)
-def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
+def create_category(
+    category: CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     db_category = ProductCategory(**category.model_dump())
     db.add(db_category)
     db.commit()
@@ -384,7 +432,10 @@ def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
 
 @category_router.put("/{category_id}", response_model=CategoryResponse)
 def update_category(
-    category_id: int, category_update: CategoryUpdate, db: Session = Depends(get_db)
+    category_id: int,
+    category_update: CategoryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     category = (
         db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
@@ -404,7 +455,11 @@ def update_category(
 
 
 @category_router.delete("/{category_id}")
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     category = (
         db.query(ProductCategory).filter(ProductCategory.id == category_id).first()
     )

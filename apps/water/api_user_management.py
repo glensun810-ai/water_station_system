@@ -19,6 +19,12 @@ router = APIRouter(prefix="/api/users", tags=["user_management"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _prepare_password(password: str) -> bytes:
+    """bcrypt 最大 72 字节限制，超长密码截断"""
+    pw = password.encode("utf-8")
+    return pw[:72] if len(pw) > 72 else pw
+
+
 # ==================== 数据模型 ====================
 
 
@@ -270,7 +276,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
                 )
 
         # 加密密码
-        password_hash = pwd_context.hash(user.password) if user.password else None
+        password_hash = pwd_context.hash(_prepare_password(user.password)) if user.password else None
 
         # 创建用户
         new_user = main.User(
@@ -429,7 +435,7 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
             existing.is_active = user.is_active
 
         if user.password is not None:
-            existing.password_hash = pwd_context.hash(user.password)
+            existing.password_hash = pwd_context.hash(_prepare_password(user.password))
 
         existing.updated_at = datetime.now()
         db.commit()
@@ -681,7 +687,7 @@ def reset_user_password(
             raise HTTPException(status_code=404, detail="用户不存在")
 
         generated_password = new_password or secrets.token_urlsafe(8)
-        user.password_hash = pwd_context.hash(generated_password)
+        user.password_hash = pwd_context.hash(_prepare_password(generated_password))
         user.updated_at = datetime.now()
         db.commit()
 

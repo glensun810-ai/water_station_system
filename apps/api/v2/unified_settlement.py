@@ -107,7 +107,7 @@ async def get_unified_settlement_summary(
             func.sum(OfficePickup.total_amount).label("amount"),
         ).filter(
             OfficePickup.is_deleted == False,
-            OfficePickup.settlement_status.in_(["pending", "paid", "applied"]),
+            OfficePickup.settlement_status.in_(["pending", "paid"]),
         )
 
         water_pending_result = water_pending_query.first()
@@ -119,7 +119,7 @@ async def get_unified_settlement_summary(
             func.sum(OfficePickup.total_amount).label("amount"),
         ).filter(
             OfficePickup.is_deleted == False,
-            OfficePickup.settlement_status.in_(["confirmed", "settled"]),
+            OfficePickup.settlement_status == "settled",
         )
 
         if month_start:
@@ -137,7 +137,7 @@ async def get_unified_settlement_summary(
             func.sum(OfficePickup.total_amount).label("amount"),
         ).filter(
             OfficePickup.is_deleted == False,
-            OfficePickup.settlement_status.in_(["confirmed", "settled"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.confirmed_time >= datetime(current_year, current_month, 1),
         )
 
@@ -296,11 +296,11 @@ async def get_unified_settlement_records(
                 )
             elif status == "waiting":
                 water_query = water_query.filter(
-                    OfficePickup.settlement_status.in_(["paid", "applied"])
+                    OfficePickup.settlement_status == "paid"
                 )
             elif status == "settled":
                 water_query = water_query.filter(
-                    OfficePickup.settlement_status.in_(["confirmed", "settled"])
+                    OfficePickup.settlement_status == "settled"
                 )
 
             # 月份过滤在数据库层执行
@@ -336,10 +336,10 @@ async def get_unified_settlement_records(
 
             for pickup in water_pickups:
                 pickup_status = pickup.settlement_status
-                if pickup_status in ["paid", "applied"]:
+                if pickup_status == "paid":
                     status_class = "waiting"
-                    status_text = "已申请结算"
-                elif pickup_status in ["confirmed", "settled"]:
+                    status_text = "已付款"
+                elif pickup_status == "settled":
                     status_class = "settled"
                     status_text = "已结算"
                 else:
@@ -672,7 +672,7 @@ async def export_monthly_report(
             db.query(OfficePickup)
             .filter(
                 OfficePickup.is_deleted == False,
-                OfficePickup.settlement_status.in_(["confirmed", "settled"]),
+                OfficePickup.settlement_status == "settled",
                 OfficePickup.confirmed_time >= month_start,
                 OfficePickup.confirmed_time <= month_end,
             )
@@ -823,9 +823,11 @@ async def batch_confirm_settlements(
                 OfficePickup.id == rid, OfficePickup.is_deleted == False
             ).first()
             if pickup:
-                if pickup.settlement_status in ("confirmed", "settled"):
+                if pickup.settlement_status == "paid":
                     pickup.settlement_status = "settled"
                     pickup.confirmed_time = pickup.confirmed_time or datetime.now()
+                elif pickup.settlement_status == "settled":
+                    pass  # 已经是结算状态
                 else:
                     skipped.append(f"water_{rid}: 状态为{pickup.settlement_status}，无法结算")
                     continue

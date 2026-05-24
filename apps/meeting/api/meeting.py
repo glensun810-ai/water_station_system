@@ -9,6 +9,8 @@ from pydantic import BaseModel, field_validator
 from config.database import get_db
 from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
+from models.user import User
+from depends.auth import get_current_user
 
 router = APIRouter(prefix="/api/meeting", tags=["会议室管理"])
 
@@ -129,6 +131,7 @@ def get_meeting_rooms(
     limit: int = 100,
     is_active: Optional[bool] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取会议室列表"""
     query = db.query(MeetingRoom)
@@ -141,7 +144,7 @@ def get_meeting_rooms(
 
 
 @router.post("/rooms", response_model=MeetingRoomResponse)
-def create_meeting_room(room: MeetingRoomCreate, db: Session = Depends(get_db)):
+def create_meeting_room(room: MeetingRoomCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """创建会议室"""
     db_room = MeetingRoom(**room.model_dump())
     db.add(db_room)
@@ -151,7 +154,7 @@ def create_meeting_room(room: MeetingRoomCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/rooms/{room_id}", response_model=MeetingRoomResponse)
-def get_meeting_room(room_id: int, db: Session = Depends(get_db)):
+def get_meeting_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取会议室详情"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
     if not room:
@@ -164,6 +167,7 @@ def update_meeting_room(
     room_id: int,
     room_update: MeetingRoomUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """更新会议室信息"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
@@ -181,7 +185,7 @@ def update_meeting_room(
 
 
 @router.delete("/rooms/{room_id}")
-def delete_meeting_room(room_id: int, db: Session = Depends(get_db)):
+def delete_meeting_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """删除会议室"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()
     if not room:
@@ -203,6 +207,7 @@ def get_bookings(
     user_type: Optional[str] = None,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取预约列表"""
     query = db.query(MeetingBooking)
@@ -227,7 +232,7 @@ def get_bookings(
 
 
 @router.post("/bookings", response_model=MeetingBookingResponse)
-def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db)):
+def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """创建预约"""
     import random
     from datetime import datetime as dt
@@ -300,7 +305,7 @@ def create_booking(booking: MeetingBookingCreate, db: Session = Depends(get_db))
 
 
 @router.get("/bookings/{booking_id}", response_model=MeetingBookingResponse)
-def get_booking(booking_id: int, db: Session = Depends(get_db)):
+def get_booking(booking_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取预约详情"""
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
     if not booking:
@@ -314,7 +319,7 @@ def get_booking(booking_id: int, db: Session = Depends(get_db)):
 
 @router.put("/bookings/{booking_id}/cancel")
 def cancel_booking(
-    booking_id: int, reason: Optional[str] = None, db: Session = Depends(get_db)
+    booking_id: int, reason: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """取消预约"""
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()
@@ -337,6 +342,7 @@ def check_room_availability(
     room_id: int,
     date: date,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """检查会议室可用时间段"""
     room = db.query(MeetingRoom).filter(MeetingRoom.id == room_id).first()

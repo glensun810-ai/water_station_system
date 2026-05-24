@@ -86,9 +86,9 @@ def confirm_office_pickup(
     if pickup.settlement_status != "paid":
         raise HTTPException(status_code=400, detail="只能确认'已付款'状态的记录")
 
-    pickup.settlement_status = "confirmed"
+    pickup.settlement_status = "settled"
     pickup.confirmed_by = current_user.id
-    pickup.confirmed_at = datetime.now()
+    pickup.confirmed_time = datetime.now()
     db.commit()
     return {"message": "已确认收款", "pickup_id": pickup_id}
 
@@ -105,8 +105,8 @@ def revert_office_pickup(
     ).first()
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
-    if pickup.settlement_status not in ("confirmed", "paid"):
-        raise HTTPException(status_code=400, detail="只能回退'已确认'或'已付款'状态的记录")
+    if pickup.settlement_status not in ("settled", "paid"):
+        raise HTTPException(status_code=400, detail="只能回退'已结清'或'已付款'状态的记录")
 
     pickup.settlement_status = "pending"
     pickup.confirmed_by = None
@@ -146,9 +146,9 @@ def batch_confirm_pickups(
             OfficePickup.id == pid, OfficePickup.is_deleted == False
         ).first()
         if pickup and pickup.settlement_status == "paid":
-            pickup.settlement_status = "confirmed"
+            pickup.settlement_status = "settled"
             pickup.confirmed_by = current_user.id
-            pickup.confirmed_at = datetime.now()
+            pickup.confirmed_time = datetime.now()
             confirmed.append(pid)
     db.commit()
     return {"message": f"已确认 {len(confirmed)} 条记录", "confirmed_ids": confirmed}
@@ -206,7 +206,7 @@ def get_admin_settlements(
     """管理员获取办公室结算列表"""
     pickups = db.query(OfficePickup).filter(
         OfficePickup.is_deleted == False,
-        OfficePickup.settlement_status.in_(["confirmed", "settled"]),
+        OfficePickup.settlement_status == "settled",
     ).order_by(OfficePickup.pickup_time.desc()).limit(limit).all()
 
     # 按办公室分组
@@ -242,7 +242,7 @@ def auto_generate_monthly_settlement(
 
     pickups = db.query(OfficePickup).filter(
         OfficePickup.is_deleted == False,
-        OfficePickup.settlement_status == "confirmed",
+        OfficePickup.settlement_status == "settled",
     ).all()
 
     if not pickups:

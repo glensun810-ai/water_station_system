@@ -11,15 +11,20 @@ class SpaceAPI {
     }
 
     async request(endpoint, options = {}) {
-        const url = `${SPACE_API_BASE}${endpoint}`;
+        const url = endpoint.startsWith('/api/')
+            ? endpoint
+            : `${SPACE_API_BASE}${endpoint}`;
 
         const defaultHeaders = {
             'Content-Type': 'application/json',
         };
 
-        const token = localStorage.getItem('token');
-        if (token) {
-            defaultHeaders['Authorization'] = `Bearer ${token}`;
+        const skipAuth = options.skipAuth === true;
+        if (!skipAuth) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                defaultHeaders['Authorization'] = `Bearer ${token}`;
+            }
         }
 
         const config = {
@@ -307,30 +312,46 @@ class SpaceAPI {
         return this.get('/statistics/my');
     }
 
+    // ========== 通知 API ==========
+
+    async getNotifications(params = {}) {
+        return this.get('/notifications', params);
+    }
+
+    async getUnreadNotificationCount() {
+        return this.get('/notifications/unread-count');
+    }
+
+    async markNotificationRead(notificationId) {
+        return this.request(`/api/v2/space/notifications/${notificationId}/read`, {
+            method: 'PATCH',
+        });
+    }
+
+    async markAllNotificationsRead() {
+        return this.request('/api/v2/space/notifications/read-all', {
+            method: 'PATCH',
+        });
+    }
+
     // ========== 用户认证 API ==========
 
     async login(username, password) {
-        return fetch('/api/v1/system/auth/login', {
+        return this.request('/api/v1/system/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
-        }).then(r => r.json());
+            skipAuth: true,
+        });
     }
 
     async logout() {
-        return fetch('/api/v1/system/auth/logout', {
+        return this.request('/api/v1/system/auth/logout', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-        }).then(r => r.json());
+        });
     }
 
     async getCurrentUser() {
-        return fetch('/api/v1/user/me', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.json());
+        return this.request('/api/v1/user/me');
     }
 
     async updateProfile(profileData) {
@@ -360,6 +381,10 @@ class SpaceAPI {
 }
 
 const spaceAPI = new SpaceAPI();
+
+if (typeof window !== 'undefined') {
+    window.spaceAPI = spaceAPI;
+}
 
 export default spaceAPI;
 export { SpaceAPI, SPACE_API_BASE };

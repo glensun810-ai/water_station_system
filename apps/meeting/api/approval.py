@@ -11,6 +11,8 @@ from config.database import get_db
 from models.approval import MeetingApproval, MeetingPayment
 from models.booking import MeetingBooking, BookingStatus
 from models.meeting import MeetingRoom
+from models.user import User
+from depends.auth import get_current_user
 
 router = APIRouter(prefix="/api/meeting", tags=["会议室审批和支付"])
 
@@ -78,6 +80,7 @@ def get_approvals(
     limit: int = 100,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取审批列表"""
     query = db.query(MeetingApproval)
@@ -95,7 +98,7 @@ def get_approvals(
 
 
 @router.post("/approval/submit", response_model=ApprovalResponse)
-def submit_approval(approval: ApprovalCreate, db: Session = Depends(get_db)):
+def submit_approval(approval: ApprovalCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """提交审批"""
     # 检查预约是否存在
     booking = (
@@ -137,7 +140,7 @@ def submit_approval(approval: ApprovalCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/approval/{approval_id}", response_model=ApprovalResponse)
-def get_approval(approval_id: int, db: Session = Depends(get_db)):
+def get_approval(approval_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取审批详情"""
     approval = (
         db.query(MeetingApproval).filter(MeetingApproval.id == approval_id).first()
@@ -153,6 +156,7 @@ def approve_approval(
     approver_id: int,
     approver_name: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """审批通过"""
     approval = (
@@ -190,6 +194,7 @@ def batch_approve(
     approver_id: int,
     approver_name: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """批量审批"""
     approved_count = 0
@@ -233,6 +238,7 @@ def get_payments(
     status: Optional[str] = None,
     user_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取支付记录列表"""
     query = db.query(MeetingPayment)
@@ -249,7 +255,7 @@ def get_payments(
 
 
 @router.post("/payment/submit", response_model=PaymentResponse)
-def submit_payment(payment: PaymentCreate, db: Session = Depends(get_db)):
+def submit_payment(payment: PaymentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """提交支付"""
     # 检查预约是否存在
     booking = (
@@ -286,6 +292,7 @@ def confirm_payment(
     payment_id: int,
     transaction_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """确认支付"""
     payment = db.query(MeetingPayment).filter(MeetingPayment.id == payment_id).first()
@@ -315,6 +322,7 @@ def confirm_payment(
 def batch_confirm_payment(
     payment_ids: List[int],
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """批量确认支付"""
     confirmed_count = 0
@@ -348,7 +356,7 @@ def batch_confirm_payment(
 
 
 @router.get("/settlement/{batch_id}")
-def get_settlement(batch_id: str, db: Session = Depends(get_db)):
+def get_settlement(batch_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取结算详情"""
     # 这里batch_id可以是booking_id或payment_id
     payment = (
@@ -389,6 +397,7 @@ def get_settlements(
     limit: int = 100,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """获取结算列表"""
     query = db.query(MeetingPayment)
@@ -428,6 +437,7 @@ def create_settlement(
     user_id: int,
     user_name: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """创建结算（支付请求）"""
     booking = db.query(MeetingBooking).filter(MeetingBooking.id == booking_id).first()

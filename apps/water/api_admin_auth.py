@@ -105,14 +105,20 @@ def get_db():
         db.close()
 
 
+def _prepare_password(password: str) -> bytes:
+    """bcrypt 最大 72 字节限制，超长密码截断"""
+    pw = password.encode("utf-8")
+    return pw[:72] if len(pw) > 72 else pw
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_prepare_password(plain_password), hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """生成密码哈希"""
-    return pwd_context.hash(password)
+    return pwd_context.hash(_prepare_password(password))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

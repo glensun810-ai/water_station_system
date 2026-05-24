@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
     <script src="/portal/components/GlobalHeader.js"></script>
     <script src="/portal/assets/js/auth.js"></script>
+    <script src="./toast.js"></script>
     
     <style>
         [v-cloak] { display: none !important; }
@@ -363,6 +364,45 @@
                 min-width: 44px;
             }
         }
+
+        .bottom-nav {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-md);
+            min-height: 44px;
+            min-width: 44px;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+        }
+        .nav-item:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+        .nav-label {
+            font-size: var(--font-size-xs);
+        }
     </style>
 </head>
 <body>
@@ -565,8 +605,31 @@
                 </button>
             </div>
         </main>
+
+        <nav class="bottom-nav" role="navigation" aria-label="底部导航">
+            <a href="/space-frontend/index.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-label">首页</span>
+            </a>
+            <a href="/space-frontend/calendar.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📅</span>
+                <span class="nav-label">日历</span>
+            </a>
+            <a href="/space-frontend/my-bookings.html" class="nav-item active" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">📋</span>
+                <span class="nav-label">预约</span>
+            </a>
+            <a href="/space-frontend/notifications.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">🔔</span>
+                <span class="nav-label">通知</span>
+            </a>
+            <a href="/space-frontend/profile.html" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">👤</span>
+                <span class="nav-label">我的</span>
+            </a>
+        </nav>
     </div>
-    
+
     <script type="module">
         import spaceAPI from './api.js';
         
@@ -789,7 +852,11 @@
                 };
                 
                 const goBack = () => {
-                    window.location.href = '/portal/index.html';
+                    if (document.referrer && document.referrer.includes('/space-frontend/')) {
+                        history.back();
+                    } else {
+                        window.location.href = '/space-frontend/calendar.html';
+                    }
                 };
                 
                 const handleLogout = async () => {

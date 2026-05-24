@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from config.database import get_db
 from models.office import Office
 from models.user import User
+from depends.auth import get_admin_user
 
 router = APIRouter(prefix="/offices", tags=["办公室管理"])
 
@@ -55,6 +56,7 @@ def get_offices(
     limit: int = 100,
     is_active: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """
     获取办公室列表 - 返回完整信息
@@ -116,7 +118,11 @@ def get_offices(
 
 
 @router.get("/{office_id}")
-def get_office(office_id: int, db: Session = Depends(get_db)):
+def get_office(
+    office_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取单个办公室详情"""
     office = db.query(Office).filter(Office.id == office_id).first()
 
@@ -155,7 +161,11 @@ def get_office(office_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("")
-def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
+def create_office(
+    office: OfficeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """创建办公室"""
     from passlib.context import CryptContext
 
@@ -283,7 +293,10 @@ def create_office(office: OfficeCreate, db: Session = Depends(get_db)):
 
 @router.put("/{office_id}")
 def update_office(
-    office_id: int, office_update: OfficeUpdate, db: Session = Depends(get_db)
+    office_id: int,
+    office_update: OfficeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """更新办公室信息"""
     from passlib.context import CryptContext
@@ -413,7 +426,12 @@ def update_office(
 
 
 @router.delete("/{office_id}")
-def delete_office(office_id: int, force: bool = False, db: Session = Depends(get_db)):
+def delete_office(
+    office_id: int,
+    force: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """删除办公室"""
     office = db.query(Office).filter(Office.id == office_id).first()
 
@@ -441,7 +459,11 @@ def delete_office(office_id: int, force: bool = False, db: Session = Depends(get
 
 
 @router.post("/batch-delete")
-def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db)):
+def batch_delete_offices(
+    office_ids: List[int],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """批量删除办公室"""
     deleted_count = 0
     errors = []
@@ -477,7 +499,10 @@ def batch_delete_offices(office_ids: List[int], db: Session = Depends(get_db)):
 
 @router.post("/batch-common")
 def batch_set_common(
-    office_ids: List[int], is_common: int = 1, db: Session = Depends(get_db)
+    office_ids: List[int],
+    is_common: int = 1,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """批量设置常用/不常用状态"""
     updated_count = 0
@@ -500,7 +525,10 @@ def batch_set_common(
 
 @router.post("/batch-active")
 def batch_set_active(
-    office_ids: List[int], is_active: int = 1, db: Session = Depends(get_db)
+    office_ids: List[int],
+    is_active: int = 1,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """批量设置启用/禁用状态"""
     updated_count = 0
@@ -522,7 +550,11 @@ def batch_set_active(
 
 
 @router.get("/{office_id}/users")
-def get_office_users(office_id: int, db: Session = Depends(get_db)):
+def get_office_users(
+    office_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取办公室关联的用户列表"""
     office = db.query(Office).filter(Office.id == office_id).first()
 
@@ -540,7 +572,10 @@ def get_office_users(office_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/admin-users")
-def get_admin_users(db: Session = Depends(get_db)):
+def get_admin_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取管理员用户列表"""
     users = (
         db.query(User)
@@ -555,7 +590,10 @@ def get_admin_users(db: Session = Depends(get_db)):
 
 
 @router.get("/office-admins/candidates")
-def get_office_admin_candidates(db: Session = Depends(get_db)):
+def get_office_admin_candidates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取可设置为办公室管理员的候选人列表"""
     users = (
         db.query(User)
@@ -586,7 +624,11 @@ def get_office_admin_candidates(db: Session = Depends(get_db)):
 
 
 @router.get("/office-admins/office/{office_id}")
-def get_office_admins(office_id: int, db: Session = Depends(get_db)):
+def get_office_admins(
+    office_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取办公室的管理员列表"""
     try:
         results = db.execute(
@@ -628,7 +670,11 @@ def get_office_admins(office_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/office-admins")
-def add_office_admin(admin: OfficeAdminCreate, db: Session = Depends(get_db)):
+def add_office_admin(
+    admin: OfficeAdminCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """添加办公室管理员"""
     try:
         db.execute(
@@ -654,7 +700,10 @@ def add_office_admin(admin: OfficeAdminCreate, db: Session = Depends(get_db)):
 
 @router.put("/office-admins/{admin_id}")
 def update_office_admin(
-    admin_id: int, is_primary: int = 0, db: Session = Depends(get_db)
+    admin_id: int,
+    is_primary: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
 ):
     """更新办公室管理员"""
     try:
@@ -684,7 +733,11 @@ def update_office_admin(
 
 
 @router.delete("/office-admins/{admin_id}")
-def remove_office_admin(admin_id: int, db: Session = Depends(get_db)):
+def remove_office_admin(
+    admin_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """移除办公室管理员"""
     try:
         db.execute(
@@ -701,7 +754,11 @@ def remove_office_admin(admin_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/users/check-name/{name}")
-def check_user_name(name: str, db: Session = Depends(get_db)):
+def check_user_name(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """检查用户名是否已存在"""
     user = db.query(User).filter(User.name == name).first()
 
@@ -720,7 +777,11 @@ def check_user_name(name: str, db: Session = Depends(get_db)):
 
 
 @router.get("/office-admins/user/{user_id}")
-def get_user_managed_offices(user_id: int, db: Session = Depends(get_db)):
+def get_user_managed_offices(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
     """获取用户管理的所有办公室（GlobalHeader调用）"""
     from sqlalchemy import text
 

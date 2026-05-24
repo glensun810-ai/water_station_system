@@ -46,6 +46,7 @@ from apps.api.v2.space_bookings import router as space_bookings_router
 from apps.api.v2.space_approvals import router as space_approvals_router
 from apps.api.v2.space_payments import router as space_payments_router
 from apps.api.v2.space_statistics import router as space_statistics_router
+from apps.api.v2.space_notifications import router as space_notifications_router
 from apps.api.v2.unified_settlement import router as unified_settlement_router
 from apps.api.v2.space_payment_settlement import (
     router as space_payment_settlement_router,
@@ -147,6 +148,7 @@ v2_router.include_router(space_bookings_router)
 v2_router.include_router(space_approvals_router)
 v2_router.include_router(space_payments_router)
 v2_router.include_router(space_statistics_router)
+v2_router.include_router(space_notifications_router)
 v2_router.include_router(unified_settlement_router)
 v2_router.include_router(space_payment_settlement_router)
 

@@ -38,8 +38,13 @@ class PasswordManager:
         if not password:
             raise ValueError("密码不能为空")
 
+        # bcrypt 最大 72 字节限制，超长密码截断
+        password_bytes = password.encode("utf-8")
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+
         salt = bcrypt.gensalt(rounds=PasswordManager.BCRYPT_ROUNDS)
-        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        hashed = bcrypt.hashpw(password_bytes, salt)
         return hashed.decode("utf-8")
 
     @staticmethod
@@ -62,9 +67,11 @@ class PasswordManager:
             return False
 
         try:
-            return bcrypt.checkpw(
-                plain_password.encode("utf-8"), hashed_password.encode("utf-8")
-            )
+            # bcrypt 最大 72 字节限制，验证时同样截断
+            plain_bytes = plain_password.encode("utf-8")
+            if len(plain_bytes) > 72:
+                plain_bytes = plain_bytes[:72]
+            return bcrypt.checkpw(plain_bytes, hashed_password.encode("utf-8"))
         except Exception:
             return False
 

@@ -137,8 +137,8 @@ def get_user_pickups(
 
     状态说明:
     - pending: 待付款（用户已登记，等待付款）
-    - paid/applied: 已付款待确认（用户已付款，等待管理员确认）
-    - confirmed/settled: 已确认收款（管理员已确认）
+    - paid: 已付款待确认（用户已付款，等待管理员确认）
+    - settled: 已结清（管理员已确认）
     """
 
     query = db.query(OfficePickup).filter(OfficePickup.is_deleted == False)
@@ -171,11 +171,11 @@ def get_user_pickups(
     if status and status != "all":
         if status == "paid":
             query = query.filter(
-                OfficePickup.settlement_status.in_(["paid", "applied"])
+                OfficePickup.settlement_status == "paid"
             )
-        elif status == "confirmed":
+        elif status == "settled":
             query = query.filter(
-                OfficePickup.settlement_status.in_(["confirmed", "settled"])
+                OfficePickup.settlement_status == "settled"
             )
         else:
             query = query.filter(OfficePickup.settlement_status == status)
@@ -189,12 +189,7 @@ def get_user_pickups(
 
     results = []
     for pickup in pickups:
-        # 状态兼容处理
         status_display = pickup.settlement_status
-        if status_display == "applied":
-            status_display = "paid"
-        elif status_display == "settled":
-            status_display = "confirmed"
 
         results.append(
             {
@@ -576,11 +571,11 @@ def get_settlement_records(
     if status and status != "all":
         if status == "paid":
             query = query.filter(
-                OfficePickup.settlement_status.in_(["paid", "applied"])
+                OfficePickup.settlement_status == "paid"
             )
-        elif status == "confirmed":
+        elif status == "settled":
             query = query.filter(
-                OfficePickup.settlement_status.in_(["confirmed", "settled"])
+                OfficePickup.settlement_status == "settled"
             )
         else:
             query = query.filter(OfficePickup.settlement_status == status)
@@ -594,12 +589,7 @@ def get_settlement_records(
 
     results = []
     for settlement in settlements:
-        # 状态兼容处理
         status_display = settlement.settlement_status
-        if status_display == "applied":
-            status_display = "paid"
-        elif status_display == "settled":
-            status_display = "confirmed"
 
         results.append(
             {
@@ -667,7 +657,7 @@ def apply_settlement(
         )
 
         if pickup:
-            pickup.settlement_status = "applied"
+            pickup.settlement_status = "paid"
             updated_count += 1
             total_amount += pickup.total_amount
 
@@ -690,7 +680,7 @@ def confirm_settlement(
     """
     管理员确认收款
 
-    状态流转: pending/paid → confirmed
+    状态流转: pending → paid → settled
     管理员确认收款后调用此API
 
     Args:
@@ -701,11 +691,11 @@ def confirm_settlement(
     if not pickup:
         raise HTTPException(status_code=404, detail="领水记录不存在")
 
-    if pickup.settlement_status not in ["pending", "paid", "applied"]:
+    if pickup.settlement_status not in ["pending", "paid"]:
         raise HTTPException(status_code=400, detail="该记录不可确认结算")
 
     # 更新确认信息
-    pickup.settlement_status = "confirmed"
+    pickup.settlement_status = "settled"
     pickup.confirmed_time = datetime.now()
     pickup.confirmed_by = current_user.id
     pickup.confirmed_by_name = current_user.name
@@ -718,7 +708,7 @@ def confirm_settlement(
         "pickup_id": pickup_id,
         "confirmed_time": pickup.confirmed_time.isoformat(),
         "confirmed_by": pickup.confirmed_by_name,
-        "status": "confirmed",
+        "status": "settled",
     }
 
 
@@ -749,7 +739,7 @@ def get_settlements_summary_v2(
     )
 
     applied_query = db.query(OfficePickup).filter(
-        OfficePickup.settlement_status == "applied",
+        OfficePickup.settlement_status == "paid",
         OfficePickup.is_deleted == False,
     )
     applied_count = applied_query.count()
@@ -758,7 +748,7 @@ def get_settlements_summary_v2(
     )
 
     settled_query = db.query(OfficePickup).filter(
-        OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+        OfficePickup.settlement_status == "settled",
         OfficePickup.is_deleted == False,
     )
     settled_count = settled_query.count()
@@ -770,7 +760,7 @@ def get_settlements_summary_v2(
     last_month_settled = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.is_deleted == False,
             OfficePickup.confirmed_time >= last_month_start,
             OfficePickup.confirmed_time < month_start,
@@ -782,7 +772,7 @@ def get_settlements_summary_v2(
     current_month_settled = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.is_deleted == False,
             OfficePickup.confirmed_time >= month_start,
         )
@@ -900,7 +890,7 @@ def get_water_dashboard(
     applied_count = (
         db.query(OfficePickup)
         .filter(
-            OfficePickup.settlement_status == "applied",
+            OfficePickup.settlement_status == "paid",
             OfficePickup.is_deleted == False,
         )
         .count()
@@ -919,7 +909,7 @@ def get_water_dashboard(
     applied_amount = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status == "applied",
+            OfficePickup.settlement_status == "paid",
             OfficePickup.is_deleted == False,
         )
         .scalar()
@@ -929,7 +919,7 @@ def get_water_dashboard(
     settled_amount = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.is_deleted == False,
         )
         .scalar()
@@ -943,7 +933,7 @@ def get_water_dashboard(
     last_month_settled = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.is_deleted == False,
             OfficePickup.confirmed_time >= last_month_start,
             OfficePickup.confirmed_time < month_start,
@@ -955,7 +945,7 @@ def get_water_dashboard(
     current_month_settled = (
         db.query(func.sum(OfficePickup.total_amount))
         .filter(
-            OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+            OfficePickup.settlement_status == "settled",
             OfficePickup.is_deleted == False,
             OfficePickup.confirmed_time >= month_start,
         )
@@ -1060,7 +1050,7 @@ def get_water_dashboard(
                 "applied_amount": float(applied_amount),
                 "settled_count": db.query(OfficePickup)
                 .filter(
-                    OfficePickup.settlement_status.in_(["settled", "confirmed"]),
+                    OfficePickup.settlement_status == "settled",
                     OfficePickup.is_deleted == False,
                 )
                 .count(),

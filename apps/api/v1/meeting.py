@@ -14,7 +14,7 @@ from models.meeting import MeetingRoom
 from models.booking import MeetingBooking, BookingStatus
 from models.user import User
 from models.office import Office
-from depends.auth import get_current_user, get_admin_user
+from depends.auth import get_current_user, get_current_user_required, get_admin_user
 from sqlalchemy import func
 
 router = APIRouter(prefix="/meeting", tags=["会议室服务"])
@@ -732,7 +732,7 @@ def get_bookings(
 def create_booking(
     booking: MeetingBookingCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
 ):
     """创建预约"""
     import random
@@ -794,7 +794,7 @@ def create_booking(
     booking_data["total_fee"] = duration * price
     booking_data["actual_fee"] = duration * price
     booking_data["status"] = BookingStatus.pending.value
-    booking_data["user_id"] = current_user.id if current_user else None
+    booking_data["user_id"] = current_user.id
     booking_data["payment_status"] = "unpaid"
     booking_data["room_name"] = room.name
 
