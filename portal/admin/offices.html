@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -1412,7 +1413,7 @@
                 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}`);
+                        const response = await authFetch(`${API_BASE}`);
                         if (response.ok) {
                             offices.value = await response.json();
                         }
@@ -1423,7 +1424,7 @@
                 
                 const loadAdminUsers = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/admin-users`);
+                        const response = await authFetch(`${API_BASE}/admin-users`);
                         if (response.ok) {
                             adminUsers.value = await response.json();
                         }
@@ -1434,7 +1435,7 @@
                 
                 const loadAdminCandidates = async () => {
                     try {
-                        const response = await fetch(`${API_BASE}/office-admins/candidates`);
+                        const response = await authFetch(`${API_BASE}/office-admins/candidates`);
                         if (response.ok) {
                             adminCandidates.value = await response.json();
                         }
@@ -1454,7 +1455,7 @@
                 
                 const loadOfficeAdmins = async (officeId) => {
                     try {
-                        const response = await fetch(`${API_BASE}/office-admins/office/${officeId}`);
+                        const response = await authFetch(`${API_BASE}/office-admins/office/${officeId}`);
                         if (response.ok) {
                             officeAdmins.value = await response.json();
                         }
@@ -1468,7 +1469,7 @@
                     if (!newAdminUser.value) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/office-admins`, {
+                        const response = await authFetch(`${API_BASE}/office-admins`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1498,7 +1499,7 @@
                     if (!confirm(`确定移除管理员「${admin.user_name}」吗？`)) return;
                     
                     try {
-                        const response = await fetch(`${API_BASE}/office-admins/${admin.id}`, {
+                        const response = await authFetch(`${API_BASE}/office-admins/${admin.id}`, {
                             method: 'DELETE'
                         });
                         
@@ -1513,7 +1514,7 @@
                 
                 const setPrimaryAdmin = async (admin) => {
                     try {
-                        const response = await fetch(`${API_BASE}/office-admins/${admin.id}?is_primary=1`, {
+                        const response = await authFetch(`${API_BASE}/office-admins/${admin.id}?is_primary=1`, {
                             method: 'PUT'
                         });
                         
@@ -1596,7 +1597,7 @@
                 
                 const toggleCommon = async (office) => {
                     try {
-                        const response = await fetch(`${API_BASE}/${office.id}`, {
+                        const response = await authFetch(`${API_BASE}/${office.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_common: office.is_common ? 0 : 1 })
@@ -1612,7 +1613,7 @@
                 
                 const toggleActive = async (office) => {
                     try {
-                        const response = await fetch(`${API_BASE}/${office.id}`, {
+                        const response = await authFetch(`${API_BASE}/${office.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active: office.is_active ? 0 : 1 })
@@ -1628,7 +1629,7 @@
                 
                 const batchSetActive = async (isActive) => {
                     try {
-                        const response = await fetch(`${API_BASE}/batch-active`, {
+                        const response = await authFetch(`${API_BASE}/batch-active`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ office_ids: selectedIds.value, is_active: isActive })
@@ -1645,7 +1646,7 @@
                 
                 const batchSetCommon = async (isCommon) => {
                     try {
-                        const response = await fetch(`${API_BASE}/batch-common`, {
+                        const response = await authFetch(`${API_BASE}/batch-common`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ office_ids: selectedIds.value, is_common: isCommon })
@@ -1666,7 +1667,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/batch-delete`, {
+                        const response = await authFetch(`${API_BASE}/batch-delete`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(selectedIds.value)
@@ -1710,7 +1711,7 @@
                             ? `${API_BASE}/${editingOffice.value.id}`
                             : `${API_BASE}`;
                         
-                        const response = await fetch(url, {
+                        const response = await authFetch(url, {
                             method: showEditModal.value ? 'PUT' : 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(form.value)
@@ -1764,7 +1765,7 @@
                     }
                     
                     try {
-                        const response = await fetch(`${API_BASE}/${office.id}`, {
+                        const response = await authFetch(`${API_BASE}/${office.id}`, {
                             method: 'DELETE'
                         });
                         
@@ -1774,7 +1775,7 @@
                             const data = await response.json();
                             if (data.requires_confirmation) {
                                 if (confirm(data.message + '\n\n是否强制删除所有关联数据？')) {
-                                    await fetch(`${API_BASE}/${office.id}?force=true`, {
+                                    await authFetch(`${API_BASE}/${office.id}?force=true`, {
                                         method: 'DELETE'
                                     });
                                     await loadOffices();
@@ -1792,7 +1793,7 @@
                 const showUserList = async (office) => {
                     currentOffice.value = office;
                     try {
-                        const response = await fetch(`${API_BASE}/${office.id}/users`);
+                        const response = await authFetch(`${API_BASE}/${office.id}/users`);
                         if (response.ok) {
                             const users = await response.json();
                             officeUsers.value = users.filter(u => u.department === office.name);
@@ -1832,7 +1833,7 @@
                     checkLeaderTimer = setTimeout(async () => {
                         checkingLeaderName.value = true;
                         try {
-                            const response = await fetch(`${API_BASE}/users/check-name/${encodeURIComponent(form.value.leader_name)}`);
+                            const response = await authFetch(`${API_BASE}/users/check-name/${encodeURIComponent(form.value.leader_name)}`);
                             if (response.ok) {
                                 const data = await response.json();
                                 if (data.exists) {

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
             <style>
         [v-cloak] { display: none !important; }
         
@@ -1001,7 +1002,7 @@
                     
                     // 验证token是否有效（防止过期token）
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/auth/profile'), {
+                        const response = await authFetch(window.buildApiUrl('/system/auth/profile'), {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         
@@ -1130,7 +1131,7 @@ const isFormValid = computed(() => {
                 const loadUsers = async () => {
                     if (!checkAuth()) return;
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/users'), { headers: getAuthHeaders() });
+                        const response = await authFetch(window.buildApiUrl('/system/users'), { headers: getAuthHeaders() });
                         if (handleApiError(response)) return;
                         if (response.ok) {
                             const data = await response.json();
@@ -1141,7 +1142,7 @@ const isFormValid = computed(() => {
                 
                 const loadOffices = async () => {
                     try {
-                        const response = await fetch('/api/v1/offices');
+                        const response = await authFetch('/api/v1/offices');
                         if (response.ok) {
                             const data = await response.json();
                             offices.value = data;
@@ -1152,7 +1153,7 @@ const isFormValid = computed(() => {
                 const loadStats = async () => {
                     if (!checkAuth()) return;
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/users/stats/overview'), { headers: getAuthHeaders() });
+                        const response = await authFetch(window.buildApiUrl('/system/users/stats/overview'), { headers: getAuthHeaders() });
                         if (handleApiError(response)) return;
                         if (response.ok) stats.value = await response.json();
                     } catch (e) { console.error('加载统计失败:', e); }
@@ -1234,7 +1235,7 @@ const isFormValid = computed(() => {
                     }
                     
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
                             headers: getAuthHeaders(),
                             body: JSON.stringify({ is_active: user.is_active ? 0 : 1 })
@@ -1264,7 +1265,7 @@ const isFormValid = computed(() => {
                     }
                     
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
                             headers: getAuthHeaders(),
                             body: JSON.stringify({ role: 'super_admin' })
@@ -1343,7 +1344,7 @@ const saveUser = async () => {
                          
                          const headers = getAuthHeaders();
                          
-                         const response = await fetch(url, { method, headers, body: JSON.stringify(body) });
+                         const response = await authFetch(url, { method, headers, body: JSON.stringify(body) });
                          
                          if (handleApiError(response)) return;
                          
@@ -1378,7 +1379,7 @@ const saveUser = async () => {
                     try {
                         const headers = getAuthHeaders();
                         
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
                             headers,
                             body: JSON.stringify({ password: newPassword })
@@ -1396,7 +1397,7 @@ const saveUser = async () => {
                     try {
                         const headers = getAuthHeaders();
                         
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
                             headers,
                             body: JSON.stringify({ role: 'admin' })
@@ -1416,7 +1417,7 @@ const saveUser = async () => {
                     try {
                         const headers = getAuthHeaders();
                         
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), {
                             method: 'PUT',
                             headers,
                             body: JSON.stringify({ role: 'office_admin' })
@@ -1430,7 +1431,7 @@ const saveUser = async () => {
                     if (!confirm(`确定删除用户「${user.name}」吗？此操作不可恢复。`)) return;
                     
                     try {
-                        const response = await fetch(window.buildApiUrl('/system/users/' + user.id), { method: 'DELETE', headers: getAuthHeaders() });
+                        const response = await authFetch(window.buildApiUrl('/system/users/' + user.id), { method: 'DELETE', headers: getAuthHeaders() });
                         if (handleApiError(response)) return;
                         if (response.ok) { await Promise.all([loadUsers(), loadStats()]); }
                         else { const error = await response.json(); alert(error.detail || '删除失败'); }
@@ -1441,7 +1442,7 @@ const saveUser = async () => {
                     try {
                         const headers = getAuthHeaders();
                         
-                        const response = await fetch(window.buildApiUrl('/system/users/batch'), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/batch'), {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({ user_ids: selectedIds.value, is_active: isActive })
@@ -1454,7 +1455,7 @@ const batchAssignOffice = async () => {
                      try {
                          const headers = getAuthHeaders();
                          
-                         const response = await fetch(window.buildApiUrl('/system/users/batch'), {
+                         const response = await authFetch(window.buildApiUrl('/system/users/batch'), {
                              method: 'POST',
                              headers,
                              body: JSON.stringify({ 
@@ -1478,7 +1479,7 @@ const batchAssignOffice = async () => {
                     try {
                         const headers = getAuthHeaders();
                         
-                        const response = await fetch(window.buildApiUrl('/system/users/batch-delete'), {
+                        const response = await authFetch(window.buildApiUrl('/system/users/batch-delete'), {
                             method: 'POST',
                             headers,
                             body: JSON.stringify(selectedIds.value)

@@ -12,6 +12,7 @@
     <script src="/portal/components/GlobalHeader.js"></script>
     <link rel="stylesheet" href="/portal/components/Footer.css">
     <script src="/portal/components/Footer.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
             <style>
         [v-cloak] { display: none !important; }
         
@@ -417,7 +418,7 @@
                 
                 const loadPlans = async () => {
                     try {
-                        const response = await fetch('/api/v1/membership/plans');
+                        const response = await authFetch('/api/v1/membership/plans');
                         if (response.ok) {
                             const data = await response.json();
                             data.plans.forEach(plan => {
@@ -440,7 +441,7 @@
                             ? `/api/payment/orders/user/${userId}`
                             : `/api/payment/orders/user/${userId}?status=${currentTab.value}`;
                         
-                        const response = await fetch(url, {
+                        const response = await authFetch(url, {
                             headers: {
                                 'X-User-Id': userId,
                                 'Authorization': `Bearer ${token}`
@@ -493,7 +494,7 @@
                         const userId = userInfo.value?.id;
                         const token = localStorage.getItem('token');
                         
-                        const response = await fetch(`/api/payment/orders/${order.order_no}/cancel`, {
+                        const response = await authFetch(`/api/payment/orders/${order.order_no}/cancel`, {
                             method: 'POST',
                             headers: {
                                 'X-User-Id': userId,
@@ -537,7 +538,7 @@
                         const userId = userInfo.value?.id;
                         const token = localStorage.getItem('token');
                         
-                        const response = await fetch('/api/payment/refund', {
+                        const response = await authFetch('/api/payment/refund', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

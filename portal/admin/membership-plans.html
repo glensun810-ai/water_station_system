@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -1206,7 +1207,7 @@
                 const loadPlans = async () => {
                     try {
                         loading.value = true;
-                        const response = await fetch(`${API_BASE}/plans`);
+                        const response = await authFetch(`${API_BASE}/plans`);
                         if (response.ok) {
                             const data = await response.json();
                             plans.value = data.plans || [];
@@ -1294,7 +1295,7 @@
                         
                         const method = isEdit.value ? 'PUT' : 'POST';
                         
-                        const response = await fetch(url, {
+                        const response = await authFetch(url, {
                             method,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -1318,7 +1319,7 @@
                 
                 const toggleStatus = async (plan) => {
                     try {
-                        const response = await fetch(`${API_ADMIN_BASE}/${plan.id}`, {
+                        const response = await authFetch(`${API_ADMIN_BASE}/${plan.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active: !plan.is_active })
@@ -1346,7 +1347,7 @@
                     try {
                         deleting.value = true;
                         
-                        const response = await fetch(`${API_ADMIN_BASE}/${deletingPlan.value.id}`, {
+                        const response = await authFetch(`${API_ADMIN_BASE}/${deletingPlan.value.id}`, {
                             method: 'DELETE'
                         });
                         

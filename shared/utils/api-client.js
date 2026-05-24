@@ -14,6 +14,11 @@ class ApiService {
         this.token = token;
     }
 
+    // 别名，兼容旧代码
+    setAuthToken(token) {
+        this.setToken(token);
+    }
+
     // 清除认证令牌
     clearToken() {
         this.token = null;

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../components/GlobalHeader.css">
     <script src="../components/GlobalHeader.js"></script>
     <script src="../assets/js/auth.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
     <style>
         [v-cloak] { display: none !important; }
         
@@ -1276,8 +1277,8 @@
                         const token = localStorage.getItem('token');
                         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                         
-                        const unifiedRes = await fetch('/api/v2/unified/settlements/summary', { headers }).catch(() => ({ ok: false }));
-                        const unifiedRecordsRes = await fetch('/api/v2/unified/settlements/records?limit=200', { headers }).catch(() => ({ ok: false }));
+                        const unifiedRes = await authFetch('/api/v2/unified/settlements/summary', { headers }).catch(() => ({ ok: false }));
+                        const unifiedRecordsRes = await authFetch('/api/v2/unified/settlements/records?limit=200', { headers }).catch(() => ({ ok: false }));
                         
                         if (unifiedRes.ok && unifiedRecordsRes.ok) {
                             const summaryData = await unifiedRes.json();
@@ -1316,8 +1317,8 @@
                         }
                         
                         const [waterRes, spaceRes] = await Promise.all([
-                            fetch('/api/v1/water/settlements/summary', { headers }).catch(() => ({ ok: false })),
-                            fetch('/api/v2/space/bookings?limit=200', { headers }).catch(() => ({ ok: false }))
+                            authFetch('/api/v1/water/settlements/summary', { headers }).catch(() => ({ ok: false })),
+                            authFetch('/api/v2/space/bookings?limit=200', { headers }).catch(() => ({ ok: false }))
                         ]);
                         
                         if (waterRes.ok) {
@@ -1332,7 +1333,7 @@
                                     monthly_count: (waterData.data && waterData.data.monthly_count) || 0
                                 };
                                 
-                                const recordsRes = await fetch('/api/v1/water/settlements?limit=100', { headers }).catch(() => ({ ok: false }));
+                                const recordsRes = await authFetch('/api/v1/water/settlements?limit=100', { headers }).catch(() => ({ ok: false }));
                                 if (recordsRes.ok) {
                                     const recordsData = await recordsRes.json();
                                     waterRecords.value = ((recordsData.data && recordsData.data.items) || recordsData.records || []).map(r => ({
@@ -1575,7 +1576,7 @@
                     const url = `/api/v2/unified/settlements/export?${params.toString()}`;
                     
                     try {
-                        const response = await fetch(url, {
+                        const response = await authFetch(url, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         
@@ -1622,7 +1623,7 @@
                     const url = `/api/v2/unified/settlements/export/monthly-report?year=${year}&month=${month}`;
                     
                     try {
-                        const response = await fetch(url, {
+                        const response = await authFetch(url, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         
