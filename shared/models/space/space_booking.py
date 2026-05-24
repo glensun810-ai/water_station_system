@@ -223,6 +223,9 @@ class SpaceBooking(Base, TimestampMixin):
     end_date = Column(Date)
     booking_days = Column(Integer, default=1)
 
+    time_slot_key = Column(String(50))
+    booking_unit = Column(String(20), default="hour")
+
     meal_session = Column(String(20))
     meal_standard = Column(String(20))
     guests_count = Column(Integer, default=1)

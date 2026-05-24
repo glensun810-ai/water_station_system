@@ -5,6 +5,7 @@
 from .space_type import SpaceType
 from .space_resource import SpaceResource
 from .space_booking import SpaceBooking, BookingStatus, PaymentStatus, SettlementStatus
+from .resource_time_slot import ResourceTimeSlot
 from .space_approval import SpaceApproval, ApprovalStatus
 from .space_payment import SpacePayment, PaymentType
 from .space_settlement import SpaceSettlement
@@ -32,6 +33,7 @@ __all__ = [
     "PricingTimeSlot",
     "PricingAddon",
     "PricingDiscount",
+    "ResourceTimeSlot",
     "UserSpaceQuota",
     "UserMemberInfo",
     "Notification",

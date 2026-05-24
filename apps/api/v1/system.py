@@ -257,6 +257,11 @@ def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
                 user_id=user_id,
                 failure_reason=failure_reason,
             )
+            if user_role == "super_admin":
+                print(
+                    f"[SECURITY] 超级管理员账户已停用尝试登录: username={username}, "
+                    f"ip={client_host}, time={datetime.now().isoformat()}"
+                )
             raise HTTPException(status_code=403, detail="账户已被停用，请联系管理员")
 
         if not verify_password(password, user.password_hash):
@@ -269,6 +274,13 @@ def login(login_data: dict, request: Request, db: Session = Depends(get_db)):
                 user_id=user_id,
                 failure_reason=failure_reason,
             )
+
+            if user_role == "super_admin":
+                print(
+                    f"[SECURITY] 超级管理员登录失败: username={username}, "
+                    f"ip={client_host}, reason={failure_reason}, "
+                    f"time={datetime.now().isoformat()}"
+                )
 
             remaining = get_remaining_attempts(username, db)
             raise HTTPException(
@@ -604,13 +616,14 @@ def get_user_stats(
 ):
     """获取用户统计概览"""
 
-    total = db.query(User).count()
-    super_admins = db.query(User).filter(User.role == "super_admin").count()
-    admins = db.query(User).filter(User.role == "admin").count()
-    office_admins = db.query(User).filter(User.role == "office_admin").count()
-    users = db.query(User).filter(User.role == "user").count()
-    active = db.query(User).filter(User.is_active == 1).count()
-    inactive = db.query(User).filter(User.is_active == 0).count()
+    base_query = db.query(User).filter(User.is_hidden == 0)
+    total = base_query.count()
+    super_admins = base_query.filter(User.role == "super_admin").count()
+    admins = base_query.filter(User.role == "admin").count()
+    office_admins = base_query.filter(User.role == "office_admin").count()
+    users = base_query.filter(User.role == "user").count()
+    active = base_query.filter(User.is_active == 1).count()
+    inactive = base_query.filter(User.is_active == 0).count()
 
     return {
         "total": total,
@@ -636,7 +649,7 @@ def get_users(
 ):
     """获取用户列表（仅管理员）"""
 
-    query = db.query(User)
+    query = db.query(User).filter(User.is_hidden == 0)
 
     if role:
         query = query.filter(User.role == role)

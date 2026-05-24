@@ -43,6 +43,7 @@ class User(Base):
     phone = Column(String(20), nullable=True, comment="手机号")
     email = Column(String(100), nullable=True, comment="邮箱")
     company = Column(String(100), nullable=True, comment="公司名称")
+    is_hidden = Column(Integer, default=0, comment="隐藏用户标记：1=在用户列表中不可见")
     last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

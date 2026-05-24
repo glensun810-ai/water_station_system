@@ -17,6 +17,10 @@ class UserRepository(BaseRepository[User]):
     def __init__(self, db: Session):
         super().__init__(User, db)
 
+    def get_multi(self, skip: int = 0, limit: int = 100, filters: dict = None) -> List[User]:
+        """获取多条记录（排除隐藏用户）"""
+        return super().get_multi(skip, limit, {**(filters or {}), "is_hidden": 0})
+
     def get_by_name(self, name: str) -> Optional[User]:
         """
         根据用户名获取用户
@@ -39,7 +43,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             用户列表
         """
-        return self.db.query(User).filter(User.department == department).all()
+        return self.db.query(User).filter(User.department == department, User.is_hidden == 0).all()
 
     def get_active_users(self) -> List[User]:
         """
@@ -48,7 +52,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             活跃用户列表
         """
-        return self.db.query(User).filter(User.is_active == 1).all()
+        return self.db.query(User).filter(User.is_active == 1, User.is_hidden == 0).all()
 
     def get_by_role(self, role: str) -> List[User]:
         """
@@ -60,7 +64,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             用户列表
         """
-        return self.db.query(User).filter(User.role == role).all()
+        return self.db.query(User).filter(User.role == role, User.is_hidden == 0).all()
 
     def name_exists(self, name: str, exclude_id: int = None) -> bool:
         """
@@ -90,7 +94,7 @@ class UserRepository(BaseRepository[User]):
         """
         return (
             self.db.query(User)
-            .filter(or_(User.name.contains(keyword), User.department.contains(keyword)))
+            .filter(User.is_hidden == 0, or_(User.name.contains(keyword), User.department.contains(keyword)))
             .all()
         )
 

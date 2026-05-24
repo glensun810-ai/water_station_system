@@ -37,8 +37,9 @@ class SpaceBookingBase(BaseModel):
 
     @field_validator("start_time", "end_time")
     def time_format_must_be_valid(cls, v):
+        if v is None:
+            return v
         from datetime import datetime as dt
-
         try:
             dt.strptime(v, "%H:%M")
         except ValueError:
@@ -57,6 +58,9 @@ class SpaceBookingCreate(SpaceBookingBase):
 
     user_type: str = "external"
     type_code: Optional[str] = None
+
+    time_slot_key: Optional[str] = None
+    booking_unit: str = "hour"
 
     meal_session: Optional[str] = None
     meal_standard: Optional[str] = None
@@ -187,9 +191,12 @@ class FeeCalculationRequest(BaseModel):
     resource_id: int
     type_code: Optional[str] = None
     booking_date: date
-    start_time: str
-    end_time: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     duration: Optional[float] = None
+
+    time_slot_key: Optional[str] = None
+    booking_unit: str = "hour"
 
     user_id: Optional[int] = None
     user_type: str = "external"
@@ -202,8 +209,9 @@ class FeeCalculationRequest(BaseModel):
 
     @field_validator("start_time", "end_time")
     def time_format_must_be_valid(cls, v):
+        if v is None:
+            return v
         from datetime import datetime as dt
-
         try:
             dt.strptime(v, "%H:%M")
         except ValueError:

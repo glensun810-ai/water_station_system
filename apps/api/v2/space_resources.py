@@ -12,15 +12,19 @@ import csv
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_current_user_required, get_admin_user
+from depends.auth import get_current_user_required, get_admin_user, get_super_admin_user, get_office_admin_user, check_office_permission
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_booking import SpaceBooking
 from shared.models.space.space_type import SpaceType
+from shared.models.space.resource_time_slot import ResourceTimeSlot
 from shared.schemas.space.space_resource import (
     SpaceResourceCreate,
     SpaceResourceUpdate,
     SpaceResourceResponse,
     SpaceAvailabilityResponse,
+    ResourceTimeSlotCreate,
+    ResourceTimeSlotUpdate,
+    ResourceTimeSlotResponse,
 )
 from shared.schemas.space.response import ApiResponse, PaginatedResponse
 
@@ -173,9 +177,9 @@ async def update_space_resource(
 async def delete_space_resource(
     resource_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_super_admin_user),
 ):
-    """删除空间资源（仅管理员）"""
+    """删除空间资源（仅超级管理员）"""
 
     resource = db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
 
@@ -192,6 +196,8 @@ async def delete_space_resource(
 async def check_resource_availability(
     resource_id: int,
     date: date = Query(..., description="查询日期"),
+    booking_unit: Optional[str] = Query(None, description="预订单位过滤"),
+    end_date: Optional[date] = Query(None, description="结束日期（多日预订）"),
     db: Session = Depends(get_db),
 ):
     """查询空间可用时段"""
@@ -205,12 +211,15 @@ async def check_resource_availability(
         db.query(SpaceBooking)
         .filter(
             SpaceBooking.resource_id == resource_id,
-            SpaceBooking.booking_date == date,
+            SpaceBooking.booking_date >= date,
             SpaceBooking.status.in_(["pending", "approved", "confirmed", "active"]),
         )
         .order_by(SpaceBooking.start_time)
         .all()
     )
+
+    if end_date:
+        bookings = bookings.filter(SpaceBooking.booking_date <= end_date)
 
     booked_slots = []
     for b in bookings:
@@ -218,64 +227,144 @@ async def check_resource_availability(
             {
                 "start_time": b.start_time,
                 "end_time": b.end_time,
+                "booking_date": b.booking_date.isoformat() if b.booking_date else None,
+                "end_date": b.end_date.isoformat() if b.end_date else None,
+                "time_slot_key": b.time_slot_key,
+                "booking_unit": b.booking_unit or "hour",
                 "booking_id": b.id,
                 "booking_title": b.title,
                 "user_name": b.user_name,
             }
         )
 
-    available_slots = _calculate_available_slots(booked_slots)
+    available_slots = _calculate_available_slots(resource, booked_slots, date, booking_unit)
 
-    total_available_hours = sum(s["duration"] for s in available_slots)
+    total_available = len(available_slots)
 
     return ApiResponse(
-        data=SpaceAvailabilityResponse(
-            resource_id=resource_id,
-            resource_name=resource.name,
-            date=date.isoformat(),
-            operating_hours={"start": "08:00", "end": "23:00"},
-            booked_slots=booked_slots,
-            available_slots=available_slots,
-            total_available_hours=total_available_hours,
-        )
+        data={
+            "resource_id": resource_id,
+            "resource_name": resource.name,
+            "date": date.isoformat(),
+            "end_date": end_date.isoformat() if end_date else None,
+            "booking_unit": booking_unit,
+            "booked_slots": booked_slots,
+            "available_slots": available_slots,
+            "total_available": total_available,
+        }
     )
 
 
-def _calculate_available_slots(booked_slots: List[dict]) -> List[dict]:
-    """计算可用时段"""
+def _calculate_available_slots(
+    resource: SpaceResource,
+    booked_slots: List[dict],
+    query_date: date,
+    booking_unit: Optional[str] = None,
+) -> List[dict]:
+    """计算可用时段——支持多种预订单位"""
 
-    if not booked_slots:
-        return [{"start_time": "08:00", "end_time": "23:00", "duration": 15}]
+    time_slots = resource.time_slots if hasattr(resource, 'time_slots') and resource.time_slots else []
+
+    # If resource has configured time_slots, use them
+    active_slots = [s for s in time_slots if s.is_active]
+
+    if active_slots:
+        if booking_unit:
+            active_slots = [s for s in active_slots if s.duration_unit == booking_unit]
+
+        available = []
+        for slot in active_slots:
+            # Count bookings that conflict with this slot
+            conflicting_count = 0
+            for b in booked_slots:
+                if slot.slot_type in ("fixed_time",):
+                    # Same day + same slot_key → conflict
+                    if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
+                        conflicting_count += 1
+                    # Also check hour-based bookings overlapping with this slot
+                    elif b.get("booking_date") == query_date.isoformat() and b.get("booking_unit") == "hour":
+                        if _time_ranges_overlap(
+                            slot.start_time, slot.end_time,
+                            b.get("start_time"), b.get("end_time"),
+                        ):
+                            conflicting_count += 1
+                elif slot.slot_type == "session":
+                    if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
+                        conflicting_count += 1
+                elif slot.slot_type in ("day", "week", "month"):
+                    b_end = b.get("end_date") or b.get("booking_date")
+                    if _date_ranges_overlap(
+                        str(query_date), str(query_date),
+                        b.get("booking_date"), b_end,
+                    ):
+                        conflicting_count += 1
+
+            available.append(
+                {
+                    "slot_key": slot.slot_key,
+                    "slot_name": slot.slot_name,
+                    "slot_type": slot.slot_type,
+                    "start_time": slot.start_time,
+                    "end_time": slot.end_time,
+                    "duration_value": slot.duration_value,
+                    "duration_unit": slot.duration_unit,
+                    "max_bookings": slot.max_bookings_per_slot,
+                    "booked_count": conflicting_count,
+                    "available_count": max(0, slot.max_bookings_per_slot - conflicting_count),
+                    "is_available": conflicting_count < slot.max_bookings_per_slot,
+                }
+            )
+
+        return available
+
+    # Fallback: no time_slots configured — use legacy hourly calculation
+    hourly_booked = [b for b in booked_slots if b.get("booking_unit", "hour") == "hour"]
+
+    if not hourly_booked:
+        return [{"start_time": "08:00", "end_time": "23:00", "duration": 15, "slot_type": "hourly"}]
 
     available = []
     current_start = "08:00"
 
-    for booked in sorted(booked_slots, key=lambda x: x["start_time"]):
+    for booked in sorted(hourly_booked, key=lambda x: x["start_time"] or ""):
+        if not booked.get("start_time") or not booked.get("end_time"):
+            continue
+        if booked.get("booking_date") != query_date.isoformat():
+            continue
         if booked["start_time"] > current_start:
             start_dt = dt.strptime(current_start, "%H:%M")
             end_dt = dt.strptime(booked["start_time"], "%H:%M")
             duration = (end_dt - start_dt).seconds / 3600
-
             available.append(
-                {
-                    "start_time": current_start,
-                    "end_time": booked["start_time"],
-                    "duration": duration,
-                }
+                {"start_time": current_start, "end_time": booked["start_time"], "duration": duration, "slot_type": "hourly"}
             )
-
-        current_start = booked["end_time"]
+        current_start = max(current_start, booked["end_time"]) if booked["end_time"] > current_start else current_start
 
     if current_start < "23:00":
         start_dt = dt.strptime(current_start, "%H:%M")
         end_dt = dt.strptime("23:00", "%H:%M")
         duration = (end_dt - start_dt).seconds / 3600
-
         available.append(
-            {"start_time": current_start, "end_time": "23:00", "duration": duration}
+            {"start_time": current_start, "end_time": "23:00", "duration": duration, "slot_type": "hourly"}
         )
 
     return available
+
+
+def _time_ranges_overlap(start1, end1, start2, end2):
+    """Check if two time ranges overlap"""
+    if not all([start1, end1, start2, end2]):
+        return False
+    return start1 < end2 and start2 < end1
+
+
+def _date_ranges_overlap(start1, end1, start2, end2):
+    """Check if two date ranges overlap"""
+    if not all([start1, start2]):
+        return False
+    end1 = end1 or start1
+    end2 = end2 or start2
+    return start1 <= end2 and start2 <= end1
 
 
 # ==================== 批量操作API ====================
@@ -314,9 +403,9 @@ async def batch_activate_resources(
 async def batch_delete_resources(
     resource_ids: List[int] = Body(..., description="资源ID列表"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_super_admin_user),
 ):
-    """批量删除资源"""
+    """批量删除资源（仅超级管理员）"""
 
     if not resource_ids:
         raise HTTPException(status_code=400, detail="资源ID列表不能为空")
@@ -607,5 +696,211 @@ async def batch_import_resources(
             "imported_count": imported_count,
             "failed_count": failed_count,
             "errors": errors[:10],
+        },
+    )
+
+
+# ==================== 办公室管理员资源管理API ====================
+
+
+def _get_office_name_from_id(office_id: int, db: Session) -> Optional[str]:
+    """根据办公室ID获取办公室名称，用于权限校验"""
+    from sqlalchemy import text
+    result = db.execute(text("SELECT name FROM offices WHERE id = :id"), {"id": office_id}).fetchone()
+    return result[0] if result else None
+
+
+def _require_office_admin_for_resource(resource_id: int, db: Session, current_user: User):
+    """校验 office_admin 对资源的管辖权限"""
+    resource = db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="空间资源不存在")
+    if not resource.office_id:
+        raise HTTPException(status_code=400, detail="该资源未关联办公室")
+    office_name = _get_office_name_from_id(resource.office_id, db)
+    if not office_name:
+        raise HTTPException(status_code=404, detail="关联办公室不存在")
+    if current_user.role not in ("admin", "super_admin"):
+        if current_user.role == "office_admin" and current_user.department != office_name:
+            raise HTTPException(
+                status_code=403,
+                detail=f"无权限管理办公室 '{office_name}' 的资源",
+            )
+    return resource, office_name
+
+
+@router.get("/office/{office_id}", response_model=ApiResponse)
+async def get_office_resources(
+    office_id: int,
+    type_id: Optional[int] = Query(None, description="空间类型过滤"),
+    is_active: Optional[bool] = Query(None, description="激活状态过滤"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_office_admin_user),
+):
+    """获取办公室的资源列表（办公室管理员）"""
+    office_name = _get_office_name_from_id(office_id, db)
+    if not office_name:
+        raise HTTPException(status_code=404, detail="办公室不存在")
+
+    if current_user.role not in ("admin", "super_admin"):
+        if current_user.department != office_name:
+            raise HTTPException(status_code=403, detail=f"无权限查看办公室 '{office_name}' 的资源")
+
+    query = db.query(SpaceResource).filter(SpaceResource.office_id == office_id)
+    if type_id:
+        query = query.filter(SpaceResource.type_id == type_id)
+    if is_active is not None:
+        query = query.filter(SpaceResource.is_active == is_active)
+
+    resources = query.order_by(SpaceResource.id).all()
+
+    items = []
+    for r in resources:
+        space_type = db.query(SpaceType).filter(SpaceType.id == r.type_id).first() if r.type_id else None
+        items.append(
+            {
+                "id": r.id,
+                "type_id": r.type_id,
+                "type_code": space_type.type_code if space_type else None,
+                "type_name": space_type.type_name if space_type else None,
+                "name": r.name,
+                "location": r.location,
+                "capacity": r.capacity,
+                "base_price": r.base_price,
+                "is_active": r.is_active,
+                "is_available": r.is_available,
+                "maintenance_status": r.maintenance_status,
+            }
+        )
+
+    return ApiResponse(data={"office_id": office_id, "office_name": office_name, "resources": items})
+
+
+@router.put("/{resource_id}/office-toggle-active", response_model=ApiResponse)
+async def office_toggle_resource_active(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_office_admin_user),
+):
+    """办公室管理员启用/停用资源"""
+    resource, office_name = _require_office_admin_for_resource(resource_id, db, current_user)
+
+    resource.is_active = not resource.is_active
+    db.commit()
+    db.refresh(resource)
+
+    return ApiResponse(
+        message=f"资源已{'激活' if resource.is_active else '停用'}",
+        data={"id": resource.id, "is_active": resource.is_active, "office_name": office_name},
+    )
+
+
+# ==================== 资源时段管理API ====================
+
+
+@router.get("/{resource_id}/time-slots", response_model=ApiResponse)
+async def get_resource_time_slots(
+    resource_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required),
+):
+    """获取资源的可用时段配置"""
+    resource = db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="空间资源不存在")
+
+    time_slots = db.query(ResourceTimeSlot).filter(
+        ResourceTimeSlot.resource_id == resource_id, ResourceTimeSlot.is_active == True
+    ).order_by(ResourceTimeSlot.sort_order).all()
+
+    return ApiResponse(
+        data={
+            "resource_id": resource_id,
+            "resource_name": resource.name,
+            "time_slots": [
+                {
+                    "id": ts.id,
+                    "slot_key": ts.slot_key,
+                    "slot_name": ts.slot_name,
+                    "slot_type": ts.slot_type,
+                    "start_time": ts.start_time,
+                    "end_time": ts.end_time,
+                    "duration_value": ts.duration_value,
+                    "duration_unit": ts.duration_unit,
+                    "max_bookings_per_slot": ts.max_bookings_per_slot,
+                    "applicable_days": ts.applicable_days,
+                    "price_override": ts.price_override,
+                    "is_active": ts.is_active,
+                }
+                for ts in time_slots
+            ],
+        }
+    )
+
+
+@router.put("/{resource_id}/time-slots", response_model=ApiResponse)
+async def update_resource_time_slots(
+    resource_id: int,
+    time_slots_data: List[ResourceTimeSlotCreate] = Body(..., description="时段配置列表"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """配置资源可用时段（管理员/办公室管理员）"""
+    resource = db.query(SpaceResource).filter(SpaceResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="空间资源不存在")
+
+    # office_admin scope check
+    if current_user.role == "office_admin":
+        if resource.office_id:
+            office_name = _get_office_name_from_id(resource.office_id, db)
+            if office_name and current_user.department != office_name:
+                raise HTTPException(status_code=403, detail=f"无权限配置办公室 '{office_name}' 的资源时段")
+
+    # Delete existing time slots and replace
+    db.query(ResourceTimeSlot).filter(ResourceTimeSlot.resource_id == resource_id).delete()
+
+    for ts_data in time_slots_data:
+        ts = ResourceTimeSlot(
+            resource_id=resource_id,
+            slot_key=ts_data.slot_key,
+            slot_name=ts_data.slot_name,
+            slot_type=ts_data.slot_type,
+            start_time=ts_data.start_time,
+            end_time=ts_data.end_time,
+            duration_value=ts_data.duration_value,
+            duration_unit=ts_data.duration_unit,
+            max_bookings_per_slot=ts_data.max_bookings_per_slot,
+            applicable_days=ts_data.applicable_days,
+            price_override=ts_data.price_override,
+            is_active=ts_data.is_active,
+            sort_order=ts_data.sort_order,
+        )
+        db.add(ts)
+
+    db.commit()
+
+    updated_slots = db.query(ResourceTimeSlot).filter(
+        ResourceTimeSlot.resource_id == resource_id
+    ).order_by(ResourceTimeSlot.sort_order).all()
+
+    return ApiResponse(
+        message=f"时段配置已更新，共 {len(updated_slots)} 个时段",
+        data={
+            "resource_id": resource_id,
+            "time_slots": [
+                {
+                    "id": ts.id,
+                    "slot_key": ts.slot_key,
+                    "slot_name": ts.slot_name,
+                    "slot_type": ts.slot_type,
+                    "start_time": ts.start_time,
+                    "end_time": ts.end_time,
+                    "duration_value": ts.duration_value,
+                    "duration_unit": ts.duration_unit,
+                    "is_active": ts.is_active,
+                }
+                for ts in updated_slots
+            ],
         },
     )

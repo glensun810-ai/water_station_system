@@ -41,10 +41,22 @@ class LoginAttemptManager:
             (是否允许, 错误信息)
 
         Security:
+            - 超级管理员绕过锁定：防止管理员被锁定无法恢复
             - 账号级别锁定：防止账号暴力破解
             - IP级别限制：防止分布式攻击
             - 滑动窗口计数：记录最近N分钟的失败次数
         """
+        # 超级管理员绕过锁定检查
+        try:
+            result = db.execute(
+                text("SELECT role FROM users WHERE username = :username"),
+                {"username": username},
+            ).fetchone()
+            if result and result.role == "super_admin":
+                return True, None
+        except Exception:
+            pass
+
         now = datetime.now()
         window_start = now - timedelta(minutes=settings.LOGIN_ATTEMPT_WINDOW_MINUTES)
 

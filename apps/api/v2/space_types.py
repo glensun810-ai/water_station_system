@@ -8,7 +8,7 @@ from typing import Optional, List
 
 from config.database import get_db
 from models.user import User
-from depends.auth import get_admin_user, get_super_admin_user
+from depends.auth import get_admin_user, get_super_admin_user  # noqa: F811
 from shared.models.space.space_type import SpaceType
 from shared.schemas.space.space_type import (
     SpaceTypeCreate,
@@ -99,9 +99,9 @@ async def get_space_type(
 async def create_space_type(
     type_data: SpaceTypeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_super_admin_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """创建空间类型（仅超级管理员）"""
+    """创建空间类型（仅管理员）"""
 
     existing = (
         db.query(SpaceType).filter(SpaceType.type_code == type_data.type_code).first()
@@ -126,9 +126,9 @@ async def update_space_type(
     type_id: int,
     type_data: SpaceTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_super_admin_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """更新空间类型（仅超级管理员）"""
+    """更新空间类型（仅管理员）"""
 
     space_type = db.query(SpaceType).filter(SpaceType.id == type_id).first()
 

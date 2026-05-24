@@ -63,6 +63,7 @@ class SpaceResource(Base, TimestampMixin):
 
     space_type = relationship("SpaceType", back_populates="resources")
     bookings = relationship("SpaceBooking", back_populates="resource")
+    time_slots = relationship("ResourceTimeSlot", back_populates="resource", cascade="all, delete-orphan")
 
     def __repr__(self):
         return (

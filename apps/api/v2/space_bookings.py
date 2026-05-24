@@ -16,6 +16,7 @@ from depends.auth import get_current_user_required, get_admin_user, get_super_ad
 from shared.models.space.space_booking import SpaceBooking, BookingStatus
 from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_type import SpaceType
+from shared.models.space.resource_time_slot import ResourceTimeSlot
 from apps.api.v2.space_notifications import create_notification
 from shared.schemas.space.space_booking import (
     SpaceBookingCreate,
@@ -67,7 +68,7 @@ async def get_bookings(
             SpaceBooking.title.contains(q) | SpaceBooking.user_name.contains(q)
         )
 
-    if current_user.role not in ["admin", "super_admin", "space_manager"]:
+    if current_user.role not in ["admin", "super_admin", "office_admin"]:
         query = query.filter(SpaceBooking.user_id == current_user.id)
 
     total = query.count()
@@ -146,7 +147,7 @@ async def get_booking(
     if not booking:
         raise HTTPException(status_code=404, detail="预约不存在")
 
-    if current_user.role not in ["admin", "super_admin", "space_manager"]:
+    if current_user.role not in ["admin", "super_admin", "office_admin"]:
         if booking.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="无权限查看此预约")
 
@@ -181,42 +182,67 @@ async def create_booking(
 
     space_type = db.query(SpaceType).filter(SpaceType.id == resource.type_id).first()
 
-    try:
-        start_dt = dt.strptime(booking_data.start_time, "%H:%M")
-        end_dt = dt.strptime(booking_data.end_time, "%H:%M")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="时间格式错误")
+    booking_unit = booking_data.booking_unit or "hour"
 
-    if start_dt >= end_dt:
-        raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
-
-    conflicting = (
-        db.query(SpaceBooking)
-        .filter(
-            SpaceBooking.resource_id == booking_data.resource_id,
-            SpaceBooking.booking_date == booking_data.booking_date,
-            SpaceBooking.status.in_(
-                ["pending", "approved", "confirmed", "active", "completed"]
-            ),
-        )
-        .all()
-    )
-
-    for existing in conflicting:
+    # Validate and compute duration based on booking_unit
+    if booking_unit == "hour":
+        if not booking_data.start_time or not booking_data.end_time:
+            raise HTTPException(status_code=400, detail="按小时预订需要提供 start_time 和 end_time")
         try:
-            existing_start = dt.strptime(existing.start_time, "%H:%M")
-            existing_end = dt.strptime(existing.end_time, "%H:%M")
+            start_dt = dt.strptime(booking_data.start_time, "%H:%M")
+            end_dt = dt.strptime(booking_data.end_time, "%H:%M")
         except ValueError:
-            continue
+            raise HTTPException(status_code=400, detail="时间格式必须为HH:MM")
+        if start_dt >= end_dt:
+            raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
+        duration = (end_dt - start_dt).seconds / 3600
+    elif booking_unit == "half_day":
+        if not booking_data.time_slot_key:
+            raise HTTPException(status_code=400, detail="半天预订需要提供 time_slot_key")
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == resource.id,
+            ResourceTimeSlot.slot_key == booking_data.time_slot_key,
+        ).first()
+        duration = time_slot.duration_value if time_slot else 0.5
+    elif booking_unit == "day":
+        if booking_data.end_date:
+            duration = (booking_data.end_date - booking_data.booking_date).days + 1
+        else:
+            duration = booking_data.booking_days or 1
+    elif booking_unit == "meal":
+        if not booking_data.meal_session:
+            raise HTTPException(status_code=400, detail="餐次预订需要提供 meal_session")
+        duration = 1
+    else:
+        duration = booking_data.booking_days or 1
 
-        if not (end_dt <= existing_start or start_dt >= existing_end):
-            raise HTTPException(
-                status_code=400,
-                detail=f"时间段 {booking_data.start_time}-{booking_data.end_time} 已被预约",
-            )
+    # Conflict detection
+    _check_booking_conflict(booking_data.resource_id, booking_data.booking_date,
+                            booking_data.start_time, booking_data.end_time,
+                            booking_unit, booking_data.time_slot_key,
+                            booking_data.end_date, booking_data.meal_session, db)
 
-    duration = (end_dt - start_dt).seconds / 3600
-    total_fee = duration * resource.base_price
+    # Fee calculation
+    if booking_unit == "hour":
+        total_fee = duration * (resource.base_price or 0)
+    elif booking_unit == "half_day":
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == resource.id,
+            ResourceTimeSlot.slot_key == booking_data.time_slot_key,
+        ).first()
+        unit_price = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.base_price or 0)
+        total_fee = duration * unit_price
+    elif booking_unit in ("day", "week", "month"):
+        total_fee = duration * (resource.base_price or 0)
+    elif booking_unit == "meal":
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == resource.id,
+            ResourceTimeSlot.slot_key == booking_data.time_slot_key,
+        ).first()
+        unit_price = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.meal_standard_price or resource.base_price or 0)
+        total_fee = unit_price
+    else:
+        total_fee = duration * (resource.base_price or 0)
 
     booking_no = (
         f"SB{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
@@ -310,11 +336,15 @@ async def create_booking(
                 "content_url",
                 "exhibition_type",
                 "exhibition_plan_url",
+                "time_slot_key",
+                "booking_unit",
             }
         ),
         booking_no=booking_no,
         duration=duration,
-        duration_unit=space_type.min_duration_unit if space_type else "hour",
+        duration_unit=booking_unit,
+        time_slot_key=booking_data.time_slot_key,
+        booking_unit=booking_unit,
         type_id=resource.type_id,
         type_code=space_type.type_code if space_type else None,
         resource_name=resource.name,
@@ -871,15 +901,40 @@ async def calculate_fee(
     if not resource:
         raise HTTPException(status_code=404, detail="空间资源不存在")
 
-    try:
-        start_dt = dt.strptime(fee_request.start_time, "%H:%M")
-        end_dt = dt.strptime(fee_request.end_time, "%H:%M")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="时间格式错误")
+    booking_unit = fee_request.booking_unit or "hour"
 
-    duration = fee_request.duration or (end_dt - start_dt).seconds / 3600
+    if booking_unit == "hour":
+        if not fee_request.start_time or not fee_request.end_time:
+            raise HTTPException(status_code=400, detail="按小时计算需要 start_time 和 end_time")
+        try:
+            start_dt = dt.strptime(fee_request.start_time, "%H:%M")
+            end_dt = dt.strptime(fee_request.end_time, "%H:%M")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="时间格式必须为HH:MM")
+        duration = fee_request.duration or (end_dt - start_dt).seconds / 3600
+        price_per_unit = resource.base_price or 0
+    elif booking_unit == "half_day":
+        duration = fee_request.duration or 0.5
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == resource.id,
+            ResourceTimeSlot.slot_key == fee_request.time_slot_key,
+        ).first() if fee_request.time_slot_key else None
+        price_per_unit = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.base_price or 0)
+    elif booking_unit in ("day", "week", "month"):
+        duration = fee_request.duration or 1
+        price_per_unit = resource.base_price or 0
+    elif booking_unit == "meal":
+        duration = 1
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == resource.id,
+            ResourceTimeSlot.slot_key == fee_request.time_slot_key,
+        ).first() if fee_request.time_slot_key else None
+        price_per_unit = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.meal_standard_price or resource.base_price or 0)
+    else:
+        duration = fee_request.duration or 1
+        price_per_unit = resource.base_price or 0
 
-    base_fee = duration * resource.base_price
+    base_fee = duration * price_per_unit
 
     member_discount = 0
     if fee_request.member_level == "vip":
@@ -919,7 +974,8 @@ async def calculate_fee(
             calculation_detail={
                 "base_fee": {
                     "units": duration,
-                    "price_per_unit": resource.base_price,
+                    "booking_unit": booking_unit,
+                    "price_per_unit": price_per_unit,
                     "subtotal": base_fee,
                 },
                 "member_discount": {
@@ -1070,6 +1126,10 @@ def _format_booking(booking: SpaceBooking, db: Session) -> dict:
         "start_time": booking.start_time,
         "end_time": booking.end_time,
         "duration": booking.duration,
+        "duration_unit": booking.duration_unit,
+        "booking_unit": booking.booking_unit or "hour",
+        "time_slot_key": booking.time_slot_key,
+        "meal_session": booking.meal_session,
         "title": booking.title,
         "attendees_count": booking.attendees_count,
         "total_fee": booking.total_fee,
@@ -1134,35 +1194,13 @@ async def approve_booking_with_payment(
         )
 
     # 检查时段是否仍有冲突（审批前再次确认）
-    try:
-        start_dt = dt.strptime(booking.start_time, "%H:%M")
-        end_dt = dt.strptime(booking.end_time, "%H:%M")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="预约时间格式错误")
-
-    conflicting = (
-        db.query(SpaceBooking)
-        .filter(
-            SpaceBooking.resource_id == booking.resource_id,
-            SpaceBooking.booking_date == booking.booking_date,
-            SpaceBooking.status.in_(["approved", "confirmed", "active"]),
-            SpaceBooking.id != booking_id,
-        )
-        .all()
+    _check_booking_conflict(
+        booking.resource_id, booking.booking_date,
+        booking.start_time, booking.end_time,
+        booking.booking_unit or "hour", booking.time_slot_key,
+        booking.end_date, booking.meal_session,
+        db, exclude_booking_id=booking_id,
     )
-
-    for existing in conflicting:
-        try:
-            existing_start = dt.strptime(existing.start_time, "%H:%M")
-            existing_end = dt.strptime(existing.end_time, "%H:%M")
-        except ValueError:
-            continue
-
-        if not (end_dt <= existing_start or start_dt >= existing_end):
-            raise HTTPException(
-                status_code=400,
-                detail=f"时段冲突：{booking.start_time}-{booking.end_time} 已被其他已批准的预约占用",
-            )
 
     # 更新预约状态
     booking.status = "approved"
@@ -1240,3 +1278,93 @@ async def approve_booking_with_payment(
             "payment_method": payment_method,
         },
     )
+
+
+def _check_booking_conflict(resource_id: int, booking_date, start_time, end_time,
+                            booking_unit: str, time_slot_key, end_date, meal_session,
+                            db: Session, exclude_booking_id: int = None):
+    """统一的预约冲突检测——支持多种预订单位"""
+    active_statuses = ["pending", "approved", "confirmed", "active", "completed"]
+
+    if booking_unit == "hour":
+        if not start_time or not end_time:
+            return
+        query = db.query(SpaceBooking).filter(
+            SpaceBooking.resource_id == resource_id,
+            SpaceBooking.booking_date == booking_date,
+            SpaceBooking.status.in_(active_statuses),
+        )
+        if exclude_booking_id:
+            query = query.filter(SpaceBooking.id != exclude_booking_id)
+
+        for existing in query.all():
+            if not existing.start_time or not existing.end_time:
+                continue
+            if _time_ranges_overlap(start_time, end_time, existing.start_time, existing.end_time):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"时间段 {start_time}-{end_time} 与已有预约 {existing.start_time}-{existing.end_time} 冲突",
+                )
+
+    elif booking_unit == "half_day":
+        if not time_slot_key:
+            return
+        query = db.query(SpaceBooking).filter(
+            SpaceBooking.resource_id == resource_id,
+            SpaceBooking.booking_date == booking_date,
+            SpaceBooking.time_slot_key == time_slot_key,
+            SpaceBooking.status.in_(active_statuses),
+        )
+        if exclude_booking_id:
+            query = query.filter(SpaceBooking.id != exclude_booking_id)
+        if query.count() > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"时段 '{time_slot_key}' 已被预约",
+            )
+
+    elif booking_unit in ("day", "week", "month"):
+        query = db.query(SpaceBooking).filter(
+            SpaceBooking.resource_id == resource_id,
+            SpaceBooking.status.in_(active_statuses),
+        )
+        if exclude_booking_id:
+            query = query.filter(SpaceBooking.id != exclude_booking_id)
+
+        req_start = booking_date.isoformat() if hasattr(booking_date, 'isoformat') else str(booking_date)
+        req_end = (end_date.isoformat() if hasattr(end_date, 'isoformat') else str(end_date)) if end_date else req_start
+
+        for existing in query.all():
+            ex_start = existing.booking_date.isoformat() if existing.booking_date else None
+            ex_end = (existing.end_date.isoformat() if existing.end_date else None) or ex_start
+            if not ex_start:
+                continue
+            if req_start <= ex_end and ex_start <= req_end:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"日期范围 {req_start} 至 {req_end} 与已有预约冲突",
+                )
+
+    elif booking_unit == "meal":
+        if not meal_session:
+            return
+        query = db.query(SpaceBooking).filter(
+            SpaceBooking.resource_id == resource_id,
+            SpaceBooking.booking_date == booking_date,
+            SpaceBooking.meal_session == meal_session,
+            SpaceBooking.status.in_(active_statuses),
+        )
+        if exclude_booking_id:
+            query = query.filter(SpaceBooking.id != exclude_booking_id)
+        if query.count() > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"餐次 '{meal_session}' 已被预约",
+            )
+
+
+def _time_ranges_overlap(start1, end1, start2, end2):
+    """Check if two time ranges overlap"""
+    if not all([start1, end1, start2, end2]):
+        return False
+    return start1 < end2 and start2 < end1

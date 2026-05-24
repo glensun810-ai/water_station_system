@@ -126,12 +126,65 @@ class SpaceResourceUpdate(BaseModel):
     office_id: Optional[int] = None
 
 
+class ResourceTimeSlotBase(BaseModel):
+    """资源时段基础模型"""
+
+    slot_key: str
+    slot_name: Optional[str] = None
+    slot_type: str = "fixed_time"
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration_value: float = 1
+    duration_unit: str = "hour"
+    max_bookings_per_slot: int = 1
+    applicable_days: Optional[str] = None
+    price_override: Optional[float] = None
+    is_active: bool = True
+    sort_order: int = 0
+
+
+class ResourceTimeSlotCreate(ResourceTimeSlotBase):
+    """创建资源时段"""
+
+    pass
+
+
+class ResourceTimeSlotUpdate(BaseModel):
+    """更新资源时段"""
+
+    slot_key: Optional[str] = None
+    slot_name: Optional[str] = None
+    slot_type: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration_value: Optional[float] = None
+    duration_unit: Optional[str] = None
+    max_bookings_per_slot: Optional[int] = None
+    applicable_days: Optional[str] = None
+    price_override: Optional[float] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class ResourceTimeSlotResponse(ResourceTimeSlotBase):
+    """资源时段响应"""
+
+    id: int
+    resource_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class SpaceResourceResponse(SpaceResourceBase):
     """空间资源响应模型"""
 
     id: int
     type_code: Optional[str] = None
     type_name: Optional[str] = None
+    time_slots: Optional[List[ResourceTimeSlotResponse]] = None
     created_at: datetime
     updated_at: datetime
 

@@ -34,6 +34,9 @@ class SpaceTypeBase(BaseModel):
     standard_facilities: Optional[str] = None
     optional_addons: Optional[str] = None
 
+    supported_duration_units: Optional[List[str]] = ["hour"]
+    time_slot_preset: Optional[List[dict]] = None
+
     is_active: bool = True
     sort_order: int = 0
 
@@ -84,6 +87,9 @@ class SpaceTypeUpdate(BaseModel):
 
     standard_facilities: Optional[str] = None
     optional_addons: Optional[str] = None
+
+    supported_duration_units: Optional[List[str]] = None
+    time_slot_preset: Optional[List[dict]] = None
 
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None

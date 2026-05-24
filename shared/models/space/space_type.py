@@ -40,6 +40,9 @@ class SpaceType(Base, TimestampMixin):
     standard_facilities = Column(Text)
     optional_addons = Column(Text)
 
+    supported_duration_units = Column(Text, default='["hour"]')
+    time_slot_preset = Column(Text)
+
     is_active = Column(Boolean, default=True)
     sort_order = Column(Integer, default=0)
 

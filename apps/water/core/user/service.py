@@ -21,13 +21,17 @@ class UserService(BaseService[User]):
         """根据用户名获取用户"""
         return self.db.query(User).filter(User.name == name).first()
 
+    def get_multi(self, skip: int = 0, limit: int = 100, **filters) -> List[User]:
+        """获取多个用户（排除隐藏用户）"""
+        return super().get_multi(skip, limit, is_hidden=0, **filters)
+
     def get_by_department(
         self, department: str, skip: int = 0, limit: int = 100
     ) -> List[User]:
         """根据部门获取用户列表"""
         return (
             self.db.query(User)
-            .filter(User.department == department)
+            .filter(User.department == department, User.is_hidden == 0)
             .offset(skip)
             .limit(limit)
             .all()
@@ -37,7 +41,7 @@ class UserService(BaseService[User]):
         """根据角色获取用户列表"""
         return (
             self.db.query(User)
-            .filter(User.role == role)
+            .filter(User.role == role, User.is_hidden == 0)
             .offset(skip)
             .limit(limit)
             .all()
@@ -47,7 +51,7 @@ class UserService(BaseService[User]):
         """获取所有活跃用户"""
         return (
             self.db.query(User)
-            .filter(User.is_active == 1)
+            .filter(User.is_active == 1, User.is_hidden == 0)
             .offset(skip)
             .limit(limit)
             .all()
@@ -59,7 +63,7 @@ class UserService(BaseService[User]):
 
         return (
             self.db.query(User)
-            .filter(or_(User.name.contains(keyword), User.department.contains(keyword)))
+            .filter(User.is_hidden == 0, or_(User.name.contains(keyword), User.department.contains(keyword)))
             .offset(skip)
             .limit(limit)
             .all()
