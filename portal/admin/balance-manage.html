@@ -564,7 +564,7 @@
         }
         
         .empty-icon {
-            font-size: 64px;
+            font-size: 48px;
             opacity: 0.5;
             margin-bottom: var(--spacing-lg);
         }
@@ -653,6 +653,28 @@
                 min-height: 44px;
                 min-width: 44px;
             }
+
+            .mobile-card-list { display: flex; flex-direction: column; gap: 8px; }
+            .mobile-card { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; border-left: 4px solid var(--primary); }
+            .mobile-card-main { padding: 12px; }
+            .mobile-card-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+            .mobile-card-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+            .mobile-card-meta { display: flex; gap: 6px; align-items: center; }
+            .mobile-card-phone { font-size: 12px; color: var(--text-tertiary); }
+            .mobile-tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+            .mobile-tag.positive { background: #d1fae5; color: #065f46; }
+            .mobile-tag.negative { background: #fee2e2; color: #991b1b; }
+            .mobile-card-row2 { margin-bottom: 6px; }
+            .mobile-card-booking-no { font-size: 12px; color: var(--text-secondary); }
+            .mobile-card-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+            .mobile-info-item { display: flex; flex-direction: column; gap: 2px; }
+            .mobile-info-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
+            .mobile-info-value { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+            .mobile-card-row4 { display: flex; gap: 6px; }
+            .mobile-action-btn { flex: 1; padding: 8px 0; border: none; border-radius: var(--radius-md); font-size: 12px; font-weight: 500; cursor: pointer; transition: transform 0.1s; }
+            .mobile-action-btn:active { transform: scale(0.95); }
+            .mobile-action-btn.primary { background: var(--primary); color: white; }
+            .mobile-action-btn.secondary { background: var(--bg-tertiary); color: var(--text-primary); }
         }
     </style>
 </head>
@@ -749,7 +771,7 @@
             <div v-if="currentTab === 'accounts'">
                 <div class="toolbar">
                     <div class="search-box">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                         <input v-model="searchText" type="text" class="search-input" placeholder="搜索用户名/手机号...">
                     </div>
                     
@@ -770,7 +792,7 @@
                     <div class="empty-desc">当前筛选条件下没有找到余额账户</div>
                 </div>
                 
-                <div v-else class="accounts-table">
+                <div v-else-if="!isMobile" class="accounts-table">
                     <div class="table-header">
                         <div>用户</div>
                         <div>手机号</div>
@@ -781,7 +803,7 @@
                         <div>最后交易</div>
                         <div>操作</div>
                     </div>
-                    
+
                     <div v-for="account in accounts" :key="account.id" class="table-row">
                         <div>
                             <span class="user-link" @click="showAccountDetail(account)">{{ account.user_name }}</span>
@@ -811,6 +833,44 @@
                                 <button @click="showAccountDetail(account)" class="action-btn secondary">
                                     详情
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="isMobile && accounts.length > 0" class="mobile-card-list">
+                    <div v-for="account in accounts" :key="account.id" class="mobile-card">
+                        <div class="mobile-card-main">
+                            <div class="mobile-card-row1">
+                                <div class="mobile-card-name">{{ account.user_name }}</div>
+                                <div class="mobile-card-meta">
+                                    <span class="mobile-card-phone">{{ account.user_phone }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row3">
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">会员余额</span>
+                                    <span class="mobile-info-value" style="color: var(--success);">¥{{ account.membership_balance }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">服务余额</span>
+                                    <span class="mobile-info-value">¥{{ account.service_balance }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">赠送余额</span>
+                                    <span class="mobile-info-value" style="color: #f59e0b;">¥{{ account.gift_balance }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">总余额</span>
+                                    <span class="mobile-info-value" style="color: var(--success); font-weight: 700;">¥{{ account.total_balance }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row2" style="margin-top: 4px;">
+                                <span class="mobile-card-booking-no">最后交易: {{ formatDate(account.last_transaction_at) || '-' }}</span>
+                            </div>
+                            <div class="mobile-card-row4">
+                                <button class="mobile-action-btn primary" @click="openAdjustForAccount(account)">调整</button>
+                                <button class="mobile-action-btn secondary" @click="showAccountDetail(account)">详情</button>
                             </div>
                         </div>
                     </div>
@@ -849,7 +909,7 @@
                     <div class="empty-desc">当前筛选条件下没有找到交易记录</div>
                 </div>
                 
-                <div v-else class="accounts-table">
+                <div v-else-if="!isMobile" class="accounts-table">
                     <div class="table-header">
                         <div>流水号</div>
                         <div>用户</div>
@@ -861,7 +921,7 @@
                         <div>说明</div>
                         <div>时间</div>
                     </div>
-                    
+
                     <div v-for="tx in transactions" :key="tx.id" class="table-row" style="grid-template-columns: 140px 100px 120px 100px 100px 100px 100px 180px 140px;">
                         <div style="font-size: var(--font-size-xs);">{{ tx.transaction_no }}</div>
                         <div>{{ tx.user_name }}</div>
@@ -876,6 +936,39 @@
                         <div>¥{{ tx.after_total_balance || '-' }}</div>
                         <div style="font-size: var(--font-size-xs);">{{ tx.description || '-' }}</div>
                         <div>{{ formatDate(tx.created_at) }}</div>
+                    </div>
+                </div>
+
+                <div v-if="isMobile && transactions.length > 0" class="mobile-card-list">
+                    <div v-for="tx in transactions" :key="tx.id" class="mobile-card">
+                        <div class="mobile-card-main">
+                            <div class="mobile-card-row1">
+                                <div class="mobile-card-name" style="font-size: 11px; font-family: monospace;">{{ tx.transaction_no }}</div>
+                                <div class="mobile-card-meta">
+                                    <span :class="['mobile-tag', tx.amount >= 0 ? 'positive' : 'negative']">{{ tx.amount >= 0 ? '+' : '' }}¥{{ Math.abs(tx.amount) }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row2">
+                                <span class="mobile-card-booking-no">{{ tx.user_name }} · {{ tx.transaction_type_text }} · {{ tx.balance_type || '-' }}</span>
+                            </div>
+                            <div class="mobile-card-row3">
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">变动前</span>
+                                    <span class="mobile-info-value">¥{{ tx.before_total_balance || '-' }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">变动后</span>
+                                    <span class="mobile-info-value">¥{{ tx.after_total_balance || '-' }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">时间</span>
+                                    <span class="mobile-info-value">{{ formatDate(tx.created_at) }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row2" style="margin-top: 2px;">
+                                <span class="mobile-card-booking-no" style="font-size: 11px;">{{ tx.description || '-' }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1147,7 +1240,8 @@
                 const accounts = ref([]);
                 const transactions = ref([]);
                 const loading = ref(false);
-                
+                const isMobile = ref(window.innerWidth < 768);
+
                 const searchText = ref('');
                 const minBalance = ref(null);
                 const accountsPage = ref(1);
@@ -1461,6 +1555,7 @@
                 }
                 
                 onMounted(async () => {
+                    window.addEventListener('resize', () => { isMobile.value = window.innerWidth < 768; });
                     await loadStats();
                     await loadAccounts();
                 });
@@ -1471,6 +1566,7 @@
                     accounts,
                     transactions,
                     loading,
+                    isMobile,
                     searchText,
                     minBalance,
                     accountsPage,

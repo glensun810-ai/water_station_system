@@ -353,8 +353,9 @@
         }
         
         .btn-sm {
-            padding: 4px 8px;
-            font-size: var(--font-size-xs);
+            padding: 6px 12px;
+            min-height: 44px;
+            font-size: var(--font-size-sm);
         }
         
         .empty-state {
@@ -402,22 +403,30 @@
         }
         
         @media (max-width: 768px) {
-            .module-container {
-                padding: var(--spacing-md);
-            }
-            
-            .stats-bar {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .settlement-stats {
-                display: none;
-            }
+            .module-container { padding: 8px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+            .module-header { flex-direction: column; align-items: flex-start; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 18px; }
+            .stat-value { font-size: var(--font-size-lg); }
+            .filter-section { padding: 12px; }
+            .tab-filters { overflow-x: auto; }
+            .tab-btn { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+
+            .settlement-card { margin-bottom: 8px; border-radius: var(--radius-lg); overflow: hidden; }
+            .settlement-header { flex-wrap: wrap; padding: 12px; gap: 8px; }
+            .settlement-info { flex: 1; min-width: 0; }
+            .settlement-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+            .settlement-stat { text-align: center; }
+            .settlement-stat-value { font-size: 16px; }
+            .settlement-stat-label { font-size: 10px; }
+            .settlement-actions { width: 100%; display: flex; gap: 6px; }
+            .settlement-actions .btn { flex: 1; }
+            .settlement-details { padding: 0 8px; }
+            .detail-table { font-size: 11px; }
+            .detail-table th, .detail-table td { padding: 6px 4px; white-space: nowrap; }
+            .detail-table { display: block; overflow-x: auto; }
+
             .bottom-nav {
                 display: block !important;
             }
@@ -440,7 +449,7 @@
         <template v-else>
             <!-- 版本提示 -->
         <div style="background: var(--info-light); border: 2px solid var(--info); border-radius: var(--radius-lg); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-lg);">
-            <span style="font-size: 24px;">ℹ️</span>
+            <span style="font-size: 22px;" aria-hidden="true">ℹ️</span>
             <div style="flex: 1;">
                 <strong>新版月度结算已上线</strong>
                 <p style="margin: var(--spacing-xs) 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">推荐使用新版月度结算功能，支持申请→审批→确认→结算的完整流程，并生成正式结算单据。</p>
@@ -631,23 +640,23 @@
         <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
             <div style="display: flex; justify-content: space-around;">
                 <a href="/portal/admin/water/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #3B82F6; text-decoration: none;">
-                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 22px;" aria-hidden="true">🏠</span>
                     <span style="font-size: 12px;">工作台</span>
                 </a>
                 <a href="/portal/admin/water/products.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">📦</span>
+                    <span style="font-size: 22px;" aria-hidden="true">📦</span>
                     <span style="font-size: 12px;">套餐</span>
                 </a>
                 <a href="/portal/admin/water/pickups.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">💧</span>
+                    <span style="font-size: 22px;" aria-hidden="true">💧</span>
                     <span style="font-size: 12px;">领水</span>
                 </a>
                 <a href="/portal/admin/water/accounts.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">💰</span>
+                    <span style="font-size: 22px;" aria-hidden="true">💰</span>
                     <span style="font-size: 12px;">账户</span>
                 </a>
                 <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 22px;" aria-hidden="true">👤</span>
                     <span style="font-size: 12px;">首页</span>
                 </a>
             </div>
@@ -672,7 +681,8 @@
                 const settlementTab = ref('paid');
                 const settlementFilter = ref('paid');
                 const expandedSettlementId = ref(null);
-                
+                const isMobile = ref(window.innerWidth < 768);
+
                 const checkAuth = async () => {
                     const storedToken = localStorage.getItem('token');
                     const userInfoStr = localStorage.getItem('userInfo');
@@ -1037,6 +1047,10 @@ await loadOfficeSettlements();
                     
                     await loadOfficeSettlements();
                     loading.value = false;
+
+                    window.addEventListener('resize', () => {
+                        isMobile.value = window.innerWidth < 768;
+                    });
                 });
                 
                 return {
@@ -1046,6 +1060,7 @@ await loadOfficeSettlements();
                     settlementTab,
                     settlementFilter,
                     expandedSettlementId,
+                    isMobile,
                     filteredOfficeSettlements,
                     settlementStats,
                     toggleSettlementExpand,

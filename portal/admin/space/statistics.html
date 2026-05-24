@@ -167,6 +167,11 @@
             width: 100%;
             border-collapse: collapse;
         }
+
+        .usage-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         
         .usage-table th {
             background: var(--bg-secondary);
@@ -211,6 +216,42 @@
             .chart-container {
                 height: 200px;
             }
+
+            .stats-container {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+        }
+
+        .bottom-nav { display: none; }
+        @media (max-width: 768px) {
+            .bottom-nav { display: flex !important; }
+            .stats-container { padding: 8px; }
+            .header-section { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .page-title { font-size: var(--font-size-xl); }
+            .filter-bar { padding: 12px; gap: 8px; }
+            .filter-group { width: 100%; }
+            .filter-select, .filter-input { width: 100%; min-width: auto; }
+            .overview-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .overview-card { padding: 12px; }
+            .overview-value { font-size: var(--font-size-2xl); }
+            .chart-container { height: 200px !important; }
+            .section-card { padding: 12px; }
+            .section-header { margin-bottom: 12px; }
+
+            .mobile-card-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+            .mobile-card { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; border-left: 4px solid var(--primary); }
+            .mobile-card-main { padding: 12px; }
+            .mobile-card-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+            .mobile-card-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+            .mobile-card-meta { display: flex; gap: 6px; align-items: center; }
+            .mobile-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+            .mobile-tag.utilization-high { background: #d1fae5; color: #065f46; }
+            .mobile-tag.utilization-medium { background: #fef3c7; color: #92400e; }
+            .mobile-tag.utilization-low { background: #fee2e2; color: #991b1b; }
+            .mobile-card-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+            .mobile-info-item { display: flex; flex-direction: column; gap: 2px; }
+            .mobile-info-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
+            .mobile-info-value { font-size: 13px; color: var(--text-primary); font-weight: 500; }
         }
     </style>
 </head>
@@ -319,7 +360,7 @@
                     <h3 class="section-title">资源使用率</h3>
                 </div>
                 
-                <div v-if="usage.resources && usage.resources.length > 0">
+                <div v-if="usage.resources && usage.resources.length > 0 && !isMobile" class="usage-table-wrapper">
                     <table class="usage-table">
                         <thead>
                             <tr>
@@ -352,7 +393,37 @@
                         </tbody>
                     </table>
                 </div>
-                
+
+                <div v-else-if="isMobile && usage.resources && usage.resources.length > 0" class="mobile-card-list">
+                    <div v-for="resource in usage.resources" :key="resource.resource_id" class="mobile-card">
+                        <div class="mobile-card-main">
+                            <div class="mobile-card-row1">
+                                <div class="mobile-card-name">{{ resource.resource_name }}</div>
+                                <div class="mobile-card-meta">
+                                    <span :class="['mobile-tag', getUtilizationClass(resource.utilization)]">{{ resource.utilization.toFixed(1) }}%</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row3">
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">预约次数</span>
+                                    <span class="mobile-info-value">{{ resource.bookings_count }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">使用时长</span>
+                                    <span class="mobile-info-value">{{ resource.used_hours }}h</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">可用时长</span>
+                                    <span class="mobile-info-value">{{ resource.available_hours }}h</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; background: #f3f4f6; border-radius: 4px; height: 6px; overflow: hidden;">
+                                <div :class="getUtilizationClass(resource.utilization)" :style="{ width: Math.min(resource.utilization, 100) + '%', height: '100%', borderRadius: '4px', background: resource.utilization >= 70 ? '#10b981' : resource.utilization >= 40 ? '#f59e0b' : '#ef4444' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div v-else style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">
                     暂无使用数据
                 </div>
@@ -384,6 +455,31 @@
                 </div>
             </div>
         </div>
+
+        <nav class="bottom-nav" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
+            <div style="display: flex; justify-content: space-around;">
+                <a href="/portal/admin/space/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none; min-height: 44px; justify-content: center;">
+                    <span style="font-size: 22px;" aria-hidden="true">🏠</span>
+                    <span style="font-size: 11px;">工作台</span>
+                </a>
+                <a href="/portal/admin/space/bookings.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none; min-height: 44px; justify-content: center;">
+                    <span style="font-size: 22px;" aria-hidden="true">📅</span>
+                    <span style="font-size: 11px;">预约</span>
+                </a>
+                <a href="/portal/admin/space/settlements.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none; min-height: 44px; justify-content: center;">
+                    <span style="font-size: 22px;" aria-hidden="true">💰</span>
+                    <span style="font-size: 11px;">账单</span>
+                </a>
+                <a href="/portal/admin/space/resources.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none; min-height: 44px; justify-content: center;">
+                    <span style="font-size: 22px;" aria-hidden="true">🏢</span>
+                    <span style="font-size: 11px;">资源</span>
+                </a>
+                <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none; min-height: 44px; justify-content: center;">
+                    <span style="font-size: 22px;" aria-hidden="true">👤</span>
+                    <span style="font-size: 11px;">首页</span>
+                </a>
+            </div>
+        </nav>
     </div>
     
     <script>
@@ -406,6 +502,8 @@
                 const usage = ref({});
                 const trends = ref([]);
                 const revenue = ref({});
+                const isMobile = ref(window.innerWidth < 768);
+                const handleResize = () => { isMobile.value = window.innerWidth < 768; };
                 
                 const trendChart = ref(null);
                 const revenueChart = ref(null);
@@ -644,11 +742,13 @@
                     if (!user) return;
                     
                     await loadAllData();
+                    window.addEventListener('resize', handleResize);
                 });
                 
                 onUnmounted(() => {
                     if (trendChartInstance) trendChartInstance.destroy();
                     if (revenueChartInstance) revenueChartInstance.destroy();
+                    window.removeEventListener('resize', handleResize);
                 });
                 
                 return {
@@ -659,6 +759,7 @@
                     usage,
                     trends,
                     revenue,
+                    isMobile,
                     trendChart,
                     revenueChart,
                     getTypeIcon,

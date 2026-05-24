@@ -204,9 +204,10 @@
         }
 
         .status-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
             font-size: 12px;
             font-weight: 500;
         }
@@ -227,13 +228,18 @@
         }
 
         .action-btn {
-            padding: 4px 8px;
+            padding: 6px 10px;
             border: 1px solid var(--border);
             border-radius: 4px;
             background: white;
             cursor: pointer;
             font-size: 12px;
             margin-right: 4px;
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .action-btn:hover {
@@ -346,7 +352,7 @@
         }
 
         @media (max-width: 768px) {
-            .stat-bar {
+            .stats-bar {
                 grid-template-columns: repeat(2, 1fr);
                 gap: var(--spacing-sm);
             }
@@ -368,15 +374,52 @@
             .btn {
                 min-height: 44px;
             }
+            .module-container {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
             .bottom-nav {
                 display: block !important;
             }
         }
 
         @media (max-width: 480px) {
-            .stat-bar {
+            .stats-bar {
                 grid-template-columns: 1fr;
             }
+        }
+
+        @media (max-width: 768px) {
+            .module-container { padding: 8px; }
+            .module-header { flex-direction: column; align-items: flex-start; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 18px; }
+            .stat-value { font-size: var(--font-size-lg); }
+            .filter-section { padding: 12px; }
+            .tab-filters { overflow-x: auto; }
+            .tab-btn { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+            .table-container { overflow-x: visible; }
+
+            .mobile-card-list { display: flex; flex-direction: column; gap: 8px; }
+            .mobile-card { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; border-left: 4px solid var(--primary); }
+            .mobile-card-main { padding: 12px; }
+            .mobile-card-row1 { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+            .mobile-card-name { font-weight: 600; font-size: 13px; color: var(--text-primary); font-family: monospace; }
+            .mobile-card-meta { display: flex; gap: 6px; align-items: center; }
+            .mobile-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+            .mobile-tag.status-pending { background: #fef3c7; color: #92400e; }
+            .mobile-tag.status-approved { background: #dbeafe; color: #1e40af; }
+            .mobile-tag.status-settled { background: #d1fae5; color: #065f46; }
+            .mobile-card-row2 { margin-bottom: 8px; }
+            .mobile-card-booking-no { font-size: 13px; color: var(--text-secondary); }
+            .mobile-card-row3 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; padding: 8px 10px; background: var(--bg-secondary); border-radius: 8px; }
+            .mobile-info-item { display: flex; flex-direction: column; gap: 2px; }
+            .mobile-info-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
+            .mobile-info-value { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+            .mobile-card-row4 { display: flex; gap: 6px; }
+            .mobile-action-btn { flex: 1; padding: 8px 0; border: none; border-radius: var(--radius-md); font-size: 12px; font-weight: 500; cursor: pointer; transition: transform 0.1s; min-height: 36px; }
+            .mobile-action-btn:active { transform: scale(0.95); }
+            .mobile-action-btn.primary { background: var(--primary); color: white; }
         }
     </style>
 </head>
@@ -469,17 +512,17 @@
                 </div>
 
                 <div class="table-container">
-                    <table v-if="loading">
+                    <table v-if="loading && !isMobile">
                         <tr>
                             <td colspan="8" class="loading">加载中...</td>
                         </tr>
                     </table>
-                    <table v-else-if="filteredSettlements.length === 0">
+                    <table v-else-if="filteredSettlements.length === 0 && !isMobile">
                         <tr>
                             <td colspan="8" class="empty-state">暂无数据</td>
                         </tr>
                     </table>
-                    <table v-else>
+                    <table v-else-if="!isMobile">
                         <thead>
                             <tr>
                                 <th>结算单号</th>
@@ -514,21 +557,57 @@
                                         class="action-btn"
                                         @click="approveSettlement(settlement)"
                                         title="审核通过"
+                                        aria-label="审核通过"
                                     >
-                                        ✅
+                                        审核
                                     </button>
                                     <button
                                         v-if="settlement.status === 'approved'"
                                         class="action-btn"
                                         @click="settleSettlement(settlement)"
                                         title="结算"
+                                        aria-label="结算"
                                     >
-                                        💰
+                                        结算
                                     </button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div v-if="isMobile && filteredSettlements.length > 0" class="mobile-card-list">
+                    <div v-for="settlement in filteredSettlements" :key="settlement.id" class="mobile-card">
+                        <div class="mobile-card-main">
+                            <div class="mobile-card-row1">
+                                <div class="mobile-card-name">{{ settlement.settlement_no }}</div>
+                                <div class="mobile-card-meta">
+                                    <span :class="['mobile-tag', getStatusClass(settlement.status)]">{{ getStatusText(settlement.status) }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row2">
+                                <span class="mobile-card-booking-no">{{ settlement.office_name }} · {{ settlement.settlement_period }}</span>
+                            </div>
+                            <div class="mobile-card-row3">
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">记录数</span>
+                                    <span class="mobile-info-value">{{ settlement.record_count }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">金额</span>
+                                    <span class="mobile-info-value" style="color: var(--primary); font-weight: 700;">¥{{ settlement.total_amount.toFixed(2) }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">创建时间</span>
+                                    <span class="mobile-info-value">{{ formatDate(settlement.created_at) }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row4">
+                                <button v-if="settlement.status === 'pending'" class="mobile-action-btn primary" @click="approveSettlement(settlement)">审核通过</button>
+                                <button v-if="settlement.status === 'approved'" class="mobile-action-btn primary" @click="settleSettlement(settlement)">结算</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -578,23 +657,23 @@
         <nav class="bottom-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); z-index: 100;">
             <div style="display: flex; justify-content: space-around;">
                 <a href="/portal/admin/water/dashboard.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #3B82F6; text-decoration: none;">
-                    <span style="font-size: 24px;">🏠</span>
+                    <span style="font-size: 22px;" aria-hidden="true">🏠</span>
                     <span style="font-size: 12px;">工作台</span>
                 </a>
                 <a href="/portal/admin/water/products.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">📦</span>
+                    <span style="font-size: 22px;" aria-hidden="true">📦</span>
                     <span style="font-size: 12px;">套餐</span>
                 </a>
                 <a href="/portal/admin/water/pickups.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">💧</span>
+                    <span style="font-size: 22px;" aria-hidden="true">💧</span>
                     <span style="font-size: 12px;">领水</span>
                 </a>
                 <a href="/portal/admin/water/accounts.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">💰</span>
+                    <span style="font-size: 22px;" aria-hidden="true">💰</span>
                     <span style="font-size: 12px;">账户</span>
                 </a>
                 <a href="/portal/index.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; color: #6b7280; text-decoration: none;">
-                    <span style="font-size: 24px;">👤</span>
+                    <span style="font-size: 22px;" aria-hidden="true">👤</span>
                     <span style="font-size: 12px;">首页</span>
                 </a>
             </div>
@@ -622,6 +701,7 @@
                     total_count: 0,
                     total_amount: 0
                 });
+                const isMobile = ref(window.innerWidth < 768);
                 const currentTab = ref('pending');
                 const showGenerateModal = ref(false);
                 const newSettlement = ref({
@@ -836,6 +916,7 @@
                     loadSettlements();
                     loadStatistics();
                     loadOffices();
+                    window.addEventListener('resize', () => { isMobile.value = window.innerWidth < 768; });
                 });
 
                 return {
@@ -844,6 +925,7 @@
                     offices,
                     availablePeriods,
                     statistics,
+                    isMobile,
                     currentTab,
                     showGenerateModal,
                     newSettlement,

@@ -45,7 +45,7 @@
             margin-top: var(--spacing-xs);
         }
         
-        .page-actions { display: flex; gap: var(--spacing-sm); }
+        .page-actions { display: flex; gap: var(--spacing-sm); position: relative; }
         
         /* 按钮使用 design-system.css 统一样式，此处仅保留必要覆盖 */
         .btn-success:hover { background: var(--success-dark); }
@@ -288,6 +288,11 @@
             box-shadow: var(--shadow-md);
             overflow: hidden;
         }
+
+        .records-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         
         .records-header {
             padding: var(--spacing-md) var(--spacing-lg);
@@ -414,7 +419,7 @@
         }
         
         .empty-icon {
-            font-size: 64px;
+            font-size: 48px;
             margin-bottom: var(--spacing-md);
         }
         
@@ -556,11 +561,13 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             font-size: var(--font-size-xs);
+            font-family: inherit;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            min-height: 36px;
         }
         
         .quick-filter-tag:hover {
@@ -639,10 +646,10 @@
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             padding: var(--spacing-sm);
-            z-index: 100;
+            z-index: 1001;
             min-width: 200px;
         }
-        
+
         .export-menu-item {
             padding: var(--spacing-sm) var(--spacing-md);
             cursor: pointer;
@@ -668,17 +675,19 @@
             margin: var(--spacing-sm) 0;
         }
         
+        .mobile-card-list { display: none; }
+
         /* 响应式 */
         @media (max-width: 1024px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .service-section { grid-template-columns: 1fr; }
         }
-        
+
         @media (max-width: 768px) {
-            .page-container { padding: var(--spacing-md); }
-            .stats-grid { grid-template-columns: 1fr; }
+            .page-container { padding: 12px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
             .service-stats { grid-template-columns: 1fr; }
-            .toolbar { flex-direction: column; }
+            .toolbar { flex-direction: column; gap: 8px; position: sticky; top: 0; z-index: 50; background: var(--bg-primary); }
             .toolbar-section { width: 100%; }
             .filter-select, .search-input { width: 100%; }
             .records-table { font-size: var(--font-size-xs); }
@@ -686,6 +695,30 @@
             .filter-result-hint { flex-direction: column; }
             .filter-result-stats { flex-wrap: wrap; }
             .advanced-filter-section { grid-template-columns: 1fr; }
+            .mobile-card-list { display: flex; flex-direction: column; gap: 10px; }
+            .mobile-card {
+                background: white; border-radius: 14px; overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid var(--border);
+            }
+            .mobile-card-main { padding: 12px 14px; }
+            .mobile-card-row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+            .mobile-card-name { font-size: 15px; font-weight: 700; color: var(--text-primary); flex: 1; }
+            .mobile-card-meta { display: flex; flex-shrink: 0; gap: 6px; }
+            .mobile-tag { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+            .mobile-tag.settled { background: #ecfdf5; color: #059669; }
+            .mobile-tag.pending { background: #fffbeb; color: #d97706; }
+            .mobile-tag.waiting { background: #eff6ff; color: #1d4ed8; }
+            .mobile-card-row2 { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+            .mobile-card-booking-no { font-weight: 500; color: var(--primary); background: var(--primary-light); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+            .mobile-card-row3 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; padding: 8px 10px; background: var(--bg-secondary); border-radius: 8px; }
+            .mobile-info-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+            .mobile-info-icon { font-size: 16px; flex-shrink: 0; }
+            .mobile-info-label { color: var(--text-tertiary); font-size: 10px; margin-right: 2px; }
+            .mobile-info-value { color: var(--text-primary); font-weight: 600; font-size: 12px; }
+            .mobile-card-row4 { display: flex; gap: 6px; padding-top: 8px; border-top: 1px solid var(--border-light); }
+            .mobile-btn { flex: 1; padding: 8px 4px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 3px; }
+            .mobile-btn-outline { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+            .mobile-btn:active { transform: scale(0.95); }
         }
     </style>
 </head>
@@ -857,24 +890,24 @@
             
             <!-- 三、快捷筛选标签 -->
             <div class="quick-filters">
-                <span :class="['quick-filter-tag', { active: filters.status === 'all' }]" @click="quickFilterStatus('all')">
-                    📊 全部 {{ mergedRecords.length }}
-                </span>
-                <span :class="['quick-filter-tag', 'pending', { active: filters.status === 'pending' }]" @click="quickFilterStatus('pending')">
-                    ⏳ 待确认收款 {{ pendingCount }}
-                </span>
-                <span :class="['quick-filter-tag', 'waiting', { active: filters.status === 'waiting' }]" @click="quickFilterStatus('waiting')">
-                    📋 已申请结算 {{ waitingCount }}
-                </span>
-                <span :class="['quick-filter-tag', 'settled', { active: filters.status === 'settled' }]" @click="quickFilterStatus('settled')">
-                    ✅ 已结算 {{ settledCount }}
-                </span>
-                <span :class="['quick-filter-tag', { active: filters.serviceType === 'water' }]" @click="quickFilterService('water')">
-                    💧 水站服务 {{ waterRecordsCount }}
-                </span>
-                <span :class="['quick-filter-tag', { active: filters.serviceType === 'space' }]" @click="quickFilterService('space')">
-                    🏢 空间服务 {{ spaceRecordsCount }}
-                </span>
+                <button :class="['quick-filter-tag', { active: filters.status === 'all' }]" @click="quickFilterStatus('all')" type="button" :aria-pressed="filters.status === 'all'">
+                    全部 {{ mergedRecords.length }}
+                </button>
+                <button :class="['quick-filter-tag', 'pending', { active: filters.status === 'pending' }]" @click="quickFilterStatus('pending')" type="button" :aria-pressed="filters.status === 'pending'">
+                    待确认收款 {{ pendingCount }}
+                </button>
+                <button :class="['quick-filter-tag', 'waiting', { active: filters.status === 'waiting' }]" @click="quickFilterStatus('waiting')" type="button" :aria-pressed="filters.status === 'waiting'">
+                    已申请结算 {{ waitingCount }}
+                </button>
+                <button :class="['quick-filter-tag', 'settled', { active: filters.status === 'settled' }]" @click="quickFilterStatus('settled')" type="button" :aria-pressed="filters.status === 'settled'">
+                    已结算 {{ settledCount }}
+                </button>
+                <button :class="['quick-filter-tag', { active: filters.serviceType === 'water' }]" @click="quickFilterService('water')" type="button" :aria-pressed="filters.serviceType === 'water'">
+                    水站服务 {{ waterRecordsCount }}
+                </button>
+                <button :class="['quick-filter-tag', { active: filters.serviceType === 'space' }]" @click="quickFilterService('space')" type="button" :aria-pressed="filters.serviceType === 'space'">
+                    空间服务 {{ spaceRecordsCount }}
+                </button>
             </div>
             
             <!-- 四、筛选工具栏 -->
@@ -883,8 +916,8 @@
                     <span class="toolbar-label">服务类型：</span>
                     <select class="filter-select" v-model="filters.serviceType" @change="applyFiltersAndSaveUrl">
                         <option value="all">全部服务</option>
-                        <option value="water">💧 水站服务</option>
-                        <option value="space">🏢 空间服务</option>
+                        <option value="water">水站服务</option>
+                        <option value="space">空间服务</option>
                     </select>
                 </div>
                 
@@ -892,9 +925,9 @@
                     <span class="toolbar-label">结算状态：</span>
                     <select class="filter-select" v-model="filters.status" @change="applyFiltersAndSaveUrl">
                         <option value="all">全部状态</option>
-                        <option value="pending">⏳ 待确认收款</option>
-                        <option value="waiting">📋 已申请结算</option>
-                        <option value="settled">✅ 已结算</option>
+                        <option value="pending">待确认收款</option>
+                        <option value="waiting">已申请结算</option>
+                        <option value="settled">已结算</option>
                     </select>
                 </div>
                 
@@ -958,7 +991,7 @@
             <!-- 五、筛选结果提示区 -->
             <div class="filter-result-hint" v-if="hasActiveFilters && filteredRecords.length > 0">
                 <div class="filter-result-info">
-                    <span class="filter-result-icon">🔍</span>
+                    <span class="filter-result-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                     <span class="filter-result-text">
                         当前筛选条件：
                         <span v-if="filters.serviceType !== 'all'">{{ filters.serviceType === 'water' ? '💧水站' : '🏢空间' }}</span>
@@ -987,7 +1020,8 @@
                     <span v-if="hasActiveFilters">（已筛选）</span>
                 </div>
                 
-                <table class="records-table" v-if="filteredRecords.length > 0">
+                <div class="records-table-wrapper" v-if="filteredRecords.length > 0 && !isMobile">
+                <table class="records-table">
                     <thead>
                         <tr>
                             <th style="width: 100px;">服务类型</th>
@@ -1032,8 +1066,45 @@
                         </tr>
                     </tbody>
                 </table>
-                
-                <div v-else class="empty-state">
+                </div>
+
+                <div v-if="isMobile && filteredRecords.length > 0" class="mobile-card-list">
+                    <div v-for="item in filteredRecords" :key="item.id" class="mobile-card">
+                        <div class="mobile-card-main">
+                            <div class="mobile-card-row1">
+                                <div class="mobile-card-name">{{ item.serviceIcon }} {{ item.serviceName }}</div>
+                                <div class="mobile-card-meta">
+                                    <span :class="['mobile-tag', item.statusClass]">{{ item.statusText }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row2">
+                                <span class="mobile-card-booking-no">{{ item.recordNo }}</span>
+                            </div>
+                            <div class="mobile-card-row3">
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-icon">👤</span>
+                                    <span class="mobile-info-label">付款方</span>
+                                    <span class="mobile-info-value">{{ item.payer }}</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-icon">💰</span>
+                                    <span class="mobile-info-label">金额</span>
+                                    <span class="mobile-info-value" style="color: var(--primary);">¥{{ formatAmount(item.amount) }}</span>
+                                </div>
+                                <div class="mobile-info-item" style="grid-column: 1 / -1;">
+                                    <span class="mobile-info-icon">📅</span>
+                                    <span class="mobile-info-label">时间</span>
+                                    <span class="mobile-info-value">{{ formatTime(item.createdAt) }}</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card-row4">
+                                <button class="mobile-btn mobile-btn-outline" @click="viewRecord(item)">👁️ 查看</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="filteredRecords.length === 0" class="empty-state">
                     <div class="empty-icon">📭</div>
                     <div class="empty-title">暂无结算记录</div>
                     <div class="empty-desc">
@@ -1134,7 +1205,8 @@
                 const showSpaceDetail = ref(false);
                 const showAdvancedFilter = ref(false);
                 const showExportMenu = ref(false);
-                
+                const isMobile = ref(window.innerWidth < 768);
+
                 const pendingCount = computed(() => mergedRecords.value.filter(r => r.statusClass === 'pending').length);
                 const waitingCount = computed(() => mergedRecords.value.filter(r => r.statusClass === 'waiting').length);
                 const settledCount = computed(() => mergedRecords.value.filter(r => r.statusClass === 'settled').length);
@@ -1544,9 +1616,9 @@
                 
                 const getStatusLabel = (status) => {
                     const labels = {
-                        'pending': '⏳ 待确认收款',
-                        'waiting': '📋 已申请结算',
-                        'settled': '✅ 已结算'
+                        'pending': '待确认收款',
+                        'waiting': '已申请结算',
+                        'settled': '已结算'
                     };
                     return labels[status] || status;
                 };
@@ -1660,7 +1732,14 @@
                     }
                 });
                 
+                const viewRecord = (record) => {
+                    window.open(record.detailUrl, '_blank');
+                };
+
                 onMounted(async () => {
+                    window.addEventListener('resize', () => {
+                        isMobile.value = window.innerWidth < 768;
+                    });
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true });
                     if (!user) return;
                     loadFiltersFromUrl();
@@ -1669,6 +1748,7 @@
                 
                 return {
                     loading,
+                    isMobile,
                     waterSummary,
                     spaceSummary,
                     totalStats,
@@ -1705,6 +1785,7 @@
                     toggleServiceDetail,
                     getStatusLabel,
                     getMonthLabel,
+                    viewRecord,
                     exportReport,
                     exportFilteredData,
                     exportMonthlyReport,
