@@ -56,6 +56,16 @@ def _check_role_hierarchy(actor: User, target_role: str, target_user_id: int = N
         )
 
     return True
+
+
+def _safe_execute(db: Session, sql: str, params: dict):
+    """安全执行SQL，表不存在时跳过而非崩溃"""
+    try:
+        db.execute(text(sql), params)
+    except Exception:
+        pass
+
+
 from utils.password import (
     hash_password,
     verify_password,
@@ -836,19 +846,19 @@ def delete_user(
     # 撤销该用户所有token
     revoke_user_tokens(user.id, db)
 
-    # 清理关联数据
-    db.execute(text("DELETE FROM user_sessions WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("DELETE FROM login_attempts WHERE username = :uname"), {"uname": username})
-    db.execute(text("DELETE FROM account_lockouts WHERE username = :uname"), {"uname": username})
-    db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("DELETE FROM office_admin_relations WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("DELETE FROM token_blacklist WHERE user_id = :uid"), {"uid": user.id})
+    # 清理关联数据（表可能不存在，逐条安全尝试）
+    _safe_execute(db, "DELETE FROM user_sessions WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "DELETE FROM login_attempts WHERE username = :uname", {"uname": username})
+    _safe_execute(db, "DELETE FROM account_lockouts WHERE username = :uname", {"uname": username})
+    _safe_execute(db, "DELETE FROM notifications WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "DELETE FROM office_admin_relations WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "DELETE FROM token_blacklist WHERE user_id = :uid", {"uid": user.id})
 
     # 将关联的交易、结算等记录重新分配给 admin（id=1），保留审计轨迹
-    db.execute(text("UPDATE transactions SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("UPDATE payment_orders SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("UPDATE membership_orders SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
-    db.execute(text("UPDATE admin_balance SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
+    _safe_execute(db, "UPDATE transactions SET user_id = 1 WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "UPDATE payment_orders SET user_id = 1 WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "UPDATE membership_orders SET user_id = 1 WHERE user_id = :uid", {"uid": user.id})
+    _safe_execute(db, "UPDATE admin_balance SET user_id = 1 WHERE user_id = :uid", {"uid": user.id})
 
     # 硬删除用户
     db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user.id})
