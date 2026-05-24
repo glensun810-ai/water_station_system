@@ -23,6 +23,39 @@ from depends.auth import (
 )
 from schemas.system import UserResponse, OfficeResponse, AuthResponse
 from utils.jwt import create_access_token, verify_token
+
+# 角色权限层级（数值越大权限越高）
+ROLE_LEVEL = {
+    "super_admin": 3,
+    "admin": 2,
+    "office_admin": 1,
+    "user": 0,
+}
+
+
+def _check_role_hierarchy(actor: User, target_role: str, target_user_id: int = None):
+    """
+    检查角色层级权限：
+    - 高权限可以管理低权限
+    - 不能管理同级或更高权限
+    - 不能修改自己
+    """
+    if target_user_id and actor.id == target_user_id:
+        raise HTTPException(status_code=400, detail="不能操作自己的账户")
+
+    actor_level = ROLE_LEVEL.get(actor.role, -1)
+    target_level = ROLE_LEVEL.get(target_role, -1)
+
+    if actor_level <= target_level:
+        role_names = {"super_admin": "超级管理员", "admin": "系统管理员", "office_admin": "办公室管理员", "user": "普通用户"}
+        actor_name = role_names.get(actor.role, actor.role)
+        target_name = role_names.get(target_role, target_role)
+        raise HTTPException(
+            status_code=403,
+            detail=f"{actor_name}无权操作{target_name}角色的账户",
+        )
+
+    return True
 from utils.password import (
     hash_password,
     verify_password,
@@ -724,17 +757,21 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """更新用户信息（仅管理员）"""
+    """更新用户信息（管理员及以上，按权限层级管理）"""
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    if user.role == "super_admin" and current_user.role != "super_admin":
-        raise HTTPException(status_code=403, detail="无权限修改超级管理员")
+    # 角色层级权限检查：不能修改同级或更高级别的用户
+    _check_role_hierarchy(current_user, user.role, target_user_id=user.id)
+
+    new_role = user_update.get("role")
+    # 如果要修改角色，检查目标角色层级
+    if new_role and new_role != user.role:
+        _check_role_hierarchy(current_user, new_role)
 
     office_ids = user_update.get("office_ids")
-    new_role = user_update.get("role")
 
     if new_role == "office_admin":
         if office_ids is not None and len(office_ids) == 0:
@@ -786,31 +823,39 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_super_admin_user),
 ):
-    """删除用户（仅超级管理员）"""
+    """删除用户（仅超级管理员，硬删除）"""
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    if user.id == current_user.id:
-        raise HTTPException(status_code=400, detail="不能删除自己的账户")
+    _check_role_hierarchy(current_user, user.role, target_user_id=user.id)
 
-    if user.role == "super_admin":
-        raise HTTPException(status_code=403, detail="不能删除超级管理员账户")
+    username = user.username
 
+    # 撤销该用户所有token
     revoke_user_tokens(user.id, db)
 
-    db.execute(
-        text("UPDATE user_sessions SET is_active = 0 WHERE user_id = :user_id"),
-        {"user_id": user.id},
-    )
+    # 清理关联数据
+    db.execute(text("DELETE FROM user_sessions WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("DELETE FROM login_attempts WHERE username = :uname"), {"uname": username})
+    db.execute(text("DELETE FROM account_lockouts WHERE username = :uname"), {"uname": username})
+    db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("DELETE FROM office_admin_relations WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("DELETE FROM token_blacklist WHERE user_id = :uid"), {"uid": user.id})
 
-    user.is_active = False
-    user.updated_at = datetime.now()
+    # 将关联的交易、结算等记录重新分配给 admin（id=1），保留审计轨迹
+    db.execute(text("UPDATE transactions SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("UPDATE payment_orders SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("UPDATE membership_orders SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
+    db.execute(text("UPDATE admin_balance SET user_id = 1 WHERE user_id = :uid"), {"uid": user.id})
+
+    # 硬删除用户
+    db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user.id})
 
     db.commit()
 
-    return {"message": "用户已停用", "user_id": user_id}
+    return {"message": "用户已永久删除", "user_id": user_id, "username": username}
 
 
 @router.post("/users")
@@ -819,7 +864,7 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """创建用户（仅管理员）"""
+    """创建用户（管理员及以上，按权限层级分配角色）"""
 
     username = user_data.get("name")
     password = user_data.get("password")
@@ -836,6 +881,9 @@ def create_user(
 
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="密码长度不能少于6位")
+
+    # 角色层级权限检查：高权限可创建低权限，不能创建同级或更高
+    _check_role_hierarchy(current_user, role)
 
     existing = db.query(User).filter(User.username == username).first()
     if existing:
@@ -898,7 +946,13 @@ def batch_update_users(
     for user_id in user_ids:
         user = db.query(User).filter(User.id == user_id).first()
         if user:
-            if user.role == "super_admin" and current_user.role != "super_admin":
+            # 角色层级权限检查
+            try:
+                _check_role_hierarchy(current_user, user.role, target_user_id=user.id)
+                new_role = updates.get("role")
+                if new_role and new_role != user.role:
+                    _check_role_hierarchy(current_user, new_role)
+            except HTTPException:
                 continue
 
             for key, value in updates.items():
