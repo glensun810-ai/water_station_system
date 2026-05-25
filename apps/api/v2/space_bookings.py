@@ -33,6 +33,30 @@ from shared.schemas.space.response import ApiResponse, PaginatedResponse
 router = APIRouter(prefix="/space/bookings", tags=["空间预约管理"])
 
 
+def _resolve_price_per_unit(resource, booking_unit: str, time_slot=None) -> float:
+    """统一价格查找：按 booking_unit 确定单价来源及优先级
+
+    优先级链：
+    - hour / day / week / month: resource.base_price
+    - half_day / session / slot:   time_slot.price_override → resource.base_price
+    - meal:                        time_slot.price_override → resource.meal_standard_price → resource.base_price
+    """
+    if booking_unit in ("hour", "day", "week", "month"):
+        return resource.base_price or 0
+
+    if booking_unit in ("half_day", "session", "slot"):
+        if time_slot and time_slot.price_override:
+            return time_slot.price_override
+        return resource.base_price or 0
+
+    if booking_unit == "meal":
+        if time_slot and time_slot.price_override:
+            return time_slot.price_override
+        return resource.meal_standard_price or resource.base_price or 0
+
+    return resource.base_price or 0
+
+
 @router.get("", response_model=ApiResponse)
 async def get_bookings(
     type_code: Optional[str] = Query(None, description="空间类型代码过滤"),
@@ -239,28 +263,21 @@ async def create_booking(
                             booking_unit, booking_data.time_slot_key,
                             booking_data.end_date, booking_data.meal_session, db)
 
-    # Fee calculation
-    if booking_unit == "hour":
-        total_fee = duration * (resource.base_price or 0)
-    elif booking_unit in ("half_day", "session", "slot"):
+    # Fee calculation — resolve time_slot once for units that need it
+    time_slot = None
+    if booking_unit in ("half_day", "session", "slot", "meal") and booking_data.time_slot_key:
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == booking_data.time_slot_key,
         ).first()
-        unit_price = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.base_price or 0)
-        total_fee = duration * unit_price
-    elif booking_unit in ("day", "week", "month"):
-        total_fee = duration * (resource.base_price or 0)
-    elif booking_unit == "meal":
-        time_slot = db.query(ResourceTimeSlot).filter(
-            ResourceTimeSlot.resource_id == resource.id,
-            ResourceTimeSlot.slot_key == booking_data.time_slot_key,
-        ).first()
-        unit_price = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.meal_standard_price or resource.base_price or 0)
+
+    unit_price = _resolve_price_per_unit(resource, booking_unit, time_slot)
+
+    if booking_unit == "meal":
         guests = booking_data.guests_count or 1
         total_fee = unit_price * guests
     else:
-        total_fee = duration * (resource.base_price or 0)
+        total_fee = duration * unit_price
 
     booking_no = (
         f"SB{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
@@ -934,16 +951,19 @@ async def calculate_fee(
         except ValueError:
             raise HTTPException(status_code=400, detail="时间格式必须为HH:MM")
         duration = fee_request.duration or (end_dt - start_dt).seconds / 3600
-        price_per_unit = resource.base_price or 0
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
     elif booking_unit in ("half_day", "session", "slot"):
         duration = fee_request.duration or 0.5
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == fee_request.time_slot_key,
         ).first() if fee_request.time_slot_key else None
-        price_per_unit = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.base_price or 0)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot)
     elif booking_unit in ("day", "week", "month"):
-        days = fee_request.booking_days or fee_request.duration or 1
+        if fee_request.end_date:
+            days = (fee_request.end_date - fee_request.booking_date).days + 1
+        else:
+            days = fee_request.booking_days or fee_request.duration or 1
         if booking_unit == "week":
             import math
             duration = max(1, math.ceil(days / 7))
@@ -952,19 +972,19 @@ async def calculate_fee(
             duration = max(1, math.ceil(days / 30))
         else:
             duration = days
-        price_per_unit = resource.base_price or 0
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
     elif booking_unit == "meal":
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == fee_request.time_slot_key,
         ).first() if fee_request.time_slot_key else None
-        price_per_unit = time_slot.price_override if (time_slot and time_slot.price_override) else (resource.meal_standard_price or resource.base_price or 0)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot)
         guests = fee_request.guests_count or 1
         base_fee = price_per_unit * guests
         duration = guests
     else:
         duration = fee_request.duration or 1
-        price_per_unit = resource.base_price or 0
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
 
     if booking_unit != "meal":
         base_fee = duration * price_per_unit

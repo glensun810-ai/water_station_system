@@ -75,7 +75,7 @@ class SpaceBookingCreate(SpaceBookingBase):
     exhibition_plan_url: Optional[str] = None
 
     end_date: Optional[date] = None
-    booking_days: int = 1
+    booking_days: int = 0
 
     class Config:
         extra = "ignore"  # 忽略前端发送的额外字段
@@ -145,7 +145,7 @@ class SpaceBookingResponse(BaseModel):
     booking_unit: str = "hour"
     time_slot_key: Optional[str] = None
     end_date: Optional[date] = None
-    booking_days: int = 1
+    booking_days: int = 0
     meal_session: Optional[str] = None
     guests_count: int = 1
 
@@ -214,7 +214,7 @@ class FeeCalculationRequest(BaseModel):
     addons_selected: Optional[List[dict]] = None
 
     end_date: Optional[date] = None
-    booking_days: int = 1
+    booking_days: int = 0
     guests_count: int = 1
     meal_session: Optional[str] = None
 

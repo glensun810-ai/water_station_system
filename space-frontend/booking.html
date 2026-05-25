@@ -1652,7 +1652,7 @@
                             </div>
                             <div class="resource-price">
                                 <span class="price-label">基础价格</span>
-                                <span class="price-value">¥{{ resource.basePrice }}/{{ typeUnit }}</span>
+                                <span class="price-value">¥{{ resource.basePrice }}/{{ resource.unitLabel || typeUnit }}</span>
                             </div>
                         </div>
                     </div>
@@ -1676,7 +1676,7 @@
                             class="unit-btn"
                             :class="{ active: bookingUnit === unit }"
                             @click="switchBookingUnit(unit)"
-                        >{{ ({ hour: '按小时', half_day: '按半天', session: '按场次', slot: '按时段', day: '按天', week: '按周', month: '按月', meal: '按餐次' })[unit] || unit }}</button>
+                        >{{ UNIT_SWITCHER_LABEL_MAP[unit] || unit }}</button>
                     </div>
 
                     <!-- 选择提示 -->
@@ -2171,6 +2171,9 @@
                 const userType = ref('external')
                 const freeHoursRemaining = ref(0)
                 
+                const UNIT_LABEL_MAP = { hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' }
+                const UNIT_SWITCHER_LABEL_MAP = { hour: '按小时', half_day: '按半天', session: '按场次', slot: '按时段', day: '按天', week: '按周', month: '按月', meal: '按餐次' }
+
                 const spaceType = ref(null)
                 const availableResources = ref([])
                 const selectedResource = ref(null)
@@ -2309,13 +2312,13 @@
 
                             supportedUnits.value = units
                             bookingUnit.value = supportedUnits.value[0]
-                            typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[bookingUnit.value] || '小时'
+                            typeUnit.value = UNIT_LABEL_MAP[bookingUnit.value] || '小时'
                             console.log('检测到预订单位:', bookingUnit.value, '支持:', supportedUnits.value)
                         } else if (resource.price_unit) {
                             // 无匹配类型时，用资源自身的 price_unit
                             supportedUnits.value = [resource.price_unit]
                             bookingUnit.value = resource.price_unit
-                            typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[bookingUnit.value] || '小时'
+                            typeUnit.value = UNIT_LABEL_MAP[bookingUnit.value] || '小时'
                         }
                     } catch (e) {
                         console.error('检测预订单位失败:', e)
@@ -2426,11 +2429,14 @@
                         const basePrice = selectedResource.value?.basePrice || 0
                         let est = 0
                         if (unit === 'hour') est = selectedTimeSlots.value.length * basePrice
-                        else if (unit === 'half_day' || unit === 'session' || unit === 'slot') est = basePrice
+                        else if (unit === 'half_day' || unit === 'session' || unit === 'slot') {
+                            const selectedSlot = sessionSlots.value.find(s => s.slot_key === selectedSession.value)
+                            est = (selectedSlot?.duration_value || 0.5) * basePrice
+                        }
                         else if (unit === 'day') est = computeDateRangeDays() * basePrice
                         else if (unit === 'week') est = Math.max(1, Math.ceil(computeDateRangeDays() / 7)) * basePrice
                         else if (unit === 'month') est = Math.max(1, Math.ceil(computeDateRangeDays() / 30)) * basePrice
-                        else if (unit === 'meal') est = basePrice * guestsCount.value
+                        else if (unit === 'meal') est = (selectedResource.value?.mealStandardPrice || basePrice) * guestsCount.value
                         feeDetail.value = {
                             baseFee: est,
                             memberDiscount: userType.value === 'internal' ? est * 0.2 : 0,
@@ -2445,7 +2451,7 @@
 
                 const switchBookingUnit = (unit) => {
                     bookingUnit.value = unit
-                    typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[unit] || '小时'
+                    typeUnit.value = UNIT_LABEL_MAP[unit] || '小时'
                     selectedTimeSlots.value = []
                     selectedSession.value = null
                     selectedMealSession.value = null
@@ -2663,11 +2669,19 @@
                             location: item.location || '未知位置',
                             capacity: item.capacity || 10,
                             basePrice: item.base_price || 50,
+                            memberPrice: item.member_price || 0,
                             isFavorite: item.is_favorite || false,
                             requiresDeposit: item.requires_deposit || false,
                             type_code: item.type_code || '',
                             type_id: item.type_id || null,
                             price_unit: item.price_unit || null,
+                            unitLabel: UNIT_LABEL_MAP[item.price_unit] || '小时',
+                            mealStandardPrice: item.meal_standard_price || null,
+                            mealVipPrice: item.meal_vip_price || null,
+                            mealLuxuryPrice: item.meal_luxury_price || null,
+                            boothSize: item.booth_size || null,
+                            boothPosition: item.booth_position || null,
+                            venueLevel: item.venue_level || null,
                         }));
                         
                         if (resourceId) {
@@ -2805,7 +2819,7 @@
                                 start_time: s.start_time,
                                 end_time: s.end_time,
                                 is_available: s.is_available,
-                                price: s.price_override || selectedResource.value.basePrice || 0,
+                                price: s.price_override || selectedResource.value.mealStandardPrice || selectedResource.value.basePrice || 0,
                             }));
                             availableHoursCount.value = availableSlots.filter(s => s.is_available).length;
                             bookedHoursCount.value = availableSlots.filter(s => !s.is_available).length;
