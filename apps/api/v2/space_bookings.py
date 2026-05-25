@@ -189,6 +189,7 @@ async def create_booking(
     booking_unit = booking_data.booking_unit or "hour"
 
     # Validate and compute duration based on booking_unit
+    computed_booking_days = 1  # default for single-day bookings
     if booking_unit == "hour":
         if not booking_data.start_time or not booking_data.end_time:
             raise HTTPException(status_code=400, detail="按小时预订需要提供 start_time 和 end_time")
@@ -213,12 +214,14 @@ async def create_booking(
             duration = (booking_data.end_date - booking_data.booking_date).days + 1
         else:
             duration = booking_data.booking_days or 1
+        computed_booking_days = int(duration)
     elif booking_unit in ("week", "month"):
         import math
         if booking_data.end_date:
             days = (booking_data.end_date - booking_data.booking_date).days + 1
         else:
             days = booking_data.booking_days or 1
+        computed_booking_days = days
         if booking_unit == "week":
             duration = max(1, math.ceil(days / 7))
         else:
@@ -361,7 +364,7 @@ async def create_booking(
         time_slot_key=booking_data.time_slot_key,
         booking_unit=booking_unit,
         end_date=booking_data.end_date,
-        booking_days=booking_data.booking_days or duration,
+        booking_days=computed_booking_days,
         meal_session=booking_data.meal_session,
         guests_count=booking_data.guests_count,
         type_id=resource.type_id,
@@ -378,7 +381,7 @@ async def create_booking(
         base_fee=total_fee,
         requires_deposit=space_type.requires_deposit if space_type else False,
         deposit_amount=total_fee
-        * (space_type.deposit_percentage / 100 if space_type else 0),
+        * (space_type.deposit_percentage if space_type else 0),
         status=initial_status,
         payment_status=payment_status,
         payment_mode=payment_mode,
