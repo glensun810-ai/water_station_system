@@ -1180,70 +1180,137 @@
             .booking-main {
                 padding: var(--spacing-md);
             }
-            
+
             .progress-container {
-                padding: var(--spacing-md);
+                padding: var(--spacing-sm) var(--spacing-md);
             }
-            
+
             .progress-steps {
-                flex-wrap: wrap;
-                gap: var(--spacing-sm);
+                flex-wrap: nowrap;
+                gap: 4px;
             }
-            
+
+            .step-item {
+                gap: 4px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .step-circle {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+                border-width: 2px;
+            }
+
+            .step-label {
+                font-size: 11px;
+                white-space: nowrap;
+            }
+
             .progress-line {
                 display: none;
             }
-            
+
             .form-card {
-                padding: var(--spacing-lg);
-                border-radius: 16px;
+                padding: var(--spacing-md) var(--spacing-sm);
+                border-radius: 14px;
             }
-            
+
             .time-picker-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
             }
-            
+
+            .time-slot {
+                padding: 8px 4px;
+                border-radius: 8px;
+                font-size: 11px;
+            }
+
+            .time-slot .slot-time {
+                font-size: 12px;
+            }
+
+            .time-slot .slot-status {
+                font-size: 9px;
+            }
+
             .resource-selector {
                 grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
                 gap: var(--spacing-sm);
             }
-            
+
             .form-actions {
                 flex-direction: column;
             }
-            
+
             .action-btn {
                 width: 100%;
                 min-width: auto;
             }
-            
+
             .user-info-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
+
             .time-legend {
                 flex-wrap: wrap;
                 gap: var(--spacing-md);
             }
-            
+
             .time-stats {
-                flex-direction: column;
+                flex-direction: row;
+                flex-wrap: wrap;
                 gap: var(--spacing-sm);
+            }
+
+            .session-card-grid,
+            .meal-card-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .session-card, .meal-card {
+                padding: var(--spacing-sm);
+                min-height: auto;
+            }
+
+            .session-card .session-name,
+            .meal-card .meal-name {
+                font-size: 13px;
+            }
+
+            .session-card .session-time,
+            .meal-card .meal-time {
+                font-size: 11px;
             }
         }
         
         @media (max-width: 480px) {
             .time-picker-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+            }
+
+            .time-slot {
+                padding: 6px 2px;
             }
 
             .step-item {
-                flex: none;
-                width: 50%;
+                flex: 1;
+                min-width: 0;
             }
 
-            .step-item:nth-child(n+5) {
-                display: none;
+            .step-circle {
+                width: 28px;
+                height: 28px;
+                font-size: 11px;
+                border-width: 2px;
+            }
+
+            .step-label {
+                font-size: 10px;
             }
 
             .date-range-summary > div {
@@ -1254,11 +1321,12 @@
             .session-card-grid,
             .meal-card-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
             }
 
             .session-card, .meal-card {
-                min-height: 100px;
-                padding: var(--spacing-md);
+                min-height: auto;
+                padding: var(--spacing-sm);
             }
         }
         
@@ -2779,7 +2847,10 @@
                     }
                     
                     try {
-                        const response = await spaceAPI.getResources({ type_code: typeCode || 'meeting_room' });
+                        const apiParams = {}
+                        if (typeCode) apiParams.type_code = typeCode
+                        if (resourceTypeFilter.value) apiParams.type_code = resourceTypeFilter.value
+                        const response = await spaceAPI.getResources(apiParams);
                         const items = response.data.items || [];
                         
                         if (items.length > 0) {
@@ -3166,7 +3237,53 @@ const submitBooking = async () => {
                 watch(feeDetail, () => {
                     loadPaymentModes()
                 }, { deep: true })
-                
+
+                watch(resourceTypeFilter, async (newType) => {
+                    try {
+                        const apiParams = {}
+                        if (newType) apiParams.type_code = newType
+                        const response = await spaceAPI.getResources(apiParams)
+                        const items = response.data.items || []
+                        availableResources.value = items.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            location: item.location || '未知位置',
+                            capacity: item.capacity || 10,
+                            basePrice: item.base_price || 50,
+                            memberPrice: item.member_price || 0,
+                            isFavorite: item.is_favorite || false,
+                            requiresDeposit: item.requires_deposit || false,
+                            type_code: item.type_code || '',
+                            type_id: item.type_id || null,
+                            price_unit: item.price_unit || null,
+                            unitLabel: UNIT_LABEL_MAP[item.price_unit] || '小时',
+                            mealStandardPrice: item.meal_standard_price || null,
+                            mealVipPrice: item.meal_vip_price || null,
+                            mealLuxuryPrice: item.meal_luxury_price || null,
+                            boothSize: item.booth_size || null,
+                            boothPosition: item.booth_position || null,
+                            venueLevel: item.venue_level || null,
+                        }))
+                        if (items.length > 0) {
+                            spaceType.value = {
+                                code: newType || items[0].type_code,
+                                name: items[0].type_name || '空间资源',
+                                unit: '按小时'
+                            }
+                            typeUnit.value = UNIT_LABEL_MAP[items[0].price_unit] || '小时'
+                        }
+                        selectedResource.value = null
+                        selectedTimeSlots.value = []
+                        selectedSession.value = null
+                        selectedMealSession.value = null
+                        timeSlots.value = []
+                        sessionSlots.value = []
+                        mealSlots.value = []
+                    } catch (error) {
+                        console.error('按类型筛选资源失败:', error)
+                    }
+                })
+
                 onMounted(async () => {
                     await loadUserData()
                     await loadPaymentModes()
