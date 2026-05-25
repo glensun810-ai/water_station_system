@@ -35,7 +35,6 @@ const GlobalHeader = {
                     <template v-for="(item, index) in breadcrumbs">
                         <span class="breadcrumb-separator">/</span>
                         <a :href="item.url" class="breadcrumb-item" :class="{ 'breadcrumb-active': index === breadcrumbs.length - 1 }">
-                            <span class="breadcrumb-icon" v-if="item.icon">{{ item.icon }}</span>
                             <span class="breadcrumb-text">{{ item.text }}</span>
                         </a>
                     </template>
