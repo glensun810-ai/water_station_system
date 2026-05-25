@@ -396,9 +396,9 @@ async def create_booking(
         total_fee=total_fee,
         actual_fee=total_fee,
         base_fee=total_fee,
-        requires_deposit=space_type.requires_deposit if space_type else False,
+        requires_deposit=(space_type.requires_deposit if space_type else False) or False,
         deposit_amount=total_fee
-        * (space_type.deposit_percentage if space_type else 0),
+        * ((space_type.deposit_percentage if space_type else None) or 0),
         status=initial_status,
         payment_status=payment_status,
         payment_mode=payment_mode,
@@ -1064,8 +1064,8 @@ async def calculate_fee(
     if space_type and space_type.requires_deposit:
         deposit_info = {
             "requires_deposit": True,
-            "deposit_amount": final_fee * space_type.deposit_percentage,
-            "deposit_percentage": space_type.deposit_percentage,
+            "deposit_amount": final_fee * (space_type.deposit_percentage or 0),
+            "deposit_percentage": space_type.deposit_percentage or 0,
         }
 
     return ApiResponse(
