@@ -402,6 +402,12 @@
                             <td>
                                 <div class="actions-cell">
                                     <button class="btn btn-ghost btn-sm" @click="openEditModal(t)">编辑</button>
+                                    <button v-if="t.is_active" class="btn btn-outline btn-sm" @click="toggleTypeActive(t)">
+                                        {{ t.is_active ? '停用' : '启用' }}
+                                    </button>
+                                    <button v-if="!t.is_active" class="btn btn-ghost btn-sm" style="color:#059669;" @click="toggleTypeActive(t)">
+                                        启用
+                                    </button>
                                     <button class="btn btn-danger btn-sm" @click="confirmDelete(t)">删除</button>
                                 </div>
                             </td>
@@ -578,18 +584,97 @@
 
         <!-- Delete Confirm Modal -->
         <div class="modal-overlay" v-if="showDeleteModal" @click.self="showDeleteModal = false">
-            <div class="modal" style="max-width:400px;">
+            <div class="modal" style="max-width:480px;">
                 <div class="modal-header">
-                    <h2>确认删除</h2>
+                    <h2>{{ typeStats.can_delete ? '确认删除' : '⚠️ 无法删除此类型' }}</h2>
                     <button class="modal-close" @click="showDeleteModal = false">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p>确定要删除类型 <strong>{{ deletingType?.type_name }}</strong> ({{ deletingType?.type_code }}) 吗？</p>
-                    <p style="color:var(--danger,#DC2626);font-size:var(--font-size-sm);">此操作不可撤销，且仅超级管理员可执行。</p>
+                    <div style="margin-bottom:var(--spacing-lg);">
+                        <p style="font-size:var(--font-size-md);margin-bottom:var(--spacing-sm);">
+                            类型：<strong>{{ deletingType?.type_name }}</strong>
+                            <span class="type-code-badge" style="margin-left:var(--spacing-sm);">{{ deletingType?.type_code }}</span>
+                        </p>
+                    </div>
+
+                    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:var(--spacing-md);margin-bottom:var(--spacing-lg);">
+                        <div style="display:flex;justify-content:space-around;text-align:center;">
+                            <div>
+                                <div style="font-size:var(--font-size-xl);font-weight:700;color:var(--text-primary);">{{ typeStats.resource_count }}</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);">关联资源</div>
+                            </div>
+                            <div>
+                                <div style="font-size:var(--font-size-xl);font-weight:700;color:var(--text-primary);">{{ typeStats.booking_count }}</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);">历史预约</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 有资源 → 阻止删除，提供替代方案 -->
+                    <div v-if="!typeStats.can_delete" style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--radius-md);padding:var(--spacing-md);margin-bottom:var(--spacing-lg);">
+                        <p style="font-weight:600;color:#92400E;margin-bottom:var(--spacing-sm);">此类型下有 {{ typeStats.resource_count }} 个关联资源，无法直接删除。</p>
+                        <p style="font-size:var(--font-size-sm);color:#92400E;">请选择以下替代方案：</p>
+                        <ul style="font-size:var(--font-size-sm);color:#92400E;margin:var(--spacing-sm) 0;padding-left:var(--spacing-lg);">
+                            <li><strong>迁移资源</strong>：将资源批量转移至其他兼容类型，再删除此类型</li>
+                            <li><strong>停用类型</strong>：隐藏此类型，已有预约不受影响</li>
+                        </ul>
+                    </div>
+
+                    <!-- 零资源 → 允许删除 -->
+                    <div v-else style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:var(--radius-md);padding:var(--spacing-md);margin-bottom:var(--spacing-lg);">
+                        <p style="color:#991B1B;font-size:var(--font-size-sm);">⚠️ 此类型下无关联资源，删除后不可恢复。确认删除？</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-ghost" @click="showDeleteModal = false">取消</button>
-                    <button class="btn btn-danger" @click="deleteType" :disabled="saving">{{ saving ? '删除中...' : '确认删除' }}</button>
+                    <button v-if="!typeStats.can_delete" class="btn btn-primary" @click="openMigrateModal(deletingType)">迁移资源</button>
+                    <button v-if="!typeStats.can_delete" class="btn btn-outline" @click="toggleTypeActive(deletingType); showDeleteModal = false">
+                        {{ deletingType?.is_active ? '停用类型' : '启用类型' }}
+                    </button>
+                    <button v-if="typeStats.can_delete" class="btn btn-danger" @click="deleteType" :disabled="saving">
+                        {{ saving ? '删除中...' : '确认删除' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Migrate Resources Modal -->
+        <div class="modal-overlay" v-if="showMigrateModal" @click.self="showMigrateModal = false">
+            <div class="modal" style="max-width:500px;">
+                <div class="modal-header">
+                    <h2>迁移资源</h2>
+                    <button class="modal-close" @click="showMigrateModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom:var(--spacing-md);">
+                        将 <strong>{{ migratingType?.type_name }}</strong> 下的
+                        <strong>{{ typeStats.resource_count }}</strong> 个资源迁移至：
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label">目标类型</label>
+                        <select class="form-select" v-model="migrateTargetId" style="width:100%;">
+                            <option :value="null" disabled>请选择目标类型</option>
+                            <option v-for="t in migratableTypes" :key="t.id" :value="t.id">
+                                {{ t.icon || '📦' }} {{ t.type_name }} ({{ t.type_code }})
+                            </option>
+                        </select>
+                        <div class="form-hint">
+                            仅显示预订单位兼容的类型。迁移后资源的基础信息和价格保持不变。
+                        </div>
+                    </div>
+
+                    <div v-if="migrateTargetId" style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:var(--radius-md);padding:var(--spacing-md);margin-top:var(--spacing-md);">
+                        <p style="font-size:var(--font-size-sm);color:#1E40AF;">
+                            📋 将迁移 {{ typeStats.resource_count }} 个资源，完成后「{{ migratingType?.type_name }}」可安全删除。
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" @click="showMigrateModal = false">取消</button>
+                    <button class="btn btn-primary" @click="executeMigrate" :disabled="!migrateTargetId || migrating">
+                        {{ migrating ? '迁移中...' : '确认迁移' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -623,13 +708,19 @@
                 const types = ref([]);
                 const loading = ref(false);
                 const saving = ref(false);
+                const searching = ref(false);
                 const searchQuery = ref('');
                 const statusFilter = ref('');
                 const showModal = ref(false);
                 const showDeleteModal = ref(false);
+                const showMigrateModal = ref(false);
                 const editingType = ref(null);
                 const deletingType = ref(null);
+                const migratingType = ref(null);
+                const migrateTargetId = ref(null);
+                const migrating = ref(false);
                 const activeTab = ref('basic');
+                const typeStats = ref({ resource_count: 0, booking_count: 0, can_delete: false });
 
                 const defaultForm = {
                     type_code: '', type_name: '', description: '',
@@ -818,8 +909,47 @@
                     }
                 };
 
-                const confirmDelete = (type) => {
+                // 预订单位兼容性分组（同组内可互相迁移）
+                const COMPATIBLE_GROUPS = [
+                    new Set(['hour']),
+                    new Set(['half_day', 'session', 'slot']),
+                    new Set(['day', 'week', 'month']),
+                    new Set(['meal']),
+                ];
+
+                const getCompatibleGroup = (unit) => {
+                    return COMPATIBLE_GROUPS.find(g => g.has(unit));
+                };
+
+                // 可选迁移目标类型——与当前迁移类型兼容的、已启用的、非自身的类型
+                const migratableTypes = computed(() => {
+                    if (!migratingType.value) return [];
+                    const fromGroup = getCompatibleGroup(migratingType.value.min_duration_unit);
+                    if (!fromGroup) return [];
+                    return types.value.filter(t =>
+                        t.id !== migratingType.value.id &&
+                        t.is_active &&
+                        getCompatibleGroup(t.min_duration_unit) === fromGroup
+                    );
+                });
+
+                const confirmDelete = async (type) => {
                     deletingType.value = type;
+                    typeStats.value = { resource_count: 0, booking_count: 0, can_delete: false };
+
+                    // 先获取关联数据统计
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}/${type.id}/stats`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            typeStats.value = data.data;
+                        }
+                    } catch (e) {
+                        console.error('获取类型统计失败:', e);
+                    }
                     showDeleteModal.value = true;
                 };
 
@@ -836,7 +966,7 @@
 
                         const data = await resp.json();
                         if (data.code === 200) {
-                            showToast('类型已删除');
+                            showToast(`✓ 类型「${deletingType.value.type_name}」已删除`);
                             showDeleteModal.value = false;
                             deletingType.value = null;
                             await loadTypes();
@@ -851,6 +981,67 @@
                     }
                 };
 
+                const openMigrateModal = (type) => {
+                    migratingType.value = type;
+                    migrateTargetId.value = null;
+                    showDeleteModal.value = false;
+                    showMigrateModal.value = true;
+                };
+
+                const executeMigrate = async () => {
+                    if (!migratingType.value || !migrateTargetId.value) return;
+                    migrating.value = true;
+
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}/${migratingType.value.id}/migrate-resources`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ to_type_id: migrateTargetId.value })
+                        });
+
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            const detail = data.data;
+                            showToast(`✓ 已将 ${detail.migrated_count} 个资源迁移至「${detail.to_type_name}」`);
+                            showMigrateModal.value = false;
+                            migratingType.value = null;
+                            migrateTargetId.value = null;
+                            await loadTypes();
+                        } else {
+                            showToast(`迁移失败: ${data.message || data.detail || '未知错误'}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('迁移失败:', e);
+                        showToast('迁移失败，请重试', 'error');
+                    } finally {
+                        migrating.value = false;
+                    }
+                };
+
+                const toggleTypeActive = async (type) => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        const resp = await fetch(`${API_BASE}/${type.id}/toggle-active`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if (data.code === 200) {
+                            showToast(`✓ ${data.message}`);
+                            await loadTypes();
+                        } else {
+                            showToast(`操作失败: ${data.message || data.detail}`, 'error');
+                        }
+                    } catch (e) {
+                        console.error('切换状态失败:', e);
+                        showToast('操作失败，请重试', 'error');
+                    }
+                };
+
                 onMounted(() => {
                     loadTypes();
                     if (typeof initGlobalHeader === 'function') {
@@ -860,12 +1051,14 @@
 
                 return {
                     types, loading, saving, searchQuery, statusFilter,
-                    filteredTypes, showModal, showDeleteModal,
-                    editingType, deletingType, activeTab,
+                    filteredTypes, showModal, showDeleteModal, showMigrateModal,
+                    editingType, deletingType, migratingType, migrateTargetId, migrating, activeTab,
+                    typeStats, migratableTypes,
                     form, supportedUnitsChecked, allDurationUnits,
                     formatUnit, parseUnits, toggleUnit,
                     openCreateModal, openEditModal, closeModal,
-                    saveType, confirmDelete, deleteType,
+                    saveType, confirmDelete, deleteType, openMigrateModal, executeMigrate,
+                    toggleTypeActive,
                 };
             }
         });

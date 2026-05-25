@@ -10,6 +10,7 @@ from typing import Optional, List
 from datetime import datetime as dt
 import io
 import csv
+import json
 
 from config.database import get_db
 from models.user import User
@@ -225,6 +226,15 @@ async def check_resource_availability(
     if not resource:
         raise HTTPException(status_code=404, detail="空间资源不存在")
 
+    # Load space type to get time_slot_preset for fallback
+    space_type = db.query(SpaceType).filter(SpaceType.id == resource.type_id).first()
+    type_preset = None
+    if space_type and space_type.time_slot_preset:
+        try:
+            type_preset = json.loads(space_type.time_slot_preset) if isinstance(space_type.time_slot_preset, str) else space_type.time_slot_preset
+        except (json.JSONDecodeError, TypeError):
+            type_preset = None
+
     bookings = (
         db.query(SpaceBooking)
         .filter(
@@ -255,7 +265,7 @@ async def check_resource_availability(
             }
         )
 
-    available_slots = _calculate_available_slots(resource, booked_slots, date, booking_unit)
+    available_slots = _calculate_available_slots(resource, booked_slots, date, booking_unit, type_preset)
 
     total_available = len(available_slots)
 
@@ -278,13 +288,17 @@ def _calculate_available_slots(
     booked_slots: List[dict],
     query_date: date,
     booking_unit: Optional[str] = None,
+    type_preset: Optional[List[dict]] = None,
 ) -> List[dict]:
-    """计算可用时段——支持多种预订单位"""
+    """计算可用时段——支持多种预订单位
+
+    优先级：资源级 time_slots > 类型 time_slot_preset > 系统硬编码默认值
+    """
 
     time_slots = resource.time_slots if hasattr(resource, 'time_slots') and resource.time_slots else []
 
     # If resource has configured time_slots, use them
-    active_slots = [s for s in time_slots if s.is_active]
+    active_slots = [s for s in time_slots if s.is_active and s.slot_key and s.slot_key.strip()]
 
     if active_slots:
         if booking_unit:
@@ -337,7 +351,64 @@ def _calculate_available_slots(
 
             return available
 
-    # Fallback: no time_slots configured — generate defaults per booking_unit
+    # Fallback 1: type's time_slot_preset
+    if type_preset:
+        matching_presets = type_preset
+        if booking_unit:
+            # session/slot/half_day are equivalent for slot matching
+            equivalent_units = {booking_unit}
+            if booking_unit in ("half_day", "session", "slot"):
+                equivalent_units = {"half_day", "session", "slot"}
+            matching_presets = [p for p in matching_presets if p.get("duration_unit") in equivalent_units]
+
+        if matching_presets:
+            available = []
+            for preset in matching_presets:
+                slot_key = preset.get("slot_key", "")
+                slot_type = preset.get("slot_type", "fixed_time")
+
+                conflicting_count = 0
+                for b in booked_slots:
+                    if slot_type in ("fixed_time",):
+                        if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot_key:
+                            conflicting_count += 1
+                        elif b.get("booking_date") == query_date.isoformat() and b.get("booking_unit") == "hour":
+                            if _time_ranges_overlap(
+                                preset.get("start_time"), preset.get("end_time"),
+                                b.get("start_time"), b.get("end_time"),
+                            ):
+                                conflicting_count += 1
+                    elif slot_type == "session":
+                        if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot_key:
+                            conflicting_count += 1
+                    elif slot_type in ("day", "week", "month"):
+                        b_end = b.get("end_date") or b.get("booking_date")
+                        if _date_ranges_overlap(
+                            str(query_date), str(query_date),
+                            b.get("booking_date"), b_end,
+                        ):
+                            conflicting_count += 1
+
+                max_bookings = preset.get("max_bookings_per_slot", 1)
+                available.append({
+                    "slot_key": slot_key,
+                    "slot_name": preset.get("slot_name", ""),
+                    "slot_type": slot_type,
+                    "start_time": preset.get("start_time"),
+                    "end_time": preset.get("end_time"),
+                    "duration_value": preset.get("duration_value", 1),
+                    "duration_unit": preset.get("duration_unit", booking_unit or "hour"),
+                    "max_bookings": max_bookings,
+                    "booked_count": conflicting_count,
+                    "available_count": max(0, max_bookings - conflicting_count),
+                    "is_available": conflicting_count < max_bookings,
+                    "source": "type_preset",
+                })
+
+            if available:
+                return available
+
+    # Fallback 2: hardcoded defaults per booking_unit
     if booking_unit in ("half_day", "session", "slot"):
         return _generate_default_session_slots(query_date, booked_slots)
     elif booking_unit == "meal":
