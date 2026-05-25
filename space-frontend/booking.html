@@ -1358,7 +1358,16 @@
             outline-offset: 2px;
         }
         .nav-icon {
-            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-icon svg {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
         .nav-label {
             font-size: var(--font-size-xs, 12px);
@@ -1535,6 +1544,22 @@
         .guests-input-row .form-input {
             width: 120px;
         }
+
+        .quick-duration-btn {
+            padding: 6px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            background: white;
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .quick-duration-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0f4ff;
+        }
     </style>
 </head>
 <body>
@@ -1622,10 +1647,26 @@
                         <span>🏢</span>
                         <span>选择预约空间</span>
                     </div>
-                    
+
+                    <!-- 搜索和筛选 -->
+                    <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px; position: relative;">
+                            <input type="text" class="form-input" v-model="resourceSearch" placeholder="🔍 搜索空间名称、位置..." style="padding-left: 36px;">
+                        </div>
+                        <select class="form-input" v-model="resourceTypeFilter" style="max-width: 180px;">
+                            <option value="">全部类型</option>
+                            <option value="meeting_room">会议室</option>
+                            <option value="auditorium">会场/多功能厅</option>
+                            <option value="lobby_screen">大堂大屏</option>
+                            <option value="lobby_booth">展位</option>
+                            <option value="vip_dining">VIP餐厅</option>
+                            <option value="dining_room">餐厅</option>
+                        </select>
+                    </div>
+
                     <div class="resource-selector" role="radiogroup">
-                        <div 
-                            v-for="resource in availableResources" 
+                        <div
+                            v-for="resource in filteredAvailableResources"
                             :key="resource.id"
                             class="resource-card"
                             :class="{ selected: selectedResource?.id === resource.id }"
@@ -1708,6 +1749,14 @@
                                 <div style="font-size:var(--font-size-xs); color:var(--text-tertiary); margin-bottom:4px;">结束日期</div>
                                 <input type="date" class="date-input" v-model="endDate" :min="bookingDate" @change="onDateRangeChange" style="width:100%;">
                             </div>
+                        </div>
+                        <!-- 快捷选择按钮 -->
+                        <div v-if="bookingDate" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--spacing-md);">
+                            <button type="button" class="quick-duration-btn" @click="setEndDateFromNow(1)">1天</button>
+                            <button type="button" class="quick-duration-btn" @click="setEndDateFromNow(3)">3天</button>
+                            <button type="button" class="quick-duration-btn" @click="setEndDateFromNow(7)">7天</button>
+                            <button type="button" class="quick-duration-btn" @click="setEndDateFromNow(15)">15天</button>
+                            <button type="button" class="quick-duration-btn" @click="setEndDateFromNow(30)">30天</button>
                         </div>
                         <div v-if="endDate && bookingDate" class="date-range-summary" style="margin-top: var(--spacing-md);">
                             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--spacing-md);">
@@ -2123,23 +2172,23 @@
 
         <nav class="bottom-nav" role="navigation" aria-label="底部导航">
             <a href="/space-frontend/index.html" class="nav-item">
-                <span class="nav-icon" aria-hidden="true">🏠</span>
+                <span class="nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
                 <span class="nav-label">首页</span>
             </a>
             <a href="/space-frontend/calendar.html" class="nav-item">
-                <span class="nav-icon" aria-hidden="true">📅</span>
+                <span class="nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                 <span class="nav-label">日历</span>
             </a>
             <a href="/space-frontend/my-bookings.html" class="nav-item">
-                <span class="nav-icon" aria-hidden="true">📋</span>
+                <span class="nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                 <span class="nav-label">预约</span>
             </a>
             <a href="/space-frontend/notifications.html" class="nav-item">
-                <span class="nav-icon" aria-hidden="true">🔔</span>
+                <span class="nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
                 <span class="nav-label">通知</span>
             </a>
             <a href="/space-frontend/profile.html" class="nav-item">
-                <span class="nav-icon" aria-hidden="true">👤</span>
+                <span class="nav-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                 <span class="nav-label">我的</span>
             </a>
         </nav>
@@ -2180,6 +2229,23 @@
                 const typeUnit = ref('小时')
                 const bookingUnit = ref('hour')
                 const supportedUnits = ref(['hour'])
+                const resourceSearch = ref('')
+                const resourceTypeFilter = ref('')
+
+                const filteredAvailableResources = computed(() => {
+                    let list = availableResources.value
+                    if (resourceSearch.value.trim()) {
+                        const q = resourceSearch.value.trim().toLowerCase()
+                        list = list.filter(r =>
+                            r.name.toLowerCase().includes(q) ||
+                            (r.location || '').toLowerCase().includes(q)
+                        )
+                    }
+                    if (resourceTypeFilter.value) {
+                        list = list.filter(r => r.type_code === resourceTypeFilter.value)
+                    }
+                    return list
+                })
 
                 const bookingDate = ref('')
                 const endDate = ref('')
@@ -2215,6 +2281,59 @@
                 const paymentModes = ref([])
                 const selectedPaymentMode = ref('credit')
                 const userBalance = ref(0)
+
+                // P0-1: Form data persistence
+                const DRAFT_KEY = 'booking_draft'
+
+                function saveProgress() {
+                    const draft = {
+                        currentStep: currentStep.value,
+                        selectedResourceId: selectedResource.value?.id,
+                        bookingDate: bookingDate.value,
+                        endDate: endDate.value,
+                        bookingUnit: bookingUnit.value,
+                        selectedTimeSlots: selectedTimeSlots.value.map(s => ({ time: s.time, available: s.available })),
+                        selectedSession: selectedSession.value,
+                        selectedMealSession: selectedMealSession.value,
+                        guestsCount: guestsCount.value,
+                        meetingTitle: meetingTitle.value,
+                        attendeesCount: attendeesCount.value,
+                        specialRequests: specialRequests.value,
+                        timestamp: Date.now()
+                    }
+                    try {
+                        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+                    } catch(e) { /* quota exceeded, ignore */ }
+                }
+
+                function restoreProgress() {
+                    try {
+                        const raw = localStorage.getItem(DRAFT_KEY)
+                        if (!raw) return false
+                        const draft = JSON.parse(raw)
+                        // Expire after 2 hours
+                        if (Date.now() - draft.timestamp > 7200000) {
+                            localStorage.removeItem(DRAFT_KEY)
+                            return false
+                        }
+                        if (draft.currentStep) currentStep.value = draft.currentStep
+                        if (draft.bookingDate) bookingDate.value = draft.bookingDate
+                        if (draft.endDate) endDate.value = draft.endDate
+                        if (draft.bookingUnit) bookingUnit.value = draft.bookingUnit
+                        if (draft.selectedTimeSlots) selectedTimeSlots.value = draft.selectedTimeSlots
+                        if (draft.selectedSession) selectedSession.value = draft.selectedSession
+                        if (draft.selectedMealSession) selectedMealSession.value = draft.selectedMealSession
+                        if (draft.guestsCount) guestsCount.value = draft.guestsCount
+                        if (draft.meetingTitle) meetingTitle.value = draft.meetingTitle
+                        if (draft.attendeesCount) attendeesCount.value = draft.attendeesCount
+                        if (draft.specialRequests) specialRequests.value = draft.specialRequests
+                        return true
+                    } catch(e) { return false }
+                }
+
+                function clearProgress() {
+                    localStorage.removeItem(DRAFT_KEY)
+                }
                 
                 const minDate = computed(() => {
                     const today = new Date()
@@ -2269,6 +2388,8 @@
                 const nextStep = () => {
                     if (canProceedToNext.value && currentStep.value < 4) {
                         currentStep.value++
+                        if (currentStep.value === 4) clearProgress()
+                        else saveProgress()
                     }
                 }
                 
@@ -2279,7 +2400,12 @@
                 }
 
                 const cancelBooking = () => {
-                    if (confirm('确定要取消预约吗？已填写的信息将不会保存。')) {
+                    const draft = localStorage.getItem(DRAFT_KEY)
+                    const hasData = draft || meetingTitle.value || selectedResource.value
+                    const msg = hasData ? '确定要取消预约吗？当前填写的信息可以在2小时内恢复。' : '确定要取消预约吗？'
+                    if (confirm(msg)) {
+                        // Save progress before leaving so it can be restored
+                        if (selectedResource.value) saveProgress()
                         window.location.href = '/space-frontend/calendar.html'
                     }
                 }
@@ -2477,6 +2603,14 @@
                     const end = new Date(endDate.value + 'T00:00:00')
                     const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
                     return Math.max(1, diff)
+                }
+
+                const setEndDateFromNow = (days) => {
+                    if (!bookingDate.value) return
+                    const start = new Date(bookingDate.value + 'T00:00:00')
+                    start.setDate(start.getDate() + days - 1)
+                    endDate.value = start.toISOString().split('T')[0]
+                    onDateRangeChange()
                 }
 
                 const computeDateRangeFee = () => {
@@ -2761,10 +2895,25 @@
                         bookedSlotsInfo.value = bookedSlots;
 
                         if (unit === 'hour') {
-                            // Build hourly grid from available slots
+                            // Derive hour range from API available_slots, or fall back to 08:00-22:00
+                            let minHour = 8, maxHour = 22;
+                            if (availableSlots.length > 0) {
+                                const starts = availableSlots.map(s => parseInt((s.start_time || '').split(':')[0])).filter(h => !isNaN(h));
+                                const ends = availableSlots.map(s => parseInt((s.end_time || '').split(':')[0])).filter(h => !isNaN(h));
+                                if (starts.length > 0) minHour = Math.min(...starts);
+                                if (ends.length > 0) maxHour = Math.max(...ends);
+                            }
+                            // Also consider booked slots range
+                            if (bookedSlots.length > 0) {
+                                const bStarts = bookedSlots.map(b => parseInt((b.start_time || '').split(':')[0])).filter(h => !isNaN(h));
+                                const bEnds = bookedSlots.map(b => parseInt((b.end_time || '').split(':')[0])).filter(h => !isNaN(h));
+                                if (bStarts.length > 0) minHour = Math.min(minHour, ...bStarts);
+                                if (bEnds.length > 0) maxHour = Math.max(maxHour, ...bEnds);
+                            }
+
                             const allHourSlots = [];
-                            let hour = 8;
-                            while (hour < 23) {
+                            let hour = minHour;
+                            while (hour < maxHour) {
                                 const timeKey = `${String(hour).padStart(2, '0')}:00-${String(hour + 1).padStart(2, '0')}:00`;
                                 const isInAvailable = availableSlots.some(s => {
                                     const sStart = parseInt((s.start_time || '').split(':')[0]);
@@ -2986,6 +3135,7 @@ const submitBooking = async () => {
                          else if (unit === 'day' || unit === 'week' || unit === 'month') timeLabel = `${bookingDate.value} ~ ${endDate.value}`;
                          else if (unit === 'meal') timeLabel = `${selectedMealSession.value} ${guestsCount.value}人`;
 
+                         clearProgress()
                          localStorage.setItem('booking_success', JSON.stringify({
                              booking_no: bookingNo,
                              space_name: selectedResource.value.name,
@@ -3019,7 +3169,14 @@ const submitBooking = async () => {
                 onMounted(async () => {
                     await loadUserData()
                     await loadPaymentModes()
+                    const restored = restoreProgress()
                     await loadSpaceType()
+
+                    // If restored a selected resource, re-trigger selection
+                    if (restored && selectedResource.value && bookingDate.value) {
+                        await loadTimeSlots()
+                        calculateFee()
+                    }
 
                     // Auto-select resource from recId URL parameter
                     const urlParams = new URLSearchParams(window.location.search)
@@ -3041,6 +3198,11 @@ const submitBooking = async () => {
                     if (selectedResource.value && bookingDate.value) {
                         await loadTimeSlots()
                     }
+
+                    // Show restore banner if progress was restored
+                    if (restored && currentStep.value > 1) {
+                        displayToast('已恢复上次的预约进度，可以继续填写', 'success')
+                    }
                 })
                 
                 return {
@@ -3050,6 +3212,9 @@ const submitBooking = async () => {
                     bookingUnit,
                     supportedUnits,
                     availableResources,
+                    filteredAvailableResources,
+                    resourceSearch,
+                    resourceTypeFilter,
                     selectedResource,
                     bookingDate,
                     endDate,
@@ -3103,6 +3268,7 @@ const submitBooking = async () => {
                     toggleMealSession,
                     computeDateRangeDays,
                     computeDateRangeFee,
+                    setEndDateFromNow,
                     showToast,
                     toastMessage,
                     toastType,
