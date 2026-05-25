@@ -98,11 +98,12 @@ class SpaceBookingUpdate(BaseModel):
         if v is None:
             return v
         from datetime import datetime as dt
-
-        try:
-            dt.strptime(v, "%H:%M")
-        except ValueError:
-            raise ValueError("时间格式必须为HH:MM")
+        for fmt in ("%H:%M", "%Y-%m-%d"):
+            try:
+                dt.strptime(v, fmt)
+                return v
+            except ValueError:
+                continue
         return v
 
 
