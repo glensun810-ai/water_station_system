@@ -2283,7 +2283,7 @@
                 
                 const selectResource = async (resource) => {
                     selectedResource.value = resource
-                    console.log('选中资源:', resource.name)
+                    console.log('选中资源:', resource.name, 'type_code:', resource.type_code)
 
                     // Detect booking unit from space type
                     try {
@@ -2294,12 +2294,28 @@
                             let units = []
                             try {
                                 const raw = matchedType.supported_duration_units
-                                units = typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
-                            } catch { units = [matchedType.min_duration_unit || 'hour'] }
-                            supportedUnits.value = units.length > 0 ? units : ['hour']
+                                units = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : [])
+                            } catch { units = [] }
+
+                            // 兜底：若类型配置不合理，使用资源的 price_unit
+                            if (units.length === 0 || (units.length === 1 && units[0] === 'hour' && matchedType.min_duration_unit && matchedType.min_duration_unit !== 'hour')) {
+                                const fallback = resource.price_unit || matchedType.min_duration_unit
+                                if (fallback && fallback !== 'hour') {
+                                    units = [fallback]
+                                    console.log('类型配置异常，使用资源 price_unit 兜底:', fallback)
+                                }
+                            }
+                            if (units.length === 0) units = ['hour']
+
+                            supportedUnits.value = units
                             bookingUnit.value = supportedUnits.value[0]
                             typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[bookingUnit.value] || '小时'
                             console.log('检测到预订单位:', bookingUnit.value, '支持:', supportedUnits.value)
+                        } else if (resource.price_unit) {
+                            // 无匹配类型时，用资源自身的 price_unit
+                            supportedUnits.value = [resource.price_unit]
+                            bookingUnit.value = resource.price_unit
+                            typeUnit.value = ({ hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' })[bookingUnit.value] || '小时'
                         }
                     } catch (e) {
                         console.error('检测预订单位失败:', e)
@@ -2648,7 +2664,10 @@
                             capacity: item.capacity || 10,
                             basePrice: item.base_price || 50,
                             isFavorite: item.is_favorite || false,
-                            requiresDeposit: item.requires_deposit || false
+                            requiresDeposit: item.requires_deposit || false,
+                            type_code: item.type_code || '',
+                            type_id: item.type_id || null,
+                            price_unit: item.price_unit || null,
                         }));
                         
                         if (resourceId) {

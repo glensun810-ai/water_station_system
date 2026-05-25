@@ -640,7 +640,7 @@
                     requires_approval: false, approval_type: '', approval_deadline_hours: 24,
                     requires_deposit: false, deposit_percentage: 0,
                     standard_facilities: '', optional_addons: '', time_slot_preset: '',
-                    supported_duration_units: '["hour"]',
+                    supported_duration_units: ['hour'],
                 };
 
                 const form = ref({...defaultForm});
@@ -664,8 +664,9 @@
 
                 const parseUnits = (raw) => {
                     if (!raw) return [];
+                    if (Array.isArray(raw)) return raw;
                     try {
-                        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        return typeof raw === 'string' ? JSON.parse(raw) : [];
                     } catch { return []; }
                 };
 
@@ -677,7 +678,12 @@
                     const units = Object.entries(supportedUnitsChecked.value)
                         .filter(([_, v]) => v)
                         .map(([k]) => k);
-                    form.value.supported_duration_units = JSON.stringify(units.length > 0 ? units : ['hour']);
+                    if (units.length === 0) units.push('hour');
+                    // 确保 min_duration_unit 始终在列表中
+                    if (!units.includes(form.value.min_duration_unit)) {
+                        units.unshift(form.value.min_duration_unit);
+                    }
+                    form.value.supported_duration_units = units;
                 };
 
                 const syncFormToSupportedUnits = () => {
@@ -685,6 +691,10 @@
                     supportedUnitsChecked.value = {};
                     allDurationUnits.forEach(u => { supportedUnitsChecked.value[u.value] = false; });
                     units.forEach(u => { supportedUnitsChecked.value[u] = true; });
+                    // 确保 min_duration_unit 也被勾选
+                    if (form.value.min_duration_unit && !supportedUnitsChecked.value[form.value.min_duration_unit]) {
+                        supportedUnitsChecked.value[form.value.min_duration_unit] = true;
+                    }
                 };
 
                 const loadTypes = async () => {
@@ -743,7 +753,7 @@
                                 standard_facilities: t.standard_facilities || '',
                                 optional_addons: t.optional_addons || '',
                                 time_slot_preset: t.time_slot_preset || '',
-                                supported_duration_units: t.supported_duration_units || '["hour"]',
+                                supported_duration_units: t.supported_duration_units || ['hour'],
                             };
                         }
                     } catch (e) {

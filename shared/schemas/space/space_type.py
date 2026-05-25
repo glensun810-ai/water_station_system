@@ -2,8 +2,9 @@
 空间类型Schema
 """
 
+import json
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, field_validator
 
 
@@ -35,7 +36,7 @@ class SpaceTypeBase(BaseModel):
     optional_addons: Optional[str] = None
 
     supported_duration_units: Optional[List[str]] = ["hour"]
-    time_slot_preset: Optional[List[dict]] = None
+    time_slot_preset: Optional[Any] = None
 
     is_active: bool = True
     sort_order: int = 0
@@ -53,6 +54,18 @@ class SpaceTypeBase(BaseModel):
     def must_be_between_0_and_1(cls, v):
         if v < 0 or v > 1:
             raise ValueError("定金比例必须在0-1之间")
+        return v
+
+    @field_validator("supported_duration_units", "time_slot_preset", mode="before")
+    def parse_json_string_to_list(cls, v):
+        """将数据库或前端传来的 JSON 字符串自动解析为列表/字典"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return v
         return v
 
 
@@ -89,13 +102,24 @@ class SpaceTypeUpdate(BaseModel):
     optional_addons: Optional[str] = None
 
     supported_duration_units: Optional[List[str]] = None
-    time_slot_preset: Optional[List[dict]] = None
+    time_slot_preset: Optional[Any] = None
 
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
 
     icon: Optional[str] = None
     color_theme: Optional[str] = None
+
+    @field_validator("supported_duration_units", "time_slot_preset", mode="before")
+    def parse_json_string_to_list(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return v
+        return v
 
 
 class SpaceTypeResponse(SpaceTypeBase):
