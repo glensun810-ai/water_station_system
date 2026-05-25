@@ -2375,6 +2375,7 @@
                     } catch(e) { /* quota exceeded, ignore */ }
                 }
 
+                let restoredResourceId = null
                 function restoreProgress() {
                     try {
                         const raw = localStorage.getItem(DRAFT_KEY)
@@ -2396,6 +2397,7 @@
                         if (draft.meetingTitle) meetingTitle.value = draft.meetingTitle
                         if (draft.attendeesCount) attendeesCount.value = draft.attendeesCount
                         if (draft.specialRequests) specialRequests.value = draft.specialRequests
+                        if (draft.selectedResourceId) restoredResourceId = draft.selectedResourceId
                         return true
                     } catch(e) { return false }
                 }
@@ -2608,15 +2610,17 @@
 
                     try {
                         const resp = await spaceAPI.calculateFee(payload)
-                        const data = resp.data || resp
+                        const ctx = (resp.data || resp)
+                        const summary = ctx.fee_summary || ctx
+                        const depositInfo = ctx.deposit_info || {}
                         feeDetail.value = {
-                            baseFee: data.base_fee || data.baseFee || 0,
-                            memberDiscount: data.member_discount || data.memberDiscount || 0,
-                            freeHoursUsed: data.free_hours_used || data.freeHoursUsed || 0,
-                            freeHoursDiscount: data.free_hours_discount || data.freeHoursDiscount || 0,
-                            totalFee: data.total_fee || data.totalFee || 0,
-                            depositAmount: data.deposit_amount || data.depositAmount || 0,
-                            depositPercentage: data.deposit_percentage || data.depositPercentage || 0,
+                            baseFee: summary.base_fee || 0,
+                            memberDiscount: summary.discount_total || ctx.member_discount || 0,
+                            freeHoursUsed: ctx.free_hours_used || ctx.freeHoursUsed || 0,
+                            freeHoursDiscount: ctx.free_hours_discount || ctx.freeHoursDiscount || 0,
+                            totalFee: summary.final_fee || summary.total_fee || 0,
+                            depositAmount: depositInfo.deposit_amount || ctx.deposit_amount || 0,
+                            depositPercentage: depositInfo.deposit_percentage || ctx.deposit_percentage || 0,
                         }
                     } catch (e) {
                         console.error('费用计算API失败，使用本地估算:', e)
@@ -2904,42 +2908,8 @@
                         
                     } catch (error) {
                         console.error('加载空间资源失败:', error);
-                        spaceType.value = {
-                            code: typeCode || 'meeting_room',
-                            name: '会议室',
-                            unit: '按小时'
-                        };
-                        typeUnit.value = '小时';
-                        
-                        availableResources.value = [
-                            {
-                                id: 1,
-                                name: '1号会议室',
-                                location: '3楼301',
-                                capacity: 10,
-                                basePrice: 50,
-                                isFavorite: true,
-                                requiresDeposit: false
-                            },
-                            {
-                                id: 2,
-                                name: 'VIP会议室',
-                                location: '5楼501',
-                                capacity: 20,
-                                basePrice: 80,
-                                isFavorite: false,
-                                requiresDeposit: true
-                            },
-                            {
-                                id: 3,
-                                name: '2号会议室',
-                                location: '3楼302',
-                                capacity: 15,
-                                basePrice: 60,
-                                isFavorite: false,
-                                requiresDeposit: false
-                            }
-                        ];
+                        displayToast('加载空间资源失败：' + (error.message || '网络异常，请稍后重试'), 'error');
+                        availableResources.value = [];
                     }
                 }
                 
@@ -3066,6 +3036,7 @@
 
                     } catch (error) {
                         console.error('加载时段失败:', error);
+                        displayToast('加载可用时段失败：' + (error.message || '网络异常，请稍后重试'), 'error');
                         timeSlots.value = [];
                         sessionSlots.value = [];
                         mealSlots.value = [];
@@ -3289,6 +3260,14 @@ const submitBooking = async () => {
                     await loadPaymentModes()
                     const restored = restoreProgress()
                     await loadSpaceType()
+
+                    // Restore previously selected resource from draft
+                    if (restored && restoredResourceId && availableResources.value.length > 0) {
+                        const restoredRes = availableResources.value.find(r => r.id === restoredResourceId)
+                        if (restoredRes) {
+                            await selectResource(restoredRes)
+                        }
+                    }
 
                     // If restored a selected resource, re-trigger selection
                     if (restored && selectedResource.value && bookingDate.value) {
