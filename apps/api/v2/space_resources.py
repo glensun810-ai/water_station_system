@@ -290,53 +290,55 @@ def _calculate_available_slots(
         if booking_unit:
             active_slots = [s for s in active_slots if s.duration_unit == booking_unit]
 
-        available = []
-        for slot in active_slots:
-            # Count bookings that conflict with this slot
-            conflicting_count = 0
-            for b in booked_slots:
-                if slot.slot_type in ("fixed_time",):
-                    # Same day + same slot_key → conflict
-                    if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
-                        conflicting_count += 1
-                    # Also check hour-based bookings overlapping with this slot
-                    elif b.get("booking_date") == query_date.isoformat() and b.get("booking_unit") == "hour":
-                        if _time_ranges_overlap(
-                            slot.start_time, slot.end_time,
-                            b.get("start_time"), b.get("end_time"),
+        # If filtering left no matching slots, fall through to defaults
+        if active_slots:
+            available = []
+            for slot in active_slots:
+                # Count bookings that conflict with this slot
+                conflicting_count = 0
+                for b in booked_slots:
+                    if slot.slot_type in ("fixed_time",):
+                        # Same day + same slot_key → conflict
+                        if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
+                            conflicting_count += 1
+                        # Also check hour-based bookings overlapping with this slot
+                        elif b.get("booking_date") == query_date.isoformat() and b.get("booking_unit") == "hour":
+                            if _time_ranges_overlap(
+                                slot.start_time, slot.end_time,
+                                b.get("start_time"), b.get("end_time"),
+                            ):
+                                conflicting_count += 1
+                    elif slot.slot_type == "session":
+                        if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
+                            conflicting_count += 1
+                    elif slot.slot_type in ("day", "week", "month"):
+                        b_end = b.get("end_date") or b.get("booking_date")
+                        if _date_ranges_overlap(
+                            str(query_date), str(query_date),
+                            b.get("booking_date"), b_end,
                         ):
                             conflicting_count += 1
-                elif slot.slot_type == "session":
-                    if b.get("booking_date") == query_date.isoformat() and b.get("time_slot_key") == slot.slot_key:
-                        conflicting_count += 1
-                elif slot.slot_type in ("day", "week", "month"):
-                    b_end = b.get("end_date") or b.get("booking_date")
-                    if _date_ranges_overlap(
-                        str(query_date), str(query_date),
-                        b.get("booking_date"), b_end,
-                    ):
-                        conflicting_count += 1
 
-            available.append(
-                {
-                    "slot_key": slot.slot_key,
-                    "slot_name": slot.slot_name,
-                    "slot_type": slot.slot_type,
-                    "start_time": slot.start_time,
-                    "end_time": slot.end_time,
-                    "duration_value": slot.duration_value,
-                    "duration_unit": slot.duration_unit,
-                    "max_bookings": slot.max_bookings_per_slot,
-                    "booked_count": conflicting_count,
-                    "available_count": max(0, slot.max_bookings_per_slot - conflicting_count),
-                    "is_available": conflicting_count < slot.max_bookings_per_slot,
-                }
-            )
+                available.append(
+                    {
+                        "slot_key": slot.slot_key,
+                        "slot_name": slot.slot_name,
+                        "slot_type": slot.slot_type,
+                        "start_time": slot.start_time,
+                        "end_time": slot.end_time,
+                        "duration_value": slot.duration_value,
+                        "duration_unit": slot.duration_unit,
+                        "max_bookings": slot.max_bookings_per_slot,
+                        "booked_count": conflicting_count,
+                        "available_count": max(0, slot.max_bookings_per_slot - conflicting_count),
+                        "is_available": conflicting_count < slot.max_bookings_per_slot,
+                    }
+                )
 
-        return available
+            return available
 
     # Fallback: no time_slots configured — generate defaults per booking_unit
-    if booking_unit in ("half_day", "session"):
+    if booking_unit in ("half_day", "session", "slot"):
         return _generate_default_session_slots(query_date, booked_slots)
     elif booking_unit == "meal":
         return _generate_default_meal_slots(query_date, booked_slots)

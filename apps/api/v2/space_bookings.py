@@ -200,9 +200,9 @@ async def create_booking(
         if start_dt >= end_dt:
             raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
         duration = (end_dt - start_dt).seconds / 3600
-    elif booking_unit in ("half_day", "session"):
+    elif booking_unit in ("half_day", "session", "slot"):
         if not booking_data.time_slot_key:
-            raise HTTPException(status_code=400, detail="场次预订需要提供 time_slot_key")
+            raise HTTPException(status_code=400, detail="场次/时段预订需要提供 time_slot_key")
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == booking_data.time_slot_key,
@@ -239,7 +239,7 @@ async def create_booking(
     # Fee calculation
     if booking_unit == "hour":
         total_fee = duration * (resource.base_price or 0)
-    elif booking_unit in ("half_day", "session"):
+    elif booking_unit in ("half_day", "session", "slot"):
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == booking_data.time_slot_key,
@@ -932,7 +932,7 @@ async def calculate_fee(
             raise HTTPException(status_code=400, detail="时间格式必须为HH:MM")
         duration = fee_request.duration or (end_dt - start_dt).seconds / 3600
         price_per_unit = resource.base_price or 0
-    elif booking_unit in ("half_day", "session"):
+    elif booking_unit in ("half_day", "session", "slot"):
         duration = fee_request.duration or 0.5
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
@@ -1333,7 +1333,7 @@ def _check_booking_conflict(resource_id: int, booking_date, start_time, end_time
                     detail=f"时间段 {start_time}-{end_time} 与已有预约 {existing.start_time}-{existing.end_time} 冲突",
                 )
 
-    elif booking_unit in ("half_day", "session"):
+    elif booking_unit in ("half_day", "session", "slot"):
         if not time_slot_key:
             return
         query = db.query(SpaceBooking).filter(

@@ -1687,7 +1687,7 @@
                                 <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">时段选择说明</div>
                                 <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
                                     <span v-if="bookingUnit === 'hour'">点击时段卡片即可选择，可连续选择多个时段（如08:00-12:00共4小时）。</span>
-                                    <span v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session'">选择一个场次时段，支持多选。</span>
+                                    <span v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'slot'">选择一个时段，点击卡片即可选中。</span>
                                     <span v-else-if="bookingUnit === 'day' || bookingUnit === 'week' || bookingUnit === 'month'">选择起止日期，系统将按{{ typeUnit }}计算费用。</span>
                                     <span v-else-if="bookingUnit === 'meal'">选择餐次并填写用餐人数。</span>
                                 </div>
@@ -1727,8 +1727,8 @@
                         </div>
                     </div>
 
-                    <!-- 小时单位日期选择（隐藏 date-range-picker 模式） -->
-                    <div v-if="bookingUnit === 'hour' || bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'meal'" class="date-picker-container" style="margin-bottom: var(--spacing-lg);">
+                    <!-- 日期选择（hour/half_day/session/slot/meal） -->
+                    <div v-if="bookingUnit === 'hour' || bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'slot' || bookingUnit === 'meal'" class="date-picker-container" style="margin-bottom: var(--spacing-lg);">
                         <label class="form-label"><span>预约日期</span></label>
                         <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
                             <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
@@ -1798,8 +1798,8 @@
                         </div>
                     </template>
 
-                    <!-- ===== 按半天/场次：场次卡片 ===== -->
-                    <template v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session'">
+                    <!-- ===== 按半天/场次/时段：场次卡片 ===== -->
+                    <template v-else-if="bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'slot'">
                         <div class="session-card-grid">
                             <div v-for="s in sessionSlots" :key="s.slot_key"
                                 class="session-card"
@@ -2223,7 +2223,7 @@
                     if (currentStep.value === 2) {
                         const unit = bookingUnit.value
                         if (unit === 'hour') return selectedTimeSlots.value.length > 0 && isConsecutive.value
-                        if (unit === 'half_day' || unit === 'session') return selectedSession.value !== null
+                        if (unit === 'half_day' || unit === 'session' || unit === 'slot') return selectedSession.value !== null
                         if (unit === 'day' || unit === 'week' || unit === 'month') return endDate.value !== ''
                         if (unit === 'meal') return selectedMealSession.value !== null
                         return selectedTimeSlots.value.length > 0
@@ -2239,7 +2239,7 @@
                 const hasValidSelection = computed(() => {
                     const unit = bookingUnit.value
                     if (unit === 'hour') return selectedTimeSlots.value.length > 0
-                    if (unit === 'half_day' || unit === 'session') return selectedSession.value !== null
+                    if (unit === 'half_day' || unit === 'session' || unit === 'slot') return selectedSession.value !== null
                     if (unit === 'day' || unit === 'week' || unit === 'month') return endDate.value !== ''
                     if (unit === 'meal') return selectedMealSession.value !== null
                     return selectedTimeSlots.value.length > 0
@@ -2381,7 +2381,7 @@
                         payload.start_time = slots[0].time.split('-')[0]
                         payload.end_time = slots[slots.length - 1].time.split('-')[1]
                         payload.booking_date = bookingDate.value
-                    } else if (unit === 'half_day' || unit === 'session') {
+                    } else if (unit === 'half_day' || unit === 'session' || unit === 'slot') {
                         if (!selectedSession.value) {
                             feeDetail.value = { baseFee: 0, memberDiscount: 0, freeHoursUsed: 0, freeHoursDiscount: 0, totalFee: 0, depositAmount: 0, depositPercentage: 0 }
                             return
@@ -2426,7 +2426,7 @@
                         const basePrice = selectedResource.value?.basePrice || 0
                         let est = 0
                         if (unit === 'hour') est = selectedTimeSlots.value.length * basePrice
-                        else if (unit === 'half_day' || unit === 'session') est = basePrice
+                        else if (unit === 'half_day' || unit === 'session' || unit === 'slot') est = basePrice
                         else if (unit === 'day') est = computeDateRangeDays() * basePrice
                         else if (unit === 'week') est = Math.max(1, Math.ceil(computeDateRangeDays() / 7)) * basePrice
                         else if (unit === 'month') est = Math.max(1, Math.ceil(computeDateRangeDays() / 30)) * basePrice
@@ -2783,8 +2783,8 @@
                                 const end = parseInt((b.end_time || '').split(':')[0]);
                                 return sum + (end - start);
                             }, 0);
-                        } else if (unit === 'half_day' || unit === 'session') {
-                            // Build session cards from API response
+                        } else if (unit === 'half_day' || unit === 'session' || unit === 'slot') {
+                            // Build session/slot cards from API response
                             sessionSlots.value = availableSlots.map(s => ({
                                 slot_key: s.slot_key,
                                 slot_name: s.slot_name,
@@ -2891,7 +2891,7 @@ const submitBooking = async () => {
                              submitting.value = false;
                              return;
                          }
-                         if ((unit === 'half_day' || unit === 'session') && !selectedSession.value) {
+                         if ((unit === 'half_day' || unit === 'session' || unit === 'slot') && !selectedSession.value) {
                              displayToast('请选择场次', 'warning');
                              submitting.value = false;
                              return;
@@ -2928,7 +2928,7 @@ const submitBooking = async () => {
                              bookingData.start_time = slots[0].time.split('-')[0];
                              bookingData.end_time = slots[slots.length - 1].time.split('-')[1];
                              bookingData.duration_hours = slots.length;
-                         } else if (unit === 'half_day' || unit === 'session') {
+                         } else if (unit === 'half_day' || unit === 'session' || unit === 'slot') {
                              bookingData.time_slot_key = selectedSession.value;
                          } else if (unit === 'day' || unit === 'week' || unit === 'month') {
                              bookingData.end_date = endDate.value;
@@ -2968,7 +2968,7 @@ const submitBooking = async () => {
 
                          let timeLabel = '';
                          if (unit === 'hour') timeLabel = `${bookingData.start_time}-${bookingData.end_time}`;
-                         else if (unit === 'half_day' || unit === 'session') timeLabel = selectedSession.value;
+                         else if (unit === 'half_day' || unit === 'session' || unit === 'slot') timeLabel = selectedSession.value;
                          else if (unit === 'day' || unit === 'week' || unit === 'month') timeLabel = `${bookingDate.value} ~ ${endDate.value}`;
                          else if (unit === 'meal') timeLabel = `${selectedMealSession.value} ${guestsCount.value}人`;
 
