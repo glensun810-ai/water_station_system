@@ -223,6 +223,30 @@
         .amount.pending {
             color: var(--warning);
         }
+
+        .fee-discrepancy-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #fef3c7;
+            color: #d97706;
+            cursor: help;
+        }
+
+        .fee-discrepancy-badge-mobile {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            background: #fef3c7;
+            color: #d97706;
+            cursor: help;
+        }
         
         .status-badge {
             padding: var(--spacing-xs) var(--spacing-md);
@@ -642,8 +666,8 @@
 <body>
     <div id="app" v-cloak>
         <global-header :breadcrumbs="[
-            { text: '空间工作台', icon: '🏢', url: '/portal/admin/space/dashboard.html' },
-            { text: '结算管理', icon: '💰', url: '/portal/admin/space/settlements.html' }
+            { text: '空间工作台', url: '/portal/admin/space/dashboard.html' },
+            { text: '结算管理', url: '/portal/admin/space/settlements.html' }
         ]"></global-header>
         
         <div class="settlement-container">
@@ -757,6 +781,9 @@
                                 <span class="amount" :class="{ pending: item.status === 'pending_payment' }">
                                     ¥{{ item.amount.toFixed(2) }}
                                 </span>
+                                <span v-if="item.hasFeeDiscrepancy" class="fee-discrepancy-badge" :title="'费用变更：' + (item.feeDiff > 0 ? '+' : '') + item.feeDiff.toFixed(2)">
+                                    {{ item.feeDiff > 0 ? '↑' : '↓' }}
+                                </span>
                             </td>
                             <td>
                                 <span class="status-badge" :class="item.statusClass">
@@ -826,7 +853,12 @@
                                 <!-- 金额行 -->
                                 <div class="mobile-card-amount-row">
                                     <span style="font-size: 12px; color: var(--text-secondary);">费用金额</span>
-                                    <span :class="['mobile-card-amount', item.status === 'pending_payment' ? 'pending' : 'settled']">¥{{ item.amount.toFixed(2) }}</span>
+                                    <span>
+                                        <span :class="['mobile-card-amount', item.status === 'pending_payment' ? 'pending' : 'settled']">¥{{ item.amount.toFixed(2) }}</span>
+                                        <span v-if="item.hasFeeDiscrepancy" class="fee-discrepancy-badge-mobile" :title="'费用变更：' + (item.feeDiff > 0 ? '+' : '') + item.feeDiff.toFixed(2)">
+                                            {{ item.feeDiff > 0 ? '↑' : '↓' }}
+                                        </span>
+                                    </span>
                                 </div>
 
                                 <!-- 第四行: 操作按钮 -->
@@ -1079,7 +1111,7 @@
                 };
 
                 const enrichSettlementDetails = async () => {
-                    // 补充空间名称和部门信息（从结算记录中获取的基础数据可能不完整）
+                    // 补充空间名称和部门信息并检测费用差异
                     try {
                         const token = localStorage.getItem('token');
                         const bookingIds = settlements.value.map(s => s.id).join(',');
@@ -1100,6 +1132,11 @@
                                     s.department = detail.department || '';
                                     s.timeSlot = `${detail.start_time || ''}-${detail.end_time || ''}`;
                                     s.title = detail.title || '';
+                                    // Detect fee discrepancy
+                                    const totalFee = parseFloat(detail.total_fee) || 0;
+                                    const actualFee = parseFloat(detail.actual_fee) || 0;
+                                    s.hasFeeDiscrepancy = totalFee > 0 && actualFee > 0 && Math.abs(totalFee - actualFee) > 0.01;
+                                    s.feeDiff = actualFee - totalFee;
                                 }
                             });
                             updateDepartmentSummary();
