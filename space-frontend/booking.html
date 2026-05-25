@@ -1235,14 +1235,29 @@
             .time-picker-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
+
             .step-item {
                 flex: none;
                 width: 50%;
             }
-            
+
             .step-item:nth-child(n+5) {
                 display: none;
+            }
+
+            .date-range-summary > div {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+            }
+
+            .session-card-grid,
+            .meal-card-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .session-card, .meal-card {
+                min-height: 100px;
+                padding: var(--spacing-md);
             }
         }
         
@@ -1680,25 +1695,45 @@
                         </div>
                     </div>
 
-                    <!-- 日期选择（通用） -->
-                    <div class="date-picker-container">
-                        <label class="form-label"><span>预约日期</span></label>
-                        <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
-                            <input type="date" class="date-input" v-model="bookingDate" :min="minDate" @change="loadTimeSlots" style="flex: 1;">
-                            <button type="button" class="btn btn-outline btn-sm" @click="goToNextDay" title="后一天" style="padding: 8px 12px; font-size: 14px;">▶</button>
+                    <!-- 日期范围选择（天/周/月单位） -->
+                    <div v-if="bookingUnit === 'day' || bookingUnit === 'week' || bookingUnit === 'month'" style="margin-bottom: var(--spacing-lg);">
+                        <label class="form-label"><span>预约周期</span></label>
+                        <div class="date-range-picker">
+                            <div style="flex:1; min-width:140px;">
+                                <div style="font-size:var(--font-size-xs); color:var(--text-tertiary); margin-bottom:4px;">开始日期</div>
+                                <input type="date" class="date-input" v-model="bookingDate" :min="minDate" @change="onDateRangeChange" style="width:100%;">
+                            </div>
+                            <span class="date-range-sep">→</span>
+                            <div style="flex:1; min-width:140px;">
+                                <div style="font-size:var(--font-size-xs); color:var(--text-tertiary); margin-bottom:4px;">结束日期</div>
+                                <input type="date" class="date-input" v-model="endDate" :min="bookingDate" @change="onDateRangeChange" style="width:100%;">
+                            </div>
+                        </div>
+                        <div v-if="endDate && bookingDate" class="date-range-summary" style="margin-top: var(--spacing-md);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--spacing-md);">
+                                <div>
+                                    <span style="font-size:var(--font-size-sm); opacity:0.85;">{{ formatDate(bookingDate) }} → {{ formatDate(endDate) }}</span>
+                                </div>
+                                <div style="display:flex; align-items:baseline; gap:var(--spacing-md);">
+                                    <span style="font-size:var(--font-size-lg); font-weight:700;">{{ computeDateRangeDays() }} {{ typeUnit }}</span>
+                                    <span v-if="selectedResource?.basePrice" style="font-size:var(--font-size-sm); opacity:0.85;">
+                                        {{ typeUnit === '天' ? '¥' + selectedResource.basePrice + '/天' : typeUnit === '周' ? '¥' + selectedResource.basePrice + '/周' : '¥' + selectedResource.basePrice + '/月' }}
+                                    </span>
+                                </div>
+                                <div v-if="selectedResource?.basePrice" style="font-size:var(--font-size-xl); font-weight:700;">
+                                    预估 ¥{{ computeDateRangeFee() }}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 结束日期（天/周/月单位） -->
-                    <div v-if="bookingUnit === 'day' || bookingUnit === 'week' || bookingUnit === 'month'" style="margin-bottom: var(--spacing-lg);">
-                        <label class="form-label"><span>结束日期</span></label>
-                        <input type="date" class="form-input" v-model="endDate" :min="bookingDate" @change="calculateFee" style="max-width: 250px;">
-                        <div v-if="endDate && bookingDate" class="date-range-summary" style="margin-top: var(--spacing-md); max-width: 350px;">
-                            共 {{ computeDateRangeDays() }} {{ typeUnit }}
-                            <span style="opacity:0.8; font-weight:400; margin-left:8px;" v-if="selectedResource?.basePrice">
-                                预估 ¥{{ computeDateRangeFee() }}
-                            </span>
+                    <!-- 小时单位日期选择（隐藏 date-range-picker 模式） -->
+                    <div v-if="bookingUnit === 'hour' || bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'meal'" class="date-picker-container" style="margin-bottom: var(--spacing-lg);">
+                        <label class="form-label"><span>预约日期</span></label>
+                        <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
+                            <input type="date" class="date-input" v-model="bookingDate" :min="minDate" @change="onDateChange" style="flex: 1;">
+                            <button type="button" class="btn btn-outline btn-sm" @click="goToNextDay" title="后一天" style="padding: 8px 12px; font-size: 14px;">▶</button>
                         </div>
                     </div>
 
@@ -2619,7 +2654,7 @@
                         if (resourceId) {
                             const selectedRes = availableResources.value.find(r => r.id == resourceId)
                             if (selectedRes) {
-                                selectedResource.value = selectedRes
+                                await selectResource(selectedRes)
                                 setTimeout(() => {
                                     if (currentStep.value === 1) {
                                         nextStep()
@@ -2789,6 +2824,21 @@
                     selectedMealSession.value = null;
                 }
                 
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const parts = dateStr.split('-');
+                    return parts[1] + '月' + parts[2] + '日';
+                };
+
+                const onDateChange = () => {
+                    loadTimeSlots();
+                };
+
+                const onDateRangeChange = () => {
+                    loadTimeSlots();
+                    calculateFee();
+                };
+
                 const goToPrevDay = () => {
                     const d = new Date(bookingDate.value + 'T00:00:00');
                     d.setDate(d.getDate() - 1);
@@ -2946,7 +2996,7 @@ const submitBooking = async () => {
                             r => String(r.id) === String(recId) || String(r.resource_id) === String(recId)
                         )
                         if (resource) {
-                            selectResource(resource)
+                            await selectResource(resource)
                         }
                     }
 
@@ -3010,6 +3060,9 @@ const submitBooking = async () => {
                     loadTimeSlots,
                     goToPrevDay,
                     goToNextDay,
+                    formatDate,
+                    onDateChange,
+                    onDateRangeChange,
                     selectPaymentMode,
                     submitBooking,
                     switchBookingUnit,

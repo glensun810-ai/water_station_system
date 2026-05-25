@@ -213,6 +213,11 @@ class FeeCalculationRequest(BaseModel):
     attendees_count: int = 1
     addons_selected: Optional[List[dict]] = None
 
+    end_date: Optional[date] = None
+    booking_days: int = 1
+    guests_count: int = 1
+    meal_session: Optional[str] = None
+
     promotion_code: Optional[str] = None
 
     @field_validator("start_time", "end_time")

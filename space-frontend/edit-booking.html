@@ -605,27 +605,44 @@
         }
 
         async function updateFeePreview() {
-            const startTime = document.getElementById('startTime').value;
-            const endTime = document.getElementById('endTime').value;
             const bu = currentBooking?.booking_unit || 'hour';
             const UNIT_LABELS = { hour: '小时', half_day: '半天', session: '场次', slot: '时段', day: '天', week: '周', month: '月', meal: '餐' };
             const unitLabel = UNIT_LABELS[bu] || '小时';
 
-            if (!startTime || !endTime) {
-                document.getElementById('feePreview').style.display = 'none';
-                return;
+            // For hour-based bookings, require start/end time
+            if (bu === 'hour') {
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+                if (!startTime || !endTime) {
+                    document.getElementById('feePreview').style.display = 'none';
+                    return;
+                }
             }
 
             try {
                 const payload = {
                     resource_id: currentBooking.resource_id,
                     booking_date: currentBooking.booking_date,
-                    start_time: startTime,
-                    end_time: endTime,
                     booking_unit: bu,
                 };
-                const response = await spaceAPI.calculateFee(payload);
 
+                if (bu === 'hour') {
+                    payload.start_time = document.getElementById('startTime').value;
+                    payload.end_time = document.getElementById('endTime').value;
+                } else if (bu === 'half_day' || bu === 'session') {
+                    payload.time_slot_key = currentBooking.time_slot_key;
+                } else if (bu === 'day' || bu === 'week' || bu === 'month') {
+                    const days = currentBooking.booking_days || currentBooking.duration || 1;
+                    payload.booking_days = days;
+                    payload.duration = days;
+                    if (currentBooking.end_date) payload.end_date = currentBooking.end_date;
+                } else if (bu === 'meal') {
+                    payload.time_slot_key = currentBooking.time_slot_key || currentBooking.meal_session;
+                    payload.meal_session = currentBooking.meal_session;
+                    payload.guests_count = currentBooking.guests_count || 1;
+                }
+
+                const response = await spaceAPI.calculateFee(payload);
                 const data = response.data;
                 const baseFee = data.fee_summary?.base_fee || data.base_fee || data.baseFee || 0;
                 const finalFee = data.fee_summary?.final_fee || data.total_fee || data.totalFee || 0;
@@ -641,10 +658,11 @@
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const bu = currentBooking?.booking_unit || 'hour';
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
 
-            if (!startTime || !endTime) {
+            if (bu === 'hour' && (!startTime || !endTime)) {
                 showError('请选择预约时间');
                 return;
             }
@@ -652,11 +670,14 @@
             const updateData = {
                 title: document.getElementById('title').value.trim(),
                 attendees_count: parseInt(document.getElementById('attendeesCount').value),
-                start_time: startTime,
-                end_time: endTime,
                 attendees_info: document.getElementById('attendeesInfo').value.trim(),
                 special_requests: document.getElementById('specialRequests').value.trim(),
             };
+
+            if (bu === 'hour') {
+                updateData.start_time = startTime;
+                updateData.end_time = endTime;
+            }
 
             try {
                 showLoading();

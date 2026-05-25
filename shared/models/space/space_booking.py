@@ -214,8 +214,8 @@ class SpaceBooking(Base, TimestampMixin):
     office_id = Column(Integer)
 
     booking_date = Column(Date, nullable=False, index=True)
-    start_time = Column(String(10), nullable=False)
-    end_time = Column(String(10), nullable=False)
+    start_time = Column(String(10), nullable=True, default="")
+    end_time = Column(String(10), nullable=True, default="")
     duration = Column(Float)
     duration_hours = Column(Float)
     duration_unit = Column(String(20))
