@@ -433,6 +433,35 @@
         .date-input:hover {
             border-color: var(--primary);
         }
+
+        /* 日期前后切换按钮 */
+        .date-nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            padding: 0;
+        }
+
+        .date-nav-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .date-nav-btn:active {
+            transform: scale(0.95);
+        }
+        }
         
         .date-input:focus {
             outline: none;
@@ -1328,13 +1357,72 @@
                 min-height: auto;
                 padding: var(--spacing-sm);
             }
+
+            .fee-card, .payment-mode-card {
+                padding: var(--spacing-md);
+                border-radius: 12px;
+                margin-top: var(--spacing-md);
+            }
+
+            .fee-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+                border-radius: 8px;
+            }
+
+            .fee-title, .payment-title {
+                font-size: var(--font-size-base);
+            }
+
+            .fee-total-value {
+                font-size: var(--font-size-lg);
+            }
+
+            .payment-option {
+                padding: var(--spacing-sm);
+            }
         }
-        
+
         /* 按钮 touch target 标准 */
         @media (max-width: 768px) {
             .btn, .action-btn, .form-actions .btn, button {
                 min-height: 44px;
                 min-width: 44px;
+            }
+
+            .fee-card, .payment-mode-card {
+                padding: var(--spacing-md);
+                border-radius: 14px;
+                margin-top: var(--spacing-md);
+            }
+
+            .fee-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+                border-radius: 8px;
+            }
+
+            .fee-header, .payment-header {
+                margin-bottom: var(--spacing-md);
+                gap: var(--spacing-sm);
+            }
+
+            .fee-title, .payment-title {
+                font-size: var(--font-size-base);
+            }
+
+            .fee-total {
+                padding-top: var(--spacing-md);
+            }
+
+            .fee-total-value {
+                font-size: var(--font-size-xl);
+            }
+
+            .payment-option {
+                padding: var(--spacing-sm) var(--spacing-md);
             }
         }
         
@@ -1849,9 +1937,9 @@
                     <div v-if="bookingUnit === 'hour' || bookingUnit === 'half_day' || bookingUnit === 'session' || bookingUnit === 'slot' || bookingUnit === 'meal'" class="date-picker-container" style="margin-bottom: var(--spacing-lg);">
                         <label class="form-label"><span>预约日期</span></label>
                         <div class="date-picker-wrapper" style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" class="btn btn-outline btn-sm" @click="goToPrevDay" title="前一天" style="padding: 8px 12px; font-size: 14px;">◀</button>
+                            <button type="button" class="date-nav-btn" @click="goToPrevDay" title="前一天">◀</button>
                             <input type="date" class="date-input" v-model="bookingDate" :min="minDate" @change="onDateChange" style="flex: 1;">
-                            <button type="button" class="btn btn-outline btn-sm" @click="goToNextDay" title="后一天" style="padding: 8px 12px; font-size: 14px;">▶</button>
+                            <button type="button" class="date-nav-btn" @click="goToNextDay" title="后一天">▶</button>
                         </div>
                     </div>
 
@@ -2461,6 +2549,10 @@
                         currentStep.value++
                         if (currentStep.value === 4) clearProgress()
                         else saveProgress()
+                        // Scroll to top when entering form-heavy steps
+                        if (currentStep.value === 3) {
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }
                     }
                 }
                 
@@ -3065,7 +3157,9 @@
                 };
 
                 const goToPrevDay = () => {
+                    if (!bookingDate.value) return;
                     const d = new Date(bookingDate.value + 'T00:00:00');
+                    if (isNaN(d.getTime())) return;
                     d.setDate(d.getDate() - 1);
                     const minD = new Date(minDate.value + 'T00:00:00');
                     if (d >= minD) {
@@ -3075,7 +3169,9 @@
                 };
 
                 const goToNextDay = () => {
+                    if (!bookingDate.value) return;
                     const d = new Date(bookingDate.value + 'T00:00:00');
+                    if (isNaN(d.getTime())) return;
                     d.setDate(d.getDate() + 1);
                     const maxD = new Date();
                     maxD.setDate(maxD.getDate() + 7);
