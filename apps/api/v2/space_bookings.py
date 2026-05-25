@@ -595,8 +595,12 @@ async def update_booking(
         raise HTTPException(status_code=400, detail="预约状态不允许修改")
 
     update_data = booking_data.model_dump(exclude_unset=True)
+    booking_unit = booking.booking_unit or "hour"
 
-    if "start_time" in update_data or "end_time" in update_data:
+    # --- Recalculate duration & fee when time-related fields change ---
+    needs_recalc = False
+
+    if booking_unit == "hour" and ("start_time" in update_data or "end_time" in update_data):
         new_start = update_data.get("start_time", booking.start_time)
         new_end = update_data.get("end_time", booking.end_time)
 
@@ -609,36 +613,78 @@ async def update_booking(
         if start_dt >= end_dt:
             raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
 
-        conflicting = (
-            db.query(SpaceBooking)
-            .filter(
-                SpaceBooking.resource_id == booking.resource_id,
-                SpaceBooking.booking_date == booking.booking_date,
-                SpaceBooking.status.in_(["pending", "approved", "confirmed", "active"]),
-                SpaceBooking.id != booking_id,
-            )
-            .all()
+        booking.start_time = new_start
+        booking.end_time = new_end
+        booking.duration = (end_dt - start_dt).seconds / 3600
+        needs_recalc = True
+
+    elif booking_unit in ("half_day", "session", "slot") and "time_slot_key" in update_data:
+        time_slot = db.query(ResourceTimeSlot).filter(
+            ResourceTimeSlot.resource_id == booking.resource_id,
+            ResourceTimeSlot.slot_key == update_data["time_slot_key"],
+        ).first()
+        booking.time_slot_key = update_data["time_slot_key"]
+        booking.duration = time_slot.duration_value if time_slot else 0.5
+        needs_recalc = True
+
+    elif booking_unit in ("day", "week", "month") and "end_date" in update_data:
+        import math
+        days = (update_data["end_date"] - booking.booking_date).days + 1
+        booking.end_date = update_data["end_date"]
+        booking.booking_days = days
+        if booking_unit == "week":
+            booking.duration = max(1, math.ceil(days / 7))
+        elif booking_unit == "month":
+            booking.duration = max(1, math.ceil(days / 30))
+        else:
+            booking.duration = days
+        needs_recalc = True
+
+    elif booking_unit == "meal" and ("meal_session" in update_data or "guests_count" in update_data):
+        if "meal_session" in update_data:
+            booking.meal_session = update_data["meal_session"]
+        if "guests_count" in update_data:
+            booking.guests_count = update_data["guests_count"]
+        booking.duration = 1
+        needs_recalc = True
+
+    if needs_recalc:
+        time_slot = None
+        if booking_unit in ("half_day", "session", "slot", "meal") and booking.time_slot_key:
+            time_slot = db.query(ResourceTimeSlot).filter(
+                ResourceTimeSlot.resource_id == booking.resource_id,
+                ResourceTimeSlot.slot_key == booking.time_slot_key,
+            ).first()
+
+        price_per_unit = _resolve_price_per_unit(
+            db.query(SpaceResource).filter(SpaceResource.id == booking.resource_id).first(),
+            booking_unit,
+            time_slot,
         )
 
-        for existing in conflicting:
-            try:
-                existing_start = dt.strptime(existing.start_time, "%H:%M")
-                existing_end = dt.strptime(existing.end_time, "%H:%M")
-            except ValueError:
-                continue
-
-            if not (end_dt <= existing_start or start_dt >= existing_end):
-                raise HTTPException(status_code=400, detail="时间段已被预约")
-
-        duration = (end_dt - start_dt).seconds / 3600
-        booking.duration = duration
-        booking.total_fee = (
-            duration * booking.base_fee / booking.duration if booking.duration else 0
-        )
+        if booking_unit == "meal":
+            guests = booking.guests_count or 1
+            booking.total_fee = price_per_unit * guests
+        else:
+            booking.total_fee = booking.duration * price_per_unit
+        booking.base_fee = booking.total_fee
         booking.actual_fee = booking.total_fee
 
+    # Conflict check
+    _check_booking_conflict(
+        booking.resource_id, booking.booking_date,
+        booking.start_time, booking.end_time,
+        booking_unit, booking.time_slot_key,
+        booking.end_date, booking.meal_session,
+        db, exclude_booking_id=booking_id,
+    )
+
+    # Apply remaining simple fields
     for key, value in update_data.items():
-        if hasattr(booking, key):
+        if hasattr(booking, key) and key not in (
+            "start_time", "end_time", "time_slot_key", "end_date",
+            "meal_session", "guests_count",
+        ):
             setattr(booking, key, value)
 
     db.commit()

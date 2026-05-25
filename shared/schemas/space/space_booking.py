@@ -92,6 +92,10 @@ class SpaceBookingUpdate(BaseModel):
 
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    time_slot_key: Optional[str] = None
+    end_date: Optional[date] = None
+    meal_session: Optional[str] = None
+    guests_count: Optional[int] = None
 
     @field_validator("start_time", "end_time")
     def time_format_must_be_valid(cls, v):

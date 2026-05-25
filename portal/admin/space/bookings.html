@@ -1346,8 +1346,8 @@
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-md); font-size: 14px;">
                         <div><span style="color: var(--text-tertiary);">空间：</span>{{ booking.resource_name }}</div>
                         <div><span style="color: var(--text-tertiary);">日期：</span>{{ booking.booking_date }}</div>
-                        <div><span style="color: var(--text-tertiary);">时段：</span>{{ booking.start_time }}-{{ booking.end_time }}</div>
-                        <div><span style="color: var(--text-tertiary);">时长：</span>{{ booking.duration }}小时</div>
+                        <div><span style="color: var(--text-tertiary);">时段：</span>{{ formatTimeSlot(booking) }}</div>
+                        <div><span style="color: var(--text-tertiary);">时长：</span>{{ formatDuration(booking) }}</div>
                         <div><span style="color: var(--text-tertiary);">费用：</span>¥{{ (booking.total_fee || 0).toFixed(2) }}</div>
                         <div>
                             <span style="color: var(--text-tertiary);">支付：</span>
@@ -1456,17 +1456,17 @@
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">预约时段</div>
-                        <div class="detail-value">{{ selectedBooking.start_time }} - {{ selectedBooking.end_time }}</div>
+                        <div class="detail-value">{{ formatTimeSlot(selectedBooking) }}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">使用时长</div>
                         <div class="detail-value" style="color: var(--success); font-weight: 600;">
-                            {{ selectedBooking.duration_hours || calculateDuration(selectedBooking.start_time, selectedBooking.end_time) }}小时
+                            {{ formatDuration(selectedBooking) }}
                         </div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">参会人数</div>
-                        <div class="detail-value">{{ selectedBooking.attendees_count }}人</div>
+                        <div class="detail-label">{{ selectedBooking.booking_unit === 'meal' ? '用餐人数' : '参会人数' }}</div>
+                        <div class="detail-value">{{ selectedBooking.booking_unit === 'meal' ? (selectedBooking.guests_count || 1) : selectedBooking.attendees_count }}人</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">基础费用</div>
@@ -1796,7 +1796,8 @@
                     'auditorium': { icon: '🎭', name: '会场', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
                     'lobby_screen': { icon: '📺', name: '大屏', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
                     'lobby_booth': { icon: '🏪', name: '展位', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
-                    'vip_dining': { icon: '🍽️', name: 'VIP餐厅', color: '#ec4899', bgColor: 'rgba(236, 72, 153, 0.1)' }
+                    'vip_dining': { icon: '🍽️', name: 'VIP餐厅', color: '#ec4899', bgColor: 'rgba(236, 72, 153, 0.1)' },
+                    'dining_room': { icon: '🍴', name: '餐厅', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.1)' }
                 };
                 
                 // 状态配置（新版本）
@@ -1995,6 +1996,56 @@
                     const start = parseInt(startTime.split(':')[0]);
                     const end = parseInt(endTime.split(':')[0]);
                     return end - start;
+                };
+
+                const UNIT_LABELS = {
+                    hour: '小时',
+                    half_day: '半天',
+                    session: '场次',
+                    slot: '时段',
+                    day: '天',
+                    week: '周',
+                    month: '月',
+                    meal: '餐',
+                };
+
+                const SLOT_LABELS = {
+                    morning: '上午',
+                    afternoon: '下午',
+                    evening: '晚场',
+                    full_day: '全天',
+                    breakfast: '早餐',
+                    lunch: '午餐',
+                    dinner: '晚餐',
+                };
+
+                const formatTimeSlot = (booking) => {
+                    const unit = booking.booking_unit || 'hour';
+                    if (unit === 'hour') {
+                        return `${booking.start_time || '?'}-${booking.end_time || '?'}`;
+                    }
+                    if (unit === 'meal') {
+                        return SLOT_LABELS[booking.meal_session] || booking.meal_session || '-';
+                    }
+                    if (unit === 'half_day' || unit === 'session' || unit === 'slot') {
+                        return SLOT_LABELS[booking.time_slot_key] || booking.time_slot_key || '-';
+                    }
+                    if (unit === 'day' || unit === 'week' || unit === 'month') {
+                        const start = booking.booking_date || '';
+                        const end = booking.end_date || start;
+                        return `${start} 至 ${end}（${booking.booking_days || booking.duration || 0}天）`;
+                    }
+                    return '-';
+                };
+
+                const formatDuration = (booking) => {
+                    const unit = booking.booking_unit || 'hour';
+                    const dur = booking.duration_hours || booking.duration || 0;
+                    const label = UNIT_LABELS[unit] || unit;
+                    if (unit === 'meal') {
+                        return `${booking.guests_count || 1}人 · ${dur}${label}`;
+                    }
+                    return `${dur}${label}`;
                 };
                 
                 const getBookingTimeline = (booking) => {
@@ -2405,7 +2456,7 @@
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
                             },
-                            body: JSON.stringify({ reason })
+                            body: JSON.stringify({ cancel_reason: reason })
                         });
                         
                         const data = await response.json();
@@ -2820,6 +2871,8 @@
                     PAYMENT_STATUS_CONFIG,
                     filterByType,
                     calculateDuration,
+                    formatTimeSlot,
+                    formatDuration,
                     getBookingTimeline,
                     formatTimelineTime,
                     toggleSort,
