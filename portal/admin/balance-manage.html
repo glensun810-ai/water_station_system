@@ -172,6 +172,20 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 3px var(--primary-light);
         }
+
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
         
         .accounts-table {
             background: var(--bg-card);
@@ -183,7 +197,7 @@
         
         .table-header {
             display: grid;
-            grid-template-columns: 120px 150px 120px 120px 120px 120px 150px 160px;
+            grid-template-columns: 100px 130px 110px 110px 100px 110px 90px 120px 120px 120px;
             padding: var(--spacing-md) var(--spacing-lg);
             background: var(--bg-secondary);
             border-bottom: 2px solid var(--border);
@@ -191,10 +205,10 @@
             font-weight: 600;
             color: var(--text-primary);
         }
-        
+
         .table-row {
             display: grid;
-            grid-template-columns: 120px 150px 120px 120px 120px 120px 150px 160px;
+            grid-template-columns: 100px 130px 110px 110px 100px 110px 90px 120px 120px 120px;
             padding: var(--spacing-md) var(--spacing-lg);
             border-bottom: 1px solid var(--border-light);
             font-size: var(--font-size-sm);
@@ -614,6 +628,111 @@
             color: #065f46;
         }
 
+        .detail-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .detail-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .detail-tab:hover {
+            color: var(--primary);
+        }
+
+        .detail-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .detail-tab .tab-count {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            font-weight: 400;
+        }
+
+        .detail-tab.active .tab-count {
+            color: var(--primary);
+        }
+
+        .detail-pane {
+            min-height: 200px;
+        }
+
+        .detail-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .detail-summary-item {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            text-align: center;
+        }
+
+        .detail-summary-item .summary-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+        }
+
+        .detail-summary-item .summary-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .deduct-link {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: var(--font-size-xs);
+        }
+
+        .deduct-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .detail-summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .detail-summary-item {
+                padding: var(--spacing-sm);
+            }
+            .detail-summary-item .summary-value {
+                font-size: var(--font-size-lg);
+            }
+            .detail-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .detail-tab {
+                padding: 10px 12px;
+                font-size: var(--font-size-xs);
+                min-height: 44px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+        }
+
         .user-search-wrapper {
             position: relative;
         }
@@ -962,7 +1081,8 @@
                         <div>赠送额度</div>
                         <div>总额度</div>
                         <div>信用额度</div>
-                        <div>最后变动</div>
+                        <div>最近充值</div>
+                        <div>最近抵扣</div>
                         <div>操作</div>
                     </div>
 
@@ -990,7 +1110,20 @@
                             <span v-if="account.credit_limit > 0" class="amount-text" style="color: var(--info);">¥{{ account.credit_limit }}</span>
                             <span v-else style="color: var(--text-tertiary);">未开启</span>
                         </div>
-                        <div>{{ formatDate(account.last_transaction_at) || '-' }}</div>
+                        <div>
+                            <span v-if="account.last_charge_at" style="font-size: var(--font-size-xs);">
+                                <div>{{ formatShortDate(account.last_charge_at) }}</div>
+                                <div style="color: var(--success); font-weight: 600;">+¥{{ account.last_charge_amount }}</div>
+                            </span>
+                            <span v-else style="color: var(--text-tertiary); font-size: var(--font-size-xs);">-</span>
+                        </div>
+                        <div>
+                            <span v-if="account.last_deduct_at" style="font-size: var(--font-size-xs);">
+                                <div>{{ formatShortDate(account.last_deduct_at) }}</div>
+                                <div style="color: var(--danger); font-weight: 600;">-¥{{ account.last_deduct_amount }}</div>
+                            </span>
+                            <span v-else style="color: var(--text-tertiary); font-size: var(--font-size-xs);">-</span>
+                        </div>
                         <div>
                             <div class="action-buttons">
                                 <button @click="openAdjustForAccount(account)" class="action-btn primary">
@@ -1033,9 +1166,16 @@
                                     <span class="mobile-info-label">总额度</span>
                                     <span class="mobile-info-value" style="color: var(--success); font-weight: 700;">¥{{ account.total_balance }}</span>
                                 </div>
-                            </div>
-                            <div class="mobile-card-row2" style="margin-top: 4px;">
-                                <span class="mobile-card-booking-no">最后变动: {{ formatDate(account.last_transaction_at) || '-' }}</span>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">最近充值</span>
+                                    <span class="mobile-info-value" style="color: var(--success);" v-if="account.last_charge_at">{{ formatShortDate(account.last_charge_at) }} +¥{{ account.last_charge_amount }}</span>
+                                    <span class="mobile-info-value" v-else style="color: var(--text-tertiary);">-</span>
+                                </div>
+                                <div class="mobile-info-item">
+                                    <span class="mobile-info-label">最近抵扣</span>
+                                    <span class="mobile-info-value" style="color: var(--danger);" v-if="account.last_deduct_at">{{ formatShortDate(account.last_deduct_at) }} -¥{{ account.last_deduct_amount }}</span>
+                                    <span class="mobile-info-value" v-else style="color: var(--text-tertiary);">-</span>
+                                </div>
                             </div>
                             <div class="mobile-card-row4">
                                 <button class="mobile-action-btn primary" @click="openAdjustForAccount(account)">调整</button>
@@ -1475,89 +1615,93 @@
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <span>💰</span>
-                        <span>额度详情</span>
+                        <span>额度详情 — {{ accountDetail?.user?.name }}</span>
                     </h3>
                     <button @click="closeDetailModal" class="modal-close">×</button>
                 </div>
-                
+
                 <div class="modal-body">
                     <div v-if="accountDetail">
-                        <div class="detail-section">
-                            <div class="detail-section-title">
-                                <span>👤</span>
-                                <span>用户信息</span>
+                        <!-- Balance Summary Cards -->
+                        <div class="detail-summary" style="margin-bottom: var(--spacing-lg);">
+                            <div class="detail-summary-item">
+                                <div class="summary-value" style="color: var(--success);">¥{{ accountDetail.account.membership_balance }}</div>
+                                <div class="summary-label">会员额度</div>
                             </div>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <div class="detail-label">用户名</div>
-                                    <div class="detail-value">{{ accountDetail.user.name }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">手机号</div>
-                                    <div class="detail-value">{{ accountDetail.user.phone }}</div>
-                                </div>
+                            <div class="detail-summary-item">
+                                <div class="summary-value" style="color: var(--primary);">¥{{ accountDetail.account.service_balance }}</div>
+                                <div class="summary-label">服务额度</div>
+                            </div>
+                            <div class="detail-summary-item">
+                                <div class="summary-value" style="color: #f59e0b;">¥{{ accountDetail.account.gift_balance }}</div>
+                                <div class="summary-label">赠送额度</div>
+                            </div>
+                            <div class="detail-summary-item">
+                                <div class="summary-value" style="color: var(--text-primary);">¥{{ accountDetail.account.total_balance }}</div>
+                                <div class="summary-label">总可用额度</div>
                             </div>
                         </div>
-                        
-                        <div class="detail-section">
-                            <div class="detail-section-title">
-                                <span>💰</span>
-                                <span>额度信息</span>
+
+                        <!-- Cumulative Stats -->
+                        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); font-size: var(--font-size-sm);">
+                            <span>📥 累计充值: <strong>¥{{ accountDetail.account.total_membership_charged + accountDetail.account.total_service_charged }}</strong></span>
+                            <span>📤 累计抵扣: <strong style="color: var(--danger);">¥{{ accountDetail.account.total_deducted }}</strong></span>
+                            <span>↩️ 累计退款: <strong>¥{{ accountDetail.account.total_refunded }}</strong></span>
+                            <span v-if="accountDetail.account.membership_expire_date">📅 会员过期: <strong :style="{ color: new Date(accountDetail.account.membership_expire_date) < new Date() ? 'var(--danger)' : 'inherit' }">{{ accountDetail.account.membership_expire_date }}</strong></span>
+                        </div>
+
+                        <!-- Detail Tabs -->
+                        <div class="detail-tabs">
+                            <div :class="['detail-tab', { active: detailTab === 'overview' }]" @click="detailTab = 'overview'">
+                                账户概览
+                            </div>
+                            <div :class="['detail-tab', { active: detailTab === 'transactions' }]" @click="detailTab = 'transactions'">
+                                变动记录 <span class="tab-count">({{ detailTxTotal }})</span>
+                            </div>
+                            <div :class="['detail-tab', { active: detailTab === 'deducts' }]" @click="detailTab = 'deducts'">
+                                抵扣明细 <span class="tab-count">({{ detailDeductTotal }})</span>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Overview -->
+                        <div v-if="detailTab === 'overview'" class="detail-pane">
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                                👤 {{ accountDetail.user.phone }}
                             </div>
                             <div class="detail-grid">
                                 <div class="detail-item">
-                                    <div class="detail-label">会员额度</div>
-                                    <div class="detail-value highlight">¥{{ accountDetail.account.membership_balance }}</div>
-                                    <div v-if="accountDetail.account.membership_expire_date" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
-                                        过期日期：{{ accountDetail.account.membership_expire_date }}
-                                    </div>
+                                    <div class="detail-label">信用额度</div>
+                                    <div class="detail-value">{{ accountDetail.account.credit_limit > 0 ? '¥' + accountDetail.account.credit_limit : '未开启' }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">服务额度</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.service_balance }}</div>
+                                    <div class="detail-label">已用信用</div>
+                                    <div class="detail-value" :style="{ color: accountDetail.account.credit_used > 0 ? 'var(--danger)' : '' }">¥{{ accountDetail.account.credit_used || 0 }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">赠送额度</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.gift_balance }}</div>
+                                    <div class="detail-label">冻结会员额度</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.frozen_membership_balance }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">总额度</div>
-                                    <div class="detail-value highlight">¥{{ accountDetail.account.total_balance }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">累计会员登记</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.total_membership_charged }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">累计服务登记</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.total_service_charged }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">累计抵扣</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.total_deducted }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">累计退款</div>
-                                    <div class="detail-value">¥{{ accountDetail.account.total_refunded }}</div>
+                                    <div class="detail-label">冻结服务额度</div>
+                                    <div class="detail-value">¥{{ accountDetail.account.frozen_service_balance }}</div>
                                 </div>
                             </div>
-                            
-                            <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md);">
+                            <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md);">
                                 <div style="font-size: var(--font-size-sm); color: var(--primary); font-weight: 600;">
-                                    可用额度：会员 ¥{{ accountDetail.available.membership }} + 服务 ¥{{ accountDetail.available.service }} + 赠送 ¥{{ accountDetail.available.gift }} = ¥{{ accountDetail.available.total }}
+                                    可用额度：会员 ¥{{ accountDetail.available.membership }} + 服务 ¥{{ accountDetail.available.service }} + 赠送 ¥{{ accountDetail.available.gift }} = <strong>¥{{ accountDetail.available.total }}</strong>
+                                    <span v-if="accountDetail.available.credit_limit > 0">（含信用: ¥{{ accountDetail.available.total_with_credit }}）</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="detail-section">
-                            <div class="detail-section-title">
-                                <span>📝</span>
-                                <span>最近交易</span>
-                            </div>
-                            <div class="transactions-list">
-                                <div v-for="tx in accountDetail.recent_transactions" :key="tx.id" class="transaction-item">
+
+                        <!-- Tab: Transactions -->
+                        <div v-if="detailTab === 'transactions'" class="detail-pane">
+                            <div v-if="detailTxLoading" style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">加载中...</div>
+                            <div v-else-if="detailTxItems.length === 0" style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">暂无变动记录</div>
+                            <div v-else class="transactions-list" style="max-height: 400px; overflow-y: auto;">
+                                <div v-for="tx in detailTxItems" :key="tx.id" class="transaction-item">
                                     <div class="transaction-info">
-                                        <div class="transaction-type">{{ tx.transaction_type }}</div>
+                                        <div class="transaction-type">{{ tx.transaction_type_text }}</div>
                                         <div class="transaction-desc">{{ tx.description || '-' }}</div>
                                     </div>
                                     <div style="text-align: right;">
@@ -1568,29 +1712,49 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div v-if="accountDetail.recent_deducts && accountDetail.recent_deducts.length > 0" class="detail-section">
-                            <div class="detail-section-title">
-                                <span>📊</span>
-                                <span>最近抵扣</span>
+                            <div v-if="detailTxTotal > detailTxPageSize" style="display: flex; justify-content: center; gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                                <button @click="detailTxPage--; loadDetailTransactions();" :disabled="detailTxPage <= 1" class="btn btn-outline btn-sm">上一页</button>
+                                <span style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">{{ detailTxPage }} / {{ Math.ceil(detailTxTotal / detailTxPageSize) }}</span>
+                                <button @click="detailTxPage++; loadDetailTransactions();" :disabled="detailTxPage >= Math.ceil(detailTxTotal / detailTxPageSize)" class="btn btn-outline btn-sm">下一页</button>
                             </div>
-                            <div class="transactions-list">
-                                <div v-for="record in accountDetail.recent_deducts" :key="record.id" class="transaction-item">
+                        </div>
+
+                        <!-- Tab: Deducts -->
+                        <div v-if="detailTab === 'deducts'" class="detail-pane">
+                            <div v-if="detailDeductLoading" style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">加载中...</div>
+                            <div v-else-if="detailDeductItems.length === 0" style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">暂无抵扣记录</div>
+                            <div v-else class="transactions-list" style="max-height: 400px; overflow-y: auto;">
+                                <div v-for="record in detailDeductItems" :key="record.id" class="transaction-item">
                                     <div class="transaction-info">
-                                        <div class="transaction-type">{{ record.order_type }} - {{ record.order_no || '无订单号' }}</div>
-                                        <div class="transaction-desc">抵扣：会员 ¥{{ record.membership_deduct }} + 服务 ¥{{ record.service_deduct }} + 现金 ¥{{ record.cash_amount }}</div>
+                                        <div class="transaction-type">
+                                            {{ getOrderTypeText(record.order_type) }}
+                                            <a v-if="getOrderLink(record)" :href="getOrderLink(record)" class="deduct-link" target="_blank">
+                                                {{ record.order_no || '#' + record.order_id }} ↗
+                                            </a>
+                                            <span v-else style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ record.order_no || '#' + record.order_id }}</span>
+                                        </div>
+                                        <div class="transaction-desc">
+                                            抵扣：会员 ¥{{ record.membership_deduct }} + 服务 ¥{{ record.service_deduct }}
+                                            <span v-if="record.gift_deduct > 0"> + 赠送 ¥{{ record.gift_deduct }}</span>
+                                            <span v-if="record.cash_amount > 0"> + 现金 ¥{{ record.cash_amount }}</span>
+                                            <span v-if="record.description"> — {{ record.description }}</span>
+                                        </div>
                                     </div>
                                     <div style="text-align: right;">
-                                        <div class="transaction-amount negative">-¥{{ record.membership_deduct + record.service_deduct }}</div>
+                                        <div class="transaction-amount negative">-¥{{ record.membership_deduct + record.service_deduct + record.gift_deduct }}</div>
                                         <div class="transaction-time">{{ formatDate(record.created_at) }}</div>
                                     </div>
                                 </div>
                             </div>
+                            <div v-if="detailDeductTotal > detailDeductPageSize" style="display: flex; justify-content: center; gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                                <button @click="detailDeductPage--; loadDetailDeducts();" :disabled="detailDeductPage <= 1" class="btn btn-outline btn-sm">上一页</button>
+                                <span style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">{{ detailDeductPage }} / {{ Math.ceil(detailDeductTotal / detailDeductPageSize) }}</span>
+                                <button @click="detailDeductPage++; loadDetailDeducts();" :disabled="detailDeductPage >= Math.ceil(detailDeductTotal / detailDeductPageSize)" class="btn btn-outline btn-sm">下一页</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer">
                     <button @click="closeDetailModal" class="btn btn-outline">关闭</button>
                     <button @click="openAdjustForAccountDetail" class="btn btn-primary">
@@ -1654,6 +1818,20 @@
                 const showDetailModal = ref(false);
                 const accountDetail = ref(null);
                 const submitting = ref(false);
+
+                // Detail modal tabs and pagination
+                const detailTab = ref('overview');
+                const detailTxItems = ref([]);
+                const detailTxTotal = ref(0);
+                const detailTxPage = ref(1);
+                const detailTxPageSize = ref(20);
+                const detailTxLoading = ref(false);
+                const detailDeductItems = ref([]);
+                const detailDeductTotal = ref(0);
+                const detailDeductPage = ref(1);
+                const detailDeductPageSize = ref(20);
+                const detailDeductLoading = ref(false);
+                const detailUserId = ref(null);
 
                 const adjustForm = ref({
                     user_id: null,
@@ -1719,7 +1897,7 @@
 
                 const toast = ref({ show: false, type: 'success', message: '' });
                 
-                const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/admin/balance`;
+                const API_BASE = '/api/v1/admin/balance';
                 
                 const showToast = (type, message) => {
                     const icons = { success: '✓', error: '✗' };
@@ -1852,9 +2030,24 @@
                 const showAccountDetail = async (account) => {
                     try {
                         loading.value = true;
-                        const response = await authFetch(`${API_BASE}/accounts/${account.user_id}`);
+                        detailUserId.value = account.user_id;
+                        detailTab.value = 'overview';
+                        detailTxPage.value = 1;
+                        detailDeductPage.value = 1;
+
+                        // Load overview (account detail)
+                        const response = await authFetch(`${API_BASE}/accounts/${account.user_id}?tx_page=1&tx_page_size=5&deduct_page=1&deduct_page_size=5`);
                         if (response.ok) {
-                            accountDetail.value = await response.json();
+                            const data = await response.json();
+                            accountDetail.value = {
+                                account: data.account,
+                                user: data.user,
+                                available: data.available,
+                            };
+                            detailTxItems.value = data.transactions.items;
+                            detailTxTotal.value = data.transactions.total;
+                            detailDeductItems.value = data.deducts.items;
+                            detailDeductTotal.value = data.deducts.total;
                             showDetailModal.value = true;
                         }
                     } catch (e) {
@@ -1863,6 +2056,72 @@
                     } finally {
                         loading.value = false;
                     }
+                };
+
+                const loadDetailTransactions = async () => {
+                    if (!detailUserId.value) return;
+                    try {
+                        detailTxLoading.value = true;
+                        const url = `${API_BASE}/accounts/${detailUserId.value}?tx_page=${detailTxPage.value}&tx_page_size=${detailTxPageSize.value}&deduct_page=1&deduct_page_size=0`;
+                        const response = await authFetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            detailTxItems.value = data.transactions.items;
+                            detailTxTotal.value = data.transactions.total;
+                        }
+                    } catch (e) {
+                        console.error('加载交易记录失败:', e);
+                    } finally {
+                        detailTxLoading.value = false;
+                    }
+                };
+
+                const loadDetailDeducts = async () => {
+                    if (!detailUserId.value) return;
+                    try {
+                        detailDeductLoading.value = true;
+                        const url = `${API_BASE}/accounts/${detailUserId.value}?tx_page=1&tx_page_size=0&deduct_page=${detailDeductPage.value}&deduct_page_size=${detailDeductPageSize.value}`;
+                        const response = await authFetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            detailDeductItems.value = data.deducts.items;
+                            detailDeductTotal.value = data.deducts.total;
+                        }
+                    } catch (e) {
+                        console.error('加载抵扣记录失败:', e);
+                    } finally {
+                        detailDeductLoading.value = false;
+                    }
+                };
+
+                const getOrderTypeText = (orderType) => {
+                    const typeMap = {
+                        'space_booking': '🏢 空间预约',
+                        'water': '💧 水站服务',
+                        'membership': '👑 会员充值',
+                        'meeting': '🏢 会议室',
+                        'dining': '🍽️ 餐饮',
+                        'adjust': '⚙️ 调整',
+                    };
+                    return typeMap[orderType] || orderType || '其他';
+                };
+
+                const getOrderLink = (record) => {
+                    if (record.order_type === 'space_booking') {
+                        return `/portal/admin/space/bookings.html?booking_id=${record.order_id}`;
+                    }
+                    if (record.order_type === 'water') {
+                        return `/portal/admin/water/pickups.html`;
+                    }
+                    return null;
+                };
+
+                const formatShortDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${month}-${day}`;
                 };
                 
                 const openAdjustForAccount = (account) => {
@@ -1931,6 +2190,14 @@
                 const closeDetailModal = () => {
                     showDetailModal.value = false;
                     accountDetail.value = null;
+                    detailUserId.value = null;
+                    detailTab.value = 'overview';
+                    detailTxItems.value = [];
+                    detailTxTotal.value = 0;
+                    detailTxPage.value = 1;
+                    detailDeductItems.value = [];
+                    detailDeductTotal.value = 0;
+                    detailDeductPage.value = 1;
                 };
 
                 const closeRechargeModal = () => {
@@ -2310,6 +2577,23 @@
                     showDetailModal,
                     accountDetail,
                     submitting,
+                    // Detail modal tabs
+                    detailTab,
+                    detailTxItems,
+                    detailTxTotal,
+                    detailTxPage,
+                    detailTxPageSize,
+                    detailTxLoading,
+                    detailDeductItems,
+                    detailDeductTotal,
+                    detailDeductPage,
+                    detailDeductPageSize,
+                    detailDeductLoading,
+                    loadDetailTransactions,
+                    loadDetailDeducts,
+                    getOrderTypeText,
+                    getOrderLink,
+                    formatShortDate,
                     adjustForm,
                     rechargeForm,
                     giftForm,

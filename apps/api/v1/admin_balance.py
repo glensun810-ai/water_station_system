@@ -55,6 +55,10 @@ class AdminBalanceAccountResponse(BaseModel):
     total_deducted: float
     total_refunded: float
     last_transaction_at: Optional[str] = None
+    last_charge_at: Optional[str] = None
+    last_charge_amount: Optional[float] = None
+    last_deduct_at: Optional[str] = None
+    last_deduct_amount: Optional[float] = None
     created_at: str
     updated_at: str
 
@@ -187,6 +191,32 @@ async def get_balance_accounts(
         account_responses = []
         for account in accounts:
             user = db.query(User).filter(User.id == account.user_id).first()
+
+            # 查询最近一次充值
+            last_charge = (
+                db.query(BalanceTransaction)
+                .filter(
+                    BalanceTransaction.user_id == account.user_id,
+                    BalanceTransaction.transaction_type.in_(
+                        [TransactionType.MEMBERSHIP_CHARGE, TransactionType.SERVICE_CHARGE]
+                    ),
+                    BalanceTransaction.amount > 0,
+                )
+                .order_by(BalanceTransaction.created_at.desc())
+                .first()
+            )
+
+            # 查询最近一次抵扣
+            last_deduct = (
+                db.query(BalanceTransaction)
+                .filter(
+                    BalanceTransaction.user_id == account.user_id,
+                    BalanceTransaction.transaction_type == TransactionType.DEDUCT,
+                )
+                .order_by(BalanceTransaction.created_at.desc())
+                .first()
+            )
+
             account_responses.append(
                 AdminBalanceAccountResponse(
                     id=account.id,
@@ -211,6 +241,10 @@ async def get_balance_accounts(
                     last_transaction_at=str(account.last_transaction_at)
                     if account.last_transaction_at
                     else None,
+                    last_charge_at=str(last_charge.created_at) if last_charge else None,
+                    last_charge_amount=float(last_charge.amount) if last_charge else None,
+                    last_deduct_at=str(last_deduct.created_at) if last_deduct else None,
+                    last_deduct_amount=float(abs(last_deduct.amount)) if last_deduct else None,
                     created_at=str(account.created_at),
                     updated_at=str(account.updated_at),
                 )
@@ -400,10 +434,17 @@ async def get_transactions(
 @router.get("/accounts/{user_id}", response_model=dict)
 async def get_user_balance_detail(
     user_id: int,
+    tx_page: int = Query(1, ge=1, description="交易记录页码"),
+    tx_page_size: int = Query(20, ge=1, le=100, description="交易记录每页数量"),
+    deduct_page: int = Query(1, ge=1, description="抵扣记录页码"),
+    deduct_page_size: int = Query(20, ge=1, le=100, description="抵扣记录每页数量"),
+    tx_type: Optional[str] = Query(None, description="交易类型筛选"),
+    start_date: Optional[str] = Query(None, description="开始日期"),
+    end_date: Optional[str] = Query(None, description="结束日期"),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user),
 ):
-    """获取用户余额详情"""
+    """获取用户余额详情（交易记录和抵扣记录支持分页）"""
     try:
         balance_account = (
             db.query(UserBalanceAccount)
@@ -416,19 +457,64 @@ async def get_user_balance_detail(
 
         user = db.query(User).filter(User.id == user_id).first()
 
-        recent_transactions = (
-            db.query(BalanceTransaction)
-            .filter(BalanceTransaction.user_id == user_id)
-            .order_by(BalanceTransaction.created_at.desc)
-            .limit(10)
+        # 交易记录查询（支持分页和筛选）
+        tx_query = db.query(BalanceTransaction).filter(
+            BalanceTransaction.user_id == user_id
+        )
+
+        if tx_type:
+            try:
+                type_enum = TransactionType(tx_type)
+                tx_query = tx_query.filter(BalanceTransaction.transaction_type == type_enum)
+            except ValueError:
+                pass
+
+        if start_date:
+            try:
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                tx_query = tx_query.filter(BalanceTransaction.created_at >= start_dt)
+            except ValueError:
+                pass
+
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                tx_query = tx_query.filter(BalanceTransaction.created_at < end_dt)
+            except ValueError:
+                pass
+
+        tx_total = tx_query.count()
+        transactions = (
+            tx_query.order_by(BalanceTransaction.created_at.desc())
+            .offset((tx_page - 1) * tx_page_size)
+            .limit(tx_page_size)
             .all()
         )
 
-        recent_deducts = (
-            db.query(BalanceDeductRecord)
-            .filter(BalanceDeductRecord.user_id == user_id)
-            .order_by(BalanceDeductRecord.created_at.desc)
-            .limit(10)
+        # 抵扣记录查询（支持分页）
+        deduct_query = db.query(BalanceDeductRecord).filter(
+            BalanceDeductRecord.user_id == user_id
+        )
+
+        if start_date:
+            try:
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                deduct_query = deduct_query.filter(BalanceDeductRecord.created_at >= start_dt)
+            except ValueError:
+                pass
+
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                deduct_query = deduct_query.filter(BalanceDeductRecord.created_at < end_dt)
+            except ValueError:
+                pass
+
+        deduct_total = deduct_query.count()
+        deducts = (
+            deduct_query.order_by(BalanceDeductRecord.created_at.desc())
+            .offset((deduct_page - 1) * deduct_page_size)
+            .limit(deduct_page_size)
             .all()
         )
 
@@ -444,6 +530,8 @@ async def get_user_balance_detail(
                     balance_account.frozen_membership_balance
                 ),
                 "frozen_service_balance": float(balance_account.frozen_service_balance),
+                "credit_limit": float(balance_account.credit_limit or 0),
+                "credit_used": float(balance_account.credit_used or 0),
                 "membership_expire_date": str(balance_account.membership_expire_date)
                 if balance_account.membership_expire_date
                 else None,
@@ -460,30 +548,50 @@ async def get_user_balance_detail(
                 "phone": user.phone if user else "",
             },
             "available": balance_account.get_available_balance(),
-            "recent_transactions": [
-                {
-                    "id": tx.id,
-                    "transaction_no": tx.transaction_no,
-                    "transaction_type": get_transaction_type_text(tx.transaction_type),
-                    "amount": float(tx.amount),
-                    "description": tx.description,
-                    "created_at": str(tx.created_at),
-                }
-                for tx in recent_transactions
-            ],
-            "recent_deducts": [
-                {
-                    "id": record.id,
-                    "deduct_no": record.deduct_no,
-                    "order_type": record.order_type,
-                    "order_no": record.order_no,
-                    "membership_deduct": float(record.membership_deduct),
-                    "service_deduct": float(record.service_deduct),
-                    "cash_amount": float(record.cash_amount),
-                    "created_at": str(record.created_at),
-                }
-                for record in recent_deducts
-            ],
+            "transactions": {
+                "items": [
+                    {
+                        "id": tx.id,
+                        "transaction_no": tx.transaction_no,
+                        "transaction_type": tx.transaction_type.value,
+                        "transaction_type_text": get_transaction_type_text(tx.transaction_type),
+                        "amount": float(tx.amount),
+                        "balance_type": tx.balance_type.value if tx.balance_type else None,
+                        "before_total_balance": float(tx.before_total_balance) if tx.before_total_balance else None,
+                        "after_total_balance": float(tx.after_total_balance) if tx.after_total_balance else None,
+                        "description": tx.description,
+                        "reference_type": tx.reference_type,
+                        "reference_no": tx.reference_no,
+                        "created_at": str(tx.created_at),
+                    }
+                    for tx in transactions
+                ],
+                "total": tx_total,
+                "page": tx_page,
+                "page_size": tx_page_size,
+            },
+            "deducts": {
+                "items": [
+                    {
+                        "id": record.id,
+                        "deduct_no": record.deduct_no,
+                        "order_type": record.order_type,
+                        "order_id": record.order_id,
+                        "order_no": record.order_no,
+                        "total_amount": float(record.total_amount),
+                        "membership_deduct": float(record.membership_deduct),
+                        "service_deduct": float(record.service_deduct),
+                        "gift_deduct": float(record.gift_deduct),
+                        "cash_amount": float(record.cash_amount),
+                        "description": record.description,
+                        "created_at": str(record.created_at),
+                    }
+                    for record in deducts
+                ],
+                "total": deduct_total,
+                "page": deduct_page,
+                "page_size": deduct_page_size,
+            },
         }
 
     except HTTPException:
