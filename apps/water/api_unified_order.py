@@ -593,8 +593,13 @@ def process_credit_payment(db: Session, order: UnifiedOrder, user_id: int):
             product_name="",
         )
     except Exception as e:
-        # 额度扣减失败不阻塞订单支付
-        pass
+        # 额度扣减失败不阻塞订单支付，但记录日志
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"用户 {user_id} 余额扣减失败（订单 {order.order_no}），转为全额记账。"
+            f"错误: {e}"
+        )
 
     deducted_amount = balance_result["deducted"] if balance_result else 0
     remaining_amount = order.total_amount - deducted_amount

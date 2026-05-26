@@ -479,6 +479,25 @@ async def create_booking(
         )
 
         if balance_account:
+            # 计算扣减金额（一次计算，deduct_record 和实际扣减共用）
+            membership_deduct = min(
+                Decimal(str(balance_account.membership_balance)),
+                deduct_amount,
+            )
+            remaining = deduct_amount - membership_deduct
+            service_deduct = min(
+                Decimal(str(balance_account.service_balance)), remaining
+            )
+            gift_deduct = min(
+                Decimal(str(balance_account.gift_balance)),
+                remaining - service_deduct,
+            )
+            # 保存变动前快照
+            before_mb = balance_account.membership_balance
+            before_sb = balance_account.service_balance
+            before_gb = balance_account.gift_balance
+            before_total = balance_account.total_balance
+
             deduct_no = f"DD{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
 
             deduct_record = BalanceDeductRecord(
@@ -488,35 +507,18 @@ async def create_booking(
                 order_id=booking.id,
                 order_no=booking.booking_no,
                 total_amount=float(deduct_amount),
-                membership_deduct=min(
-                    Decimal(str(balance_account.membership_balance)),
-                    deduct_amount,
-                ),
-                service_deduct=min(
-                    Decimal(str(balance_account.service_balance)),
-                    deduct_amount
-                    - min(
-                        Decimal(str(balance_account.membership_balance)),
-                        deduct_amount,
-                    ),
-                ),
-                gift_deduct=0,
+                membership_deduct=membership_deduct,
+                service_deduct=service_deduct,
+                gift_deduct=gift_deduct,
                 cash_amount=0,
                 description=f"空间预约余额抵扣：{booking.resource_name} {booking.booking_date}（抵扣¥{deduct_amount:.2f}）",
             )
             db.add(deduct_record)
 
-            membership_deduct = min(
-                Decimal(str(balance_account.membership_balance)),
-                deduct_amount,
-            )
-            remaining = deduct_amount - membership_deduct
-            service_deduct = min(
-                Decimal(str(balance_account.service_balance)), remaining
-            )
-
             balance_account.membership_balance -= membership_deduct
             balance_account.service_balance -= service_deduct
+            if gift_deduct > 0:
+                balance_account.gift_balance -= gift_deduct
             balance_account.total_deducted += deduct_amount
             balance_account.update_total_balance()
             balance_account.last_transaction_at = datetime.now()
@@ -530,11 +532,13 @@ async def create_booking(
                     transaction_type=TransactionType.DEDUCT,
                     amount=-membership_deduct,
                     balance_type=BalanceType.MEMBERSHIP,
-                    before_membership_balance=balance_account.membership_balance
-                    + membership_deduct,
-                    before_total_balance=balance_account.total_balance
-                    + membership_deduct,
+                    before_membership_balance=before_mb,
+                    before_service_balance=before_sb,
+                    before_gift_balance=before_gb,
+                    before_total_balance=before_total,
                     after_membership_balance=balance_account.membership_balance,
+                    after_service_balance=balance_account.service_balance,
+                    after_gift_balance=balance_account.gift_balance,
                     after_total_balance=balance_account.total_balance,
                     reference_type="space_booking",
                     reference_id=booking.id,
@@ -550,10 +554,13 @@ async def create_booking(
                     transaction_type=TransactionType.DEDUCT,
                     amount=-service_deduct,
                     balance_type=BalanceType.SERVICE,
-                    before_service_balance=balance_account.service_balance
-                    + service_deduct,
-                    before_total_balance=balance_account.total_balance + service_deduct,
+                    before_membership_balance=balance_account.membership_balance,
+                    before_service_balance=before_sb,
+                    before_gift_balance=balance_account.gift_balance,
+                    before_total_balance=before_total,
+                    after_membership_balance=balance_account.membership_balance,
                     after_service_balance=balance_account.service_balance,
+                    after_gift_balance=balance_account.gift_balance,
                     after_total_balance=balance_account.total_balance,
                     reference_type="space_booking",
                     reference_id=booking.id,
@@ -561,6 +568,28 @@ async def create_booking(
                     description=f"空间预约抵扣（服务余额）：{booking.resource_name}",
                 )
                 db.add(tx2)
+
+            if gift_deduct > 0:
+                tx3 = BalanceTransaction(
+                    transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}{random.randint(100, 999)}",
+                    user_id=current_user.id,
+                    transaction_type=TransactionType.DEDUCT,
+                    amount=-gift_deduct,
+                    balance_type=BalanceType.GIFT,
+                    before_membership_balance=balance_account.membership_balance,
+                    before_service_balance=balance_account.service_balance,
+                    before_gift_balance=before_gb,
+                    before_total_balance=before_total,
+                    after_membership_balance=balance_account.membership_balance,
+                    after_service_balance=balance_account.service_balance,
+                    after_gift_balance=balance_account.gift_balance,
+                    after_total_balance=balance_account.total_balance,
+                    reference_type="space_booking",
+                    reference_id=booking.id,
+                    reference_no=booking.booking_no,
+                    description=f"空间预约抵扣（赠送余额）：{booking.resource_name}",
+                )
+                db.add(tx3)
 
     if initial_status == "pending":
         from shared.models.space.space_approval import SpaceApproval
@@ -862,6 +891,72 @@ async def cancel_booking(
         booking.deposit_refund_amount = booking.deposit_amount
         booking.deposit_refunded = True
         booking.deposit_refund_at = datetime.now()
+
+    # 退还已扣余额
+    if booking.deduct_amount > 0 and booking.payment_mode in ("balance_deduct", "mixed"):
+        from models.user_balance import (
+            UserBalanceAccount,
+            BalanceTransaction,
+            BalanceDeductRecord,
+            TransactionType,
+        )
+
+        balance_account = (
+            db.query(UserBalanceAccount)
+            .filter(UserBalanceAccount.user_id == booking.user_id)
+            .first()
+        )
+
+        if balance_account and booking.deduct_record_id:
+            deduct_record = (
+                db.query(BalanceDeductRecord)
+                .filter(BalanceDeductRecord.id == booking.deduct_record_id)
+                .first()
+            )
+
+            if deduct_record:
+                membership_refund = Decimal(str(deduct_record.membership_deduct))
+                service_refund = Decimal(str(deduct_record.service_deduct))
+                gift_refund = Decimal(str(deduct_record.gift_deduct))
+                total_refund = membership_refund + service_refund + gift_refund
+
+                before_membership = balance_account.membership_balance
+                before_service = balance_account.service_balance
+                before_gift = balance_account.gift_balance
+                before_total = balance_account.total_balance
+
+                if membership_refund > 0:
+                    balance_account.membership_balance += membership_refund
+                if service_refund > 0:
+                    balance_account.service_balance += service_refund
+                if gift_refund > 0:
+                    balance_account.gift_balance += gift_refund
+
+                balance_account.total_deducted -= total_refund
+                balance_account.total_refunded += total_refund
+                balance_account.update_total_balance()
+                balance_account.last_transaction_at = datetime.now()
+
+                refund_tx = BalanceTransaction(
+                    transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                    user_id=booking.user_id,
+                    transaction_type=TransactionType.REFUND,
+                    amount=total_refund,
+                    balance_type=None,
+                    before_membership_balance=before_membership,
+                    before_service_balance=before_service,
+                    before_gift_balance=before_gift,
+                    before_total_balance=before_total,
+                    after_membership_balance=balance_account.membership_balance,
+                    after_service_balance=balance_account.service_balance,
+                    after_gift_balance=balance_account.gift_balance,
+                    after_total_balance=balance_account.total_balance,
+                    reference_type="booking_cancel",
+                    reference_no=booking.booking_no,
+                    description=f"取消预约退款：{booking.resource_name} {booking.booking_date}（退还¥{float(total_refund):.2f}）",
+                )
+                db.add(refund_tx)
+                booking.deduct_amount = 0
 
     db.commit()
 

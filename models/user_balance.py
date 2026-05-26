@@ -13,6 +13,7 @@ from models.base import Base
 class BalanceType(PyEnum):
     MEMBERSHIP = "membership"
     SERVICE = "service"
+    GIFT = "gift"
 
 
 class TransactionType(PyEnum):

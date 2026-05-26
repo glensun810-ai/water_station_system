@@ -435,9 +435,9 @@ async def get_transactions(
 async def get_user_balance_detail(
     user_id: int,
     tx_page: int = Query(1, ge=1, description="交易记录页码"),
-    tx_page_size: int = Query(20, ge=1, le=100, description="交易记录每页数量"),
+    tx_page_size: int = Query(20, ge=0, le=100, description="交易记录每页数量"),
     deduct_page: int = Query(1, ge=1, description="抵扣记录页码"),
-    deduct_page_size: int = Query(20, ge=1, le=100, description="抵扣记录每页数量"),
+    deduct_page_size: int = Query(20, ge=0, le=100, description="抵扣记录每页数量"),
     tx_type: Optional[str] = Query(None, description="交易类型筛选"),
     start_date: Optional[str] = Query(None, description="开始日期"),
     end_date: Optional[str] = Query(None, description="结束日期"),
@@ -483,13 +483,17 @@ async def get_user_balance_detail(
             except ValueError:
                 pass
 
-        tx_total = tx_query.count()
-        transactions = (
-            tx_query.order_by(BalanceTransaction.created_at.desc())
-            .offset((tx_page - 1) * tx_page_size)
-            .limit(tx_page_size)
-            .all()
-        )
+        if tx_page_size > 0:
+            tx_total = tx_query.count()
+            transactions = (
+                tx_query.order_by(BalanceTransaction.created_at.desc())
+                .offset((tx_page - 1) * tx_page_size)
+                .limit(tx_page_size)
+                .all()
+            )
+        else:
+            tx_total = 0
+            transactions = []
 
         # 抵扣记录查询（支持分页）
         deduct_query = db.query(BalanceDeductRecord).filter(
@@ -510,13 +514,17 @@ async def get_user_balance_detail(
             except ValueError:
                 pass
 
-        deduct_total = deduct_query.count()
-        deducts = (
-            deduct_query.order_by(BalanceDeductRecord.created_at.desc())
-            .offset((deduct_page - 1) * deduct_page_size)
-            .limit(deduct_page_size)
-            .all()
-        )
+        if deduct_page_size > 0:
+            deduct_total = deduct_query.count()
+            deducts = (
+                deduct_query.order_by(BalanceDeductRecord.created_at.desc())
+                .offset((deduct_page - 1) * deduct_page_size)
+                .limit(deduct_page_size)
+                .all()
+            )
+        else:
+            deduct_total = 0
+            deducts = []
 
         return {
             "account": {
@@ -662,7 +670,10 @@ async def adjust_balance(
             else:
                 balance_account.total_refunded += abs(adjust_amount)
         elif request.balance_type == "gift":
+            balance_type_enum = BalanceType.GIFT
             balance_account.gift_balance += adjust_amount
+            if adjust_amount < 0:
+                balance_account.total_refunded += abs(adjust_amount)
 
         balance_account.update_total_balance()
         balance_account.last_transaction_at = datetime.now()
@@ -753,7 +764,7 @@ async def gift_balance(
             user_id=user_id,
             transaction_type=TransactionType.GIFT,
             amount=gift_amount,
-            balance_type=None,
+            balance_type=BalanceType.GIFT,
             before_membership_balance=balance_account.membership_balance,
             before_service_balance=balance_account.service_balance,
             before_gift_balance=before_gift,
@@ -851,6 +862,11 @@ async def confirm_offline_recharge(
 
         balance_account.update_total_balance()
         balance_account.last_transaction_at = datetime.now()
+
+        # 充值后自动冲抵已用信用额度
+        if balance_account.credit_used and balance_account.credit_used > 0:
+            credit_reset = min(balance_account.credit_used, recharge_amount)
+            balance_account.credit_used -= credit_reset
 
         payment_info = f"，线下付款方式: {request.payment_method}"
         if request.payment_reference:
@@ -969,6 +985,8 @@ async def batch_recharge(
 
         for item in request.items:
             try:
+                # 使用 savepoint 隔离单条失败，不影响其他条目
+                db.begin_nested()
                 if item.amount <= 0:
                     failed_items.append(
                         {
@@ -1081,6 +1099,7 @@ async def batch_recharge(
                 success_count += 1
 
             except Exception as item_error:
+                db.rollback()  # 回滚当前条目的 savepoint
                 failed_items.append(
                     {
                         "user_id": item.user_id,
