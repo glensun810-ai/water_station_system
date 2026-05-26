@@ -398,13 +398,65 @@
         
         .action-btns {
             display: flex;
-            gap: var(--spacing-xs);
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
         }
-        
+
         .btn-sm {
+            padding: 5px 10px;
+            min-height: 36px;
+            font-size: var(--font-size-xs);
+            white-space: nowrap;
+        }
+
+        .btn-sm.btn-primary-action {
+            font-weight: 600;
+            padding: 5px 12px;
+        }
+
+        .action-more-wrap {
+            position: relative;
+            display: inline-block;
+        }
+
+        .action-more-btn {
+            padding: 5px 8px;
+            min-height: 36px;
+            font-size: var(--font-size-xs);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .action-more-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        .action-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            min-width: 140px;
+            padding: 4px;
+        }
+
+        .action-dropdown .btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin: 2px 0;
             padding: 6px 12px;
-            min-height: 44px;
-            font-size: var(--font-size-sm);
+            font-size: var(--font-size-xs);
+            min-height: 36px;
         }
         
         .batch-toolbar {
@@ -850,10 +902,25 @@
             }
 
             .action-btns .btn {
-                flex: 1;
-                min-width: 60px;
+                flex: 0 0 auto;
+                min-width: auto;
                 min-height: 32px;
                 font-size: var(--font-size-xs);
+            }
+
+            .action-more-btn {
+                min-height: 32px;
+                padding: 4px 10px;
+            }
+
+            .action-dropdown {
+                position: fixed;
+                right: 12px;
+                top: auto;
+                bottom: 50%;
+                left: auto;
+                min-width: 140px;
+                z-index: 200;
             }
             
             .bottom-nav {
@@ -1155,7 +1222,7 @@
                                 预约时间
                                 <span class="sort-indicator" :class="getSortClass('booking_date')"></span>
                             </th>
-                            <th style="width: 80px;" class="sortable" :class="{ active: filters.sort_by === 'user_name' }" @click="toggleSort('user_name')">
+                            <th style="width: 100px;" class="sortable" :class="{ active: filters.sort_by === 'user_name' }" @click="toggleSort('user_name')">
                                 预约人
                                 <span class="sort-indicator" :class="getSortClass('user_name')"></span>
                             </th>
@@ -1172,7 +1239,7 @@
                                 创建时间
                                 <span class="sort-indicator" :class="getSortClass('created_at')"></span>
                             </th>
-                            <th style="width: 160px;">操作</th>
+                            <th style="min-width: 180px;">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1245,84 +1312,82 @@
                             <td>
                                 <div class="action-btns">
                                     <button class="btn btn-outline btn-sm" @click="viewDetail(booking)">查看</button>
+                                    <!-- 待审批：通过+收款（主操）+ 更多 -->
                                     <template v-if="booking.status === 'pending'">
-                                        <button 
-                                            class="btn btn-success btn-sm" 
-                                            @click="approveWithPayment(booking)"
-                                            title="审批通过并确认收款"
-                                        >通过+收款</button>
-                                        <button 
-                                            class="btn btn-outline btn-sm"
-                                            style="color: var(--success);"
-                                            @click="approveBooking(booking)"
-                                            title="仅审批通过（内部员工免费）"
-                                        >通过</button>
-                                        <button 
-                                            class="btn btn-danger btn-sm"
-                                            @click="showSingleRejectModal(booking)"
-                                            title="拒绝审批"
-                                        >拒绝</button>
+                                        <button class="btn btn-success btn-sm btn-primary-action" @click="approveWithPayment(booking)" title="审批通过并确认收款">通过+收款</button>
+                                        <div class="action-more-wrap">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--success);" @click="approveBooking(booking); openMenuId = null">仅通过</button>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--danger);" @click="showSingleRejectModal(booking); openMenuId = null">拒绝</button>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--danger);" @click="cancelBooking(booking); openMenuId = null">取消</button>
+                                                <button v-if="isSuperAdmin" class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
+                                    <!-- 已批准+待支付：确认收款（主操）+ 更多 -->
                                     <template v-if="booking.status === 'approved' && booking.payment_status === 'pending'">
-                                        <button 
-                                            class="btn btn-primary btn-sm"
-                                            @click="confirmPayment(booking)"
-                                            title="确认用户已付款"
-                                        >确认收款</button>
+                                        <button class="btn btn-primary btn-sm btn-primary-action" @click="confirmPayment(booking)" title="确认用户已付款">确认收款</button>
+                                        <div class="action-more-wrap">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--danger);" @click="cancelBooking(booking); openMenuId = null">取消</button>
+                                                <button v-if="isSuperAdmin" class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
+                                    <!-- 已批准+已支付：确认生效（主操）+ 更多 -->
                                     <template v-if="booking.status === 'approved' && booking.payment_status !== 'pending'">
-                                        <button 
-                                            class="btn btn-success btn-sm"
-                                            @click="markConfirmed(booking)"
-                                            title="标记为已确认生效"
-                                        >确认生效</button>
+                                        <button class="btn btn-success btn-sm btn-primary-action" @click="markConfirmed(booking)" title="标记为已确认生效">确认生效</button>
+                                        <div class="action-more-wrap">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--danger);" @click="cancelBooking(booking); openMenuId = null">取消</button>
+                                                <button v-if="isSuperAdmin" class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
+                                    <!-- 已确认：开始使用（主操）+ 更多 -->
                                     <template v-if="booking.status === 'confirmed'">
-                                        <button 
-                                            class="btn btn-info btn-sm"
-                                            @click="markActive(booking)"
-                                            title="标记开始使用"
-                                        >开始使用</button>
+                                        <button class="btn btn-info btn-sm btn-primary-action" @click="markActive(booking)" title="标记开始使用">开始使用</button>
+                                        <div class="action-more-wrap">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" style="color: var(--danger);" @click="cancelBooking(booking); openMenuId = null">取消</button>
+                                                <button v-if="isSuperAdmin" class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
+                                    <!-- 进行中：完成使用 -->
                                     <template v-if="booking.status === 'active'">
-                                        <button 
-                                            class="btn btn-warning btn-sm"
-                                            @click="completeBooking(booking)"
-                                            title="标记使用完成"
-                                        >完成使用</button>
+                                        <button class="btn btn-warning btn-sm btn-primary-action" @click="completeBooking(booking)" title="标记使用完成">完成使用</button>
+                                        <button v-if="isSuperAdmin" class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking)">删除</button>
                                     </template>
+                                    <!-- 已完成：确认结算（主操）+ 更多 -->
                                     <template v-if="booking.status === 'completed'">
-                                        <button 
-                                            class="btn btn-success btn-sm"
-                                            @click="settleBooking(booking)"
-                                            title="确认费用结算"
-                                        >确认结算</button>
+                                        <button class="btn btn-success btn-sm btn-primary-action" @click="settleBooking(booking)" title="确认费用结算">确认结算</button>
+                                        <div class="action-more-wrap" v-if="isSuperAdmin">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
+                                    <!-- 已结算：开票（主操）+ 更多 -->
                                     <template v-if="booking.status === 'settled'">
-                                        <button 
-                                            class="btn btn-outline btn-sm"
-                                            @click="generateInvoice(booking)"
-                                            title="开具发票"
-                                        >开票</button>
+                                        <button class="btn btn-outline btn-sm btn-primary-action" @click="generateInvoice(booking)" title="开具发票">开票</button>
+                                        <div class="action-more-wrap" v-if="isSuperAdmin">
+                                            <button class="action-more-btn" @click="toggleActionMenu(booking.id)">⋮</button>
+                                            <div class="action-dropdown" v-if="openMenuId === booking.id" @click.stop>
+                                                <button class="btn btn-outline btn-sm" @click="unsettleBooking(booking); openMenuId = null">取消结算</button>
+                                                <button class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking); openMenuId = null">删除</button>
+                                            </div>
+                                        </div>
                                     </template>
-                                    <button 
-                                        v-if="['pending', 'approved', 'confirmed'].includes(booking.status)" 
-                                        class="btn btn-outline btn-sm"
-                                        style="color: var(--danger);"
-                                        @click="cancelBooking(booking)"
-                                    >取消</button>
-                                    <button 
-                                        v-if="booking.status === 'settled' && isSuperAdmin" 
-                                        class="btn btn-warning btn-sm"
-                                        @click="unsettleBooking(booking)"
-                                        title="取消结算（管理员）"
-                                    >取消结算</button>
-                                    <button 
-                                        v-if="isSuperAdmin" 
-                                        class="btn btn-danger btn-sm"
-                                        @click="deleteBooking(booking)"
-                                        style="background: #dc3545; color: white; border-color: #dc3545;"
-                                    >删除</button>
+                                    <!-- cancelled/rejected: 仅查看+删除 -->
+                                    <template v-if="['cancelled', 'rejected'].includes(booking.status) && isSuperAdmin">
+                                        <button class="btn btn-outline btn-sm" style="color: #dc3545;" @click="deleteBooking(booking)">删除</button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>
@@ -1353,6 +1418,7 @@
                     
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-md); font-size: 14px;">
                         <div><span style="color: var(--text-tertiary);">空间：</span>{{ booking.resource_name }}</div>
+                        <div><span style="color: var(--text-tertiary);">预约人：</span>{{ booking.user_name }}</div>
                         <div><span style="color: var(--text-tertiary);">日期：</span>{{ booking.booking_date }}</div>
                         <div><span style="color: var(--text-tertiary);">时段：</span>{{ formatTimeSlot(booking) }}</div>
                         <div><span style="color: var(--text-tertiary);">时长：</span>{{ formatDuration(booking) }}</div>
@@ -1362,13 +1428,18 @@
                             <span :style="{ color: getPaymentModeColor(booking.payment_mode) }">{{ getPaymentModeIcon(booking.payment_mode) }} {{ getPaymentModeText(booking.payment_mode) }}</span>
                         </div>
                     </div>
-                    
+
                     <div style="display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
                         <button class="btn btn-outline btn-sm" @click="viewDetail(booking)" style="min-height: 44px;">查看</button>
                         <button v-if="booking.status === 'pending'" class="btn btn-success btn-sm" @click="approveWithPayment(booking)" style="min-height: 44px;">通过+收款</button>
+                        <button v-if="booking.status === 'pending'" class="btn btn-outline btn-sm" @click="approveBooking(booking)" style="min-height: 44px; color: var(--success);">通过</button>
+                        <button v-if="booking.status === 'pending'" class="btn btn-outline btn-sm" @click="showSingleRejectModal(booking)" style="min-height: 44px; color: var(--danger);">拒绝</button>
                         <button v-if="booking.status === 'approved' && booking.payment_status === 'pending'" class="btn btn-primary btn-sm" @click="confirmPayment(booking)" style="min-height: 44px;">收款</button>
                         <button v-if="booking.status === 'approved' && booking.payment_status !== 'pending'" class="btn btn-success btn-sm" @click="markConfirmed(booking)" style="min-height: 44px;">生效</button>
+                        <button v-if="booking.status === 'confirmed'" class="btn btn-info btn-sm" @click="markActive(booking)" style="min-height: 44px;">开始使用</button>
+                        <button v-if="booking.status === 'active'" class="btn btn-warning btn-sm" @click="completeBooking(booking)" style="min-height: 44px;">完成</button>
                         <button v-if="booking.status === 'completed'" class="btn btn-success btn-sm" @click="settleBooking(booking)" style="min-height: 44px;">结算</button>
+                        <button v-if="['pending', 'approved', 'confirmed'].includes(booking.status)" class="btn btn-outline btn-sm" @click="cancelBooking(booking)" style="min-height: 44px; color: var(--danger);">取消</button>
                     </div>
                 </div>
             </div>
@@ -1780,7 +1851,8 @@
                 const showDetailModal = ref(false);
                 const selectedBooking = ref(null);
                 const isSuperAdmin = ref(false);
-                
+                const openMenuId = ref(null);
+
                 const selectedBookings = ref([]);
                 const showBatchModal = ref(false);
                 const showProgressModal = ref(false);
@@ -2724,6 +2796,14 @@
                 const getBookingById = (id) => {
                     return bookings.value.find(b => b.id === id);
                 };
+
+                const toggleActionMenu = (id) => {
+                    openMenuId.value = openMenuId.value === id ? null : id;
+                };
+
+                const closeActionMenu = () => {
+                    openMenuId.value = null;
+                };
                 
                 const batchOperationTitle = ref('');
                 
@@ -2795,15 +2875,18 @@
                 onMounted(async () => {
                     const user = await checkAuth({ requireAuth: true, requireAdmin: true, validateToken: true });
                     if (!user) return;
-                    
+
                     isSuperAdmin.value = user.role === 'super_admin';
-                    
+
+                    // 点击空白处关闭操作菜单
+                    document.addEventListener('click', closeActionMenu);
+
                     const urlParams = new URLSearchParams(window.location.search);
                     const alertType = urlParams.get('alert');
                     if (alertType === 'abnormal') {
                         filters.value.status = 'abnormal';
                     }
-                    
+
                     loadBookings();
                 });
                 
@@ -2855,6 +2938,9 @@
                     singleRejectBooking,
                     rejectReason,
                     rejectSuggestion,
+                    openMenuId,
+                    toggleActionMenu,
+                    closeActionMenu,
                     typeStats,
                     getTypeIcon,
                     getTypeName,
