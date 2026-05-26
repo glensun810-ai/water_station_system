@@ -2206,12 +2206,17 @@ async loadRecords(officeId, status) {
                     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `领水记录_${type}_${new Date().toISOString().slice(0,10)}.csv`; link.click();
                 },
                 async markAsPaid(recordId) {
-                    if (!confirm('确定已付款？付款后等待管理员确认收款。')) return;
+                    const method = prompt('请选择线下付款方式：\n\n1 - 现金\n2 - 银行转账\n3 - 微信\n4 - 支付宝\n\n请输入数字选择:', '1');
+                    if (!method) return;
+                    const methodMap = { '1': 'cash', '2': 'transfer', '3': 'wechat', '4': 'alipay' };
+                    const paymentMethod = methodMap[method] || 'cash';
+                    const methodNames = { cash: '现金', transfer: '银行转账', wechat: '微信', alipay: '支付宝' };
+                    if (!confirm(`确定已通过「${methodNames[paymentMethod]}」付款？\n付款后等待管理员确认收款。`)) return;
                     try {
                         const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, {
                             method: 'POST',
                             headers: this.getAuthHeaders(),
-                            body: JSON.stringify({ payment_method: 'cash', payment_note: '' })
+                            body: JSON.stringify({ payment_method: paymentMethod, payment_note: `线下${methodNames[paymentMethod]}付款` })
                         });
                         if (res.ok) {
                             const data = await res.json();
@@ -2228,7 +2233,12 @@ async loadRecords(officeId, status) {
                 },
                 async batchMarkAsPaid() {
                     if (this.selectedRecords.length === 0) return;
-                    if (!confirm(`确定将选中的 ${this.selectedRecords.length} 条记录标记为已付款？`)) return;
+                    const method = prompt('请选择线下付款方式：\n\n1 - 现金\n2 - 银行转账\n3 - 微信\n4 - 支付宝\n\n请输入数字选择（将应用于所有选中记录）:', '1');
+                    if (!method) return;
+                    const methodMap = { '1': 'cash', '2': 'transfer', '3': 'wechat', '4': 'alipay' };
+                    const paymentMethod = methodMap[method] || 'cash';
+                    const methodNames = { cash: '现金', transfer: '银行转账', wechat: '微信', alipay: '支付宝' };
+                    if (!confirm(`确定将选中的 ${this.selectedRecords.length} 条记录标记为已付款？\n付款方式：${methodNames[paymentMethod]}`)) return;
                     let successCount = 0;
                     let failCount = 0;
                     for (const recordId of this.selectedRecords) {
@@ -2236,7 +2246,7 @@ async loadRecords(officeId, status) {
                             const res = await fetch(`${API_BASE}/water/pickup/${recordId}/pay`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ payment_method: 'cash' })
+                                body: JSON.stringify({ payment_method: paymentMethod, payment_note: `批量标记-线下${methodNames[paymentMethod]}付款` })
                             });
                             if (res.ok) {
                                 successCount++;
