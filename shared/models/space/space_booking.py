@@ -59,14 +59,14 @@ class BookingStatus(str, enum.Enum):
 
 class PaymentStatus(str, enum.Enum):
     """
-    支付状态枚举
+    费用确认状态枚举（内部登记管理，非金融支付）
 
     状态说明:
-    - none:           无需支付（免费预约）
-    - pending:        待支付
-    - deposit_paid:    押金已付
-    - partial:         部分支付（押金已付，余额待结）
-    - paid:            已全额支付
+    - none:           免费使用（无需付费）
+    - pending:        待确认（线下付款后管理员确认）
+    - deposit_paid:    保证金已登记（非金融押金）
+    - partial:         部分确认（保证金已登，余款待确认）
+    - paid:            已全额确认
     - refunded:        已退款
     """
 
@@ -179,11 +179,11 @@ STATUS_CONFIG = {
 
 PAYMENT_STATUS_CONFIG = {
     "none": {"icon": "🎁", "text": "免费", "color": "#22c55e"},
-    "pending": {"icon": "⏳", "text": "待支付", "color": "#f59e0b"},
-    "deposit_paid": {"icon": "💵", "text": "押金已付", "color": "#3b82f6"},
-    "partial": {"icon": "📊", "text": "部分支付", "color": "#8b5cf6"},
-    "paid": {"icon": "✅", "text": "已支付", "color": "#22c55e"},
-    "refunded": {"icon": "↩️", "text": "已退款", "color": "#94a3b8"},
+    "pending": {"icon": "⏳", "text": "待确认", "color": "#f59e0b"},
+    "deposit_paid": {"icon": "💵", "text": "保证金已登记", "color": "#3b82f6"},
+    "partial": {"icon": "📊", "text": "部分确认", "color": "#8b5cf6"},
+    "paid": {"icon": "✅", "text": "已确认", "color": "#22c55e"},
+    "refunded": {"icon": "↩️", "text": "已退回登记", "color": "#94a3b8"},
 }
 
 
@@ -245,14 +245,14 @@ class SpaceBooking(Base, TimestampMixin):
     actual_fee = Column(Float, default=0.0)
     fee_unit = Column(String(20))
 
-    requires_deposit = Column(Boolean, default=False)
-    deposit_amount = Column(Float, default=0.0)
-    deposit_paid = Column(Boolean, default=False)
-    deposit_paid_at = Column(DateTime)
-    deposit_payment_method = Column(String(20))
-    deposit_refunded = Column(Boolean, default=False)
-    deposit_refund_amount = Column(Float)
-    deposit_refund_at = Column(DateTime)
+    requires_deposit = Column(Boolean, default=False, comment="是否需要预约保证金登记")
+    deposit_amount = Column(Float, default=0.0, comment="保证金登记金额（非金融押金）")
+    deposit_paid = Column(Boolean, default=False, comment="保证金已确认登记")
+    deposit_paid_at = Column(DateTime, comment="保证金登记确认时间")
+    deposit_payment_method = Column(String(20), comment="保证金登记方式")
+    deposit_refunded = Column(Boolean, default=False, comment="保证金已退还登记")
+    deposit_refund_amount = Column(Float, comment="退还登记金额")
+    deposit_refund_at = Column(DateTime, comment="退还登记时间")
 
     balance_amount = Column(Float, default=0.0)
     balance_paid = Column(Boolean, default=False)
@@ -260,15 +260,15 @@ class SpaceBooking(Base, TimestampMixin):
     balance_payment_method = Column(String(20))
 
     status = Column(String(20), default="pending", index=True)
-    payment_status = Column(String(20), default="none")
+    payment_status = Column(String(20), default="none", comment="费用确认状态(非金融支付)")
     payment_mode = Column(
-        String(20), default="credit", comment="credit/balance_deduct/prepay"
+        String(20), default="credit", comment="记账模式: credit(记账)/balance_deduct(额度扣减)/prepay(线下预付确认)"
     )
 
-    credit_note_id = Column(Integer, comment="记账账单ID")
-    deduct_record_id = Column(Integer, comment="抵扣记录ID")
+    credit_note_id = Column(Integer, comment="使用明细记录ID")
+    deduct_record_id = Column(Integer, comment="额度扣减记录ID")
 
-    deduct_amount = Column(Float, default=0.0, comment="余额抵扣金额")
+    deduct_amount = Column(Float, default=0.0, comment="额度扣减金额")
     credit_amount = Column(Float, default=0.0, comment="记账金额")
 
     approval_id = Column(Integer)

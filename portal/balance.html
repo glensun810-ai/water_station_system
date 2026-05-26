@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>我的余额</title>
+    <title>我的额度</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <script src="/portal/assets/js/auth.js"></script>
     <script src="/shared/static/vendor/vue/vue.global.js"></script>
@@ -479,13 +479,13 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header :breadcrumbs="[{text: '我的余额', url: '/portal/balance.html'}]"></global-header>
-        
+        <global-header :breadcrumbs="[{text: '我的额度', url: '/portal/balance.html'}]"></global-header>
+
         <div class="page-container">
             <div class="page-header">
                 <h1 class="page-title">
                     <span>💰</span>
-                    <span>我的余额</span>
+                    <span>我的额度</span>
                 </h1>
             </div>
             
@@ -497,7 +497,7 @@
             <div v-else>
                 <div class="balance-summary">
                     <div class="balance-total">
-                        <div class="balance-label">可用余额</div>
+                        <div class="balance-label">可用额度</div>
                         <div style="display: flex; align-items: baseline; justify-content: center; gap: var(--spacing-xs);">
                             <span class="balance-unit">¥</span>
                             <span class="balance-amount">{{ balanceInfo.available_total_balance }}</span>
@@ -507,7 +507,7 @@
                     <div class="balance-types">
                         <div class="balance-type-item">
                             <div class="balance-type-icon">👑</div>
-                            <div class="balance-type-name">会员余额</div>
+                            <div class="balance-type-name">会员额度</div>
                             <div class="balance-type-value membership">¥{{ balanceInfo.membership_balance }}</div>
                             <div v-if="balanceInfo.membership_expire_date" class="balance-expire">
                                 {{ getDaysLeft(balanceInfo.membership_expire_date) }}天后过期
@@ -515,21 +515,30 @@
                         </div>
                         <div class="balance-type-item">
                             <div class="balance-type-icon">💳</div>
-                            <div class="balance-type-name">服务余额</div>
+                            <div class="balance-type-name">服务额度</div>
                             <div class="balance-type-value service">¥{{ balanceInfo.service_balance }}</div>
                         </div>
                         <div class="balance-type-item">
                             <div class="balance-type-icon">🎁</div>
-                            <div class="balance-type-name">赠送余额</div>
+                            <div class="balance-type-name">赠送额度</div>
                             <div class="balance-type-value gift">¥{{ balanceInfo.gift_balance }}</div>
                         </div>
                     </div>
+                    <div v-if="balanceInfo.credit_limit > 0" style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; font-size: var(--font-size-sm);">
+                        <span style="color: var(--text-secondary);">
+                            💳 信用额度: ¥{{ balanceInfo.credit_limit }}
+                            <span v-if="balanceInfo.credit_used > 0" style="color: var(--warning);"> (已用 ¥{{ balanceInfo.credit_used }})</span>
+                        </span>
+                        <span style="color: var(--info); font-weight: 600;">
+                            可用总额: ¥{{ balanceInfo.total_with_credit }}
+                        </span>
+                    </div>
                 </div>
-                
+
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value">¥{{ summary.total_charged }}</div>
-                        <div class="stat-label">累计充值</div>
+                        <div class="stat-label">累计登记</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">¥{{ summary.total_deducted }}</div>
@@ -558,7 +567,7 @@
                 
                 <div class="tabs">
                     <div :class="['tab-item', { active: currentTab === 'transactions' }]" @click="currentTab = 'transactions'">
-                        💰 余额变动
+                        💰 额度变动
                     </div>
                     <div :class="['tab-item', { active: currentTab === 'deduct' }]" @click="currentTab = 'deduct'">
                         📊 抵扣记录
@@ -567,7 +576,7 @@
                 
                 <div v-if="currentTab === 'transactions'" class="records-card">
                     <div v-if="transactions.length === 0" class="empty-state">
-                        暂无余额变动记录
+                        暂无额度变动记录
                     </div>
                     
                     <div v-for="tx in transactions" :key="tx.id" class="record-item">
@@ -759,7 +768,7 @@
                             return;
                         }
                     } catch (e) {
-                        console.error('加载余额失败:', e);
+                        console.error('加载额度信息失败:', e);
                     }
                 };
                 

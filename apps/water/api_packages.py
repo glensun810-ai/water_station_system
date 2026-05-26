@@ -23,75 +23,8 @@ try:
     from main import get_db
     from models_unified import Package, PackageItem, PackageOrder
 except ImportError:
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker, declarative_base
-    from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
-
-    Base = declarative_base()
-
-    class Package(Base):
-        __tablename__ = "packages"
-        id = Column(Integer, primary_key=True, index=True)
-        name = Column(String(200), nullable=False)
-        description = Column(Text)
-        original_price = Column(Float, nullable=False)
-        package_price = Column(Float, nullable=False)
-        discount_rate = Column(Float, default=100)
-        service_types = Column(Text)
-        valid_days = Column(Integer, default=30)
-        max_usage = Column(Integer, default=0)
-        status = Column(String(20), default="active")
-        sort_order = Column(Integer, default=0)
-        created_at = Column(DateTime, default=datetime.now)
-        updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-
-    class PackageItem(Base):
-        __tablename__ = "package_items"
-        id = Column(Integer, primary_key=True, index=True)
-        package_id = Column(Integer, ForeignKey("packages.id"), nullable=False)
-        service_type = Column(String(50), nullable=False)
-        product_id = Column(Integer)
-        product_name = Column(String(200))
-        quantity = Column(Float, nullable=False, default=1)
-        unit = Column(String(50))
-        unit_price = Column(Float)
-        subtotal = Column(Float)
-        note = Column(Text)
-        created_at = Column(DateTime, default=datetime.now)
-
-    class PackageOrder(Base):
-        __tablename__ = "package_orders"
-        id = Column(Integer, primary_key=True, index=True)
-        package_id = Column(Integer, ForeignKey("packages.id"), nullable=False)
-        package_name = Column(String(200))
-        office_id = Column(Integer, nullable=False)
-        office_name = Column(String(200))
-        order_user_id = Column(Integer)
-        order_user_name = Column(String(200))
-        original_price = Column(Float)
-        package_price = Column(Float)
-        saved_amount = Column(Float)
-        status = Column(String(20), default="pending")
-        used_count = Column(Integer, default=0)
-        total_count = Column(Integer, default=1)
-        valid_from = Column(String)
-        valid_until = Column(String)
-        note = Column(Text)
-        created_at = Column(DateTime, default=datetime.now)
-        updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    def get_db():
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    from apps.water.database import get_db
+    from apps.water.models_unified import Package, PackageItem, PackageOrder
 
 
 router = APIRouter(prefix="/api/packages", tags=["package-management"])

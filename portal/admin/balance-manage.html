@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="var(--text-primary)">
-    <title>余额管理</title>
+    <title>额度管理</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <script src="/shared/static/vendor/vue/vue.global.js"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
@@ -585,7 +585,144 @@
             color: var(--warning);
             font-size: var(--font-size-xs);
         }
-        
+
+        .expire-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+
+        .expire-badge.expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .expire-badge.soon {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .expire-badge.ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .user-search-wrapper {
+            position: relative;
+        }
+
+        .user-search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .user-search-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .user-search-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-search-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .user-search-item.selected {
+            background: var(--primary-light);
+        }
+
+        .user-search-item .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-search-item .user-name {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+
+        .user-search-item .user-meta {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+
+        .user-search-item .user-balance {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+        }
+
+        .selected-user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
+        .selected-user-chip .remove-btn {
+            cursor: pointer;
+            font-weight: 700;
+            margin-left: var(--spacing-xs);
+            opacity: 0.7;
+        }
+
+        .selected-user-chip .remove-btn:hover {
+            opacity: 1;
+        }
+
+        .batch-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .batch-preview-table th {
+            background: var(--bg-secondary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .batch-preview-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .batch-preview-table tr.error-row {
+            background: #fef2f2;
+        }
+
+        .batch-preview-table tr.error-row td {
+            color: var(--danger);
+        }
+
         @media (max-width: 1024px) {
             .table-header, .table-row {
                 grid-template-columns: 1fr;
@@ -691,22 +828,30 @@
 </head>
 <body>
     <div id="app" v-cloak>
-        <global-header :breadcrumbs="[{text: '管理中心', url: '/portal/index.html#system-management-section'}, {text: '余额管理', url: '/portal/admin/balance-manage.html'}]"></global-header>
-        
+        <global-header :breadcrumbs="[{text: '管理中心', url: '/portal/index.html#system-management-section'}, {text: '额度管理', url: '/portal/admin/balance-manage.html'}]"></global-header>
+
         <div class="page-container">
             <div class="page-header">
                 <h1 class="page-title">
                     <span>💰</span>
-                    <span>余额管理</span>
+                    <span>额度管理</span>
                 </h1>
                 <div class="header-actions">
-                    <button @click="showGiftModal = true" class="btn btn-success">
+                    <button @click="showRechargeModal = true" class="btn btn-success">
+                        <span>💳</span>
+                        <span>充值确认</span>
+                    </button>
+                    <button @click="showBatchModal = true" class="btn btn-outline">
+                        <span>📋</span>
+                        <span>批量充值</span>
+                    </button>
+                    <button @click="showGiftModal = true" class="btn btn-outline">
                         <span>🎁</span>
-                        <span>赠送余额</span>
+                        <span>赠送额度</span>
                     </button>
                     <button @click="showAdjustModal = true" class="btn btn-primary">
                         <span>⚙️</span>
-                        <span>调整余额</span>
+                        <span>额度调整</span>
                     </button>
                 </div>
             </div>
@@ -721,35 +866,35 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-info">
-                        <div class="stat-label">会员余额总额</div>
+                        <div class="stat-label">会员额度总额</div>
                         <div class="stat-value">¥{{ stats.total_membership_balance }}</div>
                     </div>
                     <div class="stat-icon success">👑</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-info">
-                        <div class="stat-label">服务余额总额</div>
+                        <div class="stat-label">服务额度总额</div>
                         <div class="stat-value">¥{{ stats.total_service_balance }}</div>
                     </div>
                     <div class="stat-icon warning">💳</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-info">
-                        <div class="stat-label">赠送余额总额</div>
+                        <div class="stat-label">赠送额度总额</div>
                         <div class="stat-value">¥{{ stats.total_gift_balance }}</div>
                     </div>
                     <div class="stat-icon primary">🎁</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-info">
-                        <div class="stat-label">总余额</div>
+                        <div class="stat-label">总额度</div>
                         <div class="stat-value">¥{{ stats.total_balance }}</div>
                     </div>
                     <div class="stat-icon success">💰</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-info">
-                        <div class="stat-label">本月充值</div>
+                        <div class="stat-label">本月登记</div>
                         <div class="stat-value">¥{{ stats.month_charged }}</div>
                     </div>
                     <div class="stat-icon primary">📈</div>
@@ -772,10 +917,10 @@
             
             <div class="tabs">
                 <div :class="['tab-item', { active: currentTab === 'accounts' }]" @click="currentTab = 'accounts'">
-                    余额账户
+                    额度账户
                 </div>
                 <div :class="['tab-item', { active: currentTab === 'transactions' }]" @click="currentTab = 'transactions'">
-                    交易记录
+                    变动记录
                 </div>
             </div>
             
@@ -786,7 +931,7 @@
                         <input v-model="searchText" type="text" class="search-input" placeholder="搜索用户名/手机号...">
                     </div>
                     
-                    <input v-model.number="minBalance" type="number" class="filter-select" placeholder="最小余额" style="width: 120px;">
+                    <input v-model.number="minBalance" type="number" class="filter-select" placeholder="最小额度" style="width: 120px;">
                     
                     <button v-if="searchText || minBalance" @click="clearFilters" class="btn btn-outline btn-sm">
                         清空筛选
@@ -799,19 +944,20 @@
                 
                 <div v-if="accounts.length === 0 && !loading" class="empty-state">
                     <div class="empty-icon">💰</div>
-                    <div class="empty-title">暂无余额账户</div>
-                    <div class="empty-desc">当前筛选条件下没有找到余额账户</div>
+                    <div class="empty-title">暂无额度账户</div>
+                    <div class="empty-desc">当前筛选条件下没有找到额度账户</div>
                 </div>
                 
                 <div v-else-if="!isMobile" class="accounts-table">
                     <div class="table-header">
                         <div>用户</div>
                         <div>手机号</div>
-                        <div>会员余额</div>
-                        <div>服务余额</div>
-                        <div>赠送余额</div>
-                        <div>总余额</div>
-                        <div>最后交易</div>
+                        <div>会员额度</div>
+                        <div>服务额度</div>
+                        <div>赠送额度</div>
+                        <div>总额度</div>
+                        <div>信用额度</div>
+                        <div>最后变动</div>
                         <div>操作</div>
                     </div>
 
@@ -822,8 +968,8 @@
                         <div>{{ account.user_phone }}</div>
                         <div>
                             <span class="amount-text success">¥{{ account.membership_balance }}</span>
-                            <span v-if="account.membership_expire_date" class="expire-warning">
-                                ({{ getDaysLeft(account.membership_expire_date) }}天后过期)
+                            <span v-if="account.membership_expire_date" :class="['expire-badge', getExpireBadgeClass(account.membership_expire_date)]">
+                                {{ getExpireBadgeText(account.membership_expire_date) }}
                             </span>
                         </div>
                         <div>
@@ -835,11 +981,18 @@
                         <div>
                             <span class="amount-text success">¥{{ account.total_balance }}</span>
                         </div>
+                        <div>
+                            <span v-if="account.credit_limit > 0" class="amount-text" style="color: var(--info);">¥{{ account.credit_limit }}</span>
+                            <span v-else style="color: var(--text-tertiary);">未开启</span>
+                        </div>
                         <div>{{ formatDate(account.last_transaction_at) || '-' }}</div>
                         <div>
                             <div class="action-buttons">
                                 <button @click="openAdjustForAccount(account)" class="action-btn primary">
                                     调整
+                                </button>
+                                <button @click="openCreditLimitModal(account)" class="action-btn" style="background: var(--info); color: white; border: none;">
+                                    信用
                                 </button>
                                 <button @click="showAccountDetail(account)" class="action-btn secondary">
                                     详情
@@ -860,24 +1013,24 @@
                             </div>
                             <div class="mobile-card-row3">
                                 <div class="mobile-info-item">
-                                    <span class="mobile-info-label">会员余额</span>
+                                    <span class="mobile-info-label">会员额度</span>
                                     <span class="mobile-info-value" style="color: var(--success);">¥{{ account.membership_balance }}</span>
                                 </div>
                                 <div class="mobile-info-item">
-                                    <span class="mobile-info-label">服务余额</span>
+                                    <span class="mobile-info-label">服务额度</span>
                                     <span class="mobile-info-value">¥{{ account.service_balance }}</span>
                                 </div>
                                 <div class="mobile-info-item">
-                                    <span class="mobile-info-label">赠送余额</span>
+                                    <span class="mobile-info-label">赠送额度</span>
                                     <span class="mobile-info-value" style="color: #f59e0b;">¥{{ account.gift_balance }}</span>
                                 </div>
                                 <div class="mobile-info-item">
-                                    <span class="mobile-info-label">总余额</span>
+                                    <span class="mobile-info-label">总额度</span>
                                     <span class="mobile-info-value" style="color: var(--success); font-weight: 700;">¥{{ account.total_balance }}</span>
                                 </div>
                             </div>
                             <div class="mobile-card-row2" style="margin-top: 4px;">
-                                <span class="mobile-card-booking-no">最后交易: {{ formatDate(account.last_transaction_at) || '-' }}</span>
+                                <span class="mobile-card-booking-no">最后变动: {{ formatDate(account.last_transaction_at) || '-' }}</span>
                             </div>
                             <div class="mobile-card-row4">
                                 <button class="mobile-action-btn primary" @click="openAdjustForAccount(account)">调整</button>
@@ -898,12 +1051,12 @@
                 <div class="toolbar">
                     <select v-model="transactionTypeFilter" class="filter-select">
                         <option value="">全部类型</option>
-                        <option value="membership_charge">会员充值</option>
-                        <option value="service_charge">服务充值</option>
-                        <option value="deduct">余额抵扣</option>
-                        <option value="refund">退款</option>
+                        <option value="membership_charge">会员充值登记</option>
+                        <option value="service_charge">服务充值登记</option>
+                        <option value="deduct">额度扣减</option>
+                        <option value="refund">退回登记</option>
                         <option value="gift">赠送</option>
-                        <option value="adjust">管理员调整</option>
+                        <option value="adjust">额度修正</option>
                     </select>
                     
                     <input v-model="startDateFilter" type="date" class="filter-select" style="width: 140px;">
@@ -916,17 +1069,17 @@
                 
                 <div v-if="transactions.length === 0 && !loading" class="empty-state">
                     <div class="empty-icon">📝</div>
-                    <div class="empty-title">暂无交易记录</div>
-                    <div class="empty-desc">当前筛选条件下没有找到交易记录</div>
+                    <div class="empty-title">暂无变动记录</div>
+                    <div class="empty-desc">当前筛选条件下没有找到额度变动记录</div>
                 </div>
                 
                 <div v-else-if="!isMobile" class="accounts-table">
                     <div class="table-header">
                         <div>流水号</div>
                         <div>用户</div>
-                        <div>交易类型</div>
+                        <div>变动类型</div>
                         <div>金额</div>
-                        <div>余额类型</div>
+                        <div>额度类型</div>
                         <div>变动前</div>
                         <div>变动后</div>
                         <div>说明</div>
@@ -996,7 +1149,7 @@
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <span>⚙️</span>
-                        <span>调整余额</span>
+                        <span>调整额度</span>
                     </h3>
                     <button @click="closeAdjustModal" class="modal-close">×</button>
                 </div>
@@ -1004,24 +1157,36 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label required">用户</label>
-                        <input v-model.number="adjustForm.user_id" type="number" class="form-input" placeholder="输入用户ID">
-                        <div v-if="adjustForm.user_id" style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
-                            或在余额账户列表点击"调整"按钮
+                        <div v-if="adjustSelectedUser" class="selected-user-chip" style="margin-bottom: var(--spacing-sm);">
+                            {{ adjustSelectedUser.name }} ({{ adjustSelectedUser.phone }}) - 额度: ¥{{ adjustSelectedUser.total_balance }}
+                            <span class="remove-btn" @click="clearAdjustUser">×</span>
+                        </div>
+                        <div v-else class="user-search-wrapper">
+                            <input v-model="adjustUserSearch" @input="searchUsers('adjust')" @focus="searchUsers('adjust')" @blur="hideAdjustSearch" type="text" class="form-input" placeholder="搜索用户名或手机号...">
+                            <div v-if="adjustSearchResults.length > 0 && adjustShowDropdown" class="user-search-dropdown">
+                                <div v-for="user in adjustSearchResults" :key="user.id" class="user-search-item" @mousedown.prevent="selectAdjustUser(user)">
+                                    <div class="user-info">
+                                        <span class="user-name">{{ user.name }}</span>
+                                        <span class="user-meta">{{ user.phone }} · {{ user.user_type === 'internal' ? '内部' : '外部' }}</span>
+                                    </div>
+                                    <span class="user-balance">¥{{ user.total_balance }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
+
                     <div class="balance-type-toggle">
                         <div :class="['balance-type-option', { active: adjustForm.balance_type === 'membership' }]" @click="adjustForm.balance_type = 'membership'">
-                            会员余额
+                            会员额度
                         </div>
                         <div :class="['balance-type-option', { active: adjustForm.balance_type === 'service' }]" @click="adjustForm.balance_type = 'service'">
-                            服务余额
+                            服务额度
                         </div>
                         <div :class="['balance-type-option', { active: adjustForm.balance_type === 'gift' }]" @click="adjustForm.balance_type = 'gift'">
-                            赠送余额
+                            赠送额度
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label required">调整金额</label>
                         <input v-model.number="adjustForm.amount" type="number" class="form-input" step="0.01" placeholder="正数为增加，负数为减少">
@@ -1029,12 +1194,12 @@
                             例如：100（增加100元）或 -50（减少50元）
                         </div>
                     </div>
-                    
+
                     <div v-if="adjustForm.balance_type === 'membership' && adjustForm.amount > 0" class="form-group">
                         <label class="form-label">过期日期</label>
                         <input v-model="adjustForm.expire_date" type="date" class="form-input">
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">调整说明</label>
                         <textarea v-model="adjustForm.description" class="form-input form-textarea" placeholder="填写调整原因"></textarea>
@@ -1056,17 +1221,32 @@
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <span>🎁</span>
-                        <span>赠送余额</span>
+                        <span>赠送额度</span>
                     </h3>
                     <button @click="closeGiftModal" class="modal-close">×</button>
                 </div>
                 
                 <div class="modal-body">
                     <div class="form-group">
-                        <label class="form-label required">用户ID</label>
-                        <input v-model.number="giftForm.user_id" type="number" class="form-input" placeholder="输入用户ID">
+                        <label class="form-label required">用户</label>
+                        <div v-if="giftSelectedUser" class="selected-user-chip" style="margin-bottom: var(--spacing-sm);">
+                            {{ giftSelectedUser.name }} ({{ giftSelectedUser.phone }}) - 额度: ¥{{ giftSelectedUser.total_balance }}
+                            <span class="remove-btn" @click="clearGiftUser">×</span>
+                        </div>
+                        <div v-else class="user-search-wrapper">
+                            <input v-model="giftUserSearch" @input="searchUsers('gift')" @focus="searchUsers('gift')" @blur="hideGiftSearch" type="text" class="form-input" placeholder="搜索用户名或手机号...">
+                            <div v-if="giftSearchResults.length > 0 && giftShowDropdown" class="user-search-dropdown">
+                                <div v-for="user in giftSearchResults" :key="user.id" class="user-search-item" @mousedown.prevent="selectGiftUser(user)">
+                                    <div class="user-info">
+                                        <span class="user-name">{{ user.name }}</span>
+                                        <span class="user-meta">{{ user.phone }} · {{ user.user_type === 'internal' ? '内部' : '外部' }}</span>
+                                    </div>
+                                    <span class="user-balance">¥{{ user.total_balance }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label required">赠送金额</label>
                         <input v-model.number="giftForm.amount" type="number" class="form-input" step="0.01" min="0" placeholder="赠送金额">
@@ -1088,12 +1268,209 @@
             </div>
         </div>
         
+        <!-- 充值确认弹窗 -->
+        <div v-if="showRechargeModal" class="modal-overlay" @click.self="closeRechargeModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>💳</span>
+                        <span>线下充值确认</span>
+                    </h3>
+                    <button @click="closeRechargeModal" class="modal-close">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div style="font-size: var(--font-size-sm); color: var(--text-tertiary); margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        用户已线下付款给业主方，管理员在此登记确认额度。实际资金不经过系统。
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">用户</label>
+                        <div v-if="rechargeSelectedUser" class="selected-user-chip" style="margin-bottom: var(--spacing-sm);">
+                            {{ rechargeSelectedUser.name }} ({{ rechargeSelectedUser.phone }}) - 额度: ¥{{ rechargeSelectedUser.total_balance }}
+                            <span class="remove-btn" @click="clearRechargeUser">×</span>
+                        </div>
+                        <div v-else class="user-search-wrapper">
+                            <input v-model="rechargeUserSearch" @input="searchUsers('recharge')" @focus="searchUsers('recharge')" @blur="hideRechargeSearch" type="text" class="form-input" placeholder="搜索用户名或手机号...">
+                            <div v-if="rechargeSearchResults.length > 0 && rechargeShowDropdown" class="user-search-dropdown">
+                                <div v-for="user in rechargeSearchResults" :key="user.id" class="user-search-item" @mousedown.prevent="selectRechargeUser(user)">
+                                    <div class="user-info">
+                                        <span class="user-name">{{ user.name }}</span>
+                                        <span class="user-meta">{{ user.phone }} · {{ user.user_type === 'internal' ? '内部' : '外部' }}</span>
+                                    </div>
+                                    <span class="user-balance">¥{{ user.total_balance }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="balance-type-toggle">
+                        <div :class="['balance-type-option', { active: rechargeForm.balance_type === 'membership' }]" @click="rechargeForm.balance_type = 'membership'">
+                            会员额度
+                        </div>
+                        <div :class="['balance-type-option', { active: rechargeForm.balance_type === 'service' }]" @click="rechargeForm.balance_type = 'service'">
+                            服务额度
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">充值金额</label>
+                        <input v-model.number="rechargeForm.amount" type="number" class="form-input" step="0.01" min="0.01" placeholder="用户已付金额（正数）">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">线下付款方式</label>
+                        <select v-model="rechargeForm.payment_method" class="form-input">
+                            <option value="bank_transfer">银行转账</option>
+                            <option value="wechat">微信</option>
+                            <option value="cash">现金</option>
+                            <option value="offline">其他线下方式</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">付款凭证编号（可选）</label>
+                        <input v-model="rechargeForm.payment_reference" type="text" class="form-input" placeholder="如：转账截图文件名或流水号">
+                    </div>
+
+                    <div v-if="rechargeForm.balance_type === 'membership'" class="form-group">
+                        <label class="form-label">过期日期</label>
+                        <input v-model="rechargeForm.expire_date" type="date" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">备注说明</label>
+                        <textarea v-model="rechargeForm.notes" class="form-input form-textarea" placeholder="填写充值备注"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="closeRechargeModal" class="btn btn-outline">取消</button>
+                    <button @click="submitRecharge" class="btn btn-success" :disabled="submitting || !rechargeForm.user_id || !rechargeForm.amount || rechargeForm.amount <= 0">
+                        <span v-if="submitting">处理中...</span>
+                        <span v-else>确认充值登记</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 批量充值弹窗 -->
+        <div v-if="showCreditLimitModal" class="modal-overlay" @click.self="closeCreditLimitModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>💳</span>
+                        <span>设置信用额度</span>
+                    </h3>
+                    <button @click="closeCreditLimitModal" class="modal-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">用户</label>
+                        <div class="selected-user-chip" style="margin-bottom: var(--spacing-sm);">
+                            {{ creditLimitForm.user_name }} ({{ creditLimitForm.user_phone }})
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">信用额度 (元)</label>
+                        <input v-model.number="creditLimitForm.credit_limit" type="number" min="0" step="100" class="form-input" placeholder="输入信用额度，0=不启用信用">
+                        <span style="font-size: var(--font-size-xs); color: var(--text-tertiary);">信用额度允许用户额度不足时透支消费，设置0则不启用</span>
+                    </div>
+                    <div v-if="creditLimitForm.current_credit_used > 0" class="form-group" style="padding: var(--spacing-md); background: var(--warning-light); border-radius: var(--radius-sm);">
+                        <span style="font-size: var(--font-size-sm);">⚠️ 当前已使用信用额度: ¥{{ creditLimitForm.current_credit_used }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeCreditLimitModal" class="btn btn-outline">取消</button>
+                    <button @click="submitCreditLimit" class="btn btn-primary" :disabled="submitting">
+                        <span v-if="submitting">保存中...</span>
+                        <span v-else>保存</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showBatchModal" class="modal-overlay" @click.self="closeBatchModal">
+            <div class="modal large" @click.stop>
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <span>📋</span>
+                        <span>批量线下充值确认</span>
+                    </h3>
+                    <button @click="closeBatchModal" class="modal-close">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div style="font-size: var(--font-size-sm); color: var(--text-tertiary); margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <p style="margin:0 0 8px 0;font-weight:600;">批量导入格式（每行一条，用逗号/Tab分隔）：</p>
+                        <code style="font-size:12px;">用户ID或手机号, 金额, 额度类型, 付款方式, 备注</code>
+                        <p style="margin:8px 0 0 0;font-size:12px;">额度类型: membership/service | 付款方式: bank_transfer/wechat/cash/offline（可选，默认bank_transfer）</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">粘贴数据</label>
+                        <textarea v-model="batchInputText" class="form-input form-textarea" rows="6" placeholder="粘贴CSV/TSV数据，每行一条...&#10;例如：&#10;13800138000, 500, membership, wechat, 1月会员费&#10;1002, 300, service, bank_transfer"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">全局备注（可选）</label>
+                        <input v-model="batchGlobalNotes" type="text" class="form-input" placeholder="如：2026年1月批量充值">
+                    </div>
+
+                    <button @click="parseBatchInput" class="btn btn-outline btn-sm" :disabled="!batchInputText.trim()">
+                        解析预览
+                    </button>
+
+                    <div v-if="batchPreviewItems.length > 0" style="margin-top: var(--spacing-lg);">
+                        <div style="font-weight:600;margin-bottom:8px;">预览 ({{ batchPreviewItems.length }} 条)</div>
+                        <div style="max-height:300px;overflow-y:auto;">
+                            <table class="batch-preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>用户ID/手机号</th>
+                                        <th>金额</th>
+                                        <th>额度类型</th>
+                                        <th>付款方式</th>
+                                        <th>备注</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in batchPreviewItems" :key="idx" :class="{ 'error-row': item._error }">
+                                        <td>{{ idx + 1 }}</td>
+                                        <td>{{ item.user_id }}</td>
+                                        <td>¥{{ item.amount }}</td>
+                                        <td>{{ item.balance_type === 'membership' ? '会员' : '服务' }}</td>
+                                        <td>{{ item.payment_method || 'bank_transfer' }}</td>
+                                        <td>{{ item.notes || '-' }}</td>
+                                        <td>
+                                            <span v-if="item._error" style="color:var(--danger);">{{ item._error }}</span>
+                                            <span v-else style="color:var(--success);">✓</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="closeBatchModal" class="btn btn-outline">取消</button>
+                    <button @click="submitBatchRecharge" class="btn btn-success" :disabled="submitting || batchPreviewItems.length === 0 || batchHasErrors">
+                        <span v-if="submitting">处理中...</span>
+                        <span v-else>确认批量充值 ({{ validBatchCount }}条)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal">
             <div class="modal large" @click.stop>
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <span>💰</span>
-                        <span>余额详情</span>
+                        <span>额度详情</span>
                     </h3>
                     <button @click="closeDetailModal" class="modal-close">×</button>
                 </div>
@@ -1120,34 +1497,34 @@
                         <div class="detail-section">
                             <div class="detail-section-title">
                                 <span>💰</span>
-                                <span>余额信息</span>
+                                <span>额度信息</span>
                             </div>
                             <div class="detail-grid">
                                 <div class="detail-item">
-                                    <div class="detail-label">会员余额</div>
+                                    <div class="detail-label">会员额度</div>
                                     <div class="detail-value highlight">¥{{ accountDetail.account.membership_balance }}</div>
                                     <div v-if="accountDetail.account.membership_expire_date" style="font-size: var(--font-size-xs); color: var(--text-tertiary);">
                                         过期日期：{{ accountDetail.account.membership_expire_date }}
                                     </div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">服务余额</div>
+                                    <div class="detail-label">服务额度</div>
                                     <div class="detail-value">¥{{ accountDetail.account.service_balance }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">赠送余额</div>
+                                    <div class="detail-label">赠送额度</div>
                                     <div class="detail-value">¥{{ accountDetail.account.gift_balance }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">总余额</div>
+                                    <div class="detail-label">总额度</div>
                                     <div class="detail-value highlight">¥{{ accountDetail.account.total_balance }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">累计会员充值</div>
+                                    <div class="detail-label">累计会员登记</div>
                                     <div class="detail-value">¥{{ accountDetail.account.total_membership_charged }}</div>
                                 </div>
                                 <div class="detail-item">
-                                    <div class="detail-label">累计服务充值</div>
+                                    <div class="detail-label">累计服务登记</div>
                                     <div class="detail-value">¥{{ accountDetail.account.total_service_charged }}</div>
                                 </div>
                                 <div class="detail-item">
@@ -1162,7 +1539,7 @@
                             
                             <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--primary-light); border-radius: var(--radius-md);">
                                 <div style="font-size: var(--font-size-sm); color: var(--primary); font-weight: 600;">
-                                    可用余额：会员 ¥{{ accountDetail.available.membership }} + 服务 ¥{{ accountDetail.available.service }} + 赠送 ¥{{ accountDetail.available.gift }} = ¥{{ accountDetail.available.total }}
+                                    可用额度：会员 ¥{{ accountDetail.available.membership }} + 服务 ¥{{ accountDetail.available.service }} + 赠送 ¥{{ accountDetail.available.gift }} = ¥{{ accountDetail.available.total }}
                                 </div>
                             </div>
                         </div>
@@ -1212,7 +1589,7 @@
                 <div class="modal-footer">
                     <button @click="closeDetailModal" class="btn btn-outline">关闭</button>
                     <button @click="openAdjustForAccountDetail" class="btn btn-primary">
-                        调整余额
+                        调整额度
                     </button>
                 </div>
             </div>
@@ -1268,15 +1645,26 @@
                 
                 const showAdjustModal = ref(false);
                 const showGiftModal = ref(false);
+                const showRechargeModal = ref(false);
                 const showDetailModal = ref(false);
                 const accountDetail = ref(null);
                 const submitting = ref(false);
-                
+
                 const adjustForm = ref({
                     user_id: null,
                     amount: null,
                     balance_type: 'membership',
                     description: '',
+                    expire_date: ''
+                });
+
+                const rechargeForm = ref({
+                    user_id: null,
+                    amount: null,
+                    balance_type: 'membership',
+                    payment_method: 'bank_transfer',
+                    payment_reference: '',
+                    notes: '',
                     expire_date: ''
                 });
                 
@@ -1285,7 +1673,45 @@
                     amount: null,
                     description: ''
                 });
-                
+
+                // User search state - for each modal
+                const adjustUserSearch = ref('');
+                const adjustSearchResults = ref([]);
+                const adjustShowDropdown = ref(false);
+                const adjustSelectedUser = ref(null);
+
+                const giftUserSearch = ref('');
+                const giftSearchResults = ref([]);
+                const giftShowDropdown = ref(false);
+                const giftSelectedUser = ref(null);
+
+                const rechargeUserSearch = ref('');
+                const rechargeSearchResults = ref([]);
+                const rechargeShowDropdown = ref(false);
+                const rechargeSelectedUser = ref(null);
+
+                // Batch import state
+                const showBatchModal = ref(false);
+                const showCreditLimitModal = ref(false);
+                const creditLimitForm = ref({
+                    user_id: null,
+                    user_name: '',
+                    user_phone: '',
+                    credit_limit: 0,
+                    current_credit_used: 0,
+                });
+                const batchInputText = ref('');
+                const batchGlobalNotes = ref('');
+                const batchPreviewItems = ref([]);
+
+                const batchHasErrors = computed(() => {
+                    return batchPreviewItems.value.some(item => item._error);
+                });
+
+                const validBatchCount = computed(() => {
+                    return batchPreviewItems.value.filter(item => !item._error).length;
+                });
+
                 const toast = ref({ show: false, type: 'success', message: '' });
                 
                 const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1/admin/balance`;
@@ -1442,6 +1868,12 @@
                         description: '',
                         expire_date: ''
                     };
+                    adjustSelectedUser.value = {
+                        id: account.user_id,
+                        name: account.user_name,
+                        phone: account.user_phone,
+                        total_balance: account.total_balance
+                    };
                     showAdjustModal.value = true;
                 };
                 
@@ -1453,6 +1885,12 @@
                             balance_type: 'membership',
                             description: '',
                             expire_date: ''
+                        };
+                        adjustSelectedUser.value = {
+                            id: accountDetail.value.user.id,
+                            name: accountDetail.value.user.name,
+                            phone: accountDetail.value.user.phone,
+                            total_balance: accountDetail.value.account.total_balance
                         };
                         showDetailModal.value = false;
                         showAdjustModal.value = true;
@@ -1468,8 +1906,11 @@
                         description: '',
                         expire_date: ''
                     };
+                    adjustSelectedUser.value = null;
+                    adjustUserSearch.value = '';
+                    adjustSearchResults.value = [];
                 };
-                
+
                 const closeGiftModal = () => {
                     showGiftModal.value = false;
                     giftForm.value = {
@@ -1477,11 +1918,30 @@
                         amount: null,
                         description: ''
                     };
+                    giftSelectedUser.value = null;
+                    giftUserSearch.value = '';
+                    giftSearchResults.value = [];
                 };
-                
+
                 const closeDetailModal = () => {
                     showDetailModal.value = false;
                     accountDetail.value = null;
+                };
+
+                const closeRechargeModal = () => {
+                    showRechargeModal.value = false;
+                    rechargeForm.value = {
+                        user_id: null,
+                        amount: null,
+                        balance_type: 'membership',
+                        payment_method: 'bank_transfer',
+                        payment_reference: '',
+                        notes: '',
+                        expire_date: ''
+                    };
+                    rechargeSelectedUser.value = null;
+                    rechargeUserSearch.value = '';
+                    rechargeSearchResults.value = [];
                 };
                 
                 const submitAdjust = async () => {
@@ -1496,7 +1956,7 @@
                         
                         if (response.ok) {
                             const data = await response.json();
-                            showToast('success', `余额调整成功，${adjustForm.value.amount >= 0 ? '增加' : '减少'} ¥${Math.abs(adjustForm.value.amount)}`);
+                            showToast('success', `额度调整成功，${adjustForm.value.amount >= 0 ? '增加' : '减少'} ¥${Math.abs(adjustForm.value.amount)}`);
                             closeAdjustModal();
                             await loadStats();
                             await loadAccounts();
@@ -1539,7 +1999,254 @@
                         submitting.value = false;
                     }
                 };
-                
+
+                const submitRecharge = async () => {
+                    try {
+                        submitting.value = true;
+
+                        const response = await authFetch(`${API_BASE}/recharge`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(rechargeForm.value)
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            showToast('success', `充值确认成功，登记 ¥${rechargeForm.value.amount} 到${rechargeForm.value.balance_type === 'membership' ? '会员' : '服务'}额度`);
+                            closeRechargeModal();
+                            await loadStats();
+                            await loadAccounts();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '充值确认失败');
+                        }
+                    } catch (e) {
+                        console.error('充值确认失败:', e);
+                        showToast('error', '充值确认失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                // ── User search ──
+                const searchUsers = async (context) => {
+                    const searchMap = {
+                        adjust: { results: adjustSearchResults, show: adjustShowDropdown, text: adjustUserSearch },
+                        gift: { results: giftSearchResults, show: giftShowDropdown, text: giftUserSearch },
+                        recharge: { results: rechargeSearchResults, show: rechargeShowDropdown, text: rechargeUserSearch }
+                    };
+                    const state = searchMap[context];
+                    if (!state || !state.text.value.trim()) {
+                        if (state) { state.results.value = []; state.show.value = false; }
+                        return;
+                    }
+
+                    try {
+                        const response = await authFetch(`${API_BASE}/users/search?q=${encodeURIComponent(state.text.value)}&limit=10`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            state.results.value = data.users || [];
+                            state.show.value = (data.users || []).length > 0;
+                        }
+                    } catch (e) {
+                        console.error('搜索用户失败:', e);
+                    }
+                };
+
+                const selectAdjustUser = (user) => {
+                    adjustSelectedUser.value = user;
+                    adjustForm.value.user_id = user.id;
+                    adjustUserSearch.value = '';
+                    adjustSearchResults.value = [];
+                    adjustShowDropdown.value = false;
+                };
+                const clearAdjustUser = () => {
+                    adjustSelectedUser.value = null;
+                    adjustForm.value.user_id = null;
+                    adjustUserSearch.value = '';
+                };
+                const hideAdjustSearch = () => {
+                    setTimeout(() => { adjustShowDropdown.value = false; }, 200);
+                };
+
+                const selectGiftUser = (user) => {
+                    giftSelectedUser.value = user;
+                    giftForm.value.user_id = user.id;
+                    giftUserSearch.value = '';
+                    giftSearchResults.value = [];
+                    giftShowDropdown.value = false;
+                };
+                const clearGiftUser = () => {
+                    giftSelectedUser.value = null;
+                    giftForm.value.user_id = null;
+                    giftUserSearch.value = '';
+                };
+                const hideGiftSearch = () => {
+                    setTimeout(() => { giftShowDropdown.value = false; }, 200);
+                };
+
+                const selectRechargeUser = (user) => {
+                    rechargeSelectedUser.value = user;
+                    rechargeForm.value.user_id = user.id;
+                    rechargeUserSearch.value = '';
+                    rechargeSearchResults.value = [];
+                    rechargeShowDropdown.value = false;
+                };
+                const clearRechargeUser = () => {
+                    rechargeSelectedUser.value = null;
+                    rechargeForm.value.user_id = null;
+                    rechargeUserSearch.value = '';
+                };
+                const hideRechargeSearch = () => {
+                    setTimeout(() => { rechargeShowDropdown.value = false; }, 200);
+                };
+
+                // ── Batch import ──
+                const parseBatchInput = () => {
+                    batchPreviewItems.value = [];
+                    const text = batchInputText.value.trim();
+                    if (!text) return;
+
+                    const lines = text.split('\n').filter(line => line.trim());
+                    for (const line of lines) {
+                        const parts = line.split(/[,\t]+/).map(s => s.trim()).filter(s => s);
+                        if (parts.length < 2) {
+                            batchPreviewItems.value.push({ user_id: line.substring(0, 20), amount: 0, balance_type: 'service', payment_method: 'bank_transfer', notes: '', _error: '格式错误：至少需要用户ID和金额' });
+                            continue;
+                        }
+
+                        const item = {
+                            user_id: isNaN(parseInt(parts[0])) ? parts[0] : parseInt(parts[0]),
+                            amount: parseFloat(parts[1]) || 0,
+                            balance_type: parts[2] || 'service',
+                            payment_method: parts[3] || 'bank_transfer',
+                            notes: parts.slice(4).join(' ') || '',
+                            _error: null
+                        };
+
+                        if (item.amount <= 0) {
+                            item._error = '金额必须大于0';
+                        }
+
+                        const validBalanceTypes = ['membership', 'service'];
+                        if (!validBalanceTypes.includes(item.balance_type)) {
+                            item.balance_type = 'service';
+                        }
+
+                        batchPreviewItems.value.push(item);
+                    }
+                };
+
+                const submitBatchRecharge = async () => {
+                    try {
+                        submitting.value = true;
+                        const validItems = batchPreviewItems.value.filter(item => !item._error);
+                        if (validItems.length === 0) {
+                            showToast('error', '没有有效的充值条目');
+                            return;
+                        }
+
+                        const payload = {
+                            items: validItems.map(item => ({
+                                user_id: typeof item.user_id === 'string' ? item.user_id : item.user_id,
+                                amount: item.amount,
+                                balance_type: item.balance_type,
+                                payment_method: item.payment_method,
+                                notes: item.notes || undefined
+                            })),
+                            global_notes: batchGlobalNotes.value || undefined
+                        };
+
+                        const response = await authFetch(`${API_BASE}/batch-recharge`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            showToast('success', `批量充值完成：成功 ${data.success_count} 条${data.failed_count > 0 ? '，失败 ' + data.failed_count + ' 条' : ''}`);
+                            closeBatchModal();
+                            await loadStats();
+                            await loadAccounts();
+                        } else {
+                            const error = await response.json();
+                            showToast('error', error.detail || '批量充值失败');
+                        }
+                    } catch (e) {
+                        console.error('批量充值失败:', e);
+                        showToast('error', '批量充值失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                const closeBatchModal = () => {
+                    showBatchModal.value = false;
+                    batchInputText.value = '';
+                    batchGlobalNotes.value = '';
+                    batchPreviewItems.value = [];
+                };
+
+                // ── Credit limit ──
+                const openCreditLimitModal = (account) => {
+                    creditLimitForm.value = {
+                        user_id: account.user_id,
+                        user_name: account.user_name,
+                        user_phone: account.user_phone || '',
+                        credit_limit: account.credit_limit || 0,
+                        current_credit_used: account.credit_used || 0,
+                    };
+                    showCreditLimitModal.value = true;
+                };
+
+                const closeCreditLimitModal = () => {
+                    showCreditLimitModal.value = false;
+                };
+
+                const submitCreditLimit = async () => {
+                    if (submitting.value) return;
+                    submitting.value = true;
+                    try {
+                        const response = await authFetch(`${API_BASE}/admin/balance/credit-limit`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                user_id: creditLimitForm.value.user_id,
+                                credit_limit: creditLimitForm.value.credit_limit,
+                            }),
+                        });
+                        if (response.ok) {
+                            closeCreditLimitModal();
+                            await loadAccounts();
+                        }
+                    } catch (e) {
+                        console.error('设置信用额度失败:', e);
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                // ── Expiry badge ──
+                const getExpireBadgeClass = (expireDateStr) => {
+                    if (!expireDateStr) return '';
+                    const expireDate = new Date(expireDateStr);
+                    const now = new Date();
+                    const days = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
+                    if (days <= 0) return 'expired';
+                    if (days <= 30) return 'soon';
+                    return 'ok';
+                };
+
+                const getExpireBadgeText = (expireDateStr) => {
+                    if (!expireDateStr) return '';
+                    const expireDate = new Date(expireDateStr);
+                    const now = new Date();
+                    const days = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
+                    if (days <= 0) return '已过期';
+                    if (days <= 30) return `${days}天后过期`;
+                    return expireDateStr;
+                };
+
                 watch(currentTab, (newTab) => {
                     if (newTab === 'accounts') {
                         loadAccounts();
@@ -1591,12 +2298,56 @@
                     transactionsTotal,
                     showAdjustModal,
                     showGiftModal,
+                    showRechargeModal,
+                    showBatchModal,
+                    showCreditLimitModal,
+                    creditLimitForm,
                     showDetailModal,
                     accountDetail,
                     submitting,
                     adjustForm,
+                    rechargeForm,
                     giftForm,
                     toast,
+                    // User search
+                    adjustUserSearch,
+                    adjustSearchResults,
+                    adjustShowDropdown,
+                    adjustSelectedUser,
+                    giftUserSearch,
+                    giftSearchResults,
+                    giftShowDropdown,
+                    giftSelectedUser,
+                    rechargeUserSearch,
+                    rechargeSearchResults,
+                    rechargeShowDropdown,
+                    rechargeSelectedUser,
+                    searchUsers,
+                    selectAdjustUser,
+                    clearAdjustUser,
+                    hideAdjustSearch,
+                    selectGiftUser,
+                    clearGiftUser,
+                    hideGiftSearch,
+                    selectRechargeUser,
+                    clearRechargeUser,
+                    hideRechargeSearch,
+                    // Batch
+                    batchInputText,
+                    batchGlobalNotes,
+                    batchPreviewItems,
+                    batchHasErrors,
+                    validBatchCount,
+                    parseBatchInput,
+                    submitBatchRecharge,
+                    closeBatchModal,
+                    openCreditLimitModal,
+                    closeCreditLimitModal,
+                    submitCreditLimit,
+                    // Expiry
+                    getExpireBadgeClass,
+                    getExpireBadgeText,
+                    // Original
                     formatDate,
                     getDaysLeft,
                     loadAccounts,
@@ -1611,9 +2362,11 @@
                     openAdjustForAccountDetail,
                     closeAdjustModal,
                     closeGiftModal,
+                    closeRechargeModal,
                     closeDetailModal,
                     submitAdjust,
-                    submitGift
+                    submitGift,
+                    submitRecharge
                 };
             }
         }).mount('#app');

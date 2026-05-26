@@ -6,7 +6,9 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Ind
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 
-# 独立声明 Base，避免导入 main.py 引发循环依赖
+# 使用集中式水服务数据库连接
+from .database import engine, SessionLocal
+
 Base = declarative_base()
 
 

@@ -33,7 +33,7 @@ class User(Base):
         String(50), default="user", comment="角色：super_admin/admin/office_admin/user"
     )
     password_hash = Column(String(255), nullable=True)
-    balance_credit = Column(Float, default=0)
+    balance_credit = Column(Float, default=0, comment="DEPRECATED: 旧版简单余额字段，请使用 UserBalanceAccount (models/user_balance.py) 替代。迁移后此字段仅用于向后兼容读取。")
     is_active = Column(Integer, default=1)
     user_type = Column(
         String(20), default="internal", comment="用户类型：internal/external"

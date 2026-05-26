@@ -18,11 +18,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from datetime import datetime
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 使用集中式水服务数据库连接
+from .database import engine, SessionLocal
+
 Base = declarative_base()
 
 

@@ -1,37 +1,26 @@
 """
 Unified Order API - 统一订单管理接口
 支持先用后付和先付后用两种模式的统一管理
+已集成 UserBalanceAccount 额度抵扣
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from typing import Optional, List, Dict
 from datetime import datetime
+from decimal import Decimal
 import random
 import json
 
-# 本地定义 get_db，避免与 main.py 循环导入
-SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+# 使用集中式水服务数据库连接
+from apps.water.database import get_db
 
 from models_unified_order import UnifiedOrder, UnifiedTransaction
 from models_unified import AccountWallet, PromotionConfigV2, TransactionV2
 from api_admin_auth import get_current_user
 from models.user import User
+from models.user_balance import UserBalanceAccount, BalanceDeductRecord, BalanceTransaction, TransactionType, BalanceType
+from config.database import SessionLocal as MainSessionLocal
 
 router = APIRouter(prefix="/api/unified", tags=["统一订单管理"])
 
@@ -415,6 +404,133 @@ def pay_order(
     }
 
 
+def deduct_water_order_from_balance(
+    user_id: int,
+    order_no: str,
+    order_id: int,
+    total_amount: float,
+    product_name: str = "",
+) -> dict:
+    """
+    尝试从 UserBalanceAccount 扣减用水订单金额。
+    优先级: 会员额度 → 服务额度 → 赠送额度 → 记账(不扣)
+
+    Returns:
+        {deducted: float, membership_deduct: float, service_deduct: float,
+         gift_deduct: float, remaining: float, deduct_record_id: int|None}
+    """
+    if total_amount <= 0:
+        return {"deducted": 0, "membership_deduct": 0, "service_deduct": 0,
+                "gift_deduct": 0, "remaining": total_amount, "deduct_record_id": None}
+
+    main_db = MainSessionLocal()
+    try:
+        balance_account = main_db.query(UserBalanceAccount).filter(
+            UserBalanceAccount.user_id == user_id
+        ).first()
+
+        if not balance_account:
+            return {"deducted": 0, "membership_deduct": 0, "service_deduct": 0,
+                    "gift_deduct": 0, "remaining": total_amount, "deduct_record_id": None}
+
+        available = balance_account.get_available_balance()
+        available_total = available["total"]
+
+        if available_total <= 0:
+            return {"deducted": 0, "membership_deduct": 0, "service_deduct": 0,
+                    "gift_deduct": 0, "remaining": total_amount, "deduct_record_id": None}
+
+        remaining = Decimal(str(total_amount))
+        membership_deduct = Decimal(0)
+        service_deduct = Decimal(0)
+        gift_deduct = Decimal(0)
+
+        # 优先级扣减: 会员 → 服务 → 赠送
+        avail_membership = Decimal(str(available["membership"]))
+        avail_service = Decimal(str(available["service"]))
+        avail_gift = Decimal(str(available["gift"]))
+
+        if avail_membership > 0 and remaining > 0:
+            membership_deduct = min(remaining, avail_membership)
+            remaining -= membership_deduct
+            balance_account.membership_balance -= membership_deduct
+
+        if avail_service > 0 and remaining > 0:
+            service_deduct = min(remaining, avail_service)
+            remaining -= service_deduct
+            balance_account.service_balance -= service_deduct
+
+        if avail_gift > 0 and remaining > 0:
+            gift_deduct = min(remaining, avail_gift)
+            remaining -= gift_deduct
+            balance_account.gift_balance -= gift_deduct
+
+        total_deducted = membership_deduct + service_deduct + gift_deduct
+
+        if total_deducted <= 0:
+            return {"deducted": 0, "membership_deduct": 0, "service_deduct": 0,
+                    "gift_deduct": 0, "remaining": total_amount, "deduct_record_id": None}
+
+        # 记录快照
+        before_total = balance_account.total_balance
+        balance_account.update_total_balance()
+        balance_account.total_deducted += total_deducted
+        balance_account.last_transaction_at = datetime.now()
+
+        # 创建抵扣记录
+        deduct_record = BalanceDeductRecord(
+            deduct_no=f"WD{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            user_id=user_id,
+            order_type="water",
+            order_id=order_id,
+            order_no=order_no,
+            total_amount=Decimal(str(total_amount)),
+            membership_deduct=membership_deduct,
+            service_deduct=service_deduct,
+            gift_deduct=gift_deduct,
+            cash_amount=remaining,
+            description=f"用水订单 {order_no} - {product_name}" if product_name else f"用水订单 {order_no}",
+        )
+        main_db.add(deduct_record)
+        main_db.flush()
+
+        # 创建交易记录
+        transaction = BalanceTransaction(
+            transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            user_id=user_id,
+            transaction_type=TransactionType.DEDUCT,
+            amount=-total_deducted,
+            balance_type=None,
+            before_membership_balance=Decimal(str(available["membership"])) + membership_deduct - membership_deduct,
+            before_service_balance=Decimal(str(available["service"])) + service_deduct - service_deduct,
+            before_gift_balance=Decimal(str(available["gift"])) + gift_deduct - gift_deduct,
+            before_total_balance=before_total,
+            after_membership_balance=balance_account.membership_balance,
+            after_service_balance=balance_account.service_balance,
+            after_gift_balance=balance_account.gift_balance,
+            after_total_balance=balance_account.total_balance,
+            reference_type="water_order",
+            reference_no=order_no,
+            description=f"用水订单额度抵扣 - {order_no}",
+        )
+        main_db.add(transaction)
+        main_db.commit()
+
+        return {
+            "deducted": float(total_deducted),
+            "membership_deduct": float(membership_deduct),
+            "service_deduct": float(service_deduct),
+            "gift_deduct": float(gift_deduct),
+            "remaining": float(remaining),
+            "deduct_record_id": deduct_record.id,
+        }
+    except Exception as e:
+        main_db.rollback()
+        raise
+    finally:
+        main_db.close()
+
+
 def process_prepaid_payment(db: Session, order: UnifiedOrder, user_id: int):
     """
     预付钱包扣款 - 严格遵循"先扣付费，后扣赠送"原则
@@ -464,21 +580,38 @@ def process_prepaid_payment(db: Session, order: UnifiedOrder, user_id: int):
 
 def process_credit_payment(db: Session, order: UnifiedOrder, user_id: int):
     """
-    信用支付 - 创建待结算交易记录
+    信用支付 - 优先使用 UserBalanceAccount 额度抵扣，剩余部分创建待结算交易记录
     """
-    # 创建信用交易记录
+    # 尝试从 UserBalanceAccount 扣减额度
+    balance_result = None
+    try:
+        balance_result = deduct_water_order_from_balance(
+            user_id=user_id,
+            order_no=order.order_no,
+            order_id=order.id,
+            total_amount=order.total_amount,
+            product_name="",
+        )
+    except Exception as e:
+        # 额度扣减失败不阻塞订单支付
+        pass
+
+    deducted_amount = balance_result["deducted"] if balance_result else 0
+    remaining_amount = order.total_amount - deducted_amount
+
+    # 创建信用交易记录（仅记录未抵扣部分）
     transaction = TransactionV2(
         user_id=user_id,
         product_id=order.product_id,
         quantity=order.quantity,
         unit_price=order.unit_price,
-        actual_price=order.total_amount,
+        actual_price=remaining_amount,
         mode="credit",
         wallet_type="credit",
         status="pending",
         settlement_status="pending",
-        paid_amount=0.0,
-        remaining_amount=order.total_amount,
+        paid_amount=deducted_amount,
+        remaining_amount=remaining_amount,
         note=f"unified_order:{order.id}",
     )
 
@@ -488,7 +621,9 @@ def process_credit_payment(db: Session, order: UnifiedOrder, user_id: int):
     return {
         "transaction_id": transaction.id,
         "settlement_date": get_next_settlement_date(),
-        "amount": order.total_amount,
+        "amount": remaining_amount,
+        "balance_deducted": deducted_amount,
+        **({k: balance_result[k] for k in ("membership_deduct", "service_deduct", "gift_deduct")} if balance_result else {}),
     }
 
 

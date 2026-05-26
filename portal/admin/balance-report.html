@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="var(--text-primary)">
+    <title>额度统计报表</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <script src="/shared/static/vendor/vue/vue.global.js"></script>
+    <link rel="stylesheet" href="../assets/css/design-system.css">
+    <link rel="stylesheet" href="../components/GlobalHeader.css">
+    <script src="../components/GlobalHeader.js"></script>
+    <script src="/shared/utils/auth-fetch.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .stat-card-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .stat-card-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 800;
+        }
+
+        .stat-card-change {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-xs);
+        }
+
+        .change-up { color: var(--success); }
+        .change-down { color: var(--danger); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .card-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .card-body {
+            padding: var(--spacing-lg);
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .bar-label {
+            width: 80px;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 28px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: var(--radius-sm);
+            transition: width 0.6s ease;
+        }
+
+        .bar-value {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .amount-success { color: var(--success); font-weight: 600; }
+        .amount-danger { color: var(--danger); font-weight: 600; }
+        .amount-warning { color: var(--warning); font-weight: 600; }
+
+        .filter-bar {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .filter-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: white;
+        }
+
+        .section-spacer {
+            margin-top: var(--spacing-xl);
+        }
+
+        .load-more-btn {
+            text-align: center;
+            padding: var(--spacing-md);
+            color: var(--primary);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-3xl);
+            color: var(--text-secondary);
+        }
+
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .pie-legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .pie-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .page-container {
+                padding: var(--spacing-sm);
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-sm);
+            }
+            .stat-card {
+                padding: var(--spacing-md);
+            }
+            .stat-card-value {
+                font-size: var(--font-size-xl);
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <global-header :breadcrumbs="[{text: '管理中心', url: '/portal/index.html#system-management-section'}, {text: '额度统计报表', url: '/portal/admin/balance-report.html'}]"></global-header>
+
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span>📊</span>
+                    <span>额度统计报表</span>
+                </h1>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" @click="refreshData">🔄 刷新</button>
+                </div>
+            </div>
+
+            <div v-if="loading" style="text-align: center; padding: var(--spacing-3xl);">
+                <p>加载中...</p>
+            </div>
+
+            <template v-else>
+                <!-- Stats Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-label">总用户数</div>
+                        <div class="stat-card-value">{{ stats.total_users }}</div>
+                        <div class="stat-card-change">拥有额度账户</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">系统总额度</div>
+                        <div class="stat-card-value" style="color: var(--primary);">¥{{ formatAmount(stats.total_balance) }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">累计登记</div>
+                        <div class="stat-card-value" style="color: var(--success);">¥{{ formatAmount(stats.total_membership_charged + stats.total_service_charged) }}</div>
+                        <div class="stat-card-change">
+                            会员: ¥{{ formatAmount(stats.total_membership_charged) }} | 服务: ¥{{ formatAmount(stats.total_service_charged) }}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">累计抵扣</div>
+                        <div class="stat-card-value" style="color: var(--warning);">¥{{ formatAmount(stats.total_deducted) }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">本月登记</div>
+                        <div class="stat-card-value" style="color: var(--success);">¥{{ formatAmount(stats.month_charged) }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">本月抵扣</div>
+                        <div class="stat-card-value" style="color: var(--danger);">¥{{ formatAmount(stats.month_deducted) }}</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 额度类型分布</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="bar-chart">
+                                <div class="bar-row">
+                                    <span class="bar-label">会员额度</span>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" style="background: var(--success);" :style="{ width: balanceTypePercent('membership') + '%' }"></div>
+                                        <span class="bar-value">¥{{ formatAmount(stats.total_membership_balance) }}</span>
+                                    </div>
+                                </div>
+                                <div class="bar-row">
+                                    <span class="bar-label">服务额度</span>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" style="background: var(--primary);" :style="{ width: balanceTypePercent('service') + '%' }"></div>
+                                        <span class="bar-value">¥{{ formatAmount(stats.total_service_balance) }}</span>
+                                    </div>
+                                </div>
+                                <div class="bar-row">
+                                    <span class="bar-label">赠送额度</span>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" style="background: var(--warning);" :style="{ width: balanceTypePercent('gift') + '%' }"></div>
+                                        <span class="bar-value">¥{{ formatAmount(stats.total_gift_balance) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pie-legend">
+                                <div class="pie-legend-item">
+                                    <div class="pie-dot" style="background: var(--success);"></div>
+                                    会员额度 {{ balanceTypePercent('membership') }}%
+                                </div>
+                                <div class="pie-legend-item">
+                                    <div class="pie-dot" style="background: var(--primary);"></div>
+                                    服务额度 {{ balanceTypePercent('service') }}%
+                                </div>
+                                <div class="pie-legend-item">
+                                    <div class="pie-dot" style="background: var(--warning);"></div>
+                                    赠送额度 {{ balanceTypePercent('gift') }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">💳 抵扣除情况</div>
+                        </div>
+                        <div class="card-body">
+                            <div style="text-align: center; padding: var(--spacing-lg);">
+                                <div style="font-size: var(--font-size-4xl); font-weight: 800; color: var(--info);">
+                                    {{ deductionRatio() }}%
+                                </div>
+                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-sm);">
+                                    累计抵扣率（抵扣 / 登记）
+                                </div>
+                            </div>
+                            <div class="bar-chart">
+                                <div class="bar-row">
+                                    <span class="bar-label">累计登记</span>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" style="background: var(--success); width: 100%;"></div>
+                                        <span class="bar-value">¥{{ formatAmount(stats.total_membership_charged + stats.total_service_charged) }}</span>
+                                    </div>
+                                </div>
+                                <div class="bar-row">
+                                    <span class="bar-label">累计抵扣</span>
+                                    <div class="bar-track">
+                                        <div class="bar-fill" style="background: var(--warning);" :style="{ width: deductionRatio() + '%' }"></div>
+                                        <span class="bar-value">¥{{ formatAmount(stats.total_deducted) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Balance Ranking -->
+                <div class="card section-spacer">
+                    <div class="card-header">
+                        <div class="card-title">🏆 用户额度排行（前20）</div>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">排名</th>
+                                        <th>用户</th>
+                                        <th>会员额度</th>
+                                        <th>服务额度</th>
+                                        <th>赠送额度</th>
+                                        <th>总额度</th>
+                                        <th>累计登记</th>
+                                        <th>累计抵扣</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(acct, idx) in topAccounts" :key="acct.user_id">
+                                        <td>
+                                            <span v-if="idx < 3" style="font-size: 20px;">{{ ['🥇','🥈','🥉'][idx] }}</span>
+                                            <span v-else>{{ idx + 1 }}</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight: 600;">{{ acct.user_name }}</div>
+                                            <div style="font-size: var(--font-size-xs); color: var(--text-tertiary);">{{ acct.user_phone }}</div>
+                                        </td>
+                                        <td class="amount-success">¥{{ formatAmount(acct.membership_balance) }}</td>
+                                        <td>¥{{ formatAmount(acct.service_balance) }}</td>
+                                        <td class="amount-warning">¥{{ formatAmount(acct.gift_balance) }}</td>
+                                        <td style="font-weight: 700;">¥{{ formatAmount(acct.total_balance) }}</td>
+                                        <td>¥{{ formatAmount(acct.total_membership_charged + acct.total_service_charged) }}</td>
+                                        <td>¥{{ formatAmount(acct.total_deducted) }}</td>
+                                    </tr>
+                                    <tr v-if="topAccounts.length === 0">
+                                        <td colspan="8" style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">暂无数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="card section-spacer">
+                    <div class="card-header">
+                        <div class="card-title">📋 最近交易记录</div>
+                        <div class="filter-bar" style="margin-bottom: 0;">
+                            <select v-model="txFilter.type" class="filter-select">
+                                <option value="">全部类型</option>
+                                <option value="membership_charge">会员登记</option>
+                                <option value="service_charge">服务登记</option>
+                                <option value="deduct">额度抵扣</option>
+                                <option value="gift">赠送</option>
+                                <option value="adjust">调整</option>
+                            </select>
+                            <input v-model="txFilter.startDate" type="date" class="filter-input" placeholder="开始日期">
+                            <input v-model="txFilter.endDate" type="date" class="filter-input" placeholder="结束日期">
+                            <button class="btn btn-outline btn-sm" @click="loadTransactions">查询</button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>交易编号</th>
+                                        <th>用户</th>
+                                        <th>类型</th>
+                                        <th>金额</th>
+                                        <th>变更前</th>
+                                        <th>变更后</th>
+                                        <th>说明</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="tx in recentTransactions" :key="tx.id">
+                                        <td style="font-size: var(--font-size-xs); font-family: monospace;">{{ tx.transaction_no }}</td>
+                                        <td>{{ tx.user_name }}</td>
+                                        <td>{{ tx.transaction_type_text }}</td>
+                                        <td :class="tx.amount >= 0 ? 'amount-success' : 'amount-danger'">
+                                            {{ tx.amount >= 0 ? '+' : '' }}¥{{ formatAmount(tx.amount) }}
+                                        </td>
+                                        <td style="font-size: var(--font-size-xs);">¥{{ formatAmount(tx.before_total_balance) }}</td>
+                                        <td style="font-size: var(--font-size-xs);">¥{{ formatAmount(tx.after_total_balance) }}</td>
+                                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ tx.description }}</td>
+                                        <td style="font-size: var(--font-size-xs);">{{ formatDateTime(tx.created_at) }}</td>
+                                    </tr>
+                                    <tr v-if="recentTransactions.length === 0">
+                                        <td colspan="8" style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">暂无交易记录</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-if="txTotal > txPageSize" class="load-more-btn" @click="loadMoreTransactions">
+                            加载更多 ({{ txPage * txPageSize }} / {{ txTotal }})
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            components: { 'global-header': GlobalHeader },
+            setup() {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+                const API_BASE = `${protocol}//${hostname}:${port}/api/v1`;
+
+                const loading = ref(true);
+                const stats = ref({
+                    total_users: 0, total_balance: 0, total_membership_balance: 0,
+                    total_service_balance: 0, total_gift_balance: 0,
+                    total_membership_charged: 0, total_service_charged: 0,
+                    total_deducted: 0, month_charged: 0, month_deducted: 0,
+                });
+                const topAccounts = ref([]);
+                const recentTransactions = ref([]);
+                const txPage = ref(1);
+                const txPageSize = ref(20);
+                const txTotal = ref(0);
+
+                const txFilter = ref({
+                    type: '',
+                    startDate: '',
+                    endDate: '',
+                });
+
+                const getAuthHeaders = () => {
+                    const headers = { 'Content-Type': 'application/json' };
+                    const token = localStorage.getItem('token');
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                    return headers;
+                };
+
+                const handleAuthError = () => {
+                    localStorage.removeItem('token');
+                    window.location.href = '/portal/admin/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                };
+
+                const formatAmount = (val) => {
+                    if (val == null || isNaN(val)) return '0';
+                    return Math.abs(Number(val)).toFixed(0);
+                };
+
+                const formatDateTime = (dateStr) => {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+
+                const maxBalance = computed(() => {
+                    const sums = [
+                        stats.value.total_membership_balance,
+                        stats.value.total_service_balance,
+                        stats.value.total_gift_balance,
+                    ];
+                    return Math.max(...sums.filter(s => s > 0), 1);
+                });
+
+                const balanceTypePercent = (type) => {
+                    const max = maxBalance.value;
+                    if (max === 0) return 0;
+                    const map = {
+                        membership: stats.value.total_membership_balance,
+                        service: stats.value.total_service_balance,
+                        gift: stats.value.total_gift_balance,
+                    };
+                    return Math.round((map[type] || 0) / max * 100);
+                };
+
+                const deductionRatio = () => {
+                    const total = stats.value.total_membership_charged + stats.value.total_service_charged;
+                    if (total === 0) return 0;
+                    return Math.round(stats.value.total_deducted / total * 100);
+                };
+
+                const loadStats = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/balance/stats`, {
+                            headers: getAuthHeaders(),
+                        });
+                        if (response.ok) {
+                            stats.value = await response.json();
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                        }
+                    } catch (e) {
+                        console.error('加载统计失败:', e);
+                    }
+                };
+
+                const loadTopAccounts = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/balance/accounts?page=1&page_size=20`, {
+                            headers: getAuthHeaders(),
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            topAccounts.value = data.accounts || [];
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                        }
+                    } catch (e) {
+                        console.error('加载排行失败:', e);
+                    }
+                };
+
+                const loadTransactions = async () => {
+                    txPage.value = 1;
+                    recentTransactions.value = [];
+                    await fetchTransactions();
+                };
+
+                const fetchTransactions = async () => {
+                    try {
+                        let url = `${API_BASE}/admin/balance/transactions?page=${txPage.value}&page_size=${txPageSize.value}`;
+                        if (txFilter.value.type) url += `&transaction_type=${txFilter.value.type}`;
+                        if (txFilter.value.startDate) url += `&start_date=${txFilter.value.startDate}`;
+                        if (txFilter.value.endDate) url += `&end_date=${txFilter.value.endDate}`;
+
+                        const response = await fetch(url, { headers: getAuthHeaders() });
+                        if (response.ok) {
+                            const data = await response.json();
+                            recentTransactions.value = data.transactions || [];
+                            txTotal.value = data.total || 0;
+                        } else if (response.status === 401) {
+                            handleAuthError();
+                        }
+                    } catch (e) {
+                        console.error('加载交易记录失败:', e);
+                    }
+                };
+
+                const loadMoreTransactions = async () => {
+                    txPage.value++;
+                    try {
+                        let url = `${API_BASE}/admin/balance/transactions?page=${txPage.value}&page_size=${txPageSize.value}`;
+                        if (txFilter.value.type) url += `&transaction_type=${txFilter.value.type}`;
+                        if (txFilter.value.startDate) url += `&start_date=${txFilter.value.startDate}`;
+                        if (txFilter.value.endDate) url += `&end_date=${txFilter.value.endDate}`;
+
+                        const response = await fetch(url, { headers: getAuthHeaders() });
+                        if (response.ok) {
+                            const data = await response.json();
+                            recentTransactions.value = [...recentTransactions.value, ...(data.transactions || [])];
+                            txTotal.value = data.total || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载更多失败:', e);
+                    }
+                };
+
+                const refreshData = async () => {
+                    await Promise.all([loadStats(), loadTopAccounts(), fetchTransactions()]);
+                };
+
+                onMounted(async () => {
+                    await loadStats();
+                    await loadTopAccounts();
+                    await fetchTransactions();
+                    loading.value = false;
+                });
+
+                return {
+                    loading, stats, topAccounts, recentTransactions,
+                    txPage, txPageSize, txTotal, txFilter,
+                    formatAmount, formatDateTime,
+                    balanceTypePercent, deductionRatio,
+                    loadTransactions, loadMoreTransactions, refreshData,
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

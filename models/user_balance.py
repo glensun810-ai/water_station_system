@@ -49,6 +49,9 @@ class UserBalanceAccount(Base):
     )
     frozen_service_balance = Column(Numeric(10, 2), default=0, comment="冻结服务余额")
 
+    credit_limit = Column(Numeric(10, 2), default=0, comment="信用额度上限(可透支金额，0=不启用)")
+    credit_used = Column(Numeric(10, 2), default=0, comment="已使用信用额度(负余额部分)")
+
     total_membership_charged = Column(Numeric(10, 2), default=0, comment="累计会员充值")
     total_service_charged = Column(Numeric(10, 2), default=0, comment="累计服务充值")
     total_deducted = Column(Numeric(10, 2), default=0, comment="累计抵扣")
@@ -62,26 +65,34 @@ class UserBalanceAccount(Base):
     user = relationship("User", foreign_keys=[user_id], backref="balance_account")
 
     def get_available_balance(self):
-        """获取可用余额"""
+        """获取可用余额（含信用额度信息）"""
+        mb = self.membership_balance or 0
+        sb = self.service_balance or 0
+        gb = self.gift_balance or 0
+        frozen_mb = self.frozen_membership_balance or 0
+        frozen_sb = self.frozen_service_balance or 0
+
+        available_total = float(mb + sb + gb - frozen_mb - frozen_sb)
+        credit = float(self.credit_limit or 0)
+        credit_remaining = max(0, credit - float(self.credit_used or 0))
+
         return {
-            "membership": float(
-                self.membership_balance - self.frozen_membership_balance
-            ),
-            "service": float(self.service_balance - self.frozen_service_balance),
-            "gift": float(self.gift_balance),
-            "total": float(
-                self.membership_balance
-                + self.service_balance
-                + self.gift_balance
-                - self.frozen_membership_balance
-                - self.frozen_service_balance
-            ),
+            "membership": float(mb - frozen_mb),
+            "service": float(sb - frozen_sb),
+            "gift": float(gb),
+            "total": available_total,
+            "total_with_credit": available_total + credit_remaining,
+            "credit_limit": credit,
+            "credit_used": float(self.credit_used or 0),
+            "credit_remaining": credit_remaining,
         }
 
     def update_total_balance(self):
         """更新总余额"""
         self.total_balance = (
-            self.membership_balance + self.service_balance + self.gift_balance
+            (self.membership_balance or 0)
+            + (self.service_balance or 0)
+            + (self.gift_balance or 0)
         )
 
 

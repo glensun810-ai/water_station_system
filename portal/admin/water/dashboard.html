@@ -733,6 +733,46 @@
                     </div>
                 </div>
                 
+                <div v-if="balanceStats" class="card" style="margin-bottom: var(--spacing-lg);">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>📊</span>
+                            <span>额度总览</span>
+                        </div>
+                        <a href="/portal/admin/balance-manage.html" class="alert-link" style="font-size: var(--font-size-sm);">额度管理 →</a>
+                    </div>
+                    <div class="stats-grid" style="margin-bottom: 0;">
+                        <div class="stat-card" style="cursor: default;" @click="window.location.href='/portal/admin/balance-manage.html'">
+                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">👥</div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ balanceStats.total_users }}</div>
+                                <div class="stat-label">额度用户</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor: default;">
+                            <div class="stat-icon" style="background: var(--success-light); color: var(--success);">💰</div>
+                            <div class="stat-info">
+                                <div class="stat-value">¥{{ (balanceStats.total_balance || 0).toFixed(0) }}</div>
+                                <div class="stat-label">系统总额度</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor: default;">
+                            <div class="stat-icon" style="background: var(--info-light); color: var(--info-dark);">📈</div>
+                            <div class="stat-info">
+                                <div class="stat-value">¥{{ (balanceStats.month_charged || 0).toFixed(0) }}</div>
+                                <div class="stat-label">本月登记</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor: default;">
+                            <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">📉</div>
+                            <div class="stat-info">
+                                <div class="stat-value">¥{{ (balanceStats.month_deducted || 0).toFixed(0) }}</div>
+                                <div class="stat-label">本月抵扣</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="quick-actions">
                     <button class="quick-action-btn" @click="goTo('pickups')">
                         <span class="icon">🚰</span>
@@ -749,6 +789,10 @@
                     <button class="quick-action-btn" @click="goTo('accounts')">
                         <span class="icon">💳</span>
                         <span>预付账户</span>
+                    </button>
+                    <button class="quick-action-btn" @click="window.location.href='/portal/admin/balance-manage.html'">
+                        <span class="icon">📊</span>
+                        <span>额度管理</span>
                     </button>
                 </div>
                 
@@ -902,7 +946,8 @@
                 const currentTime = ref('');
                 
                 const dashboardData = ref({});
-                
+                const balanceStats = ref(null);
+
                 const updateTime = () => {
                     const now = new Date();
                     const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
@@ -947,9 +992,9 @@
                 const loadDashboardData = async () => {
                     try {
                         const headers = getAuthHeaders();
-                        
+
                         const response = await fetch(`${API_BASE}/water/dashboard`, { headers });
-                        
+
                         if (!response.ok) {
                             if (response.status === 401) {
                                 authError.value = '登录已过期';
@@ -958,13 +1003,13 @@
                             }
                             throw new Error(`API请求失败: ${response.status}`);
                         }
-                        
+
                         const data = await response.json();
                         dashboardData.value = data;
                     } catch (e) {
                         console.error('加载工作台数据失败:', e);
                         showError('数据加载失败，请刷新重试');
-                        
+
                         dashboardData.value = {
                             pending_tasks: { applications_count: 0, pending_office_settlements: 0, low_stock_count: 0 },
                             metrics: { settled_amount: 0, settled_growth_rate: 0, unsettled_amount: 0, applied_amount: 0, today_pickups: 0, today_amount: 0 },
@@ -974,6 +1019,18 @@
                             office_ranking: [],
                             total_pickup_count: 0,
                         };
+                    }
+                };
+
+                const loadBalanceStats = async () => {
+                    try {
+                        const headers = getAuthHeaders();
+                        const response = await fetch(`${API_BASE}/admin/balance/stats`, { headers });
+                        if (response.ok) {
+                            balanceStats.value = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('加载额度统计失败:', e);
                     }
                 };
                 
@@ -1056,6 +1113,7 @@
                     if (!authPassed) return;
                     
                     await loadDashboardData();
+                    await loadBalanceStats();
                     loading.value = false;
                     
                     setInterval(updateTime, 60000);
@@ -1079,6 +1137,7 @@
                     inventoryAlerts,
                     totalPickupCount,
                     officeRanking,
+                    balanceStats,
                     getUnitDisplayName,
                     getRankingBadgeClass,
                     goTo,

@@ -23,21 +23,7 @@ from models.user import User
 try:
     from main import get_db
 except ImportError:
-    # 独立运行时的备用导入
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    engine = create_engine(
-        "sqlite:///./waterms.db", connect_args={"check_same_thread": False}
-    )
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    def get_db():
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    from apps.water.database import get_db
 
 
 router = APIRouter(prefix="/api/dining", tags=["dining"])

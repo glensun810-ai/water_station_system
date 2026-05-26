@@ -5,29 +5,14 @@ Coupon API - 优惠券管理接口
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from typing import Optional, List, Dict
 from datetime import datetime
 import json
 import random
 import string
 
-# 本地定义 get_db，避免与 main.py 循环导入
-SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+# 使用集中式水服务数据库连接
+from apps.water.database import get_db
 
 from models_coupon import Coupon, UserCoupon
 from models_unified_order import UnifiedOrder

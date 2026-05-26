@@ -25,13 +25,15 @@ router = APIRouter(prefix="/admin/balance", tags=["管理员-余额管理"])
 
 
 class BalanceAdjustRequest(BaseModel):
+    """额度调整请求 — 用于修正错误的额度登记（可正可负）"""
+
     user_id: int = Field(..., description="用户ID")
     amount: float = Field(..., description="调整金额(正数为增加,负数为减少)")
     balance_type: str = Field(
-        "membership", description="余额类型(membership/service/gift)"
+        "membership", description="额度类型(membership/service/gift)"
     )
     description: Optional[str] = Field(None, description="调整说明")
-    expire_date: Optional[str] = Field(None, description="过期日期(仅会员余额)")
+    expire_date: Optional[str] = Field(None, description="过期日期(仅会员额度)")
 
 
 class AdminBalanceAccountResponse(BaseModel):
@@ -45,6 +47,8 @@ class AdminBalanceAccountResponse(BaseModel):
     total_balance: float
     frozen_membership_balance: float
     frozen_service_balance: float
+    credit_limit: float = 0
+    credit_used: float = 0
     membership_expire_date: Optional[str] = None
     total_membership_charged: float
     total_service_charged: float
@@ -105,6 +109,29 @@ class BalanceStatsResponse(BaseModel):
     total_deducted: float
     month_charged: float
     month_deducted: float
+
+
+class RechargeConfirmRequest(BaseModel):
+    """线下充值确认请求 — 用户已线下付款给业主方，管理员在系统中登记"""
+
+    user_id: int = Field(..., description="用户ID")
+    amount: float = Field(..., gt=0, description="充值金额(必须为正数)")
+    balance_type: str = Field(
+        "membership", description="额度类型(membership/service)"
+    )
+    payment_method: str = Field(
+        "offline", description="线下付款方式(bank_transfer/wechat/cash)"
+    )
+    payment_reference: Optional[str] = Field(None, description="付款凭证编号")
+    notes: Optional[str] = Field(None, description="备注说明")
+    expire_date: Optional[str] = Field(None, description="过期日期(仅会员额度)")
+
+
+class BatchRechargeRequest(BaseModel):
+    """批量充值确认请求"""
+
+    items: List[RechargeConfirmRequest] = Field(..., description="充值条目列表")
+    global_notes: Optional[str] = Field(None, description="批量操作备注")
 
 
 def get_transaction_type_text(transaction_type: TransactionType) -> str:
@@ -172,6 +199,8 @@ async def get_balance_accounts(
                     total_balance=float(account.total_balance),
                     frozen_membership_balance=float(account.frozen_membership_balance),
                     frozen_service_balance=float(account.frozen_service_balance),
+                    credit_limit=float(account.credit_limit or 0),
+                    credit_used=float(account.credit_used or 0),
                     membership_expire_date=str(account.membership_expire_date)
                     if account.membership_expire_date
                     else None,
@@ -469,7 +498,7 @@ async def adjust_balance(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user),
 ):
-    """调整用户余额"""
+    """管理员录入/修正额度登记（用于纠错调整，可正可负）"""
     try:
         user = db.query(User).filter(User.id == request.user_id).first()
         if not user:
@@ -546,7 +575,7 @@ async def adjust_balance(
             after_total_balance=balance_account.total_balance,
             reference_type="admin_adjust",
             reference_id=admin_user.id,
-            description=request.description or f"管理员调整余额 - {admin_user.name}",
+            description=request.description or f"管理员额度修正 - {admin_user.name}",
             admin_id=admin_user.id,
             expire_date=expire_date,
         )
@@ -648,3 +677,394 @@ async def gift_balance(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"赠送失败: {str(e)}")
+
+
+@router.post("/recharge", response_model=dict)
+async def confirm_offline_recharge(
+    request: RechargeConfirmRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """线下充值确认 — 用户已线下付款给业主方，管理员在系统登记额度"""
+    try:
+        if request.amount <= 0:
+            raise HTTPException(status_code=400, detail="充值金额必须为正数")
+
+        user = db.query(User).filter(User.id == request.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+
+        balance_account = (
+            db.query(UserBalanceAccount)
+            .filter(UserBalanceAccount.user_id == request.user_id)
+            .first()
+        )
+
+        if not balance_account:
+            balance_account = UserBalanceAccount(
+                user_id=request.user_id,
+                membership_balance=Decimal(0),
+                service_balance=Decimal(0),
+                gift_balance=Decimal(0),
+                total_balance=Decimal(0),
+            )
+            db.add(balance_account)
+            db.flush()
+
+        recharge_amount = Decimal(str(request.amount))
+
+        before_membership = balance_account.membership_balance
+        before_service = balance_account.service_balance
+        before_gift = balance_account.gift_balance
+        before_total = balance_account.total_balance
+
+        balance_type_enum = None
+        transaction_type = None
+        expire_date = None
+
+        if request.balance_type == "membership":
+            balance_type_enum = BalanceType.MEMBERSHIP
+            transaction_type = TransactionType.MEMBERSHIP_CHARGE
+            balance_account.membership_balance += recharge_amount
+            balance_account.total_membership_charged += recharge_amount
+            if request.expire_date:
+                try:
+                    expire_date = datetime.strptime(request.expire_date, "%Y-%m-%d").date()
+                    balance_account.membership_expire_date = expire_date
+                except ValueError:
+                    pass
+        elif request.balance_type == "service":
+            balance_type_enum = BalanceType.SERVICE
+            transaction_type = TransactionType.SERVICE_CHARGE
+            balance_account.service_balance += recharge_amount
+            balance_account.total_service_charged += recharge_amount
+        else:
+            raise HTTPException(status_code=400, detail="额度类型必须是 membership 或 service")
+
+        balance_account.update_total_balance()
+        balance_account.last_transaction_at = datetime.now()
+
+        payment_info = f"，线下付款方式: {request.payment_method}"
+        if request.payment_reference:
+            payment_info += f"，凭证编号: {request.payment_reference}"
+
+        transaction = BalanceTransaction(
+            transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            user_id=request.user_id,
+            transaction_type=transaction_type,
+            amount=recharge_amount,
+            balance_type=balance_type_enum,
+            before_membership_balance=before_membership,
+            before_service_balance=before_service,
+            before_gift_balance=before_gift,
+            before_total_balance=before_total,
+            after_membership_balance=balance_account.membership_balance,
+            after_service_balance=balance_account.service_balance,
+            after_gift_balance=balance_account.gift_balance,
+            after_total_balance=balance_account.total_balance,
+            reference_type="offline_recharge",
+            reference_id=admin_user.id,
+            description=request.notes
+            or f"用户线下付款充值{payment_info} - 操作管理员: {admin_user.name}",
+            admin_id=admin_user.id,
+            expire_date=expire_date,
+        )
+        db.add(transaction)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "线下充值确认成功",
+            "transaction_no": transaction.transaction_no,
+            "recharge_amount": float(recharge_amount),
+            "balance_type": request.balance_type,
+            "payment_method": request.payment_method,
+            "before_balance": float(before_total),
+            "after_balance": float(balance_account.total_balance),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"充值确认失败: {str(e)}")
+
+
+@router.get("/users/search", response_model=dict)
+async def search_users(
+    q: str = Query("", description="搜索关键词(姓名/手机号)"),
+    limit: int = Query(20, ge=1, le=50, description="返回数量上限"),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """搜索用户 — 用于额度管理中的用户选择器"""
+    try:
+        query = db.query(User).filter(User.is_deleted == 0)
+
+        if q:
+            search_pattern = f"%{q}%"
+            query = query.filter(
+                (User.name.ilike(search_pattern)) | (User.phone.ilike(search_pattern))
+            )
+
+        users = query.order_by(User.name).limit(limit).all()
+
+        results = []
+        for user in users:
+            balance_account = (
+                db.query(UserBalanceAccount)
+                .filter(UserBalanceAccount.user_id == user.id)
+                .first()
+            )
+            results.append(
+                {
+                    "id": user.id,
+                    "name": user.name or "",
+                    "phone": user.phone or "",
+                    "user_type": user.user_type or "external",
+                    "office_id": getattr(user, "office_id", None),
+                    "total_balance": float(balance_account.total_balance)
+                    if balance_account
+                    else 0.0,
+                    "membership_balance": float(balance_account.membership_balance)
+                    if balance_account
+                    else 0.0,
+                    "service_balance": float(balance_account.service_balance)
+                    if balance_account
+                    else 0.0,
+                }
+            )
+
+        return {"users": results, "total": len(results)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"搜索用户失败: {str(e)}")
+
+
+@router.post("/batch-recharge", response_model=dict)
+async def batch_recharge(
+    request: BatchRechargeRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """批量线下充值确认"""
+    try:
+        if not request.items or len(request.items) == 0:
+            raise HTTPException(status_code=400, detail="充值条目不能为空")
+        if len(request.items) > 100:
+            raise HTTPException(status_code=400, detail="单次批量操作最多100条记录")
+
+        success_count = 0
+        failed_items = []
+        transaction_nos = []
+
+        for item in request.items:
+            try:
+                if item.amount <= 0:
+                    failed_items.append(
+                        {
+                            "user_id": item.user_id,
+                            "reason": "金额必须为正数",
+                        }
+                    )
+                    continue
+
+                user = db.query(User).filter(User.id == item.user_id).first()
+                if not user:
+                    failed_items.append(
+                        {
+                            "user_id": item.user_id,
+                            "reason": "用户不存在",
+                        }
+                    )
+                    continue
+
+                balance_account = (
+                    db.query(UserBalanceAccount)
+                    .filter(UserBalanceAccount.user_id == item.user_id)
+                    .first()
+                )
+
+                if not balance_account:
+                    balance_account = UserBalanceAccount(
+                        user_id=item.user_id,
+                        membership_balance=Decimal(0),
+                        service_balance=Decimal(0),
+                        gift_balance=Decimal(0),
+                        total_balance=Decimal(0),
+                    )
+                    db.add(balance_account)
+                    db.flush()
+
+                recharge_amount = Decimal(str(item.amount))
+
+                before_membership = balance_account.membership_balance
+                before_service = balance_account.service_balance
+                before_total = balance_account.total_balance
+
+                balance_type_enum = None
+                transaction_type = None
+                expire_date = None
+
+                if item.balance_type == "membership":
+                    balance_type_enum = BalanceType.MEMBERSHIP
+                    transaction_type = TransactionType.MEMBERSHIP_CHARGE
+                    balance_account.membership_balance += recharge_amount
+                    balance_account.total_membership_charged += recharge_amount
+                    if item.expire_date:
+                        try:
+                            expire_date = datetime.strptime(
+                                item.expire_date, "%Y-%m-%d"
+                            ).date()
+                            balance_account.membership_expire_date = expire_date
+                        except ValueError:
+                            pass
+                elif item.balance_type == "service":
+                    balance_type_enum = BalanceType.SERVICE
+                    transaction_type = TransactionType.SERVICE_CHARGE
+                    balance_account.service_balance += recharge_amount
+                    balance_account.total_service_charged += recharge_amount
+                else:
+                    failed_items.append(
+                        {
+                            "user_id": item.user_id,
+                            "reason": "无效的额度类型",
+                        }
+                    )
+                    continue
+
+                balance_account.update_total_balance()
+                balance_account.last_transaction_at = datetime.now()
+
+                payment_info = f"，线下付款方式: {item.payment_method}"
+                if item.payment_reference:
+                    payment_info += f"，凭证编号: {item.payment_reference}"
+
+                notes = (
+                    item.notes
+                    or f"批量线下充值确认{payment_info} - 操作管理员: {admin_user.name}"
+                )
+                if request.global_notes:
+                    notes = f"[{request.global_notes}] {notes}"
+
+                transaction = BalanceTransaction(
+                    transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}{success_count:03d}",
+                    user_id=item.user_id,
+                    transaction_type=transaction_type,
+                    amount=recharge_amount,
+                    balance_type=balance_type_enum,
+                    before_membership_balance=before_membership,
+                    before_service_balance=before_service,
+                    before_gift_balance=balance_account.gift_balance,
+                    before_total_balance=before_total,
+                    after_membership_balance=balance_account.membership_balance,
+                    after_service_balance=balance_account.service_balance,
+                    after_gift_balance=balance_account.gift_balance,
+                    after_total_balance=balance_account.total_balance,
+                    reference_type="batch_offline_recharge",
+                    reference_id=admin_user.id,
+                    description=notes,
+                    admin_id=admin_user.id,
+                    expire_date=expire_date,
+                )
+                db.add(transaction)
+                transaction_nos.append(transaction.transaction_no)
+                success_count += 1
+
+            except Exception as item_error:
+                failed_items.append(
+                    {
+                        "user_id": item.user_id,
+                        "reason": str(item_error),
+                    }
+                )
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"批量充值完成: 成功 {success_count} 条，失败 {len(failed_items)} 条",
+            "total": len(request.items),
+            "success_count": success_count,
+            "failed_count": len(failed_items),
+            "failed_items": failed_items,
+            "transaction_nos": transaction_nos,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量充值失败: {str(e)}")
+
+
+class CreditLimitRequest(BaseModel):
+    """信用额度设置请求"""
+
+    user_id: int = Field(..., description="用户ID")
+    credit_limit: float = Field(..., ge=0, description="信用额度上限(0=不启用)")
+
+
+@router.post("/credit-limit", response_model=dict)
+async def set_credit_limit(
+    request: CreditLimitRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """设置用户信用额度 — 允许用户额度不足时透支消费"""
+    try:
+        user = db.query(User).filter(User.id == request.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+
+        balance_account = (
+            db.query(UserBalanceAccount)
+            .filter(UserBalanceAccount.user_id == request.user_id)
+            .first()
+        )
+
+        if not balance_account:
+            balance_account = UserBalanceAccount(
+                user_id=request.user_id,
+                membership_balance=Decimal(0),
+                service_balance=Decimal(0),
+                gift_balance=Decimal(0),
+                total_balance=Decimal(0),
+            )
+            db.add(balance_account)
+            db.flush()
+
+        old_limit = float(balance_account.credit_limit or 0)
+        balance_account.credit_limit = Decimal(str(request.credit_limit))
+        balance_account.updated_at = datetime.now()
+
+        transaction = BalanceTransaction(
+            transaction_no=f"TX{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            user_id=request.user_id,
+            transaction_type=TransactionType.ADJUST,
+            amount=Decimal(0),
+            balance_type=None,
+            before_total_balance=balance_account.total_balance,
+            after_total_balance=balance_account.total_balance,
+            reference_type="credit_limit_change",
+            reference_id=admin_user.id,
+            description=f"信用额度调整: {old_limit:.0f} → {request.credit_limit:.0f} (操作管理员: {admin_user.name})",
+            admin_id=admin_user.id,
+        )
+        db.add(transaction)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "信用额度已更新",
+            "user_id": request.user_id,
+            "old_credit_limit": old_limit,
+            "credit_limit": request.credit_limit,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"设置信用额度失败: {str(e)}")

@@ -4,8 +4,8 @@ Unified Account API Routes - 统一账户 API 路由
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine, text, func
+from sqlalchemy.orm import Session
+from sqlalchemy import text, func
 from datetime import datetime
 from typing import List, Optional
 import json
@@ -21,29 +21,8 @@ from account_service import AccountService, PickupService, SettlementService
 from discount_strategy import discount_context, get_product
 from exceptions import InsufficientBalanceError
 
-# 本地定义 get_db 依赖注入，避免循环导入
-SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def get_db():
-    """获取数据库会话"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# 需要导入主程序的依赖
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
+# 使用集中式水服务数据库连接
+from apps.water.database import get_db
 
 router = APIRouter(prefix="/api/unified", tags=["unified-account"])
 

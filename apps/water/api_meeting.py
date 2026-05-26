@@ -687,21 +687,10 @@ def get_offices():
     从水站管理系统的office表获取数据
     """
     try:
-        from sqlalchemy import create_engine, text
-        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import text
 
-        # 连接到水站管理数据库（office表所在）
-        db_path = os.path.join(os.path.dirname(__file__), "waterms.db")
-        db_path = os.path.abspath(db_path)
+        from apps.water.database import SessionLocal
 
-        # 检查数据库文件是否存在
-        if not os.path.exists(db_path):
-            raise HTTPException(
-                status_code=500, detail=f"水站管理数据库不存在: {db_path}"
-            )
-
-        engine = create_engine(f"sqlite:///{db_path}")
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
 
         try:

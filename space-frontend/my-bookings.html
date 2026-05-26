@@ -120,7 +120,65 @@
             margin: 0 auto;
             padding: var(--spacing-xl) var(--spacing-lg);
         }
-        
+
+        .balance-mini-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            cursor: pointer;
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .balance-mini-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .balance-mini-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .balance-mini-title {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+        }
+
+        .balance-mini-link {
+            font-size: var(--font-size-xs);
+            opacity: 0.8;
+        }
+
+        .balance-mini-amount {
+            font-size: var(--font-size-3xl);
+            font-weight: 800;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .balance-mini-detail {
+            display: flex;
+            gap: var(--spacing-md);
+            font-size: var(--font-size-xs);
+            opacity: 0.85;
+        }
+
+        @media (max-width: 768px) {
+            .balance-mini-card {
+                padding: var(--spacing-md);
+            }
+            .balance-mini-amount {
+                font-size: var(--font-size-2xl);
+            }
+            .balance-mini-detail {
+                flex-wrap: wrap;
+                gap: var(--spacing-sm);
+            }
+        }
+
         .filter-tabs {
             display: flex;
             gap: var(--spacing-md);
@@ -574,6 +632,20 @@
 
         <!-- Main Content -->
         <main class="main-container">
+            <!-- Balance Card -->
+            <div v-if="balanceInfo.available_total_balance > 0" class="balance-mini-card" @click="window.location.href='/portal/balance.html'">
+                <div class="balance-mini-header">
+                    <span class="balance-mini-title">💳 我的额度</span>
+                    <span class="balance-mini-link">详情 →</span>
+                </div>
+                <div class="balance-mini-amount">¥{{ balanceInfo.available_total_balance }}</div>
+                <div class="balance-mini-detail">
+                    <span>会员 ¥{{ balanceInfo.available_membership_balance }}</span>
+                    <span>服务 ¥{{ balanceInfo.available_service_balance }}</span>
+                    <span>赠送 ¥{{ balanceInfo.gift_balance }}</span>
+                </div>
+            </div>
+
             <!-- Stats Summary -->
             <div class="stats-summary">
                 <div class="stat-card">
@@ -593,7 +665,7 @@
                     <div class="stat-label">总预约</div>
                 </div>
             </div>
-            
+
             <!-- Filter Tabs -->
             <div class="filter-tabs">
                 <div 
@@ -804,6 +876,12 @@
                 const showSuccessBanner = ref(false);
                 const successInfo = ref({});
                 const statusChangeNotification = ref(null);
+                const balanceInfo = ref({
+                    available_total_balance: 0,
+                    available_membership_balance: 0,
+                    available_service_balance: 0,
+                    gift_balance: 0,
+                });
                 let pollingTimer = null;
                 
                 const checkSuccessNotification = () => {
@@ -1069,9 +1147,27 @@
                     }
                 };
                 
+                const loadBalanceInfo = async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        if (!token) return;
+                        const API_BASE = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/v1`;
+                        const response = await fetch(`${API_BASE}/balance/my`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            balanceInfo.value = data;
+                        }
+                    } catch (e) {
+                        console.error('加载额度信息失败:', e);
+                    }
+                };
+
                 onMounted(() => {
                     checkSuccessNotification();
                     loadUserAndBookings();
+                    loadBalanceInfo();
                     startStatusPolling();
                 });
 
@@ -1133,7 +1229,8 @@
                     showSuccessBanner,
                     successInfo,
                     closeSuccessBanner,
-                    statusChangeNotification
+                    statusChangeNotification,
+                    balanceInfo
                 };
             }
         }).mount('#app');

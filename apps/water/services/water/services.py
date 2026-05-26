@@ -20,37 +20,9 @@ import json
 try:
     from main import get_db, Product, OfficePickup
 except ImportError:
-    # 独立运行时的备用导入
-    from sqlalchemy import create_engine, Column, Integer, String, Float, Text, DateTime
-    from sqlalchemy.orm import sessionmaker, declarative_base
-
-    Base = declarative_base()
-
-    class Product(Base):
-        __tablename__ = "products"
-        id = Column(Integer, primary_key=True)
-        name = Column(String)
-        service_type = Column(String(50), default="water")
-        booking_required = Column(Integer, default=0)
-
-    class OfficePickup(Base):
-        __tablename__ = "office_pickup"
-        id = Column(Integer, primary_key=True)
-        service_type = Column(String(50), default="water")
-        time_slot = Column(String(100))
-
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./waterms.db"
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    def get_db():
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    from apps.water.database import get_db
+    from models.product import Product
+    from models.pickup import OfficePickup
 
 
 router = APIRouter(prefix="/api/services", tags=["service-extension"])
