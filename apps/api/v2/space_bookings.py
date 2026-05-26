@@ -27,32 +27,46 @@ from shared.schemas.space.space_booking import (
     FeeCalculationResponse,
     BatchOperationRequest,
     BatchOperationResult,
+    SettleBookingRequest,
 )
 from shared.schemas.space.response import ApiResponse, PaginatedResponse
 
 router = APIRouter(prefix="/space/bookings", tags=["空间预约管理"])
 
 
-def _resolve_price_per_unit(resource, booking_unit: str, time_slot=None) -> float:
-    """统一价格查找：按 booking_unit 确定单价来源及优先级
+def _resolve_price_per_unit(resource, booking_unit: str, time_slot=None, user=None) -> float:
+    """统一价格查找：按 booking_unit 和用户身份确定单价
 
-    优先级链：
-    - hour / day / week / month: resource.base_price
-    - half_day / session / slot:   time_slot.price_override → resource.base_price
-    - meal:                        time_slot.price_override → resource.meal_standard_price → resource.base_price
+    优先级链（价格层面）：
+    1. time_slot.price_override（最高优先级，覆盖所有）
+    2. 用户身份定价：VIP → vip_price, 会员 → member_price, 普通 → base_price
+    3. 餐次特化：meal → meal_standard/meal_vip/meal_luxury 三档
+    4. 最后回退到 base_price → 0
+
+    用户身份判定（user_type）：
+    - vip        → 使用 vip_price / meal_vip_price
+    - member     → 使用 member_price / meal_standard_price
+    - internal   → 使用 member_price（内部员工享会员价）/ meal_standard_price
+    - external   → 使用 base_price / meal_standard_price
     """
-    if booking_unit in ("hour", "day", "week", "month"):
-        return resource.base_price or 0
+    user_type = (user.user_type or "internal") if user else "external"
 
-    if booking_unit in ("half_day", "session", "slot"):
-        if time_slot and time_slot.price_override:
-            return time_slot.price_override
-        return resource.base_price or 0
+    # time_slot.price_override 最高优先级
+    if time_slot and time_slot.price_override:
+        return time_slot.price_override
 
     if booking_unit == "meal":
-        if time_slot and time_slot.price_override:
-            return time_slot.price_override
+        if user_type == "vip":
+            return resource.meal_vip_price or resource.meal_standard_price or resource.base_price or 0
+        # member / internal 使用标准餐标，external 也用标准餐标
         return resource.meal_standard_price or resource.base_price or 0
+
+    if booking_unit in ("hour", "day", "week", "month", "half_day", "session", "slot"):
+        if user_type == "vip":
+            return resource.vip_price or resource.member_price or resource.base_price or 0
+        if user_type in ("member", "internal"):
+            return resource.member_price or resource.base_price or 0
+        return resource.base_price or 0
 
     return resource.base_price or 0
 
@@ -271,7 +285,7 @@ async def create_booking(
             ResourceTimeSlot.slot_key == booking_data.time_slot_key,
         ).first()
 
-    unit_price = _resolve_price_per_unit(resource, booking_unit, time_slot)
+    unit_price = _resolve_price_per_unit(resource, booking_unit, time_slot, current_user)
 
     if booking_unit == "meal":
         guests = booking_data.guests_count or 1
@@ -279,11 +293,50 @@ async def create_booking(
     else:
         total_fee = duration * unit_price
 
+    # Track original full price before any deductions
+    original_full_fee = total_fee
+
     booking_no = (
         f"SB{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
     )
 
     user_type = current_user.user_type or "internal"
+
+    # Free hours deduction for hour-based bookings
+    free_hours_used = 0.0
+    if booking_unit == "hour" and resource.free_hours_per_month and resource.free_hours_per_month > 0:
+        current_month = datetime.now().strftime("%Y-%m")
+        from shared.models.space.user_space_quota import UserSpaceQuota
+
+        quota = (
+            db.query(UserSpaceQuota)
+            .filter(
+                UserSpaceQuota.user_id == current_user.id,
+                UserSpaceQuota.quota_month == current_month,
+            )
+            .first()
+        )
+
+        if not quota:
+            monthly_free = float(resource.free_hours_per_month)
+            quota = UserSpaceQuota(
+                user_id=current_user.id,
+                type_id=resource.type_id,
+                free_quota_monthly=monthly_free,
+                free_quota_used=0.0,
+                free_quota_remaining=monthly_free,
+                quota_month=current_month,
+            )
+            db.add(quota)
+            db.flush()
+
+        remaining = float(quota.free_quota_remaining or 0)
+        if remaining > 0:
+            free_hours_used = min(duration, remaining)
+            free_discount = free_hours_used * unit_price
+            total_fee = max(0, total_fee - free_discount)
+            quota.free_quota_used = float(quota.free_quota_used or 0) + free_hours_used
+            quota.free_quota_remaining = float(quota.free_quota_monthly or 0) - float(quota.free_quota_used)
 
     deduct_amount = Decimal("0")
     credit_amount = Decimal("0")
@@ -301,24 +354,26 @@ async def create_booking(
             str(balance_account.total_balance if balance_account else 0)
         )
 
+        free_note = f"，已使用免费额度{free_hours_used}小时" if free_hours_used > 0 else ""
+
         if available_balance >= Decimal(str(total_fee)):
             deduct_amount = Decimal(str(total_fee))
             credit_amount = Decimal("0")
             payment_mode = "balance_deduct"
             payment_status = "deducted"
-            approval_notes = "内部员工预约，余额全额抵扣，自动审批通过"
+            approval_notes = "内部员工预约，余额全额抵扣，自动审批通过" + free_note
         elif available_balance > Decimal("0"):
             deduct_amount = available_balance
             credit_amount = Decimal(str(total_fee)) - available_balance
             payment_mode = "mixed"
             payment_status = "partial_deducted"
-            approval_notes = f"内部员工预约，余额抵扣¥{deduct_amount:.2f}+记账¥{credit_amount:.2f}，自动审批通过"
+            approval_notes = f"内部员工预约，余额抵扣¥{deduct_amount:.2f}+记账¥{credit_amount:.2f}，自动审批通过" + free_note
         else:
             deduct_amount = Decimal("0")
             credit_amount = Decimal(str(total_fee))
             payment_mode = "credit"
             payment_status = "credit"
-            approval_notes = "内部员工预约，全记账模式，自动审批通过"
+            approval_notes = "内部员工预约，全记账模式，自动审批通过" + free_note
 
         initial_status = "approved"
         approved_at = datetime.now()
@@ -367,10 +422,6 @@ async def create_booking(
                 "meal_session",
                 "meal_standard",
                 "guests_count",
-                "content_type",
-                "content_url",
-                "exhibition_type",
-                "exhibition_plan_url",
                 "time_slot_key",
                 "booking_unit",
             }
@@ -393,9 +444,9 @@ async def create_booking(
         user_phone=current_user.phone,
         user_email=current_user.email,
         department=current_user.department,
-        total_fee=total_fee,
+        total_fee=original_full_fee,
         actual_fee=total_fee,
-        base_fee=total_fee,
+        base_fee=original_full_fee,
         requires_deposit=(space_type.requires_deposit if space_type else False) or False,
         deposit_amount=total_fee
         * ((space_type.deposit_percentage if space_type else None) or 0),
@@ -552,12 +603,14 @@ async def create_booking(
         "prepay": "预付模式（待线下支付）",
     }
 
+    free_note = f"（其中 ¥{(original_full_fee - total_fee):.2f} 由免费额度抵扣）" if total_fee < original_full_fee else ""
+
     if payment_mode == "balance_deduct":
-        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已从账户余额全额扣除。"
+        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已从账户余额全额扣除。{free_note}"
     elif payment_mode == "mixed":
-        message = f"预约创建成功！费用 ¥{total_fee:.2f}，其中 ¥{deduct_amount:.2f} 已从余额扣除，¥{credit_amount:.2f} 记账待结算。"
+        message = f"预约创建成功！费用 ¥{total_fee:.2f}，其中 ¥{deduct_amount:.2f} 已从余额扣除，¥{credit_amount:.2f} 记账待结算。{free_note}"
     elif payment_mode == "credit":
-        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已记账，将在使用后结算，月度账单统一处理。"
+        message = f"预约创建成功！费用 ¥{total_fee:.2f} 已记账，将在使用后结算，月度账单统一处理。{free_note}"
     elif initial_status == "pending":
         message = f"预约创建成功！等待管理员审批和支付确认。"
     else:
@@ -660,6 +713,7 @@ async def update_booking(
             db.query(SpaceResource).filter(SpaceResource.id == booking.resource_id).first(),
             booking_unit,
             time_slot,
+            current_user,
         )
 
         if booking_unit == "meal":
@@ -895,6 +949,7 @@ async def complete_booking(
 @router.put("/{booking_id}/settle", response_model=ApiResponse)
 async def settle_booking(
     booking_id: int,
+    body: SettleBookingRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
@@ -912,6 +967,16 @@ async def settle_booking(
     booking.settlement_status = "settled"
     booking.settled_at = datetime.now()
     booking.settled_by = current_user.name
+
+    # Store settlement details from request body
+    settlement_details = []
+    if body.settled_amount is not None:
+        settlement_details.append(f"结算金额: ¥{body.settled_amount:.2f}")
+    if body.payment_method:
+        settlement_details.append(f"支付方式: {body.payment_method}")
+    if body.note:
+        settlement_details.append(f"备注: {body.note}")
+    booking.settlement_notes = "; ".join(settlement_details) if settlement_details else None
 
     db.commit()
     db.refresh(booking)
@@ -997,14 +1062,14 @@ async def calculate_fee(
         except ValueError:
             raise HTTPException(status_code=400, detail="时间格式必须为HH:MM")
         duration = fee_request.duration or (end_dt - start_dt).seconds / 3600
-        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, None, current_user)
     elif booking_unit in ("half_day", "session", "slot"):
         duration = fee_request.duration or 0.5
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == fee_request.time_slot_key,
         ).first() if fee_request.time_slot_key else None
-        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot, current_user)
     elif booking_unit in ("day", "week", "month"):
         if fee_request.end_date:
             days = (fee_request.end_date - fee_request.booking_date).days + 1
@@ -1018,28 +1083,24 @@ async def calculate_fee(
             duration = max(1, math.ceil(days / 30))
         else:
             duration = days
-        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, None, current_user)
     elif booking_unit == "meal":
         time_slot = db.query(ResourceTimeSlot).filter(
             ResourceTimeSlot.resource_id == resource.id,
             ResourceTimeSlot.slot_key == fee_request.time_slot_key,
         ).first() if fee_request.time_slot_key else None
-        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, time_slot, current_user)
         guests = fee_request.guests_count or 1
         base_fee = price_per_unit * guests
         duration = guests
     else:
         duration = fee_request.duration or 1
-        price_per_unit = _resolve_price_per_unit(resource, booking_unit)
+        price_per_unit = _resolve_price_per_unit(resource, booking_unit, None, current_user)
 
     if booking_unit != "meal":
         base_fee = duration * price_per_unit
 
     member_discount = 0
-    if fee_request.member_level == "vip":
-        member_discount = base_fee * 0.2
-    elif fee_request.member_level == "enterprise":
-        member_discount = base_fee * 0.3
 
     addon_fee = 0
     addon_items = []
@@ -1056,6 +1117,31 @@ async def calculate_fee(
 
     subtotal = base_fee + addon_fee
     discount_total = member_discount
+
+    # Free hours deduction preview (for hour-based bookings)
+    free_hours_available = 0
+    free_hours_deducted = 0
+    if booking_unit == "hour" and resource.free_hours_per_month and resource.free_hours_per_month > 0:
+        current_month = datetime.now().strftime("%Y-%m")
+        from shared.models.space.user_space_quota import UserSpaceQuota
+
+        quota = (
+            db.query(UserSpaceQuota)
+            .filter(
+                UserSpaceQuota.user_id == current_user.id,
+                UserSpaceQuota.quota_month == current_month,
+            )
+            .first()
+        )
+        if quota:
+            free_hours_available = float(quota.free_quota_remaining or 0)
+        else:
+            free_hours_available = float(resource.free_hours_per_month)
+
+        if free_hours_available > 0:
+            free_hours_deducted = min(duration, free_hours_available)
+            discount_total += free_hours_deducted * price_per_unit
+
     final_fee = subtotal - discount_total
 
     deposit_info = {"requires_deposit": False, "deposit_amount": 0}
@@ -1081,6 +1167,11 @@ async def calculate_fee(
                     "member_level": fee_request.member_level,
                     "discount_amount": member_discount,
                 },
+                "free_hours_deduction": {
+                    "free_hours_available": free_hours_available,
+                    "free_hours_deducted": free_hours_deducted,
+                    "deduction_amount": free_hours_deducted * price_per_unit,
+                },
                 "addon_fee": {"items": addon_items, "subtotal": addon_fee},
             },
             fee_summary={
@@ -1088,6 +1179,8 @@ async def calculate_fee(
                 "addon_fee": addon_fee,
                 "subtotal": subtotal,
                 "discount_total": discount_total,
+                "free_hours_deducted": free_hours_deducted,
+                "free_hours_discount": free_hours_deducted * price_per_unit if booking_unit == "hour" else 0,
                 "final_fee": final_fee,
             },
             deposit_info=deposit_info,

@@ -42,6 +42,20 @@ class SpacePaymentCreate(SpacePaymentBase):
     pass
 
 
+class SpacePaymentConfirmOffline(BaseModel):
+    """确认线下支付（用户提交）"""
+
+    booking_id: int
+    payment_method: Optional[str] = "offline"
+    payment_notes: Optional[str] = None
+
+    @field_validator("booking_id")
+    def booking_id_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("预约ID必须大于0")
+        return v
+
+
 class SpacePaymentConfirm(BaseModel):
     """确认支付"""
 

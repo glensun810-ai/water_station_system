@@ -1001,9 +1001,9 @@
                                     <span v-if="resource.capacity">{{ resource.capacity }}人</span>
                                     <span v-else style="color: var(--text-tertiary);">不限</span>
                                 </td>
-                                <td>¥{{ resource.base_price }}/{{ formatPriceUnit(selectedType.min_duration_unit) }}</td>
+                                <td>¥{{ resource.base_price }}/{{ formatPriceUnit(resource.price_unit || selectedType.min_duration_unit) }}</td>
                                 <td>
-                                    <span v-if="resource.member_price">¥{{ resource.member_price }}/{{ formatPriceUnit(selectedType.min_duration_unit) }}</span>
+                                    <span v-if="resource.member_price">¥{{ resource.member_price }}/{{ formatPriceUnit(resource.price_unit || selectedType.min_duration_unit) }}</span>
                                     <span v-else style="color: var(--text-tertiary);">-</span>
                                 </td>
                                 <td>
@@ -1062,7 +1062,7 @@
                                     <div class="mobile-info-item" style="grid-column: 1 / -1;">
                                         <span class="mobile-info-icon">💰</span>
                                         <span class="mobile-info-label">基础价格</span>
-                                        <span class="mobile-info-value" style="color: var(--primary);">¥{{ resource.base_price }}/{{ formatPriceUnit(selectedType.min_duration_unit) }}</span>
+                                        <span class="mobile-info-value" style="color: var(--primary);">¥{{ resource.base_price }}/{{ formatPriceUnit(resource.price_unit || selectedType.min_duration_unit) }}</span>
                                     </div>
                                 </div>
 
@@ -1188,7 +1188,7 @@
                                     required
                                 >
                                 <p style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-xs);">
-                                    计价单位：{{ formatPriceUnit(selectedType?.min_duration_unit) }}
+                                    计价单位：{{ formatPriceUnit(formData.price_unit || selectedType?.min_duration_unit) }}
                                 </p>
                             </div>
                             
@@ -1297,8 +1297,8 @@
                         </template>
                     </div>
 
-                    <!-- 时段配置面板 (仅编辑时显示) -->
-                    <div v-if="editingResource" style="margin-bottom: var(--spacing-xl);">
+                    <!-- 时段配置面板 -->
+                    <div v-if="showTimeSlotPanel" style="margin-bottom: var(--spacing-xl);">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-md);">
                             <h4 style="font-size:var(--font-size-lg);font-weight:600;color:var(--text-primary);margin:0;">
                                 {{ slotPanelTitle }}
@@ -2074,6 +2074,36 @@
                     } catch { return []; }
                 };
 
+                // 新建资源后保存已配置的时段
+                const saveTimeSlotsForResource = async (resourceId) => {
+                    const slots = resourceTimeSlots.value.filter(s => !s._isDeleted);
+                    if (slots.length === 0) return;
+                    try {
+                        const token = localStorage.getItem('token');
+                        await fetch(`${API_RESOURCES_BASE}/${resourceId}/time-slots`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(slots.map(s => ({
+                                slot_key: s.slot_key,
+                                slot_name: s.slot_name,
+                                slot_type: s.slot_type,
+                                start_time: s.start_time || null,
+                                end_time: s.end_time || null,
+                                duration_value: s.duration_value || 0.5,
+                                duration_unit: s.duration_unit || selectedType.value?.min_duration_unit || 'hour',
+                                price_override: s.price_override || null,
+                                max_bookings_per_slot: s.max_bookings_per_slot || 1,
+                                is_active: true
+                            })))
+                        });
+                    } catch (e) {
+                        console.error('Failed to save time slots for new resource:', e);
+                    }
+                };
+
                 // 时段面板标题——按类型动态调整
                 const slotPanelTitle = computed(() => {
                     const unit = selectedType.value?.min_duration_unit;
@@ -2101,6 +2131,9 @@
                 });
 
                 const hasTypePreset = computed(() => parsedTypePreset.value.length > 0);
+                const showTimeSlotPanel = computed(() =>
+                    !!selectedType.value && (!!editingResource.value || showModal.value)
+                );
                 const hasResourceSlots = computed(() =>
                     resourceTimeSlots.value.some(s => !s._isDeleted)
                 );
@@ -2218,6 +2251,11 @@
                         const data = await response.json();
                         
                         if (data.code === 200 || data.code === 201) {
+                            const savedResource = data.data;
+                            // After creation, also save time slots if configured
+                            if (!editingResource.value && savedResource?.id && resourceTimeSlots.value.length > 0) {
+                                await saveTimeSlotsForResource(savedResource.id);
+                            }
                             showToast(`✓ ${editingResource.value ? '修改成功' : '创建成功'}`, 'success');
                             closeModal();
                             await loadResources();
@@ -2424,6 +2462,7 @@
                     slotPanelTitle,
                     parsedTypePreset,
                     hasTypePreset,
+                    showTimeSlotPanel,
                     hasResourceSlots,
                     hasPendingDeletions,
                     showSaveTimeSlots,

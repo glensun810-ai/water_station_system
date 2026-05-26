@@ -381,8 +381,14 @@
                 <button class="search-btn" @click="searchResources">搜索</button>
             </div>
             
+            <!-- Loading -->
+            <div v-if="loading" style="text-align: center; padding: 60px 0;">
+                <div style="font-size: 32px; margin-bottom: 16px;">⏳</div>
+                <div style="color: var(--text-secondary);">正在加载资源列表...</div>
+            </div>
+
             <!-- Resources Grid -->
-            <div v-if="filteredResources.length > 0" class="resources-grid">
+            <div v-else-if="filteredResources.length > 0" class="resources-grid">
                 <div 
                     v-for="resource in filteredResources" 
                     :key="resource.id"
@@ -477,7 +483,44 @@
 
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
-        
+
+        // 价格单位显示映射
+        const UNIT_LABELS = {
+            hour: '小时',
+            half_day: '半天',
+            session: '场次',
+            slot: '时段',
+            day: '天',
+            week: '周',
+            month: '月',
+            meal: '餐段'
+        };
+
+        function getApiBase() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port ? ':' + window.location.port : '';
+            return `${protocol}//${hostname}${port}`;
+        }
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('token');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        function parseTags(resource, typeMap) {
+            const t = typeMap[resource.type_code];
+            if (!t || !t.standard_facilities) return [];
+            try {
+                const facilities = typeof t.standard_facilities === 'string'
+                    ? JSON.parse(t.standard_facilities)
+                    : t.standard_facilities;
+                return Array.isArray(facilities) ? facilities : [];
+            } catch {
+                return String(t.standard_facilities).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+            }
+        }
+
         createApp({
             components: { 'global-header': GlobalHeader },
             setup() {
@@ -485,194 +528,117 @@
                 const selectedType = ref('all');
                 const searchKeyword = ref('');
                 const resources = ref([]);
-                
-                const spaceTypes = [
-                    { code: 'all', name: '全部' },
-                    { code: 'meeting_room', name: '会议室' },
-                    { code: 'auditorium', name: '会场' },
-                    { code: 'screen', name: '大屏' },
-                    { code: 'lobby_booth', name: '展位' },
-                    { code: 'vip_dining', name: 'VIP餐厅' }
-                ];
-                
+                const spaceTypes = ref([{ code: 'all', name: '全部' }]);
+                const loading = ref(true);
+                const typeMap = ref({});
+
                 const filteredResources = computed(() => {
                     let filtered = resources.value;
-                    
-                    // Filter by type
+
                     if (selectedType.value !== 'all') {
                         filtered = filtered.filter(r => r.typeCode === selectedType.value);
                     }
-                    
-                    // Filter by search keyword
+
                     if (searchKeyword.value) {
                         const keyword = searchKeyword.value.toLowerCase();
-                        filtered = filtered.filter(r => 
+                        filtered = filtered.filter(r =>
                             r.name.toLowerCase().includes(keyword) ||
-                            r.location.toLowerCase().includes(keyword) ||
-                            r.tags.some(t => t.toLowerCase().includes(keyword))
+                            (r.location || '').toLowerCase().includes(keyword) ||
+                            (r.tags || []).some(t => t.toLowerCase().includes(keyword))
                         );
                     }
-                    
+
                     return filtered;
                 });
-                
+
                 const loadResources = async () => {
                     try {
+                        loading.value = true;
                         const user = await checkAuth({ requireAuth: false, validateToken: true });
-                        
                         if (user) {
                             currentUser.value = user;
-                            console.log('用户已登录:', currentUser.value);
                         }
-                        
-                        // 加载资源数据（模拟数据）
-                        await loadResourceData();
+
+                        // 加载空间类型
+                        const typesRes = await fetch(
+                            `${getApiBase()}/api/v2/space/types?is_active=true&limit=100`,
+                            { headers: getAuthHeaders() }
+                        );
+                        if (typesRes.ok) {
+                            const typesData = await typesRes.json();
+                            if (typesData.code === 200 && typesData.data) {
+                                const items = typesData.data.items || [];
+                                // 构建类型映射表
+                                const map = {};
+                                items.forEach(t => { map[t.type_code] = t; });
+                                typeMap.value = map;
+                                // 构建筛选器选项
+                                spaceTypes.value = [
+                                    { code: 'all', name: '全部' },
+                                    ...items.map(t => ({
+                                        code: t.type_code,
+                                        name: t.type_name,
+                                        icon: t.icon
+                                    }))
+                                ];
+                            }
+                        }
+
+                        // 加载资源列表
+                        const resRes = await fetch(
+                            `${getApiBase()}/api/v2/space/resources?is_active=true&limit=100`,
+                            { headers: getAuthHeaders() }
+                        );
+                        if (resRes.ok) {
+                            const resData = await resRes.json();
+                            if (resData.code === 200 && resData.data) {
+                                const items = resData.data.items || [];
+                                resources.value = items.map(r => ({
+                                    id: r.id,
+                                    name: r.name,
+                                    location: r.location || '',
+                                    capacity: r.capacity || '不限',
+                                    typeCode: r.type_code,
+                                    typeName: r.type_name || '',
+                                    price: r.base_price || 0,
+                                    priceUnit: UNIT_LABELS[r.price_unit] || r.price_unit || '',
+                                    isAvailable: r.is_available,
+                                    statusText: r.is_available ? '空闲' : '不可用',
+                                    statusClass: r.is_available ? 'available' : 'unavailable',
+                                    tags: parseTags(r, typeMap.value)
+                                }));
+                            }
+                        }
                     } catch (error) {
                         console.error('加载资源失败:', error);
+                    } finally {
+                        loading.value = false;
                     }
                 };
-                
-                const loadResourceData = async () => {
-                    resources.value = [
-                        {
-                            id: 1,
-                            name: 'VIP会议室',
-                            location: '5楼501',
-                            capacity: 20,
-                            typeCode: 'meeting_room',
-                            typeName: '会议室',
-                            price: 80,
-                            priceUnit: '小时',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['投影仪', '白板', 'WiFi', '茶水服务']
-                        },
-                        {
-                            id: 2,
-                            name: '1号会议室',
-                            location: '3楼301',
-                            capacity: 10,
-                            typeCode: 'meeting_room',
-                            typeName: '会议室',
-                            price: 50,
-                            priceUnit: '小时',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['投影仪', '白板']
-                        },
-                        {
-                            id: 3,
-                            name: '2号会议室',
-                            location: '3楼302',
-                            capacity: 15,
-                            typeCode: 'meeting_room',
-                            typeName: '会议室',
-                            price: 60,
-                            priceUnit: '小时',
-                            status: 'busy',
-                            statusText: '已预约',
-                            statusClass: 'busy',
-                            tags: ['投影仪', '视频会议']
-                        },
-                        {
-                            id: 4,
-                            name: '多功能厅',
-                            location: '1楼大厅',
-                            capacity: 500,
-                            typeCode: 'auditorium',
-                            typeName: '会场',
-                            price: 500,
-                            priceUnit: '半天',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['舞台', '音响', '灯光', 'LED大屏']
-                        },
-                        {
-                            id: 5,
-                            name: '大堂LED大屏',
-                            location: '大堂东侧',
-                            capacity: '不限',
-                            typeCode: 'screen',
-                            typeName: '大屏',
-                            price: 200,
-                            priceUnit: '时段',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['LED', '高清', '定时播放']
-                        },
-                        {
-                            id: 6,
-                            name: '大堂展位A',
-                            location: '大堂西侧',
-                            capacity: '不限',
-                            typeCode: 'lobby_booth',
-                            typeName: '展位',
-                            price: 100,
-                            priceUnit: '天',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['产品展示', '促销']
-                        },
-                        {
-                            id: 7,
-                            name: 'VIP包厢A',
-                            location: 'VIP餐厅',
-                            capacity: 8,
-                            typeCode: 'vip_dining',
-                            typeName: 'VIP餐厅',
-                            price: 500,
-                            priceUnit: '餐段',
-                            status: 'busy',
-                            statusText: '已预约',
-                            statusClass: 'busy',
-                            tags: ['包厢', '专人服务']
-                        },
-                        {
-                            id: 8,
-                            name: 'VIP包厢B',
-                            location: 'VIP餐厅',
-                            capacity: 10,
-                            typeCode: 'vip_dining',
-                            typeName: 'VIP餐厅',
-                            price: 600,
-                            priceUnit: '餐段',
-                            status: 'available',
-                            statusText: '空闲',
-                            statusClass: 'available',
-                            tags: ['包厢', '专人服务']
-                        }
-                    ];
-                };
-                
+
                 const filterByType = (typeCode) => {
                     selectedType.value = typeCode;
                 };
-                
-                const searchResources = () => {
-                    // Search is handled by computed property
-                };
-                
+
+                const searchResources = () => {};
+
                 const viewResourceDetail = (resource) => {
-                    alert(`空间详情：\n\n名称：${resource.name}\n位置：${resource.location}\n容量：${resource.capacity}\n价格：¥${resource.price}/${resource.priceUnit}\n状态：${resource.statusText}\n设备：${resource.tags.join(', ')}`);
+                    const tagsText = (resource.tags || []).join(', ');
+                    alert(`空间详情：\n\n名称：${resource.name}\n位置：${resource.location}\n容量：${resource.capacity}\n价格：¥${resource.price}/${resource.priceUnit}\n状态：${resource.statusText}\n设施：${tagsText || '暂无'}`);
                 };
-                
+
                 const bookResource = (resource) => {
                     window.location.href = `/space-frontend/booking.html?type=${resource.typeCode}&resource=${resource.id}`;
                 };
-                
+
                 const goBack = () => {
                     window.location.href = '/portal/index.html';
                 };
-                
+
                 onMounted(() => {
                     loadResources();
                 });
-                
+
                 return {
                     currentUser,
                     selectedType,
@@ -680,6 +646,7 @@
                     spaceTypes,
                     resources,
                     filteredResources,
+                    loading,
                     filterByType,
                     searchResources,
                     viewResourceDetail,

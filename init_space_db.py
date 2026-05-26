@@ -11,8 +11,6 @@ from shared.models.space.space_resource import SpaceResource
 from shared.models.space.space_booking import SpaceBooking
 from shared.models.space.space_approval import SpaceApproval
 from shared.models.space.space_payment import SpacePayment
-from shared.models.space.space_settlement import SpaceSettlement
-from shared.models.space.notification import Notification
 from shared.models.space.user_member_info import UserMemberInfo
 from shared.models.space.user_space_quota import UserSpaceQuota
 

@@ -68,12 +68,6 @@ class SpaceBookingCreate(SpaceBookingBase):
     meal_standard: Optional[str] = None
     guests_count: Optional[int] = None
 
-    content_type: Optional[str] = None
-    content_url: Optional[str] = None
-
-    exhibition_type: Optional[str] = None
-    exhibition_plan_url: Optional[str] = None
-
     end_date: Optional[date] = None
     booking_days: int = 0
 
@@ -246,6 +240,14 @@ class FeeCalculationResponse(BaseModel):
     fee_summary: dict
     deposit_info: dict
     payment_methods: List[str]
+
+
+class SettleBookingRequest(BaseModel):
+    """结算确认请求"""
+
+    settled_amount: Optional[float] = None
+    payment_method: Optional[str] = None
+    note: Optional[str] = None
 
 
 class BatchOperationRequest(BaseModel):

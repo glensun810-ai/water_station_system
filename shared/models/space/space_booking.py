@@ -230,14 +230,6 @@ class SpaceBooking(Base, TimestampMixin):
     meal_standard = Column(String(20))
     guests_count = Column(Integer, default=1)
 
-    content_type = Column(String(50))
-    content_url = Column(String(200))
-    content_approved = Column(Boolean, default=False)
-    play_frequency = Column(Integer, default=1)
-
-    exhibition_type = Column(String(50))
-    exhibition_plan_url = Column(String(200))
-
     purpose = Column(String(200))
     title = Column(String(200))
     attendees_count = Column(Integer, default=1)
@@ -306,15 +298,7 @@ class SpaceBooking(Base, TimestampMixin):
     settled_by = Column(String(100))
     settlement_notes = Column(Text)
 
-    checked_in_at = Column(DateTime)
-    checked_in_by = Column(String(100))
     started_at = Column(DateTime)
-    ended_at = Column(DateTime)
-    actual_duration = Column(Float)
-
-    rated_at = Column(DateTime)
-    rating_score = Column(Float)
-    rating_feedback = Column(Text)
 
     invoice_requested = Column(Boolean, default=False)
     invoice_status = Column(String(20))
@@ -324,7 +308,6 @@ class SpaceBooking(Base, TimestampMixin):
     can_modify = Column(Boolean, default=True)
     can_cancel = Column(Boolean, default=True)
     cancel_deadline = Column(DateTime)
-    modify_deadline = Column(DateTime)
 
     user_payment_confirmed = Column(Boolean, default=False)
     user_payment_confirmed_at = Column(DateTime)
@@ -336,12 +319,6 @@ class SpaceBooking(Base, TimestampMixin):
     deleted_at = Column(DateTime)
     deleted_by = Column(String(100))
     delete_reason = Column(String(500))
-
-    booking_source = Column(String(20))
-    booking_channel = Column(String(20))
-
-    calendar_invite_sent = Column(Boolean, default=False)
-    calendar_invite_id = Column(String(100))
 
     status_history = Column(JSON, default=list)
 

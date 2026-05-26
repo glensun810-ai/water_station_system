@@ -16,6 +16,7 @@ from shared.models.space.space_booking import SpaceBooking
 from shared.schemas.space.space_payment import (
     SpacePaymentCreate,
     SpacePaymentConfirm,
+    SpacePaymentConfirmOffline,
     SpacePaymentVerify,
     SpacePaymentRefund,
     SpacePaymentResponse,
@@ -27,12 +28,13 @@ router = APIRouter(prefix="/space/payments", tags=["空间支付管理"])
 
 @router.post("/confirm-offline", response_model=ApiResponse)
 async def confirm_offline_payment(
-    booking_id: int = Query(..., description="预约ID"),
-    payment_method: str = Query("offline", description="支付方式"),
-    payment_notes: Optional[str] = Query(None, description="支付备注"),
+    body: SpacePaymentConfirmOffline,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_required),
 ):
+    booking_id = body.booking_id
+    payment_method = body.payment_method or "offline"
+    payment_notes = body.payment_notes
     """用户确认线下支付完成（通知管理员审核）"""
 
     booking = db.query(SpaceBooking).filter(SpaceBooking.id == booking_id).first()

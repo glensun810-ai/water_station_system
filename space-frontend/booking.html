@@ -2287,6 +2287,9 @@
                             <span>下一步</span>
                             <span>→</span>
                         </button>
+                        <p v-if="bookingUnit === 'hour' && selectedTimeSlots.length > 0 && !isConsecutive" style="color: var(--warning, #f59e0b); font-size: var(--font-size-sm); margin-top: var(--spacing-sm); text-align: center;">
+                            请选择连续的时段，不支持跳跃选择
+                        </p>
                     </div>
                 </div>
 
@@ -2323,7 +2326,7 @@
 
         <div v-if="showToast" class="toast" :class="toastType">
             <div class="toast-title">{{ toastType === 'error' ? '操作失败' : toastType === 'warning' ? '提示' : '操作成功' }}</div>
-            <div v-html="toastMessage"></div>
+            <div>{{ toastMessage }}</div>
         </div>
 
         <nav class="bottom-nav" role="navigation" aria-label="底部导航">
@@ -2708,7 +2711,7 @@
                             baseFee: summary.base_fee || 0,
                             memberDiscount: summary.discount_total || ctx.member_discount || 0,
                             freeHoursUsed: ctx.free_hours_used || ctx.freeHoursUsed || 0,
-                            freeHoursDiscount: ctx.free_hours_discount || ctx.freeHoursDiscount || 0,
+                            freeHoursDiscount: summary.free_hours_discount || ctx.free_hours_discount || ctx.freeHoursDiscount || 0,
                             totalFee: summary.final_fee || summary.total_fee || 0,
                             depositAmount: depositInfo.deposit_amount || ctx.deposit_amount || 0,
                             depositPercentage: depositInfo.deposit_percentage || ctx.deposit_percentage || 0,
@@ -3106,9 +3109,21 @@
                             availableHoursCount.value = availableSlots.filter(s => s.is_available).length;
                             bookedHoursCount.value = availableSlots.filter(s => !s.is_available).length;
                         } else if (unit === 'day' || unit === 'week' || unit === 'month') {
-                            // Date range mode: just set the flag
+                            // Date range mode: check for overlapping bookings
+                            const dateRangeConflicts = bookedSlots.filter(b =>
+                                b.booking_unit === unit || b.booking_unit === 'day' || b.booking_unit === 'week' || b.booking_unit === 'month'
+                            );
                             availableHoursCount.value = 1;
-                            bookedHoursCount.value = 0;
+                            bookedHoursCount.value = dateRangeConflicts.length;
+                            if (dateRangeConflicts.length > 0) {
+                                conflictDetected.value = true;
+                                conflictBookings.value = dateRangeConflicts.map(b => ({
+                                    booking_id: b.booking_id,
+                                    time_range: `${b.booking_date || ''} ~ ${b.end_date || ''}`,
+                                    title: b.booking_title || '未知预约',
+                                    user_name: b.user_name || '未知用户'
+                                }));
+                            }
                         }
 
                         // Build conflict info
@@ -3135,9 +3150,13 @@
                         conflictBookings.value = [];
                     }
 
+                    const hadSelected = selectedTimeSlots.value.length > 0 || selectedSession.value || selectedMealSession.value;
                     selectedTimeSlots.value = [];
                     selectedSession.value = null;
                     selectedMealSession.value = null;
+                    if (hadSelected) {
+                        displayToast('日期已变更，已选时段已重置', 'warning');
+                    }
                 }
                 
                 const formatDate = (dateStr) => {
