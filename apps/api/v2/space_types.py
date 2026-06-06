@@ -66,6 +66,8 @@ async def get_space_types(
                 "type_name": t.type_name,
                 "type_name_en": t.type_name_en,
                 "description": t.description,
+                "auto_approval_max_amount": t.auto_approval_max_amount or 0,
+                "free_quota_applicable_units": t.free_quota_applicable_units,
                 "min_duration_unit": t.min_duration_unit,
                 "min_duration_value": t.min_duration_value,
                 "max_duration_value": t.max_duration_value,

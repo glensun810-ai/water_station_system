@@ -1,3 +1,5 @@
+import json
+
 """
 空间类型模型
 定义系统支持的所有空间类型及其配置规则
@@ -20,6 +22,9 @@ class SpaceType(Base, TimestampMixin):
     type_name = Column(String(100), nullable=False)
     type_name_en = Column(String(100))
     description = Column(Text)
+
+    auto_approval_max_amount = Column(Float, default=0.0, comment="自动审批最大金额（0=不限），超出需人工审批")
+    free_quota_applicable_units = Column(Text, default='["hour"]', comment='免费额度适用的预订单位列表，如 ["hour","half_day"]')
 
     min_duration_unit = Column(String(20), nullable=False)
     min_duration_value = Column(Integer, default=1)

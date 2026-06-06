@@ -21,6 +21,9 @@ class SpaceTypeBase(BaseModel):
     max_duration_value: int = 24
     advance_booking_days: int = 0
 
+    auto_approval_max_amount: float = 0.0
+    free_quota_applicable_units: Optional[List[str]] = ["hour"]
+
     min_capacity: int = 1
     max_capacity: int = 500
 
@@ -86,6 +89,9 @@ class SpaceTypeUpdate(BaseModel):
     min_duration_value: Optional[int] = None
     max_duration_value: Optional[int] = None
     advance_booking_days: Optional[int] = None
+
+    auto_approval_max_amount: Optional[float] = None
+    free_quota_applicable_units: Optional[List[str]] = None
 
     min_capacity: Optional[int] = None
     max_capacity: Optional[int] = None

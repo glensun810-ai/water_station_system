@@ -545,6 +545,11 @@
                             <input class="form-input" type="number" v-model.number="form.approval_deadline_hours" min="1">
                             <div class="form-hint">距离预约开始时间多久之前需要完成审批</div>
                         </div>
+                        <div class="form-group" v-if="!form.requires_approval">
+                            <label class="form-label">自动审批金额上限(元)</label>
+                            <input class="form-input" type="number" v-model.number="form.auto_approval_max_amount" min="0" step="0.01">
+                            <div class="form-hint">0=不限，超出此金额的预约将转为人工审批。例如设置 1000，则 ¥1000 以上需审批</div>
+                        </div>
                         <div class="form-group">
                             <label class="form-label">
                                 <input type="checkbox" v-model="form.requires_deposit" style="margin-right:8px;">
@@ -555,6 +560,16 @@
                             <label class="form-label">押金比例</label>
                             <input class="form-input" type="number" v-model.number="form.deposit_percentage" min="0" max="1" step="0.1">
                             <div class="form-hint">0-1之间，如 0.3 表示押金为总费用的30%</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">免费额度适用单位</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                                <label v-for="unit in freeQuotaUnits" :key="unit.value" style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
+                                    <input type="checkbox" :value="unit.value" v-model="form.free_quota_applicable_units">
+                                    {{ unit.label }}
+                                </label>
+                            </div>
+                            <div class="form-hint">选择哪些预订单位可使用免费额度抵扣</div>
                         </div>
                     </div>
 
@@ -699,6 +714,28 @@
                 };
 
                 const allDurationUnits = [
+                { value: 'hour', label: '小时' },
+                { value: 'half_day', label: '半天' },
+                { value: 'session', label: '场次' },
+                { value: 'slot', label: '时段' },
+                { value: 'day', label: '天' },
+                { value: 'week', label: '周' },
+                { value: 'month', label: '月' },
+                { value: 'meal', label: '餐次' },
+            ];
+
+                const freeQuotaUnits = [
+                    { value: 'hour', label: '按小时' },
+                    { value: 'half_day', label: '按半天' },
+                    { value: 'session', label: '按场次' },
+                    { value: 'slot', label: '按时段' },
+                    { value: 'day', label: '按天' },
+                    { value: 'week', label: '按周' },
+                    { value: 'month', label: '按月' },
+                    { value: 'meal', label: '按餐次' },
+                ];
+
+                const allDurationUnits = [
                     { value: 'hour', label: '小时' },
                     { value: 'half_day', label: '半天' },
                     { value: 'session', label: '场次' },
@@ -732,9 +769,9 @@
                     min_duration_unit: 'hour', min_duration_value: 1, max_duration_value: 24,
                     advance_booking_days: 0,
                     min_capacity: 1, max_capacity: 500,
-                    requires_approval: false, approval_type: '', approval_deadline_hours: 24,
+                    requires_approval: false, approval_type: '', approval_deadline_hours: 24, auto_approval_max_amount: 0,
                     requires_deposit: false, deposit_percentage: 0,
-                    standard_facilities: '', optional_addons: '', time_slot_preset: '',
+                    standard_facilities: '', optional_addons: '', free_quota_applicable_units: ['hour'], time_slot_preset: '',
                     supported_duration_units: ['hour'],
                 };
 
@@ -845,6 +882,8 @@
                                 approval_deadline_hours: t.approval_deadline_hours || 24,
                                 requires_deposit: t.requires_deposit || false,
                                 deposit_percentage: t.deposit_percentage ?? 0,
+                                auto_approval_max_amount: t.auto_approval_max_amount ?? 0,
+                                free_quota_applicable_units: t.free_quota_applicable_units || ['hour'],
                                 standard_facilities: t.standard_facilities || '',
                                 optional_addons: t.optional_addons || '',
                                 time_slot_preset: t.time_slot_preset || '',

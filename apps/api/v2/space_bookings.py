@@ -302,9 +302,19 @@ async def create_booking(
 
     user_type = current_user.user_type or "internal"
 
-    # Free hours deduction for hour-based bookings
+    # Free quota deduction
     free_hours_used = 0.0
-    if booking_unit == "hour" and resource.free_hours_per_month and resource.free_hours_per_month > 0:
+    # 判断当前booking_unit是否可使用免费额度
+    free_quota_units = ["hour"]
+    if space_type and space_type.free_quota_applicable_units:
+        import json as _json
+        try:
+            parsed = _json.loads(space_type.free_quota_applicable_units) if isinstance(space_type.free_quota_applicable_units, str) else space_type.free_quota_applicable_units
+            if isinstance(parsed, list):
+                free_quota_units = parsed
+        except (_json.JSONDecodeError, TypeError):
+            pass
+    if booking_unit in free_quota_units and resource.free_hours_per_month and resource.free_hours_per_month > 0:
         current_month = datetime.now().strftime("%Y-%m")
         from shared.models.space.user_space_quota import UserSpaceQuota
 
@@ -394,17 +404,29 @@ async def create_booking(
         deduct_amount = Decimal("0")
         credit_amount = Decimal("0")
 
-    if space_type and space_type.requires_approval:
+    # ===== 审批决策逻辑 =====
+    needs_manual_approval = False
+    approval_override_reason = None
+    if space_type:
+        if space_type.requires_approval:
+            needs_manual_approval = True
+            approval_override_reason = "该空间类型需要人工审批"
+        elif space_type.auto_approval_max_amount and space_type.auto_approval_max_amount > 0:
+            if total_fee > space_type.auto_approval_max_amount:
+                needs_manual_approval = True
+                approval_override_reason = f"预约金额 \u00a5{total_fee:.2f} 超过自动审批上限 \u00a5{space_type.auto_approval_max_amount:.2f}，需人工审批"
+
+    if needs_manual_approval and initial_status != "pending":
         initial_status = "pending"
         approved_at = None
         approved_by = None
-        approval_notes = (
-            None
-            if user_type == "external"
-            else f"内部员工预约高价值空间，需人工审批。支付：{payment_mode}"
-        )
+        approval_notes = approval_override_reason
         if user_type in ("internal", "vip", "member"):
             payment_status = "pending"
+            # Fix 5: 推迟余额扣减 — 重置之前计算的扣款
+            deduct_amount = Decimal("0")
+            credit_amount = Decimal("0")
+            payment_mode = "credit"
 
     booking = SpaceBooking(
         **booking_data.model_dump(

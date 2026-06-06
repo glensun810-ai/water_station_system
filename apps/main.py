@@ -51,6 +51,7 @@ from apps.api.v2.unified_settlement import router as unified_settlement_router
 from apps.api.v2.space_payment_settlement import (
     router as space_payment_settlement_router,
 )
+from apps.api.v2.space_deposits import router as space_deposits_router
 
 from apps.water.api_login_logs import router as login_logs_router
 from apps.api.v1.upload import router as upload_router
@@ -151,6 +152,7 @@ v2_router.include_router(space_statistics_router)
 v2_router.include_router(space_notifications_router)
 v2_router.include_router(unified_settlement_router)
 v2_router.include_router(space_payment_settlement_router)
+v2_router.include_router(space_deposits_router)
 
 # Add routers to main app
 app.include_router(v1_router)

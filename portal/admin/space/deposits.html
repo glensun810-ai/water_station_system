@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>押金管理</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="/shared/static/vendor/vue/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/portal/assets/css/design-system.css">
+    <link rel="stylesheet" href="/portal/components/GlobalHeader.css">
+    <script src="/portal/components/GlobalHeader.js"></script>
+    <script src="/portal/assets/js/auth.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { background: var(--bg-secondary); }
+        .container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-lg); }
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: var(--spacing-xl); background: white;
+            padding: var(--spacing-lg); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        .page-title { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary); }
+        .filter-bar {
+            background: var(--bg-card); padding: var(--spacing-lg);
+            border-radius: var(--radius-lg); margin-bottom: var(--spacing-xl);
+            display: flex; gap: var(--spacing-md); flex-wrap: wrap; align-items: center;
+        }
+        .filter-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border); border-radius: var(--radius-md);
+            font-size: var(--font-size-sm); min-width: 140px;
+        }
+        .table-container { background: white; border-radius: var(--radius-lg); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: var(--bg-secondary); padding: var(--spacing-md);
+            text-align: left; font-size: var(--font-size-sm);
+            font-weight: 600; color: var(--text-secondary);
+            border-bottom: 2px solid var(--border); white-space: nowrap;
+        }
+        td {
+            padding: var(--spacing-md); border-bottom: 1px solid var(--border);
+            font-size: var(--font-size-sm); color: var(--text-primary);
+        }
+        tr:hover { background: var(--bg-hover); }
+        .status-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-size: var(--font-size-xs); font-weight: 600;
+        }
+        .status-collected { background: #dbeafe; color: #1d4ed8; }
+        .status-refunded { background: #d1fae5; color: #059669; }
+        .status-forfeited { background: #fee2e2; color: #dc2626; }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-refunding { background: #fef9c3; color: #a16207; }
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md); border: none;
+            border-radius: var(--radius-md); font-size: var(--font-size-sm);
+            font-weight: 600; cursor: pointer; transition: all var(--transition-base);
+        }
+        .btn-sm { padding: 4px 10px; font-size: var(--font-size-xs); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-success { background: #059669; color: white; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-ghost {
+            background: transparent; color: var(--primary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: var(--bg-hover); }
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: var(--text-secondary);
+        }
+        .pagination {
+            display: flex; justify-content: center; align-items: center;
+            gap: var(--spacing-md); padding: var(--spacing-lg);
+        }
+        .page-btn {
+            padding: 6px 14px; border: 1px solid var(--border);
+            border-radius: var(--radius-md); background: white;
+            cursor: pointer; font-size: var(--font-size-sm);
+        }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white; border-radius: var(--radius-xl);
+            padding: var(--spacing-xl); min-width: 400px; max-width: 500px;
+            box-shadow: var(--shadow-xl);
+        }
+        .modal-title { font-size: var(--font-size-lg); font-weight: 700; margin-bottom: var(--spacing-lg); }
+        .form-group { margin-bottom: var(--spacing-md); }
+        .form-label { display: block; font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 4px; }
+        .form-input, .form-select {
+            width: 100%; padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border); border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+        }
+        .form-actions { display: flex; gap: var(--spacing-sm); justify-content: flex-end; margin-top: var(--spacing-lg); }
+        @media (max-width: 768px) {
+            .container { padding: var(--spacing-sm); }
+            td, th { padding: var(--spacing-sm); font-size: 12px; }
+            .modal-content { min-width: auto; width: 90%; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <global-header></global-header>
+    <div class="container">
+        <div class="page-header">
+            <div class="page-title">💰 押金管理</div>
+            <div style="display:flex;gap:8px;">
+                <a href="/portal/admin/space/dashboard.html" class="btn btn-ghost btn-sm">空间工作台</a>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <select class="filter-select" v-model="filters.status">
+                <option value="">全部状态</option>
+                <option value="pending">待收取</option>
+                <option value="collected">已收取</option>
+                <option value="refunding">退还中</option>
+                <option value="refunded">已退还</option>
+                <option value="forfeited">已没收</option>
+            </select>
+            <button class="btn btn-primary btn-sm" @click="loadDeposits(1)">查询</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>押金编号</th>
+                        <th>预约编号</th>
+                        <th>用户</th>
+                        <th>金额</th>
+                        <th>状态</th>
+                        <th>收取方式</th>
+                        <th>收取时间</th>
+                        <th>退还时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="loading"><td colspan="9" style="text-align:center;padding:40px;">加载中...</td></tr>
+                    <tr v-else-if="deposits.length === 0">
+                        <td colspan="9"><div class="empty-state">暂无押金记录</div></td>
+                    </tr>
+                    <tr v-for="d in deposits" :key="d.id">
+                        <td>{{ d.deposit_no }}</td>
+                        <td>{{ d.booking_no || '-' }}</td>
+                        <td>{{ d.user_name || '-' }}</td>
+                        <td><strong>¥{{ d.amount.toFixed(2) }}</strong></td>
+                        <td>
+                            <span class="status-badge" :class="'status-' + d.status">
+                                {{ statusMap[d.status] || d.status }}
+                            </span>
+                        </td>
+                        <td>{{ methodMap[d.collect_method] || d.collect_method || '-' }}</td>
+                        <td>{{ d.collected_at ? formatDate(d.collected_at) : '-' }}</td>
+                        <td>{{ d.refunded_at ? formatDate(d.refunded_at) : (d.forfeited_at ? formatDate(d.forfeited_at) : '-') }}</td>
+                        <td>
+                            <template v-if="d.status === 'collected'">
+                                <button class="btn btn-success btn-sm" @click="showRefund(d)">退还</button>
+                                <button class="btn btn-danger btn-sm" style="margin-left:4px;" @click="showForfeit(d)">没收</button>
+                            </template>
+                            <span v-else class="status-text" style="color:var(--text-secondary);font-size:12px;">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" v-if="totalPages > 1">
+            <button class="page-btn" :disabled="page <= 1" @click="loadDeposits(page - 1)">上一页</button>
+            <span style="font-size:var(--font-size-sm);color:var(--text-secondary);">第 {{ page }} / {{ totalPages }} 页</span>
+            <button class="page-btn" :disabled="page >= totalPages" @click="loadDeposits(page + 1)">下一页</button>
+        </div>
+    </div>
+
+    <!-- 退还押金弹窗 -->
+    <div class="modal-overlay" v-if="refundModal.show" @click.self="refundModal.show = false">
+        <div class="modal-content">
+            <div class="modal-title">退还押金</div>
+            <div class="form-group">
+                <label class="form-label">预约编号</label>
+                <div style="font-size:var(--font-size-sm);color:var(--text-secondary);">{{ refundModal.bookingNo || '-' }}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">押金金额</label>
+                <div style="font-size:var(--font-size-lg);font-weight:700;color:var(--primary);">¥{{ refundModal.amount.toFixed(2) }}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">退还方式</label>
+                <select class="form-select" v-model="refundModal.method">
+                    <option value="cash">现金</option>
+                    <option value="transfer">银行转账</option>
+                    <option value="wechat">微信</option>
+                    <option value="alipay">支付宝</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">备注</label>
+                <input class="form-input" v-model="refundModal.note" placeholder="退还备注（可选）">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-ghost" @click="refundModal.show = false">取消</button>
+                <button class="btn btn-success" @click="doRefund" :disabled="refundModal.submitting">
+                    {{ refundModal.submitting ? '处理中...' : '确认退还' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 没收押金弹窗 -->
+    <div class="modal-overlay" v-if="forfeitModal.show" @click.self="forfeitModal.show = false">
+        <div class="modal-content">
+            <div class="modal-title" style="color:#dc2626;">⚠️ 没收押金</div>
+            <div class="form-group">
+                <label class="form-label">押金金额</label>
+                <div style="font-size:var(--font-size-lg);font-weight:700;color:#dc2626;">¥{{ forfeitModal.amount.toFixed(2) }}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">没收原因 *</label>
+                <textarea class="form-input" v-model="forfeitModal.reason" placeholder="请输入没收原因" style="min-height:80px;"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-ghost" @click="forfeitModal.show = false">取消</button>
+                <button class="btn btn-danger" @click="doForfeit" :disabled="!forfeitModal.reason || forfeitModal.submitting">
+                    {{ forfeitModal.submitting ? '处理中...' : '确认没收' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            deposits: [],
+            page: 1,
+            limit: 20,
+            total: 0,
+            loading: false,
+            filters: { status: '' },
+            statusMap: {
+                pending: '待收取',
+                collected: '已收取',
+                refunding: '退还中',
+                refunded: '已退还',
+                forfeited: '已没收',
+            },
+            methodMap: {
+                cash: '现金',
+                transfer: '转账',
+                wechat: '微信',
+                alipay: '支付宝',
+            },
+            refundModal: { show: false, bookingId: null, bookingNo: null, amount: 0, method: 'cash', note: '', submitting: false },
+            forfeitModal: { show: false, bookingId: null, amount: 0, reason: '', submitting: false },
+        };
+    },
+    computed: {
+        totalPages() { return Math.ceil(this.total / this.limit) || 1; },
+    },
+    methods: {
+        formatDate(iso) {
+            if (!iso) return '-';
+            const d = new Date(iso);
+            return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        },
+        async loadDeposits(p) {
+            this.page = p || 1;
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({ page: this.page, limit: this.limit });
+                if (this.filters.status) params.set('status', this.filters.status);
+                const res = await fetch(`/api/v2/space/deposits?${params}`);
+                const json = await res.json();
+                if (json.code === 200) {
+                    this.deposits = json.data.items || [];
+                    this.total = json.data.total || 0;
+                }
+            } catch(e) { console.error(e); }
+            finally { this.loading = false; }
+        },
+        showRefund(d) {
+            this.refundModal = { show: true, bookingId: d.booking_id, bookingNo: d.booking_no, amount: d.amount, method: 'cash', note: '', submitting: false };
+        },
+        showForfeit(d) {
+            this.forfeitModal = { show: true, bookingId: d.booking_id, amount: d.amount, reason: '', submitting: false };
+        },
+        async doRefund() {
+            this.refundModal.submitting = true;
+            try {
+                const res = await fetch('/api/v2/space/deposits/refund', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        booking_id: this.refundModal.bookingId,
+                        refund_method: this.refundModal.method,
+                        refund_note: this.refundModal.note || null,
+                    }),
+                });
+                const json = await res.json();
+                if (json.code === 200) {
+                    alert('✅ ' + json.message);
+                    this.refundModal.show = false;
+                    this.loadDeposits(this.page);
+                } else {
+                    alert('❌ ' + json.message);
+                }
+            } catch(e) { alert('操作失败：' + e.message); }
+            finally { this.refundModal.submitting = false; }
+        },
+        async doForfeit() {
+            if (!this.forfeitModal.reason.trim()) { alert('请输入没收原因'); return; }
+            this.forfeitModal.submitting = true;
+            try {
+                const res = await fetch('/api/v2/space/deposits/forfeit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        booking_id: this.forfeitModal.bookingId,
+                        forfeit_reason: this.forfeitModal.reason,
+                    }),
+                });
+                const json = await res.json();
+                if (json.code === 200) {
+                    alert('✅ ' + json.message);
+                    this.forfeitModal.show = false;
+                    this.loadDeposits(this.page);
+                } else {
+                    alert('❌ ' + json.message);
+                }
+            } catch(e) { alert('操作失败：' + e.message); }
+            finally { this.forfeitModal.submitting = false; }
+        },
+    },
+    mounted() { this.loadDeposits(1); },
+}).mount('#app');
+</script>
+</body>
+</html>

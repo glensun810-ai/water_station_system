@@ -418,7 +418,27 @@ async def process_monthly_settlement(
     processed_count = 0
     total_amount = Decimal("0")
 
+    from shared.models.space.space_booking import SpaceBooking as SBooking
+
     for note in credit_notes:
+        # 前置校验：验证账单内所有关联预约均为 completed 或 settled 状态
+        invalid_bookings = []
+        for item in note.items:
+            booking = db.query(SBooking).filter(SBooking.id == item.booking_id).first()
+            if booking and booking.status not in ("completed", "settled"):
+                invalid_bookings.append({
+                    "booking_id": item.booking_id,
+                    "booking_no": item.booking_no or "N/A",
+                    "status": booking.status,
+                })
+
+        if invalid_bookings:
+            booking_refs = ", ".join([f"#{b['booking_id']}({b['booking_no']}:{b['status']})" for b in invalid_bookings])
+            raise HTTPException(
+                status_code=400,
+                detail=f"账单 {note.note_no} 中包含尚未完成的预约：{booking_refs}。请先完成所有预约后再结算。"
+            )
+
         note.mark_settled(current_user.name)
         processed_count += 1
         total_amount += note.total_amount

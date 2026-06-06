@@ -34,3 +34,4 @@ __all__ = [
     "UserSpaceQuota",
     "UserMemberInfo",
 ]
+from .deposit_record import DepositRecord
